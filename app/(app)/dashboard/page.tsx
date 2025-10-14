@@ -10,21 +10,17 @@ type PageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  const cookieStore = cookies();
   const demoParam = searchParams?.demo;
 
   if (demoParam === "1") {
-    cookieStore.set("demo-mode", "true", {
-      path: "/",
-      maxAge: 60 * 60 * 12, // 12 hours
-      sameSite: "lax",
-    });
+    redirect("/api/demo-mode/enter?redirect=/dashboard");
   }
 
   if (demoParam === "0") {
-    cookieStore.delete("demo-mode");
+    redirect("/api/demo-mode/exit?redirect=/dashboard");
   }
 
+  const cookieStore = cookies();
   const supabase = await createClient();
   const {
     data: { session },
@@ -33,9 +29,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const authDisabled =
     process.env.NEXT_PUBLIC_AUTH_DISABLED === "true" || process.env.NODE_ENV !== "production";
   const demoMode =
-    demoParam === "1" ||
-    cookieStore.get("demo-mode")?.value === "true" ||
-    (authDisabled && !session);
+    cookieStore.get("demo-mode")?.value === "true" || (!session && authDisabled);
 
   if (!session && !authDisabled && !demoMode) {
     redirect("/login");

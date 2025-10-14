@@ -94,7 +94,7 @@ export default async function LoginPage() {
                 straight into the app.
               </p>
               <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard?demo=1">Explore in demo mode</Link>
+                <Link href="/api/demo-mode/enter?redirect=/dashboard">Explore in demo mode</Link>
               </Button>
               <p className="text-xs text-muted-foreground">
                 Want real access? Email <a className="underline" href="mailto:hello@mybudgetmate.co.nz">hello@mybudgetmate.co.nz</a> with a short intro.

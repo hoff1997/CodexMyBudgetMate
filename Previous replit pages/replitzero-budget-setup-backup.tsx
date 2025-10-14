@@ -1,0 +1,1 @@
+// Backup of working zero-budget-setup.tsx before sticky header implementation

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/finance";
-import { calculateRequiredContribution, PlannerFrequency, frequencyOptions } from "@/lib/planner/calculations";
+import { PlannerFrequency, frequencyOptions } from "@/lib/planner/calculations";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface IncomeStream {
   id: string;
@@ -26,11 +28,34 @@ interface Props {
 }
 
 export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Props) {
+  const router = useRouter();
   const [streams, setStreams] = useState(incomeStreams);
   const [selectedStream, setSelectedStream] = useState<IncomeStream | null>(null);
   const [showDrawer, setShowDrawer] = useState(false);
   const [search, setSearch] = useState("");
   const [frequencyFilter, setFrequencyFilter] = useState<PlannerFrequency | "all">("all");
+
+  const handleStreamSaved = (saved: IncomeStream) => {
+    setStreams((prev) => {
+      const index = prev.findIndex((item) => item.id === saved.id);
+      if (index === -1) {
+        return [saved, ...prev];
+      }
+      const copy = [...prev];
+      copy[index] = saved;
+      return copy;
+    });
+    setSelectedStream(null);
+    setShowDrawer(false);
+    router.refresh();
+  };
+
+  const handleStreamDeleted = (id: string) => {
+    setStreams((prev) => prev.filter((item) => item.id !== id));
+    setSelectedStream(null);
+    setShowDrawer(false);
+    router.refresh();
+  };
 
   const filteredStreams = useMemo(() => {
     return streams.filter((stream) => {
@@ -153,15 +178,8 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
           if (!value) setSelectedStream(null);
         }}
         stream={selectedStream}
-        onSave={(updated) => {
-          setStreams((prev) => {
-            const exists = prev.find((item) => item.id === updated.id);
-            if (exists) {
-              return prev.map((item) => (item.id === updated.id ? updated : item));
-            }
-            return [updated, ...prev];
-          });
-        }}
+        onSave={handleStreamSaved}
+        onDelete={handleStreamDeleted}
       />
       <MobileNav />
     </div>
@@ -291,50 +309,159 @@ function TimelineView({ streams }: { streams: IncomeStream[] }) {
   );
 }
 
+function createBlankStream(): IncomeStream {
+  return {
+    id: crypto.randomUUID(),
+    name: "",
+    amount: 0,
+    frequency: "fortnightly",
+    nextDate: new Date().toISOString().slice(0, 10),
+    allocations: [],
+    surplusEnvelope: "",
+  };
+}
+
+type ApiStream = {
+  id: string;
+  name: string;
+  amount: number;
+  frequency: string;
+  nextDate: string | null;
+  allocations: Array<{ envelope: string; amount: number; envelopeId?: string | null }>;
+  surplusEnvelope: string | null;
+};
+
+function mapApiStream(stream: ApiStream): IncomeStream {
+  return {
+    id: stream.id,
+    name: stream.name,
+    amount: Number(stream.amount ?? 0),
+    frequency: (stream.frequency as PlannerFrequency) ?? "monthly",
+    nextDate: stream.nextDate,
+    allocations: Array.isArray(stream.allocations)
+      ? stream.allocations.map((allocation) => ({
+          envelope: allocation.envelope ?? "",
+          amount: Number(allocation.amount ?? 0),
+        }))
+      : [],
+    surplusEnvelope: stream.surplusEnvelope ?? null,
+  };
+}
+
 function IncomeDrawer({
   open,
   onOpenChange,
   stream,
   onSave,
+  onDelete,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   stream: IncomeStream | null;
   onSave: (stream: IncomeStream) => void;
+  onDelete: (id: string) => void;
 }) {
-  const defaultStream: IncomeStream =
-    stream ?? {
-      id: crypto.randomUUID(),
-      name: "",
-      amount: 0,
-      frequency: "fortnightly",
-      nextDate: new Date().toISOString().slice(0, 10),
-      allocations: [],
+  const [localStream, setLocalStream] = useState<IncomeStream>(stream ?? createBlankStream());
+  const [saving, setSaving] = useState(false);
+  const isEdit = Boolean(stream);
+
+  useEffect(() => {
+    if (open) {
+      setLocalStream(stream ?? createBlankStream());
+      setSaving(false);
+    }
+  }, [stream, open]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const payload = {
+      name: localStream.name.trim(),
+      amount: Number(localStream.amount ?? 0),
+      frequency: localStream.frequency,
+      nextDate: localStream.nextDate ?? null,
+      allocations: localStream.allocations
+        .filter((allocation) => allocation.envelope.trim())
+        .map((allocation) => ({
+          envelope: allocation.envelope.trim(),
+          amount: Number(allocation.amount ?? 0),
+        })),
+      surplusEnvelope: localStream.surplusEnvelope
+        ? localStream.surplusEnvelope.trim()
+        : null,
     };
 
-  const [localStream, setLocalStream] = useState(defaultStream);
+    try {
+      setSaving(true);
+      const response = await fetch(
+        isEdit ? `/api/recurring-income/${stream?.id}` : "/api/recurring-income",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: "Unable to save income stream" }));
+        throw new Error(result.error ?? "Unable to save income stream");
+      }
+
+      const result = (await response.json()) as { stream: ApiStream };
+      const mapped = mapApiStream(result.stream);
+      toast.success(isEdit ? "Income stream updated" : "Income stream created");
+      onSave(mapped);
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to save income stream");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!stream) return;
+    const confirmed = window.confirm(`Delete ${stream.name}?`);
+    if (!confirmed) return;
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/recurring-income/${stream.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: "Unable to delete income stream" }));
+        throw new Error(result.error ?? "Unable to delete income stream");
+      }
+      toast.success("Income stream deleted");
+      onDelete(stream.id);
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to delete income stream");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(value) => {
-      onOpenChange(value);
-      if (!value) {
-        setLocalStream(defaultStream);
-      }
-    }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(value) => {
+        onOpenChange(value);
+        if (!value) {
+          setLocalStream(stream ?? createBlankStream());
+          setSaving(false);
+        }
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
         <Dialog.Content className="fixed inset-y-0 right-0 flex w-full max-w-lg flex-col gap-4 bg-background p-6 shadow-xl">
           <Dialog.Title className="text-lg font-semibold text-secondary">
-            {stream ? "Edit income stream" : "New income stream"}
+            {isEdit ? "Edit income stream" : "New income stream"}
           </Dialog.Title>
-          <form
-            className="flex flex-1 flex-col gap-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSave(localStream);
-              onOpenChange(false);
-            }}
-          >
+          <form className="flex flex-1 flex-col gap-4" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <Input
                 placeholder="Name"
@@ -378,6 +505,13 @@ function IncomeDrawer({
                 }
               />
             </div>
+            <Input
+              placeholder="Surplus envelope (optional)"
+              value={localStream.surplusEnvelope ?? ""}
+              onChange={(event) =>
+                setLocalStream((prev) => ({ ...prev, surplusEnvelope: event.target.value }))
+              }
+            />
             <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
               {localStream.allocations.length ? "Edit allocations below" : "Add envelope allocations"}
             </div>
@@ -443,7 +577,14 @@ function IncomeDrawer({
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Save stream</Button>
+              {isEdit ? (
+                <Button type="button" variant="destructive" onClick={handleDelete} disabled={saving}>
+                  Delete
+                </Button>
+              ) : null}
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving…" : "Save stream"}
+              </Button>
             </div>
           </form>
         </Dialog.Content>

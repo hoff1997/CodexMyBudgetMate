@@ -8,6 +8,9 @@ where user_id = '00000000-0000-0000-0000-000000000001'::uuid;
 delete from public.transaction_labels
 where user_id = '00000000-0000-0000-0000-000000000001'::uuid;
 
+delete from public.recurring_income
+where user_id = '00000000-0000-0000-0000-000000000001'::uuid;
+
 delete from auth.users
 where id = '00000000-0000-0000-0000-000000000001'::uuid
    or email = 'demo@example.com';
@@ -388,6 +391,51 @@ set merchant_normalized = excluded.merchant_normalized,
     match_type = excluded.match_type,
     case_sensitive = excluded.case_sensitive,
     is_active = excluded.is_active,
+    updated_at = excluded.updated_at;
+
+insert into public.recurring_income (
+  id,
+  user_id,
+  name,
+  amount,
+  frequency,
+  next_date,
+  allocations,
+  surplus_envelope,
+  created_at,
+  updated_at
+) values
+  (
+    '00000000-0000-0000-0000-000000000801'::uuid,
+    '00000000-0000-0000-0000-000000000001'::uuid,
+    'Primary salary',
+    2200.00,
+    'fortnightly',
+    current_date + interval '7 days',
+    '[{"envelope":"Rent","amount":1200},{"envelope":"Groceries","amount":300},{"envelope":"Savings","amount":200}]'::jsonb,
+    'Surplus',
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000802'::uuid,
+    '00000000-0000-0000-0000-000000000001'::uuid,
+    'Side hustle',
+    450.00,
+    'monthly',
+    current_date + interval '20 days',
+    '[{"envelope":"Emergency Fund","amount":200},{"envelope":"Fun","amount":100}]'::jsonb,
+    null,
+    now(),
+    now()
+  )
+on conflict (id) do update
+set name = excluded.name,
+    amount = excluded.amount,
+    frequency = excluded.frequency,
+    next_date = excluded.next_date,
+    allocations = excluded.allocations,
+    surplus_envelope = excluded.surplus_envelope,
     updated_at = excluded.updated_at;
 
 commit;

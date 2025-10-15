@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AssetRow, LiabilityRow, NetWorthSnapshotRow } from "@/lib/types/net-worth";
 import { formatCurrency } from "@/lib/finance";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface Props {
   assets: AssetRow[];
@@ -17,6 +19,7 @@ interface Props {
 }
 
 export function NetWorthClient({ assets, liabilities, snapshots, canEdit }: Props) {
+  const router = useRouter();
   const [assetDrawerOpen, setAssetDrawerOpen] = useState(false);
   const [liabilityDrawerOpen, setLiabilityDrawerOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetRow | null>(null);
@@ -77,7 +80,7 @@ export function NetWorthClient({ assets, liabilities, snapshots, canEdit }: Prop
   async function createSnapshot() {
     try {
       setSnapshotLoading(true);
-      await fetch("/api/net-worth/snapshots", {
+      const response = await fetch("/api/net-worth/snapshots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -86,7 +89,15 @@ export function NetWorthClient({ assets, liabilities, snapshots, canEdit }: Prop
           netWorth,
         }),
       });
-      window.location.reload();
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to create snapshot" }));
+        throw new Error(payload.error ?? "Unable to create snapshot");
+      }
+      toast.success("Snapshot saved");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to create snapshot");
     } finally {
       setSnapshotLoading(false);
     }
@@ -171,11 +182,13 @@ export function NetWorthClient({ assets, liabilities, snapshots, canEdit }: Prop
         open={assetDrawerOpen}
         onOpenChange={setAssetDrawerOpen}
         asset={selectedAsset}
+        onMutated={() => router.refresh()}
       />
       <LiabilityDrawer
         open={liabilityDrawerOpen}
         onOpenChange={setLiabilityDrawerOpen}
         liability={selectedLiability}
+        onMutated={() => router.refresh()}
       />
     </div>
   );
@@ -389,42 +402,121 @@ function HistoryList({ data }: { data: Array<{ id: string; date: Date; net: numb
   );
 }
 
-function AssetDrawer({ open, onOpenChange, asset }: { open: boolean; onOpenChange: (value: boolean) => void; asset: AssetRow | null }) {
+function AssetDrawer({
+  open,
+  onOpenChange,
+  asset,
+  onMutated,
+}: {
+  open: boolean;
+  onOpenChange: (value: boolean) => void;
+  asset: AssetRow | null;
+  onMutated: () => void;
+}) {
   const [localAsset, setLocalAsset] = useState<AssetRow | null>(asset);
+  const [saving, setSaving] = useState(false);
+  const isEdit = Boolean(asset);
+
+  useEffect(() => {
+    if (open) {
+      setLocalAsset(asset);
+    }
+  }, [asset, open]);
+
+  const baseAsset: AssetRow = {
+    id: asset?.id ?? "",
+    name: "",
+    asset_type: "other",
+    current_value: 0,
+    notes: "",
+  };
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      const payload = {
+        name: localAsset?.name ?? "",
+        assetType: localAsset?.asset_type ?? "other",
+        currentValue: Number(localAsset?.current_value ?? 0),
+        notes: localAsset?.notes ?? "",
+      };
+
+      const response = await fetch(
+        isEdit ? `/api/net-worth/assets/${asset?.id}` : "/api/net-worth/assets",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: "Unable to save asset" }));
+        throw new Error(result.error ?? "Unable to save asset");
+      }
+
+      toast.success(isEdit ? "Asset updated" : "Asset added");
+      onMutated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to save asset");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!asset) return;
+    const confirmed = window.confirm(`Delete ${asset.name}?`);
+    if (!confirmed) return;
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/net-worth/assets/${asset.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: "Unable to delete asset" }));
+        throw new Error(result.error ?? "Unable to delete asset");
+      }
+      toast.success("Asset deleted");
+      onMutated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to delete asset");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(value) => {
-      onOpenChange(value);
-      if (!value) setLocalAsset(asset);
-    }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(value) => {
+        onOpenChange(value);
+        if (!value) {
+          setLocalAsset(asset);
+          setSaving(false);
+        }
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
         <Dialog.Content className="fixed inset-y-0 right-0 flex w-full max-w-lg flex-col gap-4 bg-background p-6 shadow-xl">
           <Dialog.Title className="text-lg font-semibold text-secondary">
-            {asset ? "Edit asset" : "Add asset"}
+            {isEdit ? "Edit asset" : "Add asset"}
           </Dialog.Title>
-          <form
-            className="flex flex-1 flex-col gap-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              await fetch("/api/net-worth/assets", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  name: localAsset?.name ?? "",
-                  assetType: localAsset?.asset_type ?? "other",
-                  currentValue: Number(localAsset?.current_value ?? 0),
-                  notes: localAsset?.notes ?? "",
-                }),
-              });
-              onOpenChange(false);
-            }}
-          >
+          <form className="flex flex-1 flex-col gap-4" onSubmit={handleSubmit}>
             <Input
               placeholder="Name"
               value={localAsset?.name ?? ""}
               onChange={(event) =>
-                setLocalAsset((prev) => (prev ? { ...prev, name: event.target.value } : { id: "", name: event.target.value, asset_type: "other", current_value: 0, notes: "" }))
+                setLocalAsset((prev) => ({
+                  ...(prev ?? baseAsset),
+                  name: event.target.value,
+                }))
               }
               required
             />
@@ -432,7 +524,10 @@ function AssetDrawer({ open, onOpenChange, asset }: { open: boolean; onOpenChang
               className="h-10 rounded-md border px-3 text-sm"
               value={localAsset?.asset_type ?? "other"}
               onChange={(event) =>
-                setLocalAsset((prev) => (prev ? { ...prev, asset_type: event.target.value } : prev))
+                setLocalAsset((prev) => ({
+                  ...(prev ?? baseAsset),
+                  asset_type: event.target.value,
+                }))
               }
             >
               <option value="cash">Cash & Savings</option>
@@ -447,7 +542,10 @@ function AssetDrawer({ open, onOpenChange, asset }: { open: boolean; onOpenChang
               step="0.01"
               value={localAsset?.current_value ?? 0}
               onChange={(event) =>
-                setLocalAsset((prev) => (prev ? { ...prev, current_value: Number(event.target.value) } : prev))
+                setLocalAsset((prev) => ({
+                  ...(prev ?? baseAsset),
+                  current_value: Number(event.target.value),
+                }))
               }
             />
             <textarea
@@ -455,14 +553,33 @@ function AssetDrawer({ open, onOpenChange, asset }: { open: boolean; onOpenChang
               placeholder="Notes"
               value={localAsset?.notes ?? ""}
               onChange={(event) =>
-                setLocalAsset((prev) => (prev ? { ...prev, notes: event.target.value } : prev))
+                setLocalAsset((prev) => ({
+                  ...(prev ?? baseAsset),
+                  notes: event.target.value,
+                }))
               }
             />
-            <div className="mt-auto flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save asset</Button>
+            <div className="mt-auto flex flex-wrap justify-between gap-2">
+              <div>
+                {isEdit ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={saving}
+                  >
+                    Delete
+                  </Button>
+                ) : null}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save asset"}
+                </Button>
+              </div>
             </div>
           </form>
         </Dialog.Content>
@@ -475,49 +592,122 @@ function LiabilityDrawer({
   open,
   onOpenChange,
   liability,
+  onMutated,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   liability: LiabilityRow | null;
+  onMutated: () => void;
 }) {
   const [localLiability, setLocalLiability] = useState<LiabilityRow | null>(liability);
+  const [saving, setSaving] = useState(false);
+  const isEdit = Boolean(liability);
+
+  useEffect(() => {
+    if (open) {
+      setLocalLiability(liability);
+    }
+  }, [liability, open]);
+
+  const baseLiability: LiabilityRow = {
+    id: liability?.id ?? "",
+    name: "",
+    liability_type: "liability",
+    current_balance: 0,
+    interest_rate: 0,
+    notes: "",
+  };
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      const payload = {
+        name: localLiability?.name ?? "",
+        liabilityType: localLiability?.liability_type ?? "liability",
+        currentBalance: Number(localLiability?.current_balance ?? 0),
+        interestRate:
+          localLiability?.interest_rate === null
+            ? null
+            : Number(localLiability?.interest_rate ?? 0),
+        notes: localLiability?.notes ?? "",
+      };
+
+      const response = await fetch(
+        isEdit ? `/api/net-worth/liabilities/${liability?.id}` : "/api/net-worth/liabilities",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: "Unable to save liability" }));
+        throw new Error(result.error ?? "Unable to save liability");
+      }
+
+      toast.success(isEdit ? "Liability updated" : "Liability added");
+      onMutated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to save liability");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!liability) return;
+    const confirmed = window.confirm(`Delete ${liability.name}?`);
+    if (!confirmed) return;
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/net-worth/liabilities/${liability.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({ error: "Unable to delete liability" }));
+        throw new Error(result.error ?? "Unable to delete liability");
+      }
+      toast.success("Liability deleted");
+      onMutated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to delete liability");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(value) => {
-      onOpenChange(value);
-      if (!value) setLocalLiability(liability);
-    }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(value) => {
+        onOpenChange(value);
+        if (!value) {
+          setLocalLiability(liability);
+          setSaving(false);
+        }
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
         <Dialog.Content className="fixed inset-y-0 right-0 flex w-full max-w-lg flex-col gap-4 bg-background p-6 shadow-xl">
           <Dialog.Title className="text-lg font-semibold text-secondary">
-            {liability ? "Edit liability" : "Add liability"}
+            {isEdit ? "Edit liability" : "Add liability"}
           </Dialog.Title>
-          <form
-            className="flex flex-1 flex-col gap-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              await fetch("/api/net-worth/liabilities", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  name: localLiability?.name ?? "",
-                  liabilityType: localLiability?.liability_type ?? "liability",
-                  currentBalance: Number(localLiability?.current_balance ?? 0),
-                  interestRate: Number(localLiability?.interest_rate ?? 0),
-                  notes: localLiability?.notes ?? "",
-                }),
-              });
-              onOpenChange(false);
-            }}
-          >
+          <form className="flex flex-1 flex-col gap-4" onSubmit={handleSubmit}>
             <Input
               placeholder="Name"
               value={localLiability?.name ?? ""}
               onChange={(event) =>
-                setLocalLiability((prev) =>
-                  prev ? { ...prev, name: event.target.value } : { id: "", name: event.target.value, liability_type: "liability", current_balance: 0, interest_rate: 0, notes: "" },
-                )
+                setLocalLiability((prev) => ({
+                  ...(prev ?? baseLiability),
+                  name: event.target.value,
+                }))
               }
               required
             />
@@ -525,7 +715,10 @@ function LiabilityDrawer({
               className="h-10 rounded-md border px-3 text-sm"
               value={localLiability?.liability_type ?? "liability"}
               onChange={(event) =>
-                setLocalLiability((prev) => (prev ? { ...prev, liability_type: event.target.value } : prev))
+                setLocalLiability((prev) => ({
+                  ...(prev ?? baseLiability),
+                  liability_type: event.target.value,
+                }))
               }
             >
               <option value="mortgage">Mortgage</option>
@@ -539,7 +732,10 @@ function LiabilityDrawer({
               step="0.01"
               value={localLiability?.current_balance ?? 0}
               onChange={(event) =>
-                setLocalLiability((prev) => (prev ? { ...prev, current_balance: Number(event.target.value) } : prev))
+                setLocalLiability((prev) => ({
+                  ...(prev ?? baseLiability),
+                  current_balance: Number(event.target.value),
+                }))
               }
             />
             <Input
@@ -548,7 +744,10 @@ function LiabilityDrawer({
               step="0.01"
               value={localLiability?.interest_rate ?? 0}
               onChange={(event) =>
-                setLocalLiability((prev) => (prev ? { ...prev, interest_rate: Number(event.target.value) } : prev))
+                setLocalLiability((prev) => ({
+                  ...(prev ?? baseLiability),
+                  interest_rate: Number(event.target.value),
+                }))
               }
             />
             <textarea
@@ -556,14 +755,33 @@ function LiabilityDrawer({
               placeholder="Notes"
               value={localLiability?.notes ?? ""}
               onChange={(event) =>
-                setLocalLiability((prev) => (prev ? { ...prev, notes: event.target.value } : prev))
+                setLocalLiability((prev) => ({
+                  ...(prev ?? baseLiability),
+                  notes: event.target.value,
+                }))
               }
             />
-            <div className="mt-auto flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Save liability</Button>
+            <div className="mt-auto flex flex-wrap justify-between gap-2">
+              <div>
+                {isEdit ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                    disabled={saving}
+                  >
+                    Delete
+                  </Button>
+                ) : null}
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Saving…" : "Save liability"}
+                </Button>
+              </div>
             </div>
           </form>
         </Dialog.Content>

@@ -35,4 +35,5 @@ export type TransactionRow = {
   bank_reference?: string | null;
   bank_memo?: string | null;
   receipt_url?: string | null;
+  labels?: string[];
 };

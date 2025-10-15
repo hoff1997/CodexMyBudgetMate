@@ -9,11 +9,16 @@ import { toast } from "sonner";
 import { SmartSuggestionsBanner } from "@/components/layout/reconcile/smart-suggestions";
 import { CsvImportDialog } from "@/components/layout/reconcile/csv-import-dialog";
 import { ReceiptUploadDialog } from "@/components/layout/reconcile/receipt-upload-dialog";
-import { SplitEditor } from "@/components/layout/reconcile/split-editor";
+import { SplitEditor, type SplitResult } from "@/components/layout/reconcile/split-editor";
 import Link from "next/link";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
+import { useRouter } from "next/navigation";
 
-const demoTransactions: TransactionRow[] = [
+type WorkbenchRow = TransactionRow & {
+  labels?: string[];
+};
+
+const demoTransactions: WorkbenchRow[] = [
   {
     id: "demo-uber",
     merchant_name: "Uber Eats",
@@ -25,6 +30,7 @@ const demoTransactions: TransactionRow[] = [
     account_name: "Everyday account",
     bank_reference: "UBER123",
     bank_memo: "Card 1234",
+    labels: [],
   },
   {
     id: "demo-mitre",
@@ -37,6 +43,7 @@ const demoTransactions: TransactionRow[] = [
     account_name: "Everyday account",
     bank_reference: "MITRE987",
     bank_memo: "EFTPOS",
+    labels: [],
   },
   {
     id: "demo-westfield",
@@ -49,6 +56,7 @@ const demoTransactions: TransactionRow[] = [
     account_name: "Everyday account",
     bank_reference: "WESTF11",
     bank_memo: "Parking",
+    labels: [],
   },
 ];
 
@@ -79,19 +87,26 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const [dateFrom, setDateFrom] = useState(defaultFrom);
   const [dateTo, setDateTo] = useState(defaultTo);
 
+  const router = useRouter();
   const usingDemo = transactions.length === 0;
-  const initialRows = useMemo(
-    () => (transactions.length ? transactions : demoTransactions),
+  const initialRows = useMemo<WorkbenchRow[]>(
+    () =>
+      (transactions.length ? transactions : demoTransactions).map((transaction) => ({
+        ...transaction,
+        labels: Array.isArray((transaction as WorkbenchRow).labels)
+          ? [...((transaction as WorkbenchRow).labels ?? [])]
+          : [],
+      })),
     [transactions],
   );
-  const [rows, setRows] = useState(initialRows);
+  const [rows, setRows] = useState<WorkbenchRow[]>(initialRows);
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
   const [csvOpen, setCsvOpen] = useState(false);
   const [receiptTransactionId, setReceiptTransactionId] = useState<string | null>(null);
   const [splitTransactionId, setSplitTransactionId] = useState<string | null>(null);
-  const [sheetTransaction, setSheetTransaction] = useState<TransactionRow | null>(null);
+  const [sheetTransaction, setSheetTransaction] = useState<WorkbenchRow | null>(null);
   const isMobile = useIsMobile();
 
   const duplicates = useMemo(() => {
@@ -138,12 +153,6 @@ export function ReconcileWorkbench({ transactions }: Props) {
     [rows],
   );
 
-function handleAction(action: string, merchant: string) {
-  toast.success(`${action} queued`, {
-    description: `${merchant} will move through the workflow once Supabase mutations are connected.`,
-  });
-}
-
 async function handleApprove(tx: TransactionRow) {
   setRows((prev) =>
     prev.map((row) => (row.id === tx.id ? { ...row, status: "approved" } : row)),
@@ -163,6 +172,7 @@ async function handleApprove(tx: TransactionRow) {
       throw new Error(await response.text());
     }
     toast.success("Transaction approved");
+    router.refresh();
   } catch (error) {
     console.error(error);
     toast.error("Failed to approve transaction");
@@ -170,6 +180,141 @@ async function handleApprove(tx: TransactionRow) {
       prev.map((row) => (row.id === tx.id ? { ...row, status: tx.status } : row)),
     );
   }
+}
+
+async function handleAssign(tx: WorkbenchRow) {
+  const defaultValue = tx.envelope_name ?? "";
+  const value = prompt(
+    "Assign to which envelope? (case insensitive match)",
+    defaultValue,
+  );
+  if (value === null) return;
+  const trimmed = value.trim();
+  if (!trimmed) {
+    toast.error("Envelope name is required");
+    return;
+  }
+
+  const previousRows = rows.map((row) => ({ ...row, labels: [...(row.labels ?? [])] }));
+  setRows((prev) =>
+    prev.map((row) =>
+      row.id === tx.id
+        ? {
+            ...row,
+            envelope_name: trimmed,
+            status: row.status === "unmatched" ? "pending" : row.status,
+          }
+        : row,
+    ),
+  );
+  setSheetTransaction((current) =>
+    current && current.id === tx.id
+      ? { ...current, envelope_name: trimmed, status: "pending" }
+      : current,
+  );
+
+  if (usingDemo) {
+    toast.success("Envelope assigned (demo)");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/transactions/${tx.id}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ envelopeName: trimmed }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ error: "Unable to assign envelope" }));
+      throw new Error(payload.error ?? "Unable to assign envelope");
+    }
+
+    const payload = (await response.json()) as {
+      transaction: { status: string; envelope: { id: string; name: string | null } };
+    };
+
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === tx.id
+          ? {
+              ...row,
+              envelope_name: payload.transaction.envelope.name ?? trimmed,
+              status: payload.transaction.status ?? row.status,
+            }
+          : row,
+      ),
+    );
+    toast.success("Envelope assigned");
+    router.refresh();
+  } catch (error) {
+    console.error(error);
+    setRows(previousRows);
+    toast.error(error instanceof Error ? error.message : "Unable to assign envelope");
+  }
+}
+
+async function handleLabels(tx: WorkbenchRow) {
+  const defaultValue = tx.labels?.join(", ") ?? "";
+  const value = prompt(
+    "Comma-separated labels (leave blank to clear)",
+    defaultValue,
+  );
+  if (value === null) return;
+
+  const labels = value
+    .split(",")
+    .map((label) => label.trim())
+    .filter(Boolean);
+
+  const previousRows = rows.map((row) => ({ ...row, labels: [...(row.labels ?? [])] }));
+  setRows((prev) =>
+    prev.map((row) => (row.id === tx.id ? { ...row, labels } : row)),
+  );
+
+  if (usingDemo) {
+    toast.success("Labels updated (demo)");
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/transactions/${tx.id}/labels`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ labels }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ error: "Unable to update labels" }));
+      throw new Error(payload.error ?? "Unable to update labels");
+    }
+
+    const payload = (await response.json()) as {
+      transaction: { labels: Array<{ name: string }> };
+    };
+
+    const names = payload.transaction.labels?.map((label) => label.name) ?? [];
+    setRows((prev) =>
+      prev.map((row) => (row.id === tx.id ? { ...row, labels: names } : row)),
+    );
+    toast.success("Labels updated");
+    router.refresh();
+  } catch (error) {
+    console.error(error);
+    setRows(previousRows);
+    toast.error(error instanceof Error ? error.message : "Unable to update labels");
+  }
+}
+
+function applySplitResult(result: SplitResult) {
+  const label =
+    result.splits.length === 1 ? result.splits[0].envelopeName : "Split across envelopes";
+  setRows((prev) =>
+    prev.map((row) =>
+      row.id === result.transaction.id ? { ...row, envelope_name: label } : row,
+    ),
+  );
+  router.refresh();
 }
 
   const splitTarget = splitTransactionId ? rows.find((tx) => tx.id === splitTransactionId) : null;
@@ -245,9 +390,9 @@ async function handleApprove(tx: TransactionRow) {
           transactions={filtered}
           duplicates={duplicates}
           onOpenSheet={setSheetTransaction}
-          onAssign={(tx) => handleAction("Assign envelope", tx.merchant_name)}
+          onAssign={handleAssign}
           onApprove={handleApprove}
-          onLabels={(tx) => handleAction("Label editor", tx.merchant_name)}
+          onLabels={handleLabels}
           onSplit={(tx) => {
             setSplitTransactionId(tx.id);
             setSheetTransaction(null);
@@ -327,10 +472,26 @@ async function handleApprove(tx: TransactionRow) {
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
                             {tx.envelope_name ? tx.envelope_name : "Needs tag"}
                           </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {tx.labels?.length ? (
+                            tx.labels.map((label) => (
+                              <span
+                                key={label}
+                                className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                              >
+                                {label}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No labels</span>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleAction("Label editor", tx.merchant_name)}
+                            onClick={() => handleLabels(tx)}
                           >
                             Manage labels
                           </Button>
@@ -341,7 +502,7 @@ async function handleApprove(tx: TransactionRow) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleAction("Assign envelope", tx.merchant_name)}
+                            onClick={() => handleAssign(tx)}
                           >
                             Assign
                           </Button>
@@ -374,9 +535,11 @@ async function handleApprove(tx: TransactionRow) {
                       <tr className="bg-muted/20">
                         <td colSpan={7} className="px-6 py-4">
                           <SplitEditor
+                            demo={usingDemo}
                             transactionId={tx.id}
                             amount={Number(tx.amount ?? 0)}
                             onClose={() => setSplitTransactionId(null)}
+                            onSaved={applySplitResult}
                           />
                         </td>
                       </tr>
@@ -399,12 +562,11 @@ async function handleApprove(tx: TransactionRow) {
       {isMobile && splitTarget ? (
         <div className="rounded-xl border border-dashed bg-muted/10 p-4 md:hidden">
           <SplitEditor
+            demo={usingDemo}
             transactionId={splitTarget.id}
             amount={Number(splitTarget.amount ?? 0)}
             onClose={() => setSplitTransactionId(null)}
-            onSaved={async () => {
-              toast.success("Split saved (demo)");
-            }}
+            onSaved={applySplitResult}
           />
         </div>
       ) : null}
@@ -433,7 +595,7 @@ async function handleApprove(tx: TransactionRow) {
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    handleAction("Assign envelope", sheetTransaction.merchant_name);
+                    void handleAssign(sheetTransaction);
                     setSheetTransaction(null);
                   }}
                 >
@@ -513,14 +675,14 @@ function MobileTransactionList({
   onSplit,
   onReceipt,
 }: {
-  transactions: TransactionRow[];
+  transactions: WorkbenchRow[];
   duplicates: Map<string, number>;
-  onOpenSheet: (transaction: TransactionRow) => void;
-  onAssign: (transaction: TransactionRow) => void;
-  onApprove: (transaction: TransactionRow) => void;
-  onLabels: (transaction: TransactionRow) => void;
-  onSplit: (transaction: TransactionRow) => void;
-  onReceipt: (transaction: TransactionRow) => void;
+  onOpenSheet: (transaction: WorkbenchRow) => void;
+  onAssign: (transaction: WorkbenchRow) => void;
+  onApprove: (transaction: WorkbenchRow) => void;
+  onLabels: (transaction: WorkbenchRow) => void;
+  onSplit: (transaction: WorkbenchRow) => void;
+  onReceipt: (transaction: WorkbenchRow) => void;
 }) {
   return (
     <div className="space-y-3 md:hidden">
@@ -564,15 +726,15 @@ function MobileTransactionCard({
   onSplit,
   onReceipt,
 }: {
-  transaction: TransactionRow;
+  transaction: WorkbenchRow;
   status: string;
   duplicateFlag: boolean;
-  onOpenSheet: (transaction: TransactionRow) => void;
-  onAssign: (transaction: TransactionRow) => void;
-  onApprove: (transaction: TransactionRow) => void;
-  onLabels: (transaction: TransactionRow) => void;
-  onSplit: (transaction: TransactionRow) => void;
-  onReceipt: (transaction: TransactionRow) => void;
+  onOpenSheet: (transaction: WorkbenchRow) => void;
+  onAssign: (transaction: WorkbenchRow) => void;
+  onApprove: (transaction: WorkbenchRow) => void;
+  onLabels: (transaction: WorkbenchRow) => void;
+  onSplit: (transaction: WorkbenchRow) => void;
+  onReceipt: (transaction: WorkbenchRow) => void;
 }) {
   const [offset, setOffset] = useState(0);
   const startX = useRef(0);
@@ -699,6 +861,15 @@ function MobileTransactionCard({
             Assign
           </button>
         </div>
+        {transaction.labels?.length ? (
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            {transaction.labels.map((label) => (
+              <span key={label} className="rounded-full bg-muted px-2 py-0.5">
+                {label}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-2 text-[11px] text-muted-foreground">
           {transaction.bank_reference ? `Ref ${transaction.bank_reference} · ` : ""}
           {transaction.bank_memo ?? ""}

@@ -6,6 +6,7 @@ const schema = z.object({
   fromId: z.string().uuid(),
   toId: z.string().uuid(),
   amount: z.number().positive(),
+  note: z.string().trim().max(255).optional(),
 });
 
 export async function POST(request: Request) {
@@ -28,7 +29,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const { fromId, toId, amount } = parsed.data;
+  const { fromId, toId, amount, note } = parsed.data;
+
+  if (fromId === toId) {
+    return NextResponse.json({ error: "Cannot transfer to the same envelope" }, { status: 400 });
+  }
 
   const { data: envelopes, error } = await supabase
     .from("envelopes")
@@ -52,34 +57,36 @@ export async function POST(request: Request) {
   }
 
   const fromBalance = Number(fromEnvelope.current_amount ?? 0);
-  const toBalance = Number(toEnvelope.current_amount ?? 0);
 
   if (fromBalance < amount) {
     return NextResponse.json({ error: "Insufficient funds" }, { status: 400 });
   }
 
-  const { error: updateError } = await supabase.rpc("transfer_between_envelopes", {
-    from_envelope_id: fromId,
-    to_envelope_id: toId,
-    transfer_amount: amount,
-  });
+  const { data: transfer, error: transferError } = await supabase.rpc(
+    "transfer_between_envelopes",
+    {
+      p_user_id: session.user.id,
+      p_from_envelope_id: fromId,
+      p_to_envelope_id: toId,
+      p_amount: amount,
+      p_note: note ?? null,
+    },
+  );
 
-  if (updateError) {
-    if (updateError.code === "42883") {
-      await supabase
-        .from("envelopes")
-        .update({ current_amount: fromBalance - amount })
-        .eq("id", fromId)
-        .eq("user_id", session.user.id);
-      await supabase
-        .from("envelopes")
-        .update({ current_amount: toBalance + amount })
-        .eq("id", toId)
-        .eq("user_id", session.user.id);
-    } else {
-      return NextResponse.json({ error: updateError.message }, { status: 400 });
-    }
+  if (transferError) {
+    const message =
+      transferError.message ?? transferError.details ?? "Unable to complete transfer";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true });
+  const { data: updatedEnvelopes } = await supabase
+    .from("envelopes")
+    .select("id, current_amount")
+    .eq("user_id", session.user.id)
+    .in("id", [fromId, toId]);
+
+  return NextResponse.json({
+    transfer,
+    envelopes: updatedEnvelopes ?? [],
+  });
 }

@@ -7,7 +7,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
 ## 1. Backend Foundations
 
 - [ ] **Envelope transfer API** – build `/api/envelopes/transfer`, validate balances, persist transfer history.
-- [ ] **Transaction mutations** – finish approve/assign/split/label endpoints with optimistic cache invalidation (reconcile, transactions pages).
+- [x] **Transaction mutations** – finish approve/assign/split/label endpoints with optimistic cache invalidation (reconcile, transactions pages). (Supabase migrations 0003-0004; API routes updated in `app/api/transactions/[id]/*`).
 - [ ] **Net worth CRUD** – Supabase RPCs or REST endpoints for assets/liabilities create/update/delete and snapshot CRUD.
 - [ ] **Recurring income mutations** – API routes to add/edit/remove income streams and distribution targets.
 - [ ] **Receipt storage** – replace stubbed presign logic with Supabase Storage signed URLs (bucket config + cleanup job).
@@ -87,4 +87,3 @@ Use this progression checklist to move every legacy Replit feature into the new 
 
 - Update this checklist alongside `docs/replit-comparison.md` as features ship.
 - When a section hits ✅, note the PR / Supabase migration IDs for audit purposes.
-

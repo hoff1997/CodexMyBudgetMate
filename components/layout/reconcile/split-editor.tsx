@@ -11,14 +11,35 @@ interface Split {
   amount: number;
 }
 
+export type SplitResult = {
+  transaction: {
+    id: string;
+    amount: number;
+  };
+  splits: Array<{
+    id: string;
+    transactionId: string;
+    envelopeId: string;
+    envelopeName: string;
+    amount: number;
+  }>;
+};
+
 interface Props {
   transactionId: string;
   amount: number;
   onClose: () => void;
-  onSaved?: () => void;
+  onSaved?: (result: SplitResult) => void;
+  demo?: boolean;
 }
 
-export function SplitEditor({ transactionId, amount, onClose, onSaved }: Props) {
+export function SplitEditor({
+  transactionId,
+  amount,
+  onClose,
+  onSaved,
+  demo = false,
+}: Props) {
   const [splits, setSplits] = useState<Split[]>([
     { id: crypto.randomUUID(), envelope: "", amount },
   ]);
@@ -69,6 +90,27 @@ export function SplitEditor({ transactionId, amount, onClose, onSaved }: Props) 
       return;
     }
 
+    const resultFromState: SplitResult = {
+      transaction: {
+        id: transactionId,
+        amount,
+      },
+      splits: splits.map((split) => ({
+        id: split.id,
+        transactionId,
+        envelopeId: split.envelope.trim(),
+        envelopeName: split.envelope.trim(),
+        amount: Number(split.amount ?? 0),
+      })),
+    };
+
+    if (demo || transactionId.startsWith("demo-")) {
+      toast.success("Split saved (demo)");
+      onSaved?.(resultFromState);
+      onClose();
+      return;
+    }
+
     setIsSaving(true);
     try {
       const response = await fetch(`/api/transactions/${transactionId}/split`, {
@@ -76,7 +118,7 @@ export function SplitEditor({ transactionId, amount, onClose, onSaved }: Props) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           splits: splits.map((split) => ({
-            envelopeId: split.envelope.trim(),
+            envelopeName: split.envelope.trim(),
             amount: Number(split.amount ?? 0),
           })),
         }),
@@ -87,8 +129,10 @@ export function SplitEditor({ transactionId, amount, onClose, onSaved }: Props) 
         throw new Error(payload.error ?? "Unable to save split");
       }
 
+      const payload = (await response.json()) as SplitResult;
+
       toast.success("Split saved");
-      onSaved?.();
+      onSaved?.(payload);
       onClose();
     } catch (err) {
       console.error(err);
@@ -102,8 +146,8 @@ export function SplitEditor({ transactionId, amount, onClose, onSaved }: Props) 
     <div className="rounded-xl border bg-muted/20 p-4 text-sm">
       <h4 className="font-semibold text-secondary">Split transaction</h4>
       <p className="text-xs text-muted-foreground">
-        Original amount ${amount.toFixed(2)}. Allocate across envelopes below. This mirrors the Replit split
-        editor and will hook into Supabase mutations soon.
+        Original amount ${amount.toFixed(2)}. Allocate across envelopes below. Splits are persisted to Supabase
+        and track the same workflow the Replit build used.
       </p>
       <div className="mt-3 space-y-3">
         {splits.map((split) => (

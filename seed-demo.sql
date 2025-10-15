@@ -2,6 +2,12 @@
 begin;
 
 -- Ensure rerunning the seed removes any previous demo data.
+delete from public.transaction_splits
+where user_id = '00000000-0000-0000-0000-000000000001'::uuid;
+
+delete from public.transaction_labels
+where user_id = '00000000-0000-0000-0000-000000000001'::uuid;
+
 delete from auth.users
 where id = '00000000-0000-0000-0000-000000000001'::uuid
    or email = 'demo@example.com';

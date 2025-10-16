@@ -1,6 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ export function ReceiptUploadDialog({ open, onOpenChange, transactionId }: Props
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -63,14 +65,20 @@ export function ReceiptUploadDialog({ open, onOpenChange, transactionId }: Props
                   throw new Error(payload.error ?? "Unable to upload receipt");
                 }
 
-                const { uploadUrl, receiptUrl } = (await presignResponse.json()) as {
+                const { uploadUrl, receiptPath, headers } = (await presignResponse.json()) as {
                   uploadUrl: string;
-                  receiptUrl: string;
+                  receiptPath: string;
+                  headers?: Record<string, string>;
+                };
+
+                const uploadHeaders: Record<string, string> = {
+                  "Content-Type": file.type,
+                  ...(headers ?? {}),
                 };
 
                 const upload = await fetch(uploadUrl, {
                   method: "PUT",
-                  headers: { "Content-Type": file.type },
+                  headers: uploadHeaders,
                   body: file,
                 });
 
@@ -81,7 +89,7 @@ export function ReceiptUploadDialog({ open, onOpenChange, transactionId }: Props
                 const finalize = await fetch(`/api/transactions/${transactionId}/receipt`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ receiptUrl }),
+                  body: JSON.stringify({ receiptPath }),
                 });
 
                 if (!finalize.ok) {
@@ -91,6 +99,7 @@ export function ReceiptUploadDialog({ open, onOpenChange, transactionId }: Props
                 toast.success("Receipt uploaded");
                 onOpenChange(false);
                 setFile(null);
+                router.refresh();
               } catch (err) {
                 console.error(err);
                 setError(err instanceof Error ? err.message : "Unable to upload receipt");
@@ -101,7 +110,7 @@ export function ReceiptUploadDialog({ open, onOpenChange, transactionId }: Props
           >
             <Dialog.Title className="text-lg font-semibold text-secondary">Upload receipt</Dialog.Title>
             <Dialog.Description className="text-sm text-muted-foreground">
-              Attach a PDF or image under 5MB. Storage wiring will hook into Supabase in a future sprint.
+              Attach a PDF or image under 5MB. Files are stored securely in Supabase Storage and linked to the transaction automatically.
             </Dialog.Description>
             <div className="space-y-2">
               <Input

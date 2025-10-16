@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ReconcileWorkbench } from "./reconcile-workbench";
+import { applySignedReceiptUrls } from "@/lib/storage/receipts";
 
 export default async function ReconcilePage() {
   const supabase = await createClient();
@@ -11,6 +12,8 @@ export default async function ReconcilePage() {
     .order("occurred_at", { ascending: false })
     .limit(200);
 
+  const hydrated = await applySignedReceiptUrls(transactions ?? []);
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12 md:px-10">
       <header className="space-y-3">
@@ -21,7 +24,7 @@ export default async function ReconcilePage() {
           All / Pending / Unmatched cards.
         </p>
       </header>
-      <ReconcileWorkbench transactions={transactions ?? []} />
+      <ReconcileWorkbench transactions={hydrated} />
     </div>
   );
 }

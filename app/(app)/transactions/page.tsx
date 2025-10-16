@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { TransactionsTable } from "@/components/layout/transactions/transactions-table";
+import { applySignedReceiptUrls } from "@/lib/storage/receipts";
 
 export default async function TransactionsPage() {
   const supabase = await createClient();
@@ -12,6 +13,7 @@ export default async function TransactionsPage() {
     .limit(100);
 
   const list = error ? [] : transactions ?? [];
+  const hydrated = await applySignedReceiptUrls(list);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12 md:px-10">
@@ -26,7 +28,7 @@ export default async function TransactionsPage() {
           Transactions are unavailable until the view is created in Supabase.
         </div>
       )}
-      <TransactionsTable transactions={list} />
+      <TransactionsTable transactions={hydrated} />
     </div>
   );
 }

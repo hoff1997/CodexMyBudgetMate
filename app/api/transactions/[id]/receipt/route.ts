@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-type PresignResponse = {
-  uploadUrl: string;
-  receiptUrl: string;
-};
+import { createReceiptUploadUrl, createSignedReceiptUrl, removeReceipt } from "@/lib/storage/receipts";
 
 export async function POST(
   request: Request,
@@ -32,18 +28,33 @@ export async function POST(
 
   const body = await request.json();
   const fileName = String(body.fileName ?? "").trim() || `${params.id}.bin`;
-  const contentType = String(body.contentType ?? "application/octet-stream");
-  const path = `${session.user.id}/${params.id}/${fileName}`;
+  const contentTypeRaw = String(body.contentType ?? "application/octet-stream");
+  const contentType = contentTypeRaw.toLowerCase();
+  if (!contentType.startsWith("image/") && contentType !== "application/pdf") {
+    return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+  }
 
-  // TODO: call Supabase Storage to create signed URL
-  const fakeUrl = `https://storage.supabase.local/receipts/${encodeURIComponent(path)}`;
+  try {
+    const { uploadUrl, path } = await createReceiptUploadUrl({
+      userId: session.user.id,
+      transactionId: params.id,
+      fileName,
+    });
 
-  const payload: PresignResponse = {
-    uploadUrl: fakeUrl,
-    receiptUrl: fakeUrl,
-  };
-
-  return NextResponse.json(payload);
+    return NextResponse.json({
+      uploadUrl,
+      receiptPath: path,
+      headers: {
+        "Content-Type": contentTypeRaw,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unable to create upload URL" },
+      { status: 500 },
+    );
+  }
 }
 
 export async function PATCH(
@@ -60,14 +71,38 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const receiptUrl = String(body.receiptUrl ?? "").trim();
-  if (!receiptUrl) {
-    return NextResponse.json({ error: "receiptUrl is required" }, { status: 400 });
+  const receiptPath = String(body.receiptPath ?? "").trim();
+  if (!receiptPath) {
+    return NextResponse.json({ error: "receiptPath is required" }, { status: 400 });
   }
+
+  const expectedPrefix = `${session.user.id}/`;
+  if (!receiptPath.startsWith(expectedPrefix)) {
+    return NextResponse.json({ error: "Path does not belong to user" }, { status: 400 });
+  }
+
+  const supabase = await createClient();
+
+  const { data: existing, error: existingError } = await supabase
+    .from("transactions")
+    .select("id, receipt_url")
+    .eq("id", params.id)
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 400 });
+  }
+
+  if (!existing) {
+    return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+  }
+
+  const previousPath = existing.receipt_url ? String(existing.receipt_url) : null;
 
   const { error } = await supabase
     .from("transactions")
-    .update({ receipt_url: receiptUrl })
+    .update({ receipt_url: receiptPath })
     .eq("id", params.id)
     .eq("user_id", session.user.id);
 
@@ -75,5 +110,17 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ receiptUrl });
+  if (previousPath && previousPath !== receiptPath) {
+    removeReceipt(previousPath).catch((err) => {
+      console.error("Failed to remove previous receipt", err);
+    });
+  }
+
+  try {
+    const { signedUrl, expiresIn } = await createSignedReceiptUrl(receiptPath);
+    return NextResponse.json({ receiptUrl: signedUrl, receiptPath, expiresIn });
+  } catch (signedError) {
+    console.error(signedError);
+    return NextResponse.json({ receiptPath }, { status: 200 });
+  }
 }

@@ -12,6 +12,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
 - [x] **Recurring income mutations** – API routes to add/edit/remove income streams and distribution targets. (Supabase migration 0005; REST handlers in `app/api/recurring-income/**/*` wired into client drawers.)
 - [x] **Receipt storage** – replace stubbed presign logic with Supabase Storage signed URLs (bucket config + cleanup job). (Storage helpers in `lib/storage/receipts.ts`, route upgraded in `/api/transactions/[id]/receipt`, receipt upload dialog wired to signed URLs, old files cleaned on replace.)
 - [x] **Background jobs** – schedule Akahu sync + envelope recalcs via Supabase cron or edge functions. (Cron-driven edge function in `supabase/functions/jobs-runner`, secured `/api/jobs/run` endpoint, Akahu sync + envelope recalculation tasks.)
+  - ☐ Configure Supabase cron schedules via dashboard (**Edge Functions → jobs-runner → Scheduling**) once secrets are set (`CRON_SECRET`, `JOB_TARGET_URL`).
 
 ---
 

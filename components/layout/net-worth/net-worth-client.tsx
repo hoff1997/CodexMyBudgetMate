@@ -11,14 +11,23 @@ import { formatCurrency } from "@/lib/finance";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+type MonthlySnapshot = {
+  month_date: string;
+  source_snapshot_date: string;
+  total_assets: number;
+  total_liabilities: number;
+  net_worth: number;
+};
+
 interface Props {
   assets: AssetRow[];
   liabilities: LiabilityRow[];
   snapshots: NetWorthSnapshotRow[];
+  monthlySnapshots: MonthlySnapshot[];
   canEdit: boolean;
 }
 
-export function NetWorthClient({ assets, liabilities, snapshots, canEdit }: Props) {
+export function NetWorthClient({ assets, liabilities, snapshots, monthlySnapshots, canEdit }: Props) {
   const router = useRouter();
   const [assetDrawerOpen, setAssetDrawerOpen] = useState(false);
   const [liabilityDrawerOpen, setLiabilityDrawerOpen] = useState(false);
@@ -59,23 +68,31 @@ export function NetWorthClient({ assets, liabilities, snapshots, canEdit }: Prop
   }, [assets, assetTotals]);
 
   const timeline = useMemo(() => {
-    const base = snapshots.length
-      ? snapshots
-      : [
-          {
-            id: "demo-snap",
-            snapshot_date: new Date().toISOString(),
-            total_assets: assetTotals,
-            total_liabilities: liabilityTotals,
-            net_worth: netWorth,
-          },
-        ];
+    const base = monthlySnapshots.length
+      ? monthlySnapshots
+      : snapshots.length
+        ? snapshots.map((snapshot) => ({
+            month_date: snapshot.snapshot_date,
+            source_snapshot_date: snapshot.snapshot_date,
+            total_assets: Number(snapshot.total_assets ?? 0),
+            total_liabilities: Number(snapshot.total_liabilities ?? 0),
+            net_worth: Number(snapshot.net_worth ?? 0),
+          }))
+        : [
+            {
+              month_date: new Date().toISOString(),
+              source_snapshot_date: new Date().toISOString(),
+              total_assets: assetTotals,
+              total_liabilities: liabilityTotals,
+              net_worth: netWorth,
+            },
+          ];
     return base.map((snapshot) => ({
-      id: snapshot.id,
-      date: new Date(snapshot.snapshot_date),
+      id: snapshot.source_snapshot_date,
+      date: new Date(snapshot.month_date),
       net: Number(snapshot.net_worth ?? 0),
     }));
-  }, [snapshots, assetTotals, liabilityTotals, netWorth]);
+  }, [monthlySnapshots, snapshots, assetTotals, liabilityTotals, netWorth]);
 
   async function createSnapshot() {
     try {

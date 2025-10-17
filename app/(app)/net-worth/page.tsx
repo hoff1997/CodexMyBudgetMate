@@ -7,7 +7,7 @@ export default async function NetWorthPage() {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const [assetsRes, liabilitiesRes, snapshotsRes] = await Promise.all([
+  const [assetsRes, liabilitiesRes, snapshotsRes, monthlyRes] = await Promise.all([
     supabase
       .from("assets")
       .select("id, name, asset_type, current_value, notes, updated_at")
@@ -23,11 +23,23 @@ export default async function NetWorthPage() {
       .select("id, snapshot_date, total_assets, total_liabilities, net_worth")
       .eq("user_id", session?.user.id ?? "")
       .order("snapshot_date", { ascending: true }),
+    supabase
+      .from("net_worth_snapshots_monthly")
+      .select("month_date, source_snapshot_date, total_assets, total_liabilities, net_worth")
+      .eq("user_id", session?.user.id ?? "")
+      .order("month_date", { ascending: true }),
   ]);
 
   let assets = (assetsRes.data ?? []) as AssetRow[];
   let liabilities = (liabilitiesRes.data ?? []) as LiabilityRow[];
   let snapshots = (snapshotsRes.data ?? []) as NetWorthSnapshotRow[];
+  let monthly = (monthlyRes.data ?? []) as Array<{
+    month_date: string;
+    source_snapshot_date: string;
+    total_assets: number;
+    total_liabilities: number;
+    net_worth: number;
+  }>;
 
   if (!session) {
     assets = [
@@ -72,6 +84,13 @@ export default async function NetWorthPage() {
         net_worth: -277000,
       },
     ];
+    monthly = snapshots.map((snapshot) => ({
+      month_date: snapshot.snapshot_date,
+      source_snapshot_date: snapshot.snapshot_date,
+      total_assets: Number(snapshot.total_assets ?? 0),
+      total_liabilities: Number(snapshot.total_liabilities ?? 0),
+      net_worth: Number(snapshot.net_worth ?? 0),
+    }));
   }
 
   return (
@@ -79,6 +98,7 @@ export default async function NetWorthPage() {
       assets={assets}
       liabilities={liabilities}
       snapshots={snapshots}
+      monthlySnapshots={monthly}
       canEdit={Boolean(session)}
     />
   );

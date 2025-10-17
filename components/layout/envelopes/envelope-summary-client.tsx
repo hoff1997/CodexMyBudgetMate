@@ -14,6 +14,7 @@ import { ZeroBudgetManager } from "@/app/(app)/envelope-summary/zero-budget-mana
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
+import type { TransferHistoryItem } from "@/lib/types/envelopes";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -29,10 +30,12 @@ type StatusFilter = (typeof FILTERS)[number]["key"];
 export function EnvelopeSummaryClient({
   list,
   totals,
+  transferHistory,
   defaultTab,
 }: {
   list: SummaryEnvelope[];
   totals: { target: number; current: number };
+  transferHistory: TransferHistoryItem[];
   defaultTab?: string;
 }) {
   const router = useRouter();
@@ -225,7 +228,7 @@ export function EnvelopeSummaryClient({
           </div>
         </TabsContent>
         <TabsContent value="zero-budget">
-          <ZeroBudgetManager envelopes={orderedEnvelopes} />
+          <ZeroBudgetManager envelopes={orderedEnvelopes} transferHistory={transferHistory} />
         </TabsContent>
       </Tabs>
 

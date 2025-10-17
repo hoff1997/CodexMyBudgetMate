@@ -2,6 +2,8 @@ import { addMonths, format } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { ReportsClient } from "@/components/layout/reports/reports-client";
 import type { ReportsData, SpendingPoint, IncomePoint, DebtReportRow } from "@/lib/types/reports";
+import { mapTransferHistory } from "@/lib/types/envelopes";
+import type { TransferHistoryItem } from "@/lib/types/envelopes";
 
 type EnvelopeRecord = {
   id: string;
@@ -33,13 +35,14 @@ export default async function ReportsPage() {
   let envelopes: EnvelopeRecord[] = [];
   let transactions: TransactionRecord[] = [];
   let liabilities: LiabilityRecord[] = [];
+  let transfers: TransferHistoryItem[] = [];
 
   if (session) {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 5, 1);
     startDate.setHours(0, 0, 0, 0);
 
-    const [envelopeRes, transactionRes, liabilityRes] = await Promise.all([
+    const [envelopeRes, transactionRes, liabilityRes, transfersRes] = await Promise.all([
       supabase
         .from("envelopes")
         .select("id, name, pay_cycle_amount, target_amount, frequency")
@@ -50,14 +53,28 @@ export default async function ReportsPage() {
         .gte("occurred_at", startDate.toISOString())
         .order("occurred_at", { ascending: true }),
       supabase.from("liabilities").select("id, name, current_balance, interest_rate"),
+      supabase
+        .from("envelope_transfers")
+        .select(
+          "id, amount, note, created_at, from_envelope:from_envelope_id(id, name), to_envelope:to_envelope_id(id, name)",
+        )
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
 
     envelopes = (envelopeRes.data ?? []) as EnvelopeRecord[];
     transactions = (transactionRes.data ?? []) as TransactionRecord[];
     liabilities = (liabilityRes.data ?? []) as LiabilityRecord[];
+    transfers = mapTransferHistory(transfersRes.data as any);
   }
 
-  const data = buildReportsData({ envelopes, transactions, liabilities, demoMode: !session });
+  const data = buildReportsData({
+    envelopes,
+    transactions,
+    liabilities,
+    transfers,
+    demoMode: !session,
+  });
 
   return <ReportsClient data={data} />;
 }
@@ -66,11 +83,13 @@ function buildReportsData({
   envelopes,
   transactions,
   liabilities,
+  transfers,
   demoMode,
 }: {
   envelopes: EnvelopeRecord[];
   transactions: TransactionRecord[];
   liabilities: LiabilityRecord[];
+  transfers: TransferHistoryItem[];
   demoMode: boolean;
 }): ReportsData {
   if (demoMode) {
@@ -167,6 +186,7 @@ function buildReportsData({
       { label: "Debt payoff plan (PDF)", href: "/api/reports/debt" },
     ],
     demoMode,
+    transfers,
   };
 }
 
@@ -237,6 +257,24 @@ function getDemoReportsData(): ReportsData {
       { label: "Debt payoff plan (PDF)", href: "#" },
     ],
     demoMode: true,
+    transfers: [
+      {
+        id: "demo-transfer-1",
+        amount: 150,
+        note: "Top up groceries after long weekend",
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+        from: { id: "demo-emergency", name: "Emergency fund" },
+        to: { id: "demo-groceries", name: "Groceries" },
+      },
+      {
+        id: "demo-transfer-2",
+        amount: 220,
+        note: "Shift surplus to holidays envelope",
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
+        from: { id: "demo-surplus", name: "Surplus" },
+        to: { id: "demo-holiday", name: "Holiday savings" },
+      },
+    ],
   };
 }
 

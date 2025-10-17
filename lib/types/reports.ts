@@ -34,4 +34,5 @@ export type ReportsData = {
   debts: DebtReportRow[];
   exportLinks: { label: string; href: string }[];
   demoMode: boolean;
+  transfers: import("@/lib/types/envelopes").TransferHistoryItem[];
 };

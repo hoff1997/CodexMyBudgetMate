@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/finance";
 import type { ReportsData, SpendingPoint, IncomePoint, DebtReportRow } from "@/lib/types/reports";
+import type { TransferHistoryItem } from "@/lib/types/envelopes";
+import { formatDistanceToNow } from "date-fns";
 
 type Props = {
   data: ReportsData;
@@ -126,6 +128,8 @@ export function ReportsClient({ data }: Props) {
           ))}
         </CardContent>
       </Card>
+
+      <TransferHistoryCard transfers={data.transfers} />
     </div>
   );
 }
@@ -146,6 +150,46 @@ function SummaryCard({
       </CardHeader>
       <CardContent>
         <p className={`text-2xl font-semibold ${tone}`}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TransferHistoryCard({ transfers }: { transfers: TransferHistoryItem[] }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>Recent envelope transfers</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Track how you’re rebalancing envelopes between pay cycles. These changes help explain spending vs plan variances.
+          </p>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm text-muted-foreground">
+        {transfers.length ? (
+          transfers.slice(0, 6).map((transfer) => (
+            <div
+              key={transfer.id}
+              className="rounded-xl border border-border bg-muted/20 px-4 py-3 text-secondary"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  {transfer.from.name ?? "Unassigned"} → {transfer.to.name ?? "Unassigned"}
+                </span>
+                <span>{formatDistanceToNow(new Date(transfer.createdAt), { addSuffix: true })}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-secondary">
+                <span>{transfer.note ?? "No note"}</span>
+                <span>{formatCurrency(transfer.amount)}</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No transfers recorded yet. Use the transfer dialog to capture envelope-to-envelope movements.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

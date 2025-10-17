@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeSummaryClient } from "@/components/layout/envelopes/envelope-summary-client";
+import { mapTransferHistory } from "@/lib/types/envelopes";
 
 type PageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -20,6 +21,14 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
     .from("envelope_categories")
     .select("id, name")
     .order("name");
+
+  const { data: transfers } = await supabase
+    .from("envelope_transfers")
+    .select(
+      "id, amount, note, created_at, from_envelope:from_envelope_id(id, name), to_envelope:to_envelope_id(id, name)",
+    )
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   const categoryLookup = new Map<string, string>();
   (categories ?? []).forEach((category) => {
@@ -48,10 +57,13 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
     { target: 0, current: 0 },
   );
 
+  const transferHistory = mapTransferHistory(transfers ?? []);
+
   return (
     <EnvelopeSummaryClient
       list={list}
       totals={totals}
+      transferHistory={transferHistory}
       defaultTab={typeof searchParams?.tab === "string" ? searchParams?.tab : undefined}
     />
   );

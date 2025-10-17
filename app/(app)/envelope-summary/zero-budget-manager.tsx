@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { formatDistanceToNow } from "date-fns";
 import type { EnvelopeRow } from "@/lib/auth/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
+import type { TransferHistoryItem } from "@/lib/types/envelopes";
 
 const demoBudget: EnvelopeRow[] = [
   {
@@ -64,7 +66,13 @@ function enrichRows(rows: EnvelopeRow[]): ManagerRow[] {
   }));
 }
 
-export function ZeroBudgetManager({ envelopes }: { envelopes: EnvelopeRow[] }) {
+export function ZeroBudgetManager({
+  envelopes,
+  transferHistory = [],
+}: {
+  envelopes: EnvelopeRow[];
+  transferHistory?: TransferHistoryItem[];
+}) {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tableRows, setTableRows] = useState(() => enrichRows(envelopes));
   const [showHistory, setShowHistory] = useState(false);
@@ -104,29 +112,7 @@ export function ZeroBudgetManager({ envelopes }: { envelopes: EnvelopeRow[] }) {
     };
   }, [tableRows]);
 
-  const history = useMemo(
-    () => [
-      {
-        id: "hist-1",
-        title: "Balanced budget",
-        description: "Hit zero-based target for end of March pay cycle.",
-        achievedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14),
-      },
-      {
-        id: "hist-2",
-        title: "Emergency fund milestone",
-        description: "Emergency fund reached $2,000 ready balance.",
-        achievedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 42),
-      },
-      {
-        id: "hist-3",
-        title: "Debt snowball win",
-        description: "Harvey Norman store card repaid ahead of schedule.",
-        achievedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 70),
-      },
-    ],
-    [],
-  );
+  const transfersPreview = useMemo(() => transferHistory.slice(0, 4), [transferHistory]);
 
   const deficits = tableRows
     .map((row) => {
@@ -336,6 +322,41 @@ export function ZeroBudgetManager({ envelopes }: { envelopes: EnvelopeRow[] }) {
         </table>
       </div>
 
+      {transferHistory.length ? (
+        <div className="rounded-xl border border-muted/40 bg-muted/10 px-6 py-5 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold text-secondary">Recent envelope transfers</p>
+            <Button size="sm" variant="outline" onClick={() => setShowHistory(true)}>
+              View full history
+            </Button>
+          </div>
+          <ul className="mt-3 space-y-2">
+            {transfersPreview.map((transfer) => (
+              <li
+                key={transfer.id}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-xs text-muted-foreground"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium text-secondary">
+                    {transfer.from.name ?? "Unassigned"} → {transfer.to.name ?? "Unassigned"}
+                  </span>
+                  <span className="font-semibold text-secondary">{formatCurrency(transfer.amount)}</span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <span>{transfer.note ?? "No note"}</span>
+                  <span>{formatDistanceToNow(new Date(transfer.createdAt), { addSuffix: true })}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-muted/40 bg-muted/10 px-6 py-5 text-sm text-muted-foreground">
+          No transfers recorded yet. Move funds between envelopes from the transfer dialog to build
+          a history.
+        </div>
+      )}
+
       {metrics.status === "balanced" ? (
         <div className="rounded-xl border border-primary/40 bg-primary/5 px-6 py-5 text-sm text-primary">
           🎉 Ka pai! Zero budget achieved. Keep an eye on reconciliation to maintain the streak.
@@ -389,20 +410,24 @@ export function ZeroBudgetManager({ envelopes }: { envelopes: EnvelopeRow[] }) {
         </div>
       ) : null}
 
-      <CelebrationHistory open={showHistory} onOpenChange={setShowHistory} history={history} />
+      <TransferHistoryDialog
+        open={showHistory}
+        onOpenChange={setShowHistory}
+        transfers={transferHistory}
+      />
       <CelebrationOverlay open={showCelebration} onOpenChange={setShowCelebration} />
     </div>
   );
 }
 
-function CelebrationHistory({
+function TransferHistoryDialog({
   open,
   onOpenChange,
-  history,
+  transfers,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
-  history: { id: string; title: string; description: string; achievedAt: Date }[];
+  transfers: TransferHistoryItem[];
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -411,21 +436,34 @@ function CelebrationHistory({
         <Dialog.Content className="fixed inset-0 flex items-center justify-center px-4">
           <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-3xl border bg-background p-6 shadow-xl">
             <Dialog.Title className="text-lg font-semibold text-secondary">
-              Celebration history
+              Envelope transfer history
             </Dialog.Title>
             <Dialog.Description className="text-sm text-muted-foreground">
-              Snapshot of recent wins. This will connect to Supabase event logging soon.
+              Latest envelope-to-envelope movements. Use transfers to rebalance your plan between pay cycles.
             </Dialog.Description>
             <ul className="mt-4 space-y-3">
-              {history.map((event) => (
-                <li key={event.id} className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-sm font-semibold text-secondary">{event.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {event.achievedAt.toLocaleDateString("en-NZ", { dateStyle: "medium" })}
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">{event.description}</p>
+              {transfers.length ? (
+                transfers.map((transfer) => (
+                  <li key={transfer.id} className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-secondary">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold">
+                        {transfer.from.name ?? "Unassigned"} → {transfer.to.name ?? "Unassigned"}
+                      </span>
+                      <span className="font-semibold">{formatCurrency(transfer.amount)}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {transfer.note ?? "No note added"}
+                    </p>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      {formatDistanceToNow(new Date(transfer.createdAt), { addSuffix: true })}
+                    </p>
+                  </li>
+                ))
+              ) : (
+                <li className="rounded-xl border border-dashed border-primary/20 bg-background p-4 text-xs text-muted-foreground">
+                  No transfers yet. Use the transfer dialog to move funds between envelopes and build a history.
                 </li>
-              ))}
+              )}
             </ul>
             <div className="mt-6 text-right">
               <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>

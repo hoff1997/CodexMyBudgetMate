@@ -1,16 +1,12 @@
 [functions.jobs-runner]
 verify_jwt = false
 
-[functions.jobs-runner.environment]
-CRON_SECRET = "${CRON_SECRET}"
-JOB_TARGET_URL = "${CRON_TARGET_URL}"
-
-[[functions.jobs-runner.cron]]
+[[cron]]
+function = "jobs-runner"
 schedule = "*/30 * * * *"
-http_method = "POST"
 payload = "{\"task\":\"akahu\"}"
 
-[[functions.jobs-runner.cron]]
+[[cron]]
+function = "jobs-runner"
 schedule = "0 2 * * *"
-http_method = "POST"
 payload = "{\"task\":\"envelopes\"}"

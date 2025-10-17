@@ -27,6 +27,8 @@ type LabelRow = {
   id: string;
   name: string;
   colour: string | null;
+  description: string | null;
+  usageCount: number;
 };
 
 type BankConnectionRow = {
@@ -73,6 +75,8 @@ export function SettingsClient({ data }: Props) {
   const [labels, setLabels] = useState<LabelRow[]>(data.labels);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColour, setNewLabelColour] = useState("#0ea5e9");
+  const [newLabelDescription, setNewLabelDescription] = useState("");
+  const [refreshingUsage, setRefreshingUsage] = useState(false);
   const [webhooks, setWebhooks] = useState<WebhookSettings>(data.webhooks);
   const [security, setSecurity] = useState<SecuritySettings>(data.security);
   const [notes, setNotes] = useState("");
@@ -126,24 +130,121 @@ export function SettingsClient({ data }: Props) {
     toast.success("Profile details saved");
   }
 
-  function handleCreateLabel() {
+  async function handleCreateLabel() {
     if (!newLabelName.trim()) {
       toast.error("Label name cannot be blank");
       return;
     }
-    const newLabel: LabelRow = {
-      id: `local-${Date.now()}`,
-      name: newLabelName.trim(),
-      colour: newLabelColour,
-    };
-    setLabels((prev) => [...prev, newLabel]);
-    setNewLabelName("");
-    toast.success("Label added");
+
+    try {
+      const response = await fetch("/api/labels", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newLabelName.trim(),
+          colour: newLabelColour,
+          description: newLabelDescription.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to create label" }));
+        throw new Error(payload.error ?? "Unable to create label");
+      }
+
+      const { label } = (await response.json()) as { label: LabelRow };
+      setLabels((prev) => [label, ...prev]);
+      setNewLabelName("");
+      setNewLabelDescription("");
+      toast.success("Label added");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to create label");
+    }
   }
 
-  function handleDeleteLabel(id: string) {
-    setLabels((prev) => prev.filter((label) => label.id !== id));
-    toast.success("Label removed");
+  async function handleDeleteLabel(id: string) {
+    try {
+      const response = await fetch(`/api/labels/${id}`, { method: "DELETE" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to delete label" }));
+        throw new Error(payload.error ?? "Unable to delete label");
+      }
+      setLabels((prev) => prev.filter((label) => label.id !== id));
+      toast.success("Label removed");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to delete label");
+    }
+  }
+
+  async function handleEditLabel(label: LabelRow) {
+    const nextName = window.prompt("Update label name", label.name)?.trim();
+    if (nextName === null) return;
+    if (!nextName) {
+      toast.error("Label name cannot be blank");
+      return;
+    }
+
+    const nextDescription = window.prompt(
+      "Update label description (leave blank to clear)",
+      label.description ?? "",
+    );
+    const nextColour = window.prompt("Update colour (#hex)", label.colour ?? "#0ea5e9") ??
+      label.colour ?? "#0ea5e9";
+
+    try {
+      const response = await fetch(`/api/labels/${label.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nextName,
+          colour: nextColour,
+          description:
+            nextDescription === null
+              ? undefined
+              : nextDescription.trim().length
+                ? nextDescription.trim()
+                : null,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to update label" }));
+        throw new Error(payload.error ?? "Unable to update label");
+      }
+
+      const { label: updated } = (await response.json()) as { label: LabelRow };
+      setLabels((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      toast.success("Label updated");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to update label");
+    }
+  }
+
+  async function handleRefreshUsage() {
+    setRefreshingUsage(true);
+    try {
+      const response = await fetch("/api/labels/usage", { method: "POST" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to refresh usage" }));
+        throw new Error(payload.error ?? "Unable to refresh usage counts");
+      }
+      const { counts } = (await response.json()) as { counts: Array<{ id: string; usage_count: number }> };
+      setLabels((prev) =>
+        prev.map((label) => {
+          const match = counts.find((item) => item.id === label.id);
+          return match ? { ...label, usageCount: match.usage_count ?? 0 } : label;
+        }),
+      );
+      toast.success("Usage counts refreshed");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to refresh usage counts");
+    } finally {
+      setRefreshingUsage(false);
+    }
   }
 
   function handleToggleWebhook(key: keyof WebhookSettings) {
@@ -307,7 +408,7 @@ export function SettingsClient({ data }: Props) {
       <Card>
         <CardHeader>
           <CardTitle>Label manager</CardTitle>
-          <CardDescription>Keep transaction and envelope labels tidy with colour coding.</CardDescription>
+          <CardDescription>Keep transaction and envelope labels tidy with colour coding and notes.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-[2fr,1fr,auto]">
@@ -333,23 +434,46 @@ export function SettingsClient({ data }: Props) {
               </Button>
             </div>
           </div>
+          <label className="block space-y-1 text-sm">
+            <span className="text-muted-foreground">Description (optional)</span>
+            <Textarea
+              value={newLabelDescription}
+              onChange={(event) => setNewLabelDescription(event.target.value)}
+              placeholder="eg. Recurring utilities and household bills"
+            />
+          </label>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {labels.length ? (
               labels.map((label) => (
                 <div
                   key={label.id}
-                  className="flex items-center justify-between rounded-lg border bg-muted/20 px-3 py-2 text-sm"
+                  className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-3 text-sm"
                   style={{ borderColor: label.colour ?? undefined }}
                 >
-                  <div>
-                    <p className="font-medium text-secondary">{label.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {label.colour ?? "Default palette"}
-                    </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-secondary">{label.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {label.description ?? "No description"}
+                      </p>
+                    </div>
+                    <span
+                      className="inline-flex h-6 w-6 items-center justify-center rounded-full border"
+                      style={{ backgroundColor: label.colour ?? undefined }}
+                      title={label.colour ?? "Default"}
+                    />
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => handleDeleteLabel(label.id)}>
-                    Remove
-                  </Button>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{label.usageCount} uses</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => handleEditLabel(label)}>
+                        Edit
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDeleteLabel(label.id)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))
             ) : (
@@ -358,16 +482,27 @@ export function SettingsClient({ data }: Props) {
               </div>
             )}
           </div>
-          <div>
-            <Label className="text-sm text-muted-foreground" htmlFor="label-notes">
-              Label automation notes
-            </Label>
-            <Textarea
-              id="label-notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Document category rules or coaching notes for label usage."
-            />
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshUsage}
+              disabled={refreshingUsage}
+            >
+              {refreshingUsage ? "Refreshing…" : "Refresh usage counts"}
+            </Button>
+            <div className="flex-1 space-y-2">
+              <Label className="text-sm text-muted-foreground" htmlFor="label-notes">
+                Label automation notes
+              </Label>
+              <Textarea
+                id="label-notes"
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Document category rules or coaching notes for label usage."
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

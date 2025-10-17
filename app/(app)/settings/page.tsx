@@ -18,6 +18,8 @@ type LabelRecord = {
   id: string;
   name: string;
   colour: string | null;
+  description: string | null;
+  usage_count: number | null;
 };
 
 type BankConnectionRecord = {
@@ -51,7 +53,7 @@ export default async function SettingsPage() {
         .order("name"),
       supabase
         .from("labels")
-        .select("id, name, colour")
+        .select("id, name, colour, description, usage_count")
         .eq("user_id", session.user.id)
         .order("name"),
       supabase
@@ -88,6 +90,8 @@ export default async function SettingsPage() {
           id: label.id,
           name: label.name,
           colour: label.colour,
+          description: label.description,
+          usageCount: label.usage_count ?? 0,
         })),
         bankConnections: bankConnections.map((connection) => ({
           id: connection.id,
@@ -141,9 +145,27 @@ function getDemoSettingsData(): SettingsData {
       },
     ],
     labels: [
-      { id: "demo-household", name: "Household", colour: "#8b5cf6" },
-      { id: "demo-transport", name: "Transport", colour: "#0ea5e9" },
-      { id: "demo-fun", name: "Fun", colour: "#f97316" },
+      {
+        id: "demo-household",
+        name: "Household",
+        colour: "#8b5cf6",
+        description: "General household expenses",
+        usageCount: 18,
+      },
+      {
+        id: "demo-transport",
+        name: "Transport",
+        colour: "#0ea5e9",
+        description: "Fuel, parking, public transport",
+        usageCount: 9,
+      },
+      {
+        id: "demo-fun",
+        name: "Fun",
+        colour: "#f97316",
+        description: "Entertainment and treats",
+        usageCount: 6,
+      },
     ],
     bankConnections: [
       {

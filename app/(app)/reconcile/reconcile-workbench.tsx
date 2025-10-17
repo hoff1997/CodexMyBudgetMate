@@ -18,6 +18,16 @@ type WorkbenchRow = TransactionRow & {
   labels?: string[];
 };
 
+function duplicateKey(transaction: WorkbenchRow) {
+  const reference = transaction.bank_reference?.trim().toLowerCase();
+  if (reference) return reference;
+  const merchant = transaction.merchant_name?.trim().toLowerCase();
+  if (!merchant) return null;
+  const amount = Number(transaction.amount ?? 0).toFixed(2);
+  const date = new Date(transaction.occurred_at).toISOString().slice(0, 10);
+  return `${merchant}::${amount}::${date}`;
+}
+
 const demoTransactions: WorkbenchRow[] = [
   {
     id: "demo-uber",
@@ -31,6 +41,7 @@ const demoTransactions: WorkbenchRow[] = [
     bank_reference: "UBER123",
     bank_memo: "Card 1234",
     labels: [],
+    duplicate_status: "pending",
   },
   {
     id: "demo-mitre",
@@ -44,6 +55,7 @@ const demoTransactions: WorkbenchRow[] = [
     bank_reference: "MITRE987",
     bank_memo: "EFTPOS",
     labels: [],
+    duplicate_status: "pending",
   },
   {
     id: "demo-westfield",
@@ -57,6 +69,7 @@ const demoTransactions: WorkbenchRow[] = [
     bank_reference: "WESTF11",
     bank_memo: "Parking",
     labels: [],
+    duplicate_status: "pending",
   },
 ];
 
@@ -91,12 +104,15 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const usingDemo = transactions.length === 0;
   const initialRows = useMemo<WorkbenchRow[]>(
     () =>
-      (transactions.length ? transactions : demoTransactions).map((transaction) => ({
-        ...transaction,
-        labels: Array.isArray((transaction as WorkbenchRow).labels)
-          ? [...((transaction as WorkbenchRow).labels ?? [])]
-          : [],
-      })),
+      (transactions.length ? transactions : demoTransactions)
+        .filter((transaction) => (transaction.duplicate_status ?? "pending") !== "merged")
+        .map((transaction) => ({
+          ...transaction,
+          duplicate_status: transaction.duplicate_status ?? "pending",
+          labels: Array.isArray((transaction as WorkbenchRow).labels)
+            ? [...((transaction as WorkbenchRow).labels ?? [])]
+            : [],
+        })),
     [transactions],
   );
   const [rows, setRows] = useState<WorkbenchRow[]>(initialRows);
@@ -109,14 +125,27 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const [sheetTransaction, setSheetTransaction] = useState<WorkbenchRow | null>(null);
   const isMobile = useIsMobile();
 
-  const duplicates = useMemo(() => {
-    const map = new Map<string, number>();
+  const duplicateGroups = useMemo(() => {
+    const map = new Map<string, WorkbenchRow[]>();
     rows.forEach((tx) => {
-      const ref = tx.bank_reference ?? tx.merchant_name;
-      map.set(ref, (map.get(ref) ?? 0) + 1);
+      const status = tx.duplicate_status ?? "pending";
+      if (status !== "pending") return;
+      const key = duplicateKey(tx);
+      if (!key) return;
+      const list = map.get(key) ?? [];
+      list.push(tx);
+      map.set(key, list);
     });
     return map;
   }, [rows]);
+
+  const duplicates = useMemo(() => {
+    const counts = new Map<string, number>();
+    duplicateGroups.forEach((list, key) => {
+      if (list.length > 1) counts.set(key, list.length);
+    });
+    return counts;
+  }, [duplicateGroups]);
 
   const filtered = useMemo(() => {
     return rows.filter((tx) => {
@@ -317,6 +346,112 @@ function applySplitResult(result: SplitResult) {
   router.refresh();
 }
 
+async function handleResolveDuplicate(tx: WorkbenchRow) {
+  const key = duplicateKey(tx);
+  if (!key) {
+    toast.info("No duplicate key available for this transaction.");
+    return;
+  }
+
+  const group = duplicateGroups.get(key) ?? [];
+  const candidates = group.filter((candidate) => candidate.id !== tx.id);
+
+  if (!candidates.length) {
+    toast.info("No matching duplicates found to resolve.");
+    return;
+  }
+
+  const options = candidates
+    .map((candidate, index) => {
+      const amount = formatCurrency(Number(candidate.amount ?? 0));
+      const occurred = new Date(candidate.occurred_at).toLocaleDateString("en-NZ", {
+        dateStyle: "medium",
+      });
+      return `${index + 1}. ${candidate.merchant_name} · ${amount} · ${occurred}`;
+    })
+    .join("\n");
+
+  const choiceRaw = window.prompt(
+    `Resolve duplicate for ${tx.merchant_name}.\nSelect the matching transaction:\n${options}`,
+    "1",
+  );
+
+  if (!choiceRaw) return;
+  const choiceIndex = Number.parseInt(choiceRaw, 10) - 1;
+  if (!Number.isFinite(choiceIndex) || choiceIndex < 0 || choiceIndex >= candidates.length) {
+    toast.error("Invalid selection.");
+    return;
+  }
+
+  const decisionRaw = window.prompt(
+    'Type "merge" to combine or "ignore" to dismiss future duplicate alerts.',
+    "merge",
+  );
+  if (!decisionRaw) return;
+  const decision = decisionRaw.trim().toLowerCase();
+  if (decision !== "merge" && decision !== "ignore") {
+    toast.error("Decision must be either merge or ignore.");
+    return;
+  }
+
+  const noteInput = window.prompt("Optional note for audit (press cancel to skip).") ?? undefined;
+
+  const target = candidates[choiceIndex];
+
+  try {
+    const response = await fetch(`/api/transactions/${tx.id}/duplicates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ duplicateId: target.id, decision, note: noteInput }),
+    });
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({ error: "Unable to resolve duplicate" }));
+      throw new Error(payload.error ?? "Unable to resolve duplicate");
+    }
+
+    const payload = (await response.json()) as {
+      transactions?: Array<{
+        id: string;
+        duplicate_of: string | null;
+        duplicate_status: string | null;
+        duplicate_reviewed_at: string | null;
+      }>;
+    };
+
+    setRows((prev) => {
+      let next = prev.map((row) => {
+        const match = payload.transactions?.find((item) => item.id === row.id);
+        if (match) {
+          return {
+            ...row,
+            duplicate_of: match.duplicate_of ?? null,
+            duplicate_status: match.duplicate_status ?? row.duplicate_status,
+            duplicate_reviewed_at: match.duplicate_reviewed_at ?? row.duplicate_reviewed_at,
+          };
+        }
+        return row;
+      });
+
+      if (decision === "merge") {
+        next = next.filter((row) => row.id !== target.id);
+      }
+
+      return next;
+    });
+
+    toast.success(
+      decision === "merge"
+        ? "Duplicate merged successfully"
+        : "Duplicate dismissed for future imports",
+    );
+    router.refresh();
+  } catch (error) {
+    console.error(error);
+    toast.error(error instanceof Error ? error.message : "Unable to resolve duplicate");
+  }
+}
+
   const splitTarget = splitTransactionId ? rows.find((tx) => tx.id === splitTransactionId) : null;
   const sheetStatus = sheetTransaction ? normaliseStatus(sheetTransaction.status) : null;
 
@@ -401,6 +536,7 @@ function applySplitResult(result: SplitResult) {
             setReceiptTransactionId(tx.id);
             setSheetTransaction(null);
           }}
+          onResolveDuplicate={handleResolveDuplicate}
         />
       ) : (
         <div className="overflow-hidden rounded-xl border">
@@ -419,7 +555,10 @@ function applySplitResult(result: SplitResult) {
             <tbody className="divide-y divide-border">
               {filtered.map((tx) => {
                 const status = normaliseStatus(tx.status);
-                const duplicateCount = duplicates.get(tx.bank_reference ?? tx.merchant_name) ?? 0;
+                const duplicateCount = (() => {
+                  const keyValue = duplicateKey(tx);
+                  return keyValue ? duplicates.get(keyValue) ?? 0 : 0;
+                })();
                 const duplicateFlag = duplicateCount > 1;
                 return (
                   <Fragment key={tx.id}>
@@ -499,6 +638,11 @@ function applySplitResult(result: SplitResult) {
                       </td>
                       <td className="px-4 py-3 align-top">
                         <div className="flex flex-wrap gap-2">
+                          {duplicateFlag ? (
+                            <Button variant="outline" size="sm" onClick={() => handleResolveDuplicate(tx)}>
+                              Resolve duplicate
+                            </Button>
+                          ) : null}
                           <Button
                             variant="outline"
                             size="sm"
@@ -674,6 +818,7 @@ function MobileTransactionList({
   onLabels,
   onSplit,
   onReceipt,
+  onResolveDuplicate,
 }: {
   transactions: WorkbenchRow[];
   duplicates: Map<string, number>;
@@ -683,14 +828,17 @@ function MobileTransactionList({
   onLabels: (transaction: WorkbenchRow) => void;
   onSplit: (transaction: WorkbenchRow) => void;
   onReceipt: (transaction: WorkbenchRow) => void;
+  onResolveDuplicate: (transaction: WorkbenchRow) => void;
 }) {
   return (
     <div className="space-y-3 md:hidden">
       {transactions.length ? (
         transactions.map((transaction) => {
           const status = normaliseStatus(transaction.status);
-          const duplicateCount =
-            duplicates.get(transaction.bank_reference ?? transaction.merchant_name) ?? 0;
+          const duplicateCount = (() => {
+            const keyValue = duplicateKey(transaction);
+            return keyValue ? duplicates.get(keyValue) ?? 0 : 0;
+          })();
           return (
             <MobileTransactionCard
               key={transaction.id}
@@ -703,6 +851,7 @@ function MobileTransactionList({
               onLabels={onLabels}
               onSplit={onSplit}
               onReceipt={onReceipt}
+              onResolveDuplicate={onResolveDuplicate}
             />
           );
         })
@@ -725,6 +874,7 @@ function MobileTransactionCard({
   onLabels,
   onSplit,
   onReceipt,
+  onResolveDuplicate,
 }: {
   transaction: WorkbenchRow;
   status: string;
@@ -735,6 +885,7 @@ function MobileTransactionCard({
   onLabels: (transaction: WorkbenchRow) => void;
   onSplit: (transaction: WorkbenchRow) => void;
   onReceipt: (transaction: WorkbenchRow) => void;
+  onResolveDuplicate: (transaction: WorkbenchRow) => void;
 }) {
   const [offset, setOffset] = useState(0);
   const startX = useRef(0);
@@ -792,6 +943,19 @@ function MobileTransactionCard({
         <Button size="sm" variant="outline" className="shadow" onClick={handleMoreClick}>
           More
         </Button>
+        {duplicateFlag ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="shadow"
+            onClick={(event) => {
+              event.stopPropagation();
+              void onResolveDuplicate(transaction);
+            }}
+          >
+            Resolve
+          </Button>
+        ) : null}
       </div>
       <div
         className="relative rounded-xl border bg-card p-4 shadow-sm transition-transform"

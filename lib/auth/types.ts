@@ -36,4 +36,7 @@ export type TransactionRow = {
   bank_memo?: string | null;
   receipt_url?: string | null;
   labels?: string[];
+  duplicate_of?: string | null;
+  duplicate_status?: string | null;
+  duplicate_reviewed_at?: string | null;
 };

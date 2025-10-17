@@ -20,7 +20,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
 
 - [x] **Envelope history** – add transfer log table (from/to/amount/user_id) and expose for zero-budget + reports. (`envelope_transfers` RPC + history feed in zero-budget manager, `/api/envelopes/history`, reports dashboard card.)
 - [x] **Net worth snapshots** – ensure migration/table covers historical trend data with monthly roll-ups. (`net_worth_snapshots_monthly` view + Net Worth timeline/reporting using monthly aggregates.)
-- [ ] **Duplicate resolution** – table or flags to track merged transactions and audit decisions.
+- [x] **Duplicate resolution** – table or flags to track merged transactions and audit decisions. (`transaction_duplicate_events` audit log, `duplicate_status` flags, `/api/transactions/[id]/duplicates` resolve endpoint, UI actions in Reconcile.)
 - [ ] **Label metadata** – enrich labels with colour + description + usage counts for filtering UI.
 
 ---
@@ -35,7 +35,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
   - [ ] Editable streams (frequency, amount, next date).
   - [ ] Surplus routing rules to envelopes.
   - [ ] Summary + warning states when income < expenses.
-- [ ] **Duplicate resolution**
+- [x] **Duplicate resolution**
   - [ ] Drawer/modal to merge / keep separate / ignore.
   - [ ] Update transactions table (status badges, filtered views).
 - [ ] **Transfer & rebalancing tools**

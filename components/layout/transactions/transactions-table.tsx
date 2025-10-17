@@ -20,10 +20,13 @@ export function TransactionsTable({ transactions }: Props) {
   const router = useRouter();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [items, setItems] = useState<TransactionItem[]>(
-    transactions.map((transaction) => ({
-      ...transaction,
-      labels: Array.isArray(transaction.labels) ? [...transaction.labels] : [],
-    })),
+    transactions
+      .filter((transaction) => (transaction.duplicate_status ?? "pending") !== "merged")
+      .map((transaction) => ({
+        ...transaction,
+        duplicate_status: transaction.duplicate_status ?? "pending",
+        labels: Array.isArray(transaction.labels) ? [...transaction.labels] : [],
+      })),
   );
   const [splitTargetId, setSplitTargetId] = useState<string | null>(null);
   const [isRefreshing, startTransition] = useTransition();

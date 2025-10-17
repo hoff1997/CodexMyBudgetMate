@@ -7,7 +7,7 @@ export default async function TransactionsPage() {
   const { data: transactions, error } = await supabase
     .from("transactions_view")
     .select(
-      "id, merchant_name, description, amount, occurred_at, status, envelope_name, account_name, bank_reference, bank_memo, receipt_url",
+      "id, merchant_name, description, amount, occurred_at, status, envelope_name, account_name, bank_reference, bank_memo, receipt_url, duplicate_of, duplicate_status, duplicate_reviewed_at",
     )
     .order("occurred_at", { ascending: false })
     .limit(100);

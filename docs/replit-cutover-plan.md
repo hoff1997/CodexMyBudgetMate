@@ -17,7 +17,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
 
 ## 2. Data Model Enhancements
 
-- [ ] **Envelope history** – add transfer log table (from/to/amount/user_id) and expose for zero-budget + reports.
+- [x] **Envelope history** – add transfer log table (from/to/amount/user_id) and expose for zero-budget + reports. (`envelope_transfers` RPC + history feed in zero-budget manager, `/api/envelopes/history`, reports dashboard card.)
 - [ ] **Net worth snapshots** – ensure migration/table covers historical trend data with monthly roll-ups.
 - [ ] **Duplicate resolution** – table or flags to track merged transactions and audit decisions.
 - [ ] **Label metadata** – enrich labels with colour + description + usage counts for filtering UI.

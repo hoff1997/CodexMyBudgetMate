@@ -27,10 +27,10 @@ Use this progression checklist to move every legacy Replit feature into the new 
 
 ## 3. Core Feature Parity
 
-- [ ] **Net worth dashboard parity**
-  - [ ] Trend + allocation charts (Supabase-backed).
-  - [ ] Asset/liability drawers with full forms (type select, notes, validation).
-  - [ ] Snapshot timeline (create, view, delete).
+- [x] **Net worth dashboard parity**
+  - [x] Trend + allocation charts (Supabase-backed).
+  - [x] Asset/liability drawers with full forms (type select, notes, validation).
+  - [x] Snapshot timeline (create, view, delete).
 - [ ] **Recurring income manager**
   - [ ] Editable streams (frequency, amount, next date).
   - [ ] Surplus routing rules to envelopes.

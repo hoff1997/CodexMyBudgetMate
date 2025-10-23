@@ -64,15 +64,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
 
 ---
 
-## 5. Integrations & Automation
-
-- [x] **Akahu OAuth flow** – implement connect/disconnect, token storage, refresh.
-- [x] **Connection health** – status badges, last synced output, notification hooks.
-- [x] **Webhook processing** – Akahu events to update balances/envelopes automatically.
-- [x] **Background recalculations** – nightly jobs for envelope targets, net worth snapshots, savings goals.
-- [x] **Audit trail** – log significant actions (approvals, transfers, rule changes) with user + timestamp.
-
----
+## :
 
 ## 6. Launch Readiness
 

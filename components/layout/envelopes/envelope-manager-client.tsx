@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/finance";
-import { PlannerFrequency, frequencyOptions } from "@/lib/planner/calculations";
+import { PlannerFrequency, calculateDueProgress, frequencyOptions } from "@/lib/planner/calculations";
+import { differenceInCalendarDays } from "date-fns";
+import type { TransferHistoryItem } from "@/lib/types/envelopes";
 
 const statusFilters = [
   { key: "all", label: "All" },
@@ -21,17 +23,28 @@ const statusFilters = [
 
 type StatusFilter = (typeof statusFilters)[number]["key"];
 
+type TransferSuggestion = {
+  key: string;
+  from: SummaryEnvelope;
+  to: SummaryEnvelope;
+  amount: number;
+  deficit: number;
+  dueLabel: string;
+  daysUntil: number;
+};
+
 interface Props {
   envelopes: SummaryEnvelope[];
   categories: { id: string; name: string }[];
   canEdit: boolean;
+  transferHistory: TransferHistoryItem[];
 }
 
-export function EnvelopeManagerClient({ envelopes, categories, canEdit }: Props) {
+export function EnvelopeManagerClient({ envelopes, categories, canEdit, transferHistory }: Props) {
   const router = useRouter();
   const [selectedEnvelope, setSelectedEnvelope] = useState<SummaryEnvelope | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
-  const [transferFrom, setTransferFrom] = useState<string | undefined>();
+  const [transferDefaults, setTransferDefaults] = useState<{ fromId?: string; toId?: string; amount?: number }>({});
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -71,6 +84,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit }: Props)
       ),
     [filteredEnvelopes],
   );
+  const suggestions = useMemo(() => buildTransferSuggestions(envelopes), [envelopes]);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-24 pt-12 md:px-10 md:pb-12">
@@ -125,7 +139,13 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit }: Props)
             onChange={(event) => setSearch(event.target.value)}
             className="h-9 w-full sm:w-48"
           />
-          <Button variant="outline" onClick={() => setTransferOpen(true)}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setTransferDefaults({});
+              setTransferOpen(true);
+            }}
+          >
             Transfer funds
           </Button>
           <Button variant="outline" asChild>
@@ -133,6 +153,19 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit }: Props)
           </Button>
         </div>
       </div>
+
+      <TransferOptimizer
+        suggestions={suggestions}
+        onSelect={(suggestion) => {
+          setTransferDefaults({
+            fromId: suggestion.from.id,
+            toId: suggestion.to.id,
+            amount: suggestion.amount,
+          });
+          setTransferOpen(true);
+        }}
+        disabled={!canEdit || suggestions.length === 0}
+      />
 
       <form
         className="grid gap-3 rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-4 md:grid-cols-5"
@@ -264,7 +297,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit }: Props)
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setTransferFrom(envelope.id);
+                        setTransferDefaults({ fromId: envelope.id });
                         setTransferOpen(true);
                       }}
                       disabled={!canEdit}
@@ -304,11 +337,15 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit }: Props)
         onOpenChange={(value) => {
           setTransferOpen(value);
           if (!value) {
-            setTransferFrom(undefined);
+            setTransferDefaults({});
           }
         }}
         envelopes={envelopes}
-        defaultFromId={transferFrom}
+        defaultFromId={transferDefaults.fromId}
+        defaultToId={transferDefaults.toId}
+        defaultAmount={transferDefaults.amount}
+        history={transferHistory}
+        onTransferComplete={() => router.refresh()}
       />
 
       <MobileNav />
@@ -351,6 +388,60 @@ function formatStatusBadge(envelope: SummaryEnvelope) {
   }
 }
 
+function TransferOptimizer({
+  suggestions,
+  onSelect,
+  disabled,
+}: {
+  suggestions: TransferSuggestion[];
+  onSelect: (suggestion: TransferSuggestion) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="rounded-3xl border bg-card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-secondary">Optimisation helper</h2>
+          <p className="text-xs text-muted-foreground">
+            Suggested moves based on surplus envelopes and upcoming needs.
+          </p>
+        </div>
+      </div>
+      {suggestions.length ? (
+        <ul className="mt-4 space-y-3">
+          {suggestions.map((suggestion) => (
+            <li
+              key={suggestion.key}
+              className="flex flex-col gap-3 rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between"
+            >
+              <div className="space-y-1">
+                <p className="font-medium text-secondary">
+                  Move {formatCurrency(suggestion.amount)} from {suggestion.from.name} to {suggestion.to.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Needs {formatCurrency(suggestion.deficit)} · {suggestion.dueLabel}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => onSelect(suggestion)}
+                disabled={disabled}
+                className="md:self-end"
+              >
+                Apply suggestion
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-sm text-muted-foreground">
+          No optimisation needed. All envelopes with targets are funded to plan.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function MobileNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 border-t bg-background/95 shadow-lg backdrop-blur md:hidden">
@@ -370,4 +461,87 @@ function MobileNav() {
       </div>
     </nav>
   );
+}
+
+function buildTransferSuggestions(envelopes: SummaryEnvelope[]): TransferSuggestion[] {
+  if (!envelopes.length) return [];
+  const today = new Date();
+  const deficits = envelopes
+    .map((envelope) => {
+      const target = Number(envelope.target_amount ?? 0);
+      const current = Number(envelope.current_amount ?? 0);
+      const deficit = Math.max(0, target - current);
+      if (deficit <= 1) return null;
+      const dueDate = envelope.next_payment_due ?? envelope.due_date ?? null;
+      let daysUntil = Number.POSITIVE_INFINITY;
+      if (dueDate) {
+        const parsed = new Date(dueDate);
+        if (!Number.isNaN(parsed.getTime())) {
+          daysUntil = Math.max(0, differenceInCalendarDays(parsed, today));
+        }
+      }
+      const dueInfo = calculateDueProgress(dueDate);
+      return {
+        envelope,
+        deficit,
+        dueLabel: dueInfo.label,
+        daysUntil,
+      };
+    })
+    .filter(Boolean) as Array<{ envelope: SummaryEnvelope; deficit: number; dueLabel: string; daysUntil: number }>;
+
+  const surplus = envelopes
+    .map((envelope) => {
+      const target = Number(envelope.target_amount ?? 0);
+      const current = Number(envelope.current_amount ?? 0);
+      const extra = Math.max(0, current - target);
+      if (extra <= 1) return null;
+      return { envelope, surplus: extra };
+    })
+    .filter(Boolean) as Array<{ envelope: SummaryEnvelope; surplus: number }>;
+
+  if (!deficits.length || !surplus.length) return [];
+
+  deficits.sort((a, b) => {
+    if (a.daysUntil === b.daysUntil) {
+      return b.deficit - a.deficit;
+    }
+    return a.daysUntil - b.daysUntil;
+  });
+  surplus.sort((a, b) => b.surplus - a.surplus);
+
+  const remaining = new Map<string, number>();
+  surplus.forEach((entry) => remaining.set(entry.envelope.id, entry.surplus));
+
+  const results: TransferSuggestion[] = [];
+
+  for (const deficit of deficits) {
+    let outstanding = deficit.deficit;
+    for (const source of surplus) {
+      if (source.envelope.id === deficit.envelope.id) continue;
+      const available = remaining.get(source.envelope.id) ?? 0;
+      if (available <= 0.5) continue;
+      const amount = Math.min(outstanding, available);
+      if (amount <= 0.5) continue;
+      results.push({
+        key: `${source.envelope.id}-${deficit.envelope.id}-${results.length}`,
+        from: source.envelope,
+        to: deficit.envelope,
+        amount: Number(amount.toFixed(2)),
+        deficit: Number(deficit.deficit.toFixed(2)),
+        dueLabel: deficit.dueLabel,
+        daysUntil: deficit.daysUntil,
+      });
+      remaining.set(source.envelope.id, available - amount);
+      outstanding -= amount;
+      if (results.length >= 5) {
+        return results;
+      }
+      if (outstanding <= 0.5) {
+        break;
+      }
+    }
+  }
+
+  return results;
 }

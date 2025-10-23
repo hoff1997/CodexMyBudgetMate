@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useMemo } from "react";
+import { useRegisterCommand } from "@/providers/command-palette-provider";
 
 const demoEnvelopes = [
   "Groceries",
@@ -26,6 +28,47 @@ const demoLabels = ["Household", "Subscriptions", "Treat", "Work expenses"];
 export function QuickActionsSheet() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("transaction");
+  const quickAction = useMemo(
+    () => ({
+      id: "open-quick-actions",
+      label: "Open quick actions",
+      description: "Capture a transaction, envelope, or transfer",
+      shortcut: "Shift + Q",
+      onSelect: () => setOpen(true),
+    }),
+    [],
+  );
+  useRegisterCommand(quickAction);
+
+  const createEnvelopeAction = useMemo(
+    () => ({
+      id: "quick-create-envelope",
+      label: "Quick create envelope",
+      description: "Open the envelope capture form",
+      shortcut: "Shift + E",
+      onSelect: () => {
+        setActiveTab("envelope");
+        setOpen(true);
+      },
+    }),
+    [],
+  );
+  useRegisterCommand(createEnvelopeAction);
+
+  const transferAction = useMemo(
+    () => ({
+      id: "quick-transfer",
+      label: "Record envelope transfer",
+      description: "Jump straight to the transfer form",
+      shortcut: "Shift + T",
+      onSelect: () => {
+        setActiveTab("transfer");
+        setOpen(true);
+      },
+    }),
+    [],
+  );
+  useRegisterCommand(transferAction);
 
   function handleSubmit(formName: string, formData: FormData) {
     const values = Object.fromEntries(formData.entries());

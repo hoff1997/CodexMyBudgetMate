@@ -52,7 +52,6 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const body = await request.json();
   const parsed = createSchema.safeParse({
     ...body,
     currentValue:
@@ -80,28 +79,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ asset: inserted }, { status: 201 });
-}
-    ...body,
-    currentValue: typeof body.currentValue === "string" ? Number(body.currentValue) : body.currentValue,
-  });
-
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-  }
-
-  const { error } = await supabase
-    .from("assets")
-    .insert({
-      user_id: session.user.id,
-      name: parsed.data.name,
-      asset_type: parsed.data.assetType,
-      current_value: parsed.data.currentValue,
-      notes: parsed.data.notes ?? null,
-    });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  return NextResponse.json({ ok: true });
 }

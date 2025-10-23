@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeSummaryClient } from "@/components/layout/envelopes/envelope-summary-client";
-import { mapTransferHistory } from "@/lib/types/envelopes";
+import { mapTransferHistory, type RawTransferRow } from "@/lib/types/envelopes";
 
 type PageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -9,6 +9,10 @@ type PageProps = {
 
 export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
   const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const { data: envelopes } = await supabase
     .from("envelopes")
     .select(
@@ -29,6 +33,33 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
     )
     .order("created_at", { ascending: false })
     .limit(20);
+
+  let celebrationRows: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    achieved_at: string;
+  }> = [];
+
+  if (session) {
+    const { data: celebrationData } = await supabase
+      .from("zero_budget_celebrations")
+      .select("id, title, description, achieved_at")
+      .eq("user_id", session.user.id)
+      .order("achieved_at", { ascending: false })
+      .limit(20);
+
+    celebrationRows = celebrationData ?? [];
+  } else {
+    celebrationRows = [
+      {
+        id: crypto.randomUUID(),
+        title: "Emergency fund milestone",
+        description: "Demo celebration while exploring My Budget Mate.",
+        achieved_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(),
+      },
+    ];
+  }
 
   const categoryLookup = new Map<string, string>();
   (categories ?? []).forEach((category) => {
@@ -57,13 +88,27 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
     { target: 0, current: 0 },
   );
 
-  const transferHistory = mapTransferHistory(transfers ?? []);
+  const transferRows: RawTransferRow[] = (transfers ?? []).map((row: any) => ({
+    ...row,
+    from_envelope: Array.isArray(row.from_envelope) ? row.from_envelope[0] ?? null : row.from_envelope,
+    to_envelope: Array.isArray(row.to_envelope) ? row.to_envelope[0] ?? null : row.to_envelope,
+  }));
+
+  const transferHistory = mapTransferHistory(transferRows);
+
+  const celebrations = celebrationRows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    achievedAt: row.achieved_at,
+  }));
 
   return (
     <EnvelopeSummaryClient
       list={list}
       totals={totals}
       transferHistory={transferHistory}
+      celebrations={celebrations}
       defaultTab={typeof searchParams?.tab === "string" ? searchParams?.tab : undefined}
     />
   );

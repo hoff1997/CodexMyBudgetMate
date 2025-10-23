@@ -10,6 +10,7 @@ import type { AssetRow, LiabilityRow, NetWorthSnapshotRow } from "@/lib/types/ne
 import { formatCurrency } from "@/lib/finance";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { cn } from "@/lib/cn";
 
 type MonthlySnapshot = {
   month_date: string;
@@ -139,7 +140,23 @@ export function NetWorthClient({ assets, liabilities, snapshots, monthlySnapshot
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <div className="md:hidden">
+        <MobileNetWorthSummary
+          items={[
+            { id: "assets", label: "Assets", value: formatCurrency(assetTotals), tone: "positive" },
+            {
+              id: "liabilities",
+              label: "Liabilities",
+              value: formatCurrency(liabilityTotals),
+              tone: "negative",
+            },
+            { id: "net-worth", label: "Net worth", value: formatCurrency(netWorth) },
+          ]}
+          allocation={allocation}
+        />
+      </div>
+
+      <section className="hidden gap-4 md:grid md:grid-cols-3">
         <MetricCard title="Assets" value={formatCurrency(assetTotals)} tone="positive" />
         <MetricCard title="Liabilities" value={formatCurrency(liabilityTotals)} tone="negative" />
         <MetricCard title="Net worth" value={formatCurrency(netWorth)} tone="neutral" />
@@ -207,6 +224,68 @@ export function NetWorthClient({ assets, liabilities, snapshots, monthlySnapshot
         liability={selectedLiability}
         onMutated={() => router.refresh()}
       />
+    </div>
+  );
+}
+
+type NetWorthMetric = {
+  id: string;
+  label: string;
+  value: string;
+  tone?: "positive" | "negative";
+};
+
+function MobileNetWorthSummary({
+  items,
+  allocation,
+}: {
+  items: NetWorthMetric[];
+  allocation: Array<{ key: string; label: string; fraction: number; colour: string; total: number }>;
+}) {
+  const topAllocation = allocation.slice(0, 3);
+  return (
+    <div className="space-y-4 rounded-2xl border border-border bg-muted/20 p-4">
+      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Net worth snapshot
+      </h2>
+      <ul className="divide-y divide-border text-sm">
+        {items.map((item) => {
+          const tone =
+            item.tone === "positive"
+              ? "text-emerald-600"
+              : item.tone === "negative"
+              ? "text-rose-600"
+              : "text-secondary";
+          return (
+            <li key={item.id} className="flex items-center justify-between py-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {item.label}
+              </span>
+              <span className={cn("text-base font-semibold", tone)}>{item.value}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {topAllocation.length ? (
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Top allocations
+          </p>
+          <div className="mt-2 space-y-2 text-sm text-secondary">
+            {topAllocation.map((entry) => (
+              <div key={entry.key} className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.colour }} />
+                  {entry.label}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {(entry.fraction * 100).toFixed(1)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

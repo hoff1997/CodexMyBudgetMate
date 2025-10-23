@@ -32,19 +32,19 @@ Use this progression checklist to move every legacy Replit feature into the new 
   - [x] Asset/liability drawers with full forms (type select, notes, validation).
   - [x] Snapshot timeline (create, view, delete).
 - [ ] **Recurring income manager**
-  - [ ] Editable streams (frequency, amount, next date).
-  - [ ] Surplus routing rules to envelopes.
-  - [ ] Summary + warning states when income < expenses.
+  - [x] Editable streams (frequency, amount, next date).
+  - [x] Surplus routing rules to envelopes.
+  - [x] Summary + warning states when income < expenses.
 - [x] **Duplicate resolution**
-  - [ ] Drawer/modal to merge / keep separate / ignore.
-  - [ ] Update transactions table (status badges, filtered views).
+  - [x] Drawer/modal to merge / keep separate / ignore.
+  - [x] Update transactions table (status badges, filtered views).
 - [ ] **Transfer & rebalancing tools**
-  - [ ] Functional transfer dialog with envelope selectors, validation, history log.
-  - [ ] Optimisation helper (suggests top-ups based on deficits + upcoming dues).
+  - [x] Functional transfer dialog with envelope selectors, validation, history log.
+  - [x] Optimisation helper (suggests top-ups based on deficits + upcoming dues).
 - [ ] **Reporting & analytics**
-  - [ ] Balance sheet + transaction exports (CSV/Excel).
-  - [ ] Printable PDFs (Net worth, envelope summary).
-  - [ ] Filters (date presets, account/envelope toggles).
+  - [x] Balance sheet + transaction exports (CSV/Excel).
+  - [x] Printable PDFs (Net worth, envelope summary).
+  - [x] Filters (date presets, account/envelope toggles).
 - [ ] **Recurring income + zero-budget linkage**
   - [ ] Auto apply surplus allocation plans.
   - [ ] Celebration log stored in Supabase and shown in zero-budget manager.
@@ -53,24 +53,24 @@ Use this progression checklist to move every legacy Replit feature into the new 
 
 ## 4. User Experience Polish
 
-- [ ] **Command palette** – quick nav + envelope/transaction search (⌘K shortcut).
-- [ ] **Advanced filters** – date presets, label filters, amount ranges across reconcile + transactions + reports.
-- [ ] **Keyboard shortcuts** – approve (A), split (S), label (L), etc., on reconcile + transactions.
-- [ ] **Drag/drop ordering** – enable reordering for navigation sections, dashboard widgets, envelope categories.
+- [x] **Command palette** – quick nav + envelope/transaction search (⌘K shortcut).
+- [x] **Advanced filters** – date presets, label filters, amount ranges across reconcile + transactions + reports.
+- [x] **Keyboard shortcuts** – approve (A), split (S), label (L), etc., on reconcile + transactions.
+- [x] **Drag/drop ordering** – enable reordering for navigation sections, dashboard widgets, envelope categories.
 - [ ] **Mobile-first parity**
-  - [ ] Compact list layouts for dashboard, envelopes, reports, net worth.
-  - [ ] Bottom sheets for transaction details (non-reconcile screens).
-  - [ ] Swipe actions on transactions page.
+  - [x] Compact list layouts for dashboard, envelopes, reports, net worth.
+  - [x] Bottom sheets for transaction details (non-reconcile screens).
+  - [x] Swipe actions on transactions page.
 
 ---
 
 ## 5. Integrations & Automation
 
-- [ ] **Akahu OAuth flow** – implement connect/disconnect, token storage, refresh.
-- [ ] **Connection health** – status badges, last synced output, notification hooks.
-- [ ] **Webhook processing** – Akahu events to update balances/envelopes automatically.
-- [ ] **Background recalculations** – nightly jobs for envelope targets, net worth snapshots, savings goals.
-- [ ] **Audit trail** – log significant actions (approvals, transfers, rule changes) with user + timestamp.
+- [x] **Akahu OAuth flow** – implement connect/disconnect, token storage, refresh.
+- [x] **Connection health** – status badges, last synced output, notification hooks.
+- [x] **Webhook processing** – Akahu events to update balances/envelopes automatically.
+- [x] **Background recalculations** – nightly jobs for envelope targets, net worth snapshots, savings goals.
+- [x] **Audit trail** – log significant actions (approvals, transfers, rule changes) with user + timestamp.
 
 ---
 

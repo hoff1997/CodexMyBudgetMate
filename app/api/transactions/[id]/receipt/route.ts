@@ -81,8 +81,6 @@ export async function PATCH(
     return NextResponse.json({ error: "Path does not belong to user" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-
   const { data: existing, error: existingError } = await supabase
     .from("transactions")
     .select("id, receipt_url")

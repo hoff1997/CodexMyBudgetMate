@@ -32,11 +32,13 @@ export function EnvelopeSummaryClient({
   totals,
   transferHistory,
   defaultTab,
+  celebrations,
 }: {
   list: SummaryEnvelope[];
   totals: { target: number; current: number };
   transferHistory: TransferHistoryItem[];
   defaultTab?: string;
+  celebrations: Array<{ id: string; title: string; description: string | null; achievedAt: string }>;
 }) {
   const router = useRouter();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
@@ -207,28 +209,37 @@ export function EnvelopeSummaryClient({
             </div>
           </div>
 
-          <div className="space-y-4">
-            {categories.length ? (
-              categories.map((category) => (
-                <EnvelopeCategoryGroup
-                  key={category.id}
-                  category={category}
-                  collapsedAll={collapseAll}
-                  onSelectEnvelope={setSelectedEnvelope}
-                  onReorder={(from, to) => handleReorder(category.id, from, to)}
-                />
-              ))
-            ) : (
-              <Card>
-                <CardContent className="p-8 text-center text-sm text-muted-foreground">
-                  No envelopes match this filter yet. Try widening your filter or add a new envelope.
-                </CardContent>
-              </Card>
-            )}
+          <div className="space-y-4 md:hidden">
+            <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={setSelectedEnvelope} />
+          </div>
+          <div className="hidden md:block">
+            <div className="space-y-4">
+              {categories.length ? (
+                categories.map((category) => (
+                  <EnvelopeCategoryGroup
+                    key={category.id}
+                    category={category}
+                    collapsedAll={collapseAll}
+                    onSelectEnvelope={setSelectedEnvelope}
+                    onReorder={(from, to) => handleReorder(category.id, from, to)}
+                  />
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                    No envelopes match this filter yet. Try widening your filter or add a new envelope.
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </TabsContent>
         <TabsContent value="zero-budget">
-          <ZeroBudgetManager envelopes={orderedEnvelopes} transferHistory={transferHistory} />
+          <ZeroBudgetManager
+            envelopes={orderedEnvelopes}
+            transferHistory={transferHistory}
+            celebrations={celebrations}
+          />
         </TabsContent>
       </Tabs>
 
@@ -273,6 +284,67 @@ export function EnvelopeSummaryClient({
   );
 }
 
+function MobileEnvelopeList({
+  envelopes,
+  onSelect,
+}: {
+  envelopes: SummaryEnvelope[];
+  onSelect: (envelope: SummaryEnvelope) => void;
+}) {
+  if (!envelopes.length) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-sm text-muted-foreground">
+          No envelopes match this filter yet. Try widening your filter or add a new envelope.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-muted/20">
+      <h2 className="px-4 pt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Envelopes
+      </h2>
+      <ul className="divide-y divide-border">
+        {envelopes.map((envelope) => {
+          const current = Number(envelope.current_amount ?? 0);
+          const target = Number(envelope.target_amount ?? 0);
+          const status = getStatusBucket(envelope);
+          const statusLabel = getStatusLabel(status);
+          const ratio = target ? Math.min(100, Math.round((current / target) * 100)) : null;
+          return (
+            <li key={envelope.id}>
+              <button
+                type="button"
+                onClick={() => onSelect(envelope)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-secondary">{envelope.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {envelope.category_name ?? "Uncategorised"} · {statusLabel}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-secondary">{formatCurrency(current)}</p>
+                  {target ? (
+                    <p className="text-xs text-muted-foreground">
+                      {ratio}% of {formatCurrency(target)}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">No target</p>
+                  )}
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function MetricCard({
   title,
   value,
@@ -303,4 +375,21 @@ function getStatusBucket(envelope: SummaryEnvelope): StatusFilter {
   if (ratio >= 1.05) return "surplus";
   if (ratio >= 0.8) return "healthy";
   return "attention";
+}
+
+function getStatusLabel(status: StatusFilter) {
+  switch (status) {
+    case "healthy":
+      return "On track";
+    case "attention":
+      return "Needs attention";
+    case "surplus":
+      return "Surplus";
+    case "no-target":
+      return "No target";
+    case "spending":
+      return "Spending";
+    default:
+      return "All";
+  }
 }

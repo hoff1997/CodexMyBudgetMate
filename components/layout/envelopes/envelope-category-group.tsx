@@ -1,8 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, GripVertical } from "lucide-react";
 import { SummaryEnvelope, EnvelopeSummaryCard } from "@/components/layout/envelopes/envelope-summary-card";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { cn } from "@/lib/cn";
 
 interface Props {
   category: {
@@ -22,40 +38,28 @@ export function EnvelopeCategoryGroup({
   onReorder,
 }: Props) {
   const [collapsed, setCollapsed] = useState(collapsedAll);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   useEffect(() => {
     setCollapsed(collapsedAll);
   }, [collapsedAll]);
 
-  function handleDragStart(index: number, event: React.DragEvent<HTMLDivElement>) {
-    if (!onReorder) return;
-    setDragIndex(index);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(index));
-  }
+  const ids = useMemo(() => category.envelopes.map((envelope) => envelope.id), [category.envelopes]);
 
-  function handleDragOver(index: number, event: React.DragEvent<HTMLDivElement>) {
-    if (!onReorder || dragIndex === null) return;
-    event.preventDefault();
-    setOverIndex(index);
-  }
-
-  function handleDrop(index: number, event: React.DragEvent<HTMLDivElement>) {
-    if (!onReorder || dragIndex === null) return;
-    event.preventDefault();
-    setOverIndex(null);
-    if (index !== dragIndex) {
-      onReorder(dragIndex, index);
-    }
-    setDragIndex(null);
-  }
-
-  function handleDragEnd() {
-    setDragIndex(null);
-    setOverIndex(null);
-  }
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!onReorder || !over || active.id === over.id) return;
+    const fromIndex = category.envelopes.findIndex((envelope) => envelope.id === active.id);
+    const toIndex = category.envelopes.findIndex((envelope) => envelope.id === over.id);
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+    onReorder(fromIndex, toIndex);
+  };
 
   return (
     <section className="overflow-hidden rounded-3xl border bg-white shadow-sm">
@@ -73,26 +77,69 @@ export function EnvelopeCategoryGroup({
         <p className="text-xs text-muted-foreground">Click to {collapsed ? "expand" : "collapse"}</p>
       </header>
       {!collapsed && (
-        <div className="grid gap-3 px-4 py-4 sm:grid-cols-2">
-          {category.envelopes.map((envelope, index) => (
-            <div
-              key={envelope.id}
-              draggable={Boolean(onReorder) && category.envelopes.length > 1}
-              onDragStart={(event) => handleDragStart(index, event)}
-              onDragOver={(event) => handleDragOver(index, event)}
-              onDrop={(event) => handleDrop(index, event)}
-              onDragEnd={handleDragEnd}
-              className={
-                overIndex === index && dragIndex !== null
-                  ? "rounded-2xl border border-dashed border-primary/60 bg-primary/5 transition"
-                  : undefined
-              }
-            >
-              <EnvelopeSummaryCard envelope={envelope} onSelect={onSelectEnvelope} />
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+            <div className="grid gap-3 px-4 py-4 sm:grid-cols-2">
+              {category.envelopes.map((envelope) => (
+                <SortableEnvelopeCard
+                  key={envelope.id}
+                  envelope={envelope}
+                  onSelectEnvelope={onSelectEnvelope}
+                  disableDrag={!onReorder || category.envelopes.length <= 1}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </section>
+  );
+}
+
+function SortableEnvelopeCard({
+  envelope,
+  onSelectEnvelope,
+  disableDrag,
+}: {
+  envelope: SummaryEnvelope;
+  onSelectEnvelope?: (envelope: SummaryEnvelope) => void;
+  disableDrag: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: envelope.id,
+    disabled: disableDrag,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("relative rounded-2xl border border-transparent", isDragging && "border-primary/40 bg-primary/5")}
+    >
+      {!disableDrag ? (
+        <button
+          type="button"
+          aria-label={`Reorder ${envelope.name}`}
+          className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+      ) : null}
+      <EnvelopeSummaryCard envelope={envelope} onSelect={onSelectEnvelope} />
+    </div>
   );
 }

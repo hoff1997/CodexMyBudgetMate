@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { calculateRequiredContribution } from "@/lib/planner/calculations";
@@ -64,11 +64,17 @@ export type SettingsData = {
   demoMode: boolean;
 };
 
+type FlashMessage = {
+  type: "success" | "error";
+  message: string;
+} | null;
+
 type Props = {
   data: SettingsData;
+  flash?: FlashMessage;
 };
 
-export function SettingsClient({ data }: Props) {
+export function SettingsClient({ data, flash = null }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profileName, setProfileName] = useState(data.profile.fullName);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(data.profile.avatarUrl);
@@ -80,6 +86,7 @@ export function SettingsClient({ data }: Props) {
   const [webhooks, setWebhooks] = useState<WebhookSettings>(data.webhooks);
   const [security, setSecurity] = useState<SecuritySettings>(data.security);
   const [notes, setNotes] = useState("");
+  const [connections, setConnections] = useState<BankConnectionRow[]>(data.bankConnections);
 
   const envelopeSum = useMemo(
     () => data.envelopes.reduce((sum, envelope) => sum + envelope.annualAmount, 0),
@@ -92,7 +99,7 @@ export function SettingsClient({ data }: Props) {
       pending: [],
       issues: [],
     };
-    data.bankConnections.forEach((connection) => {
+    connections.forEach((connection) => {
       const status = connection.status.toLowerCase();
       if (status.includes("connected")) {
         groups.connected.push(connection);
@@ -103,6 +110,16 @@ export function SettingsClient({ data }: Props) {
       }
     });
     return groups;
+  }, [connections]);
+
+  useEffect(() => {
+    if (!flash) return;
+    const handler = flash.type === "success" ? toast.success : toast.error;
+    handler(flash.message);
+  }, [flash]);
+
+  useEffect(() => {
+    setConnections(data.bankConnections);
   }, [data.bankConnections]);
 
   function handleSelectPhoto() {
@@ -269,8 +286,61 @@ export function SettingsClient({ data }: Props) {
   }
 
   function handleConnectionAction(connection: BankConnectionRow, action: "refresh" | "disconnect") {
-    toast.success(
-      `${action === "refresh" ? "Refresh" : "Disconnect"} request queued for ${connection.provider}`,
+    const payload = { action };
+    toast.promise(
+      fetch("/api/akahu/connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).then(async (response) => {
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error ?? "Unable to update connection");
+        }
+        const result = await response.json().catch(() => ({}));
+        const nowIso = new Date().toISOString();
+        setConnections((prev) => {
+          if (action === "disconnect") {
+            return prev.map((row) =>
+              row.id === connection.id || row.provider === connection.provider
+                ? {
+                    ...row,
+                    status: "disconnected",
+                    lastSyncedAt: nowIso,
+                  }
+                : row,
+            );
+          }
+          const providers: string[] = Array.isArray(result.providers) ? result.providers : [connection.provider];
+          const updated = prev.map((row) =>
+            providers.includes(row.provider)
+              ? { ...row, status: "connected", lastSyncedAt: nowIso }
+              : row,
+          );
+          providers.forEach((provider) => {
+            if (!updated.find((row) => row.provider === provider)) {
+              updated.push({
+                id: `${provider}-${Date.now()}`,
+                provider,
+                status: "connected",
+                lastSyncedAt: nowIso,
+                syncFrequency: connection.syncFrequency ?? null,
+                createdAt: nowIso,
+              });
+            }
+          });
+          return updated;
+        });
+        return result;
+      }),
+      {
+        loading: action === "refresh" ? "Refreshing connection…" : "Disconnecting…",
+        success:
+          action === "refresh"
+            ? `Connection refreshed for ${connection.provider}`
+            : `${connection.provider} disconnected`,
+        error: (error) => error.message ?? "Connection update failed",
+      },
     );
   }
 
@@ -343,7 +413,7 @@ export function SettingsClient({ data }: Props) {
           </CardHeader>
           <CardContent className="grid gap-3 text-sm text-muted-foreground">
             <MetricRow label="Annual envelope funding" value={formatCurrency(envelopeSum)} />
-            <MetricRow label="Active bank connections" value={data.bankConnections.length.toString()} />
+            <MetricRow label="Active bank connections" value={connections.length.toString()} />
             <MetricRow label="Labels in use" value={labels.length.toString()} />
             <MetricRow
               label="2FA status"
@@ -354,7 +424,7 @@ export function SettingsClient({ data }: Props) {
         </Card>
       </section>
 
-      <Card>
+      <Card id="bank-connections">
         <CardHeader>
           <CardTitle>Envelope sync</CardTitle>
           <CardDescription>Planner contributions update automatically across the workspace.</CardDescription>
@@ -507,7 +577,7 @@ export function SettingsClient({ data }: Props) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="bank-connections">
         <CardHeader>
           <CardTitle>Bank connections</CardTitle>
           <CardDescription>
@@ -539,8 +609,8 @@ export function SettingsClient({ data }: Props) {
               </p>
             </TabsContent>
             <TabsContent value="connections" className="mt-4 space-y-3">
-              {data.bankConnections.length ? (
-                data.bankConnections.map((connection) => (
+              {connections.length ? (
+                connections.map((connection) => (
                   <div
                     key={connection.id}
                     className="rounded-lg border bg-muted/10 p-4 text-sm text-muted-foreground"

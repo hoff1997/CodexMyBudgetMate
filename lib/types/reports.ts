@@ -35,4 +35,18 @@ export type ReportsData = {
   exportLinks: { label: string; href: string }[];
   demoMode: boolean;
   transfers: import("@/lib/types/envelopes").TransferHistoryItem[];
+  transactions: ReportTransaction[];
+  accounts: string[];
+  envelopes: string[];
+  plannedMonthly: number;
+  labels: string[];
+};
+
+export type ReportTransaction = {
+  id: string;
+  occurredAt: string;
+  amount: number;
+  account: string | null;
+  envelope: string | null;
+  labels: string[];
 };

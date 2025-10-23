@@ -33,7 +33,7 @@ export function CelebrationTimeline({ events }: Props) {
           </ol>
         ) : (
           <div className="rounded-lg border border-dashed border-emerald-300 bg-white/70 p-4 text-xs text-emerald-800">
-            Fund an envelope or complete a reconciliation to unlock celebration milestones. We'll log
+            Fund an envelope or complete a reconciliation to unlock celebration milestones. We&apos;ll log
             them here once the planner detects milestones.
           </div>
         )}

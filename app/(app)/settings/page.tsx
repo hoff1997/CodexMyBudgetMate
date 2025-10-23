@@ -31,7 +31,11 @@ type BankConnectionRecord = {
   created_at?: string | null;
 };
 
-export default async function SettingsPage() {
+type SettingsPageProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const supabase = await createClient();
   const {
     data: { session },
@@ -113,7 +117,21 @@ export default async function SettingsPage() {
       }
     : getDemoSettingsData();
 
-  return <SettingsClient data={data} />;
+  const akahuStatus = typeof searchParams?.akahu === "string" ? searchParams.akahu : undefined;
+  const messageParam = typeof searchParams?.message === "string" ? decodeURIComponent(searchParams.message) : null;
+
+  let flash: { type: "success" | "error"; message: string } | null = null;
+  if (akahuStatus === "connected") {
+    flash = { type: "success", message: "Akahu connection linked successfully." };
+  } else if (akahuStatus === "refreshed") {
+    flash = { type: "success", message: "Akahu connection refreshed." };
+  } else if (akahuStatus === "disconnected") {
+    flash = { type: "success", message: "Akahu connection removed." };
+  } else if (akahuStatus === "error") {
+    flash = { type: "error", message: messageParam ?? "Akahu connection failed. Please try again." };
+  }
+
+  return <SettingsClient data={data} flash={flash} />;
 }
 
 function getDemoSettingsData(): SettingsData {

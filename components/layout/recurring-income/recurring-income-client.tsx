@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/finance";
-import { PlannerFrequency, frequencyOptions } from "@/lib/planner/calculations";
+import { PlannerFrequency, calculateRequiredContribution, frequencyOptions } from "@/lib/planner/calculations";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+
+type EnvelopeSummary = {
+  id: string;
+  name: string;
+  perPay: number;
+  annual: number;
+  frequency: PlannerFrequency | null;
+};
+
+type IncomeAllocation = {
+  envelope: string;
+  amount: number;
+  envelopeId?: string | null;
+};
 
 interface IncomeStream {
   id: string;
@@ -18,13 +32,13 @@ interface IncomeStream {
   amount: number;
   frequency: PlannerFrequency;
   nextDate: string | null;
-  allocations: Array<{ envelope: string; amount: number }>;
+  allocations: IncomeAllocation[];
   surplusEnvelope?: string | null;
 }
 
 interface Props {
   incomeStreams: IncomeStream[];
-  envelopeSummaries: Array<{ id: string; name: string; perPay: number }>;
+  envelopeSummaries: EnvelopeSummary[];
 }
 
 export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Props) {
@@ -34,6 +48,29 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
   const [showDrawer, setShowDrawer] = useState(false);
   const [search, setSearch] = useState("");
   const [frequencyFilter, setFrequencyFilter] = useState<PlannerFrequency | "all">("all");
+  const [applyingStreamId, setApplyingStreamId] = useState<string | null>(null);
+  const primaryFrequency = useMemo(() => detectPrimaryFrequency(streams), [streams]);
+  const annualIncome = useMemo(
+    () => streams.reduce((total, stream) => total + toAnnual(stream.amount, stream.frequency), 0),
+    [streams],
+  );
+  const monthlyIncome = annualIncome / 12;
+  const annualRequirement = useMemo(
+    () =>
+      envelopeSummaries.reduce(
+        (sum, envelope) => sum + envelopeAnnualRequirement(envelope, primaryFrequency),
+        0,
+      ),
+    [envelopeSummaries, primaryFrequency],
+  );
+  const monthlyRequirement = annualRequirement / 12;
+  const perPayIncome = calculateRequiredContribution(annualIncome, primaryFrequency);
+  const perPayRequirement = calculateRequiredContribution(annualRequirement, primaryFrequency);
+  const monthlySurplus = monthlyIncome - monthlyRequirement;
+  const perPaySurplus = perPayIncome - perPayRequirement;
+  const needsTopUp = monthlySurplus < -1;
+  const hasSurplus = monthlySurplus > 1;
+  const perPayStrain = perPaySurplus < -0.5;
 
   const handleStreamSaved = (saved: IncomeStream) => {
     setStreams((prev) => {
@@ -57,6 +94,46 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
     router.refresh();
   };
 
+  async function handleApplySurplus(stream: IncomeStream) {
+    const { surplus } = getAllocations(stream);
+    if (surplus <= 0.01) {
+      toast.info("No surplus available to auto-allocate for this stream");
+      return;
+    }
+    if (!stream.surplusEnvelope) {
+      toast.error("Set a surplus envelope before applying the auto-allocation plan");
+      return;
+    }
+    setApplyingStreamId(stream.id);
+    try {
+      const response = await fetch(`/api/recurring-income/${stream.id}/apply-surplus`, {
+        method: "POST",
+      });
+      const result = await response
+        .json()
+        .catch(() => ({ error: "Unable to apply surplus plan" }));
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to apply surplus plan");
+      }
+
+      const appliedAmount = Number(result.applied ?? 0);
+      if (appliedAmount > 0) {
+        toast.success(`Applied ${formatCurrency(appliedAmount)} to underfunded envelopes`);
+      } else {
+        toast.info("Surplus plan applied, but no envelopes required top ups");
+      }
+      if (result.celebration?.title) {
+        toast.success(result.celebration.title);
+      }
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to apply surplus plan");
+    } finally {
+      setApplyingStreamId(null);
+    }
+  }
+
   const filteredStreams = useMemo(() => {
     return streams.filter((stream) => {
       if (frequencyFilter !== "all" && stream.frequency !== frequencyFilter) return false;
@@ -65,12 +142,12 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
     });
   }, [streams, frequencyFilter, search]);
 
-  const monthlyIncome = filteredStreams.reduce(
-    (total, stream) => total + toMonthly(stream.amount, stream.frequency),
-    0,
+  const envelopeNameLookup = useMemo(
+    () => new Map(envelopeSummaries.map((envelope) => [envelope.id, envelope.name])),
+    [envelopeSummaries],
   );
-
-  const totalPerPayRequirement = envelopeSummaries.reduce((sum, envelope) => sum + envelope.perPay, 0);
+  const payLabel = frequencyLabel(primaryFrequency);
+  const payLabelLower = payLabel.toLowerCase();
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 pb-24 pt-12 md:px-10 md:pb-12">
@@ -82,13 +159,45 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
       </header>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <MetricCard title="Monthly income" value={formatCurrency(monthlyIncome)} />
-        <MetricCard title="Per pay envelope requirement" value={formatCurrency(totalPerPayRequirement)} />
+        <MetricCard
+          title="Monthly income"
+          value={formatCurrency(monthlyIncome)}
+          helper={`Per ${payLabelLower}: ${formatCurrency(perPayIncome)}`}
+        />
+        <MetricCard
+          title="Monthly envelope requirement"
+          value={formatCurrency(monthlyRequirement)}
+          helper={`Per ${payLabelLower}: ${formatCurrency(perPayRequirement)}`}
+        />
         <MetricCard
           title="Balance after allocations"
-          value={formatCurrency(monthlyIncome - totalPerPayRequirement)}
+          value={formatCurrency(monthlySurplus)}
+          tone={monthlySurplus >= 0 ? "text-emerald-600" : "text-rose-600"}
+          helper={
+            monthlySurplus >= 0
+              ? `Per ${payLabelLower}: ${formatCurrency(perPaySurplus)}`
+              : perPayStrain
+                ? `Short by ${formatCurrency(Math.abs(perPaySurplus))} per ${payLabelLower}`
+                : "Shortfall needs attention"
+          }
         />
       </section>
+
+      {needsTopUp ? (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-6 py-4 text-sm text-destructive">
+          You are short by {formatCurrency(Math.abs(monthlySurplus))} each month. Reduce allocations or
+          add income to keep envelopes funded.
+          {perPayStrain
+            ? ` That is roughly ${formatCurrency(Math.abs(perPaySurplus))} per ${payLabelLower}.`
+            : null}
+        </div>
+      ) : null}
+      {!needsTopUp && hasSurplus ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-6 py-4 text-sm text-emerald-700">
+          Nice! You have {formatCurrency(monthlySurplus)} available after allocations. Consider topping up
+          long-term goals or your surplus envelope.
+        </div>
+      ) : null}
 
       <Tabs defaultValue="streams" className="space-y-6">
         <TabsList>
@@ -127,16 +236,31 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
 
           <div className="grid gap-4">
             {filteredStreams.length ? (
-              filteredStreams.map((stream) => (
-                <Card key={stream.id} className="border border-primary/20 bg-white">
-                  <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <CardTitle>{stream.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {stream.frequency} · {formatCurrency(stream.amount)}
+              filteredStreams.map((stream) => {
+                const { surplus: streamSurplus } = getAllocations(stream);
+                const hasSurplusToApply = streamSurplus > 0.01 && Boolean(stream.surplusEnvelope);
+                const surplusLabel = stream.surplusEnvelope
+                  ? envelopeNameLookup.get(stream.surplusEnvelope) ?? stream.surplusEnvelope
+                  : "Unassigned";
+                return (
+                  <Card key={stream.id} className="border border-primary/20 bg-white">
+                    <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <CardTitle>{stream.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {stream.frequency} · {formatCurrency(stream.amount)}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {hasSurplusToApply ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleApplySurplus(stream)}
+                          disabled={applyingStreamId === stream.id}
+                        >
+                          {applyingStreamId === stream.id ? "Applying…" : "Apply surplus"}
+                        </Button>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"
@@ -148,15 +272,22 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
                         Edit
                       </Button>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <AllocationChart stream={stream} envelopeSummaries={envelopeSummaries} />
-                    <div className="text-xs text-muted-foreground">
-                      Surplus routed to {stream.surplusEnvelope ?? "unassigned"}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <AllocationChart
+                        stream={stream}
+                        envelopeNameLookup={envelopeNameLookup}
+                        monthlyRequirement={monthlyRequirement}
+                        perPayRequirement={perPayRequirement}
+                        payLabel={payLabelLower}
+                      />
+                      <div className="text-xs text-muted-foreground">
+                        Surplus routed to {surplusLabel}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
             ) : (
               <Card>
                 <CardContent className="p-10 text-center text-sm text-muted-foreground">
@@ -180,39 +311,117 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
         stream={selectedStream}
         onSave={handleStreamSaved}
         onDelete={handleStreamDeleted}
+        envelopeSummaries={envelopeSummaries}
       />
       <MobileNav />
     </div>
   );
 }
 
-function MetricCard({ title, value }: { title: string; value: string }) {
+function MetricCard({
+  title,
+  value,
+  tone = "text-secondary",
+  helper,
+}: {
+  title: string;
+  value: string;
+  tone?: string;
+  helper?: string;
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold text-secondary">{value}</p>
+        <p className={`text-2xl font-semibold ${tone}`}>{value}</p>
+        {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
       </CardContent>
     </Card>
   );
 }
 
-function toMonthly(amount: number, frequency: PlannerFrequency) {
+function toAnnual(amount: number, frequency: PlannerFrequency) {
   switch (frequency) {
     case "weekly":
-      return (amount * 52) / 12;
+      return amount * 52;
     case "fortnightly":
-      return (amount * 26) / 12;
+      return amount * 26;
+    case "monthly":
+      return amount * 12;
     case "quarterly":
       return amount * 4;
     case "annually":
-      return amount / 12;
-    case "monthly":
-    default:
       return amount;
+    case "none":
+    default:
+      return amount * 12;
   }
+}
+
+function toMonthly(amount: number, frequency: PlannerFrequency) {
+  return toAnnual(amount, frequency) / 12;
+}
+
+function perPayToAnnual(amount: number, frequency: PlannerFrequency) {
+  switch (frequency) {
+    case "weekly":
+      return amount * 52;
+    case "fortnightly":
+      return amount * 26;
+    case "monthly":
+      return amount * 12;
+    case "quarterly":
+      return amount * 4;
+    case "annually":
+      return amount;
+    case "none":
+    default:
+      return amount * 12;
+  }
+}
+
+function detectPrimaryFrequency(streams: IncomeStream[]): PlannerFrequency {
+  if (!streams.length) return "fortnightly";
+  const score: Partial<Record<PlannerFrequency, number>> = {};
+  for (const stream of streams) {
+    score[stream.frequency] = (score[stream.frequency] ?? 0) + toAnnual(stream.amount, stream.frequency);
+  }
+  const priority: PlannerFrequency[] = ["fortnightly", "monthly", "weekly", "quarterly", "annually", "none"];
+  let best: PlannerFrequency = "fortnightly";
+  let bestScore = -Infinity;
+  for (const frequency of priority) {
+    const value = score[frequency];
+    if (value !== undefined && value > bestScore) {
+      best = frequency;
+      bestScore = value;
+    }
+  }
+  return bestScore > 0 ? best : "fortnightly";
+}
+
+function frequencyLabel(frequency: PlannerFrequency) {
+  switch (frequency) {
+    case "weekly":
+      return "Weekly pay";
+    case "fortnightly":
+      return "Fortnightly pay";
+    case "monthly":
+      return "Monthly pay";
+    case "quarterly":
+      return "Quarterly cycle";
+    case "annually":
+      return "Annual cycle";
+    case "none":
+    default:
+      return "Pay cycle";
+  }
+}
+
+function envelopeAnnualRequirement(envelope: EnvelopeSummary, payFrequency: PlannerFrequency) {
+  if (envelope.annual && envelope.annual > 0) return envelope.annual;
+  return perPayToAnnual(envelope.perPay, payFrequency);
 }
 
 function getAllocations(stream: IncomeStream) {
@@ -223,60 +432,81 @@ function getAllocations(stream: IncomeStream) {
 
 function AllocationChart({
   stream,
-  envelopeSummaries,
+  envelopeNameLookup,
+  monthlyRequirement,
+  perPayRequirement,
+  payLabel,
 }: {
   stream: IncomeStream;
-  envelopeSummaries: Array<{ id: string; name: string; perPay: number }>;
+  envelopeNameLookup: Map<string, string>;
+  monthlyRequirement: number;
+  perPayRequirement: number;
+  payLabel: string;
 }) {
-  const required = envelopeSummaries.reduce((sum, envelope) => sum + envelope.perPay, 0);
-  const { allocationsTotal, surplus } = getAllocations(stream);
-  const segmentWidth = (value: number) => `${Math.min(100, Math.max(0, (value / stream.amount) * 100))}%`;
+  const { surplus } = getAllocations(stream);
+  const amountToDisplay = (value: number) =>
+    stream.amount === 0 ? `${(value * 100).toFixed(0)}%` : formatCurrency(value);
 
   return (
     <div className="space-y-3">
-      <div className="rounded-full bg-muted p-1">
-        <div className="flex overflow-hidden rounded-full">
-          {stream.allocations.map((allocation) => (
+      <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span>
+            Allocated {formatCurrency(Math.max(0, stream.amount - surplus))} of {formatCurrency(stream.amount)}
+          </span>
+          <span>
+            Remaining:{" "}
+            <span className={surplus >= 0 ? "text-emerald-600" : "text-rose-600"}>
+              {formatCurrency(surplus)}
+            </span>
+          </span>
+        </div>
+        <div className="mt-2 grid gap-2 md:grid-cols-2">
+          {stream.allocations.map((allocation, index) => {
+            const resolvedName =
+              allocation.envelopeId && envelopeNameLookup.has(allocation.envelopeId)
+                ? envelopeNameLookup.get(allocation.envelopeId) ?? allocation.envelope
+                : allocation.envelope;
+            return (
             <div
-              key={allocation.envelope}
-              className="flex items-center justify-center bg-primary/80 text-[10px] text-primary-foreground"
-              style={{ width: segmentWidth(allocation.amount) }}
+              key={`${allocation.envelopeId ?? allocation.envelope}-${index}`}
+              className="flex items-center justify-between rounded border border-primary/20 bg-background px-3 py-2"
             >
-              {allocation.envelope}
+              <span>{resolvedName}</span>
+              <span>
+                {allocationModeLabel(allocation, stream.amount)} ·{" "}
+                {amountToDisplay(allocation.amount)}
+              </span>
             </div>
-          ))}
+          );
+          })}
           {surplus > 0 ? (
-            <div
-              className="flex items-center justify-center bg-emerald-200 text-[10px] text-emerald-900"
-              style={{ width: segmentWidth(surplus) }}
-            >
-              Surplus
+            <div className="flex items-center justify-between rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-700">
+              <span>Surplus</span>
+              <span>{formatCurrency(surplus)}</span>
             </div>
           ) : null}
         </div>
       </div>
-      <div className="grid gap-2 md:grid-cols-2">
-        {stream.allocations.map((allocation) => (
-          <div key={allocation.envelope} className="flex items-center justify-between rounded border bg-muted/40 px-3 py-2 text-xs">
-            <span>{allocation.envelope}</span>
-            <span>{formatCurrency(allocation.amount)}</span>
-          </div>
-        ))}
-        {surplus > 0 ? (
-          <div className="flex items-center justify-between rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-            <span>Surplus</span>
-            <span>{formatCurrency(surplus)}</span>
-          </div>
-        ) : null}
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Your envelopes currently require {formatCurrency(required / (envelopeSummaries.length || 1))} per pay on
-        average. Planner updates will adjust these suggestions automatically.
-      </p>
+      {monthlyRequirement > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Planner envelopes need about {formatCurrency(monthlyRequirement)} each month (~{formatCurrency(perPayRequirement)} per {payLabel}).
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          No envelope targets yet. Head to the planner to set contribution goals for this income.
+        </p>
+      )}
     </div>
   );
 }
 
+function allocationModeLabel(allocation: { amount: number }, streamAmount: number) {
+  if (streamAmount === 0) {
+    return `${allocation.amount}%`;
+  }
+  return `${((allocation.amount / streamAmount) * 100).toFixed(0)}%`;
+}
 function TimelineView({ streams }: { streams: IncomeStream[] }) {
   const today = new Date();
   const events = streams.flatMap((stream) => {
@@ -317,7 +547,7 @@ function createBlankStream(): IncomeStream {
     frequency: "fortnightly",
     nextDate: new Date().toISOString().slice(0, 10),
     allocations: [],
-    surplusEnvelope: "",
+    surplusEnvelope: null,
   };
 }
 
@@ -342,6 +572,7 @@ function mapApiStream(stream: ApiStream): IncomeStream {
       ? stream.allocations.map((allocation) => ({
           envelope: allocation.envelope ?? "",
           amount: Number(allocation.amount ?? 0),
+          envelopeId: allocation.envelopeId ?? null,
         }))
       : [],
     surplusEnvelope: stream.surplusEnvelope ?? null,
@@ -354,41 +585,111 @@ function IncomeDrawer({
   stream,
   onSave,
   onDelete,
+  envelopeSummaries,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   stream: IncomeStream | null;
   onSave: (stream: IncomeStream) => void;
   onDelete: (id: string) => void;
+  envelopeSummaries: EnvelopeSummary[];
 }) {
   const [localStream, setLocalStream] = useState<IncomeStream>(stream ?? createBlankStream());
   const [saving, setSaving] = useState(false);
+  const [allocationMode, setAllocationMode] = useState<"fixed" | "percentage">("fixed");
+  const envelopeIdToName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const envelope of envelopeSummaries) {
+      map.set(envelope.id, envelope.name);
+    }
+    return map;
+  }, [envelopeSummaries]);
+  const envelopeNameToId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const envelope of envelopeSummaries) {
+      map.set(envelope.name.toLowerCase(), envelope.id);
+    }
+    return map;
+  }, [envelopeSummaries]);
+  const envelopeListId = useId();
+  const surplusListId = useId();
+  const initialSurplusId =
+    stream?.surplusEnvelope && envelopeIdToName.has(stream.surplusEnvelope)
+      ? stream.surplusEnvelope
+      : "";
+  const initialSurplusDisplay =
+    stream?.surplusEnvelope && envelopeIdToName.has(stream.surplusEnvelope)
+      ? envelopeIdToName.get(stream.surplusEnvelope) ?? ""
+      : stream?.surplusEnvelope ?? "";
+  const [surplusEnvelopeId, setSurplusEnvelopeId] = useState<string>(initialSurplusId);
+  const [surplusDisplay, setSurplusDisplay] = useState<string>(initialSurplusDisplay);
+  const totalAllocated = useMemo(
+    () => localStream.allocations.reduce((sum, allocation) => sum + Number(allocation.amount ?? 0), 0),
+    [localStream.allocations],
+  );
+  const targetTotal = allocationMode === "fixed" ? Number(localStream.amount ?? 0) : 100;
+  const remainingAllocation = targetTotal - totalAllocated;
+  const overAllocated = allocationMode === "fixed" ? remainingAllocation < -0.5 : remainingAllocation < -0.5;
+  const allocationSummary =
+    allocationMode === "fixed"
+      ? `Allocated ${formatCurrency(totalAllocated)} of ${formatCurrency(targetTotal)}`
+      : `Allocated ${totalAllocated.toFixed(2)}% of 100%`;
+  const remainingSummary =
+    allocationMode === "fixed"
+      ? `${remainingAllocation >= 0 ? "Remaining" : "Over"} ${formatCurrency(Math.abs(remainingAllocation))}`
+      : `${remainingAllocation >= 0 ? "Remaining" : "Over"} ${Math.abs(remainingAllocation).toFixed(2)}%`;
   const isEdit = Boolean(stream);
 
   useEffect(() => {
-    if (open) {
-      setLocalStream(stream ?? createBlankStream());
-      setSaving(false);
-    }
-  }, [stream, open]);
+    if (!open) return;
+    setLocalStream(stream ?? createBlankStream());
+    setSaving(false);
+    setAllocationMode("fixed");
+    const nextId =
+      stream?.surplusEnvelope && envelopeIdToName.has(stream.surplusEnvelope)
+        ? stream.surplusEnvelope
+        : "";
+    setSurplusEnvelopeId(nextId);
+    setSurplusDisplay(
+      stream?.surplusEnvelope
+        ? envelopeIdToName.get(stream.surplusEnvelope) ?? stream.surplusEnvelope
+        : "",
+    );
+  }, [open, stream, envelopeIdToName]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    let allocations = localStream.allocations
+      .filter((allocation) => allocation.envelope.trim())
+      .map((allocation) => ({
+        envelope: allocation.envelope.trim(),
+        amount: Number(allocation.amount ?? 0),
+        envelopeId: allocation.envelopeId ?? null,
+      }));
+
+    if (allocationMode === "percentage") {
+      const totalPercentage = allocations.reduce((sum, allocation) => sum + Number(allocation.amount ?? 0), 0);
+      if (totalPercentage > 100.05) {
+        toast.error("Percentage allocations cannot exceed 100%.");
+        return;
+      }
+      allocations = allocations.map((allocation) => ({
+        ...allocation,
+        amount: Number(((allocation.amount / 100) * Number(localStream.amount ?? 0)).toFixed(2)),
+      }));
+    }
+
+    const trimmedSurplusId = surplusEnvelopeId.trim();
+    const trimmedSurplusName = surplusDisplay.trim();
 
     const payload = {
       name: localStream.name.trim(),
       amount: Number(localStream.amount ?? 0),
       frequency: localStream.frequency,
       nextDate: localStream.nextDate ?? null,
-      allocations: localStream.allocations
-        .filter((allocation) => allocation.envelope.trim())
-        .map((allocation) => ({
-          envelope: allocation.envelope.trim(),
-          amount: Number(allocation.amount ?? 0),
-        })),
-      surplusEnvelope: localStream.surplusEnvelope
-        ? localStream.surplusEnvelope.trim()
-        : null,
+      allocations,
+      surplusEnvelope: trimmedSurplusId || (trimmedSurplusName ? trimmedSurplusName : null),
     };
 
     try {
@@ -444,6 +745,27 @@ function IncomeDrawer({
     }
   }
 
+  function handleAllocationModeChange(mode: "fixed" | "percentage") {
+    if (mode === allocationMode) return;
+    setLocalStream((prev) => {
+      const incomeAmount = Number(prev.amount ?? 0);
+      const updated = prev.allocations.map((allocation) => {
+        const current = Number(allocation.amount ?? 0);
+        if (mode === "percentage") {
+          if (incomeAmount <= 0) {
+            return { ...allocation, amount: 0 };
+          }
+          const percentage = (current / Math.max(incomeAmount, 0.0001)) * 100;
+          return { ...allocation, amount: Number(percentage.toFixed(2)) };
+        }
+        const absolute = Number(((current / 100) * incomeAmount).toFixed(2));
+        return { ...allocation, amount: absolute };
+      });
+      return { ...prev, allocations: updated };
+    });
+    setAllocationMode(mode);
+  }
+
   return (
     <Dialog.Root
       open={open}
@@ -476,6 +798,7 @@ function IncomeDrawer({
                 type="number"
                 step="0.01"
                 required
+                min="0"
                 value={localStream.amount}
                 onChange={(event) =>
                   setLocalStream((prev) => ({ ...prev, amount: Number(event.target.value) }))
@@ -506,34 +829,67 @@ function IncomeDrawer({
               />
             </div>
             <Input
+              list={surplusListId}
               placeholder="Surplus envelope (optional)"
-              value={localStream.surplusEnvelope ?? ""}
-              onChange={(event) =>
-                setLocalStream((prev) => ({ ...prev, surplusEnvelope: event.target.value }))
-              }
+              value={surplusDisplay}
+              onChange={(event) => {
+                const value = event.target.value;
+                const match = envelopeNameToId.get(value.toLowerCase());
+                setSurplusDisplay(value);
+                setSurplusEnvelopeId(match ?? "");
+                setLocalStream((prev) => ({ ...prev, surplusEnvelope: value }));
+              }}
             />
-            <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-              {localStream.allocations.length ? "Edit allocations below" : "Add envelope allocations"}
+            <div className="rounded-lg border bg-muted/20 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium text-secondary">Allocations</span>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={allocationMode === "fixed" ? "default" : "outline"}
+                    onClick={() => handleAllocationModeChange("fixed")}
+                  >
+                    Dollars
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={allocationMode === "percentage" ? "default" : "outline"}
+                    onClick={() => handleAllocationModeChange("percentage")}
+                  >
+                    % Split
+                  </Button>
+                </div>
+              </div>
+              <p className={`mt-2 text-xs ${overAllocated ? "text-rose-600" : "text-muted-foreground"}`}>
+                {allocationSummary} · {remainingSummary}
+              </p>
             </div>
             <div className="space-y-3">
               {localStream.allocations.map((allocation, index) => (
                 <div key={index} className="grid gap-2 md:grid-cols-[2fr,1fr,auto]">
                   <Input
+                    list={envelopeListId}
                     placeholder="Envelope"
                     value={allocation.envelope}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      const match = envelopeNameToId.get(value.toLowerCase());
                       setLocalStream((prev) => ({
                         ...prev,
                         allocations: prev.allocations.map((item, i) =>
-                          i === index ? { ...item, envelope: event.target.value } : item,
+                          i === index ? { ...item, envelope: value, envelopeId: match ?? null } : item,
                         ),
-                      }))
-                    }
+                      }));
+                    }}
                   />
                   <Input
-                    placeholder="Amount"
+                    placeholder={allocationMode === "percentage" ? "Percent" : "Amount"}
                     type="number"
-                    step="0.01"
+                    step={allocationMode === "percentage" ? "0.1" : "0.01"}
+                    min="0"
+                    max={allocationMode === "percentage" ? 100 : undefined}
                     value={allocation.amount}
                     onChange={(event) =>
                       setLocalStream((prev) => ({
@@ -566,7 +922,7 @@ function IncomeDrawer({
                 onClick={() =>
                   setLocalStream((prev) => ({
                     ...prev,
-                    allocations: [...prev.allocations, { envelope: "", amount: 0 }],
+                    allocations: [...prev.allocations, { envelope: "", envelopeId: null, amount: 0 }],
                   }))
                 }
               >
@@ -587,6 +943,16 @@ function IncomeDrawer({
               </Button>
             </div>
           </form>
+          <datalist id={envelopeListId}>
+            {envelopeSummaries.map((envelope) => (
+              <option key={`allocation-${envelope.id}`} value={envelope.name} />
+            ))}
+          </datalist>
+          <datalist id={surplusListId}>
+            {envelopeSummaries.map((envelope) => (
+              <option key={`surplus-${envelope.id}`} value={envelope.name} />
+            ))}
+          </datalist>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

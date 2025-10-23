@@ -415,7 +415,8 @@ export function RulesClient({ data }: Props) {
                       {rule.caseSensitive ? <Badge variant="outline">Case sensitive</Badge> : null}
                     </div>
                     <p className="text-sm font-semibold text-secondary">
-                      Merchants matching <span className="text-primary">"{rule.pattern}"</span>
+                      Merchants matching{" "}
+                      <span className="text-primary">&ldquo;{rule.pattern}&rdquo;</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Assign to: {rule.envelopeIcon ? `${rule.envelopeIcon} ` : ""}

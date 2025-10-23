@@ -16,8 +16,11 @@ export async function akahuRequest<T>({
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     "X-Akahu-App-Token": process.env.AKAHU_APP_TOKEN!,
-    "X-Akahu-User-Token": accessToken ?? "",
   };
+
+  if (accessToken) {
+    headers["X-Akahu-User-Token"] = accessToken;
+  }
 
   const response = await fetch(`${AKAHU_BASE_URL}${endpoint}`, {
     method,
@@ -54,5 +57,42 @@ export async function exchangeAkahuCode(code: string) {
     throw new Error(`Akahu code exchange failed: ${response.status} ${error}`);
   }
 
-  return response.json() as Promise<{ access_token: string; refresh_token: string }>;
+  return response.json() as Promise<{
+    access_token: string;
+    refresh_token: string;
+    expires_in?: number;
+    refresh_expires_in?: number;
+    refresh_token_expires_in?: number;
+    scope?: string;
+  }>;
+}
+
+export async function refreshAkahuToken(refreshToken: string) {
+  const response = await fetch(`${AKAHU_BASE_URL}/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Akahu-App-Token": process.env.AKAHU_APP_TOKEN!,
+    },
+    body: JSON.stringify({
+      id: process.env.AKAHU_CLIENT_ID,
+      secret: process.env.AKAHU_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Akahu token refresh failed: ${response.status} ${error}`);
+  }
+
+  return response.json() as Promise<{
+    access_token: string;
+    refresh_token: string;
+    expires_in?: number;
+    refresh_expires_in?: number;
+    refresh_token_expires_in?: number;
+    scope?: string;
+  }>;
 }

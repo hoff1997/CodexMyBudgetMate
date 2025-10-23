@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { formatDistanceToNow } from "date-fns";
 import type { EnvelopeRow } from "@/lib/auth/types";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 import type { TransferHistoryItem } from "@/lib/types/envelopes";
+import { CelebrationTimeline, type CelebrationEvent } from "@/components/layout/dashboard/celebration-timeline";
+import { useRegisterCommand } from "@/providers/command-palette-provider";
 
 const demoBudget: EnvelopeRow[] = [
   {
@@ -55,6 +57,20 @@ const demoBudget: EnvelopeRow[] = [
 
 type ManagerRow = EnvelopeRow & { type: "income" | "expense" };
 
+type CelebrationRecord = {
+  id: string;
+  title: string;
+  description: string | null;
+  achievedAt: string;
+};
+
+type CelebrationState = {
+  id: string;
+  title: string;
+  description: string | null;
+  achievedAt: Date;
+};
+
 function enrichRows(rows: EnvelopeRow[]): ManagerRow[] {
   if (!rows.length) {
     return demoBudget.map((row) => ({ ...row, type: row.name === "Salary" || row.name === "Side hustle" ? "income" : "expense" }));
@@ -69,14 +85,38 @@ function enrichRows(rows: EnvelopeRow[]): ManagerRow[] {
 export function ZeroBudgetManager({
   envelopes,
   transferHistory = [],
+  celebrations = [],
 }: {
   envelopes: EnvelopeRow[];
   transferHistory?: TransferHistoryItem[];
+  celebrations?: CelebrationRecord[];
 }) {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tableRows, setTableRows] = useState(() => enrichRows(envelopes));
-  const [showHistory, setShowHistory] = useState(false);
-  const [showCelebration, setShowCelebration] = useState(false);
+  const [showTransferHistory, setShowTransferHistory] = useState(false);
+  const [showCelebrationHistory, setShowCelebrationHistory] = useState(false);
+  const [celebrationLoading, setCelebrationLoading] = useState(false);
+  const [highlightCelebration, setHighlightCelebration] = useState<CelebrationState | null>(null);
+  const deficitsSectionRef = useRef<HTMLDivElement | null>(null);
+  const [celebrationsState, setCelebrationsState] = useState<CelebrationState[]>(() =>
+    (celebrations ?? []).map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      description: entry.description,
+      achievedAt: new Date(entry.achievedAt),
+    })),
+  );
+
+  useEffect(() => {
+    setCelebrationsState(
+      (celebrations ?? []).map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        description: entry.description,
+        achievedAt: new Date(entry.achievedAt),
+      })),
+    );
+  }, [celebrations]);
 
   const metrics = useMemo(() => {
     const totals = tableRows.reduce(
@@ -163,10 +203,107 @@ export function ZeroBudgetManager({
 
   const overspendTotal = overspentEnvelopes.reduce((sum, item) => sum + item.diff, 0);
 
-  function handleCelebrate() {
-    setShowCelebration(true);
-    toast.success("Celebration logged (demo mode)");
-  }
+  const celebrationEvents: CelebrationEvent[] = useMemo(
+    () =>
+      celebrationsState.map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        description: entry.description ?? "",
+        achievedAt: entry.achievedAt,
+      })),
+    [celebrationsState],
+  );
+
+  const handleCelebrate = useCallback(async () => {
+    if (celebrationLoading) return;
+    setCelebrationLoading(true);
+    try {
+      const title =
+        metrics.status === "balanced"
+          ? "Zero budget balanced"
+          : "Budget celebration";
+      const description =
+        metrics.status === "balanced"
+          ? "Your envelopes now align with this cycle's income."
+          : `Manual celebration logged with delta ${formatCurrency(metrics.delta)}.`;
+
+      const response = await fetch("/api/zero-budget/celebrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description }),
+      });
+
+      const result = await response
+        .json()
+        .catch(() => ({ error: "Unable to log celebration" }));
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to log celebration");
+      }
+
+      const celebration: CelebrationState = {
+        id: result.celebration.id,
+        title: result.celebration.title,
+        description: result.celebration.description ?? null,
+        achievedAt: new Date(result.celebration.achieved_at),
+      };
+
+      setCelebrationsState((prev) => [celebration, ...prev]);
+      setHighlightCelebration(celebration);
+      toast.success("Celebration saved");
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Unable to log celebration");
+    } finally {
+      setCelebrationLoading(false);
+    }
+  }, [celebrationLoading, metrics]);
+
+  const scrollToDeficits = useCallback(() => {
+    if (deficitsSectionRef.current) {
+      deficitsSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      deficitsSectionRef.current.focus?.({ preventScroll: true });
+    }
+  }, []);
+
+  const deficitsAction = useMemo(
+    () => ({
+      id: "zero-budget-deficits",
+      label: "Jump to zero-budget deficits",
+      description: deficits.length
+        ? `${deficits.length} envelope${deficits.length === 1 ? "" : "s"} need a top up`
+        : "All envelopes are on track",
+      onSelect: () => {
+        if (!deficits.length) {
+          toast.info("No deficits detected right now");
+          return;
+        }
+        scrollToDeficits();
+      },
+    }),
+    [deficits.length, scrollToDeficits],
+  );
+  useRegisterCommand(deficitsAction);
+
+  const celebrationAction = useMemo(
+    () => ({
+      id: "zero-budget-celebrate",
+      label: "Log zero-budget celebration",
+      description:
+        metrics.status === "balanced"
+          ? "Celebrate a balanced cycle"
+          : "Balance your plan to unlock celebration",
+      onSelect: () => {
+        if (metrics.status === "balanced") {
+          void handleCelebrate();
+        } else {
+          toast.info("Balance your plan before logging a celebration");
+        }
+      },
+    }),
+    [metrics.status, handleCelebrate],
+  );
+  useRegisterCommand(celebrationAction);
 
   function handleCapturePlan() {
     toast.success("Surplus allocation noted (demo mode)");
@@ -228,20 +365,23 @@ export function ZeroBudgetManager({
         </div>
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>
-            Celebrate when the delta hits zero! Historical celebration badges from the Replit build will
-            plug in here once Supabase event logging is wired up.
+            Celebrate when the delta hits zero and keep a log of milestones to look back on. You can also
+            review recent envelope transfers to understand how surplus moves through your plan.
           </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={() => setShowHistory(true)}>
-                View celebration history
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowCelebrationHistory(true)}>
+              View celebration history
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowTransferHistory(true)}>
+              View transfer history
+            </Button>
+            {metrics.status === "balanced" ? (
+              <Button size="sm" onClick={handleCelebrate} disabled={celebrationLoading}>
+                {celebrationLoading ? "Saving…" : "Log celebration"}
               </Button>
-              {metrics.status === "balanced" ? (
-                <Button size="sm" onClick={handleCelebrate}>
-                  Trigger celebration
-                </Button>
-              ) : null}
-            </div>
+            ) : null}
           </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border">
@@ -326,7 +466,7 @@ export function ZeroBudgetManager({
         <div className="rounded-xl border border-muted/40 bg-muted/10 px-6 py-5 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-semibold text-secondary">Recent envelope transfers</p>
-            <Button size="sm" variant="outline" onClick={() => setShowHistory(true)}>
+            <Button size="sm" variant="outline" onClick={() => setShowTransferHistory(true)}>
               View full history
             </Button>
           </div>
@@ -364,7 +504,11 @@ export function ZeroBudgetManager({
       ) : null}
 
       {metrics.status === "surplus" && allocationPlan.length ? (
-        <div className="rounded-xl border border-dashed border-secondary/40 bg-secondary/5 px-6 py-5 text-sm text-secondary">
+        <div
+          ref={deficitsSectionRef}
+          tabIndex={-1}
+          className="rounded-xl border border-dashed border-secondary/40 bg-secondary/5 px-6 py-5 text-sm text-secondary focus:outline-none"
+        >
           You have surplus available. Proposed top-ups:
           <ul className="mt-3 space-y-1">
             {allocationPlan.map((item) => (
@@ -410,12 +554,19 @@ export function ZeroBudgetManager({
         </div>
       ) : null}
 
+      <CelebrationTimeline events={celebrationEvents} />
+
       <TransferHistoryDialog
-        open={showHistory}
-        onOpenChange={setShowHistory}
+        open={showTransferHistory}
+        onOpenChange={setShowTransferHistory}
         transfers={transferHistory}
       />
-      <CelebrationOverlay open={showCelebration} onOpenChange={setShowCelebration} />
+      <CelebrationHistoryDialog
+        open={showCelebrationHistory}
+        onOpenChange={setShowCelebrationHistory}
+        celebrations={celebrationsState}
+      />
+      <CelebrationOverlay celebration={highlightCelebration} onClose={() => setHighlightCelebration(null)} />
     </div>
   );
 }
@@ -477,25 +628,81 @@ function TransferHistoryDialog({
   );
 }
 
-function CelebrationOverlay({
+function CelebrationHistoryDialog({
   open,
   onOpenChange,
+  celebrations,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
+  celebrations: CelebrationState[];
 }) {
-  if (!open) return null;
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+        <Dialog.Content className="fixed inset-0 flex items-center justify-center px-4">
+          <div className="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-3xl border bg-background p-6 shadow-xl">
+            <Dialog.Title className="text-lg font-semibold text-secondary">
+              Celebration history
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-muted-foreground">
+              A log of balanced budgets and milestones tracked over time.
+            </Dialog.Description>
+            <ul className="mt-4 space-y-3">
+              {celebrations.length ? (
+                celebrations.map((entry) => (
+                  <li key={entry.id} className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-secondary">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold">{entry.title}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(entry.achievedAt, { addSuffix: true })}
+                      </span>
+                    </div>
+                    {entry.description ? (
+                      <p className="mt-2 text-xs text-muted-foreground">{entry.description}</p>
+                    ) : null}
+                  </li>
+                ))
+              ) : (
+                <li className="rounded-xl border border-dashed border-primary/20 bg-background p-4 text-xs text-muted-foreground">
+                  No celebrations recorded yet. Balance your plan or log a custom milestone to populate this list.
+                </li>
+              )}
+            </ul>
+            <div className="mt-6 text-right">
+              <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function CelebrationOverlay({
+  celebration,
+  onClose,
+}: {
+  celebration: CelebrationState | null;
+  onClose: () => void;
+}) {
+  if (!celebration) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-6">
       <div className="relative flex max-w-xl flex-col items-center gap-4 rounded-3xl border border-primary/40 bg-white p-10 text-center shadow-2xl">
         <div className="text-5xl">🎉</div>
-        <h3 className="text-2xl font-semibold text-secondary">Zero budget balanced!</h3>
-        <p className="text-sm text-muted-foreground">
-          Your plan matches your income for this cycle. Treat yourself to a cuppa, then keep the
-          momentum going with the planner or reconciliation tools.
+        <h3 className="text-2xl font-semibold text-secondary">{celebration.title}</h3>
+        {celebration.description ? (
+          <p className="text-sm text-muted-foreground">{celebration.description}</p>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Logged {formatDistanceToNow(celebration.achievedAt, { addSuffix: true })}
         </p>
-        <Button onClick={() => onOpenChange(false)}>Close</Button>
+        <Button onClick={onClose}>Close</Button>
       </div>
     </div>
   );

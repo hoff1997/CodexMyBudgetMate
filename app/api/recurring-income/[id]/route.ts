@@ -131,6 +131,7 @@ export async function PATCH(
     .eq("id", params.id)
     .eq("user_id", session.user.id)
     .select(listColumns.join(", "))
+    .returns<DbStream>()
     .maybeSingle();
 
   if (error) {
@@ -142,7 +143,7 @@ export async function PATCH(
   }
 
   return NextResponse.json({
-    stream: formatStream(data as DbStream),
+    stream: formatStream(data),
   });
 }
 

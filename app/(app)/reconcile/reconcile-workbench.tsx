@@ -1,5 +1,6 @@
 "use client";
 
+import * as Dialog from "@radix-ui/react-dialog";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +14,73 @@ import { SplitEditor, type SplitResult } from "@/components/layout/reconcile/spl
 import Link from "next/link";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import { useRouter } from "next/navigation";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/cn";
 
 type WorkbenchRow = TransactionRow & {
   labels?: string[];
 };
+
+const duplicateFilters = [
+  { key: "all", label: "All" },
+  { key: "needs-review", label: "Needs review" },
+  { key: "canonical", label: "Primary kept" },
+  { key: "ignored", label: "Ignored" },
+] as const;
+
+type DuplicateFilter = (typeof duplicateFilters)[number]["key"];
+
+const datePresets = [
+  { key: "this-month", label: "This month" },
+  { key: "last-month", label: "Last month" },
+  { key: "last-3", label: "Last 3 months" },
+  { key: "year", label: "Year to date" },
+  { key: "all", label: "All time" },
+  { key: "custom", label: "Custom" },
+] as const;
+
+type DatePreset = (typeof datePresets)[number]["key"];
+
+function getPresetRange(preset: DatePreset) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  switch (preset) {
+    case "this-month": {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+    }
+    case "last-month": {
+      const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth(), 0);
+      return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+    }
+    case "last-3": {
+      const start = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+    }
+    case "year": {
+      const start = new Date(today.getFullYear(), 0, 1);
+      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+    }
+    case "all":
+      return { from: "", to: "" };
+    case "custom":
+    default:
+      return null;
+  }
+}
+
+function toggleValue(value: string, selected: string[], setSelected: (next: string[]) => void) {
+  setSelected(
+    selected.includes(value)
+      ? selected.filter((item) => item !== value)
+      : [...selected, value],
+  );
+}
 
 function duplicateKey(transaction: WorkbenchRow) {
   const reference = transaction.bank_reference?.trim().toLowerCase();
@@ -27,6 +91,8 @@ function duplicateKey(transaction: WorkbenchRow) {
   const date = new Date(transaction.occurred_at).toISOString().slice(0, 10);
   return `${merchant}::${amount}::${date}`;
 }
+
+const UNASSIGNED_LABEL = "Unassigned";
 
 const demoTransactions: WorkbenchRow[] = [
   {
@@ -91,6 +157,7 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "unmatched" | "matched">(
     "all",
   );
+  const [duplicateFilter, setDuplicateFilter] = useState<DuplicateFilter>("all");
   const [search, setSearch] = useState("");
   const today = new Date();
   const defaultFrom = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -99,6 +166,12 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const defaultTo = today.toISOString().slice(0, 10);
   const [dateFrom, setDateFrom] = useState(defaultFrom);
   const [dateTo, setDateTo] = useState(defaultTo);
+  const [datePreset, setDatePreset] = useState<DatePreset>("this-month");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
+  const [labelFilter, setLabelFilter] = useState<string[]>([]);
+  const [accountFilter, setAccountFilter] = useState<string[]>([]);
+  const [envelopeFilter, setEnvelopeFilter] = useState<string[]>([]);
 
   const router = useRouter();
   const usingDemo = transactions.length === 0;
@@ -116,13 +189,29 @@ export function ReconcileWorkbench({ transactions }: Props) {
     [transactions],
   );
   const [rows, setRows] = useState<WorkbenchRow[]>(initialRows);
+  const [activeRowId, setActiveRowId] = useState<string | null>(initialRows[0]?.id ?? null);
+  const approveShortcutRef = useRef<(tx: WorkbenchRow) => Promise<void>>(async () => {});
+  const labelShortcutRef = useRef<(tx: WorkbenchRow) => Promise<void>>(async () => {});
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
+  useEffect(() => {
+    if (datePreset === "custom") return;
+    const range = getPresetRange(datePreset);
+    if (!range) return;
+    setDateFrom(range.from);
+    setDateTo(range.to);
+  }, [datePreset]);
   const [csvOpen, setCsvOpen] = useState(false);
   const [receiptTransactionId, setReceiptTransactionId] = useState<string | null>(null);
   const [splitTransactionId, setSplitTransactionId] = useState<string | null>(null);
   const [sheetTransaction, setSheetTransaction] = useState<WorkbenchRow | null>(null);
+  const [duplicateDialog, setDuplicateDialog] = useState<{
+    transaction: WorkbenchRow;
+    candidates: WorkbenchRow[];
+  } | null>(null);
+  const [duplicateActionLoading, setDuplicateActionLoading] = useState(false);
+  const [duplicateActionError, setDuplicateActionError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const duplicateGroups = useMemo(() => {
@@ -147,22 +236,171 @@ export function ReconcileWorkbench({ transactions }: Props) {
     return counts;
   }, [duplicateGroups]);
 
+  const labelOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((row) => {
+      (row.labels ?? []).forEach((label) => {
+        const trimmed = label.trim();
+        if (trimmed) set.add(trimmed);
+      });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const accountOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((row) => {
+      set.add(row.account_name ?? UNASSIGNED_LABEL);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
+  const envelopeOptions = useMemo(() => {
+    const set = new Set<string>();
+    rows.forEach((row) => {
+      set.add(row.envelope_name ?? UNASSIGNED_LABEL);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [rows]);
+
   const filtered = useMemo(() => {
+    const min = amountMin.trim() ? Number(amountMin) : null;
+    const max = amountMax.trim() ? Number(amountMax) : null;
+    const searchLower = search.toLowerCase();
+    const labelSet = new Set(labelFilter.map((label) => label.toLowerCase()));
+    const accountSet = new Set(accountFilter);
+    const envelopeSet = new Set(envelopeFilter);
+
     return rows.filter((tx) => {
       const status = normaliseStatus(tx.status);
       if (statusFilter !== "all" && status !== statusFilter) return false;
       if (search) {
         const text = `${tx.merchant_name} ${tx.description ?? ""} ${tx.bank_memo ?? ""}`.toLowerCase();
-        if (!text.includes(search.toLowerCase())) {
+        if (!text.includes(searchLower)) {
           return false;
         }
       }
       const occurred = new Date(tx.occurred_at).toISOString().slice(0, 10);
       if (dateFrom && occurred < dateFrom) return false;
       if (dateTo && occurred > dateTo) return false;
+      const amount = Number(tx.amount ?? 0);
+      if (min !== null && Number.isFinite(min) && amount < min) return false;
+      if (max !== null && Number.isFinite(max) && amount > max) return false;
+      if (labelSet.size) {
+        const labels = (tx.labels ?? []).map((label) => label.toLowerCase());
+        const hasMatch = labels.some((label) => labelSet.has(label));
+        if (!hasMatch) return false;
+      }
+      if (accountSet.size) {
+        const accountName = tx.account_name ?? UNASSIGNED_LABEL;
+        if (!accountSet.has(accountName)) return false;
+      }
+      if (envelopeSet.size) {
+        const envelopeName = tx.envelope_name ?? UNASSIGNED_LABEL;
+        if (!envelopeSet.has(envelopeName)) return false;
+      }
+      const duplicateStatus = (tx.duplicate_status ?? "pending").toLowerCase();
+      const keyValue = duplicateKey(tx);
+      const duplicateCount = keyValue ? duplicates.get(keyValue) ?? 0 : 0;
+      const needsReview = duplicateStatus === "pending" && duplicateCount > 1;
+      if (duplicateFilter === "needs-review" && !needsReview) return false;
+      if (duplicateFilter === "canonical" && duplicateStatus !== "canonical") return false;
+      if (duplicateFilter === "ignored" && duplicateStatus !== "ignored") return false;
       return true;
     });
-  }, [rows, statusFilter, search, dateFrom, dateTo]);
+  }, [
+    rows,
+    statusFilter,
+    search,
+    dateFrom,
+    dateTo,
+    amountMin,
+    amountMax,
+    labelFilter,
+    accountFilter,
+    envelopeFilter,
+    duplicateFilter,
+    duplicates,
+  ]);
+
+  useEffect(() => {
+    if (!filtered.length) {
+      setActiveRowId(null);
+      return;
+    }
+    setActiveRowId((prev) => (prev && filtered.some((tx) => tx.id === prev) ? prev : filtered[0].id));
+  }, [filtered]);
+
+  const activeRow = useMemo(
+    () => (activeRowId ? filtered.find((tx) => tx.id === activeRowId) ?? null : null),
+    [filtered, activeRowId],
+  );
+
+  approveShortcutRef.current = handleApprove;
+  labelShortcutRef.current = handleLabels;
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!filtered.length) return;
+      const target = event.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName.toLowerCase();
+        if (
+          target.isContentEditable ||
+          tag === "input" ||
+          tag === "textarea" ||
+          tag === "select" ||
+          tag === "button"
+        ) {
+          return;
+        }
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const key = event.key.toLowerCase();
+      const index = activeRowId ? filtered.findIndex((tx) => tx.id === activeRowId) : -1;
+
+      if (key === "arrowdown") {
+        event.preventDefault();
+        const nextIndex = index >= 0 ? Math.min(filtered.length - 1, index + 1) : 0;
+        setActiveRowId(filtered[nextIndex]?.id ?? null);
+        return;
+      }
+
+      if (key === "arrowup") {
+        event.preventDefault();
+        if (!filtered.length) return;
+        const nextIndex = index > 0 ? index - 1 : 0;
+        setActiveRowId(filtered[nextIndex]?.id ?? null);
+        return;
+      }
+
+      if (!activeRow) return;
+
+      if (key === "a") {
+        event.preventDefault();
+        if (normaliseStatus(activeRow.status) !== "approved") {
+          void approveShortcutRef.current(activeRow);
+        }
+        return;
+      }
+
+      if (key === "s") {
+        event.preventDefault();
+        setSplitTransactionId((prev) => (prev === activeRow.id ? null : activeRow.id));
+        setSheetTransaction(null);
+        return;
+      }
+
+      if (key === "l") {
+        event.preventDefault();
+        void labelShortcutRef.current(activeRow);
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [filtered, activeRowId, activeRow]);
 
   const summary = useMemo(() => {
     return rows.reduce(
@@ -346,7 +584,7 @@ function applySplitResult(result: SplitResult) {
   router.refresh();
 }
 
-async function handleResolveDuplicate(tx: WorkbenchRow) {
+function handleResolveDuplicate(tx: WorkbenchRow) {
   const key = duplicateKey(tx);
   if (!key) {
     toast.info("No duplicate key available for this transaction.");
@@ -354,74 +592,98 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
   }
 
   const group = duplicateGroups.get(key) ?? [];
-  const candidates = group.filter((candidate) => candidate.id !== tx.id);
+  const candidates = group
+    .filter((candidate) => candidate.id !== tx.id)
+    .sort(
+      (a, b) =>
+        new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime(),
+    );
 
   if (!candidates.length) {
     toast.info("No matching duplicates found to resolve.");
     return;
   }
 
-  const options = candidates
-    .map((candidate, index) => {
-      const amount = formatCurrency(Number(candidate.amount ?? 0));
-      const occurred = new Date(candidate.occurred_at).toLocaleDateString("en-NZ", {
-        dateStyle: "medium",
+  setDuplicateActionError(null);
+  setDuplicateDialog({
+    transaction: tx,
+    candidates,
+  });
+}
+
+async function submitDuplicateResolution(
+  decision: "merge" | "ignore",
+  targetId: string,
+  note?: string,
+) {
+  if (!duplicateDialog) return;
+  const base = duplicateDialog.transaction;
+  const target = duplicateDialog.candidates.find((candidate) => candidate.id === targetId);
+  if (!target) {
+    setDuplicateActionError("Select a transaction to resolve against.");
+    return;
+  }
+
+  if (usingDemo) {
+    setRows((prev) => {
+      let next = prev.map((row) => {
+        if (row.id === base.id) {
+          return {
+            ...row,
+            duplicate_status: decision === "merge" ? "canonical" : "ignored",
+            duplicate_reviewed_at: new Date().toISOString(),
+          };
+        }
+        if (row.id === target.id) {
+          if (decision === "merge") {
+            return { ...row, duplicate_status: "merged", duplicate_of: base.id };
+          }
+          return { ...row, duplicate_status: "ignored" };
+        }
+        return row;
       });
-      return `${index + 1}. ${candidate.merchant_name} · ${amount} · ${occurred}`;
-    })
-    .join("\n");
-
-  const choiceRaw = window.prompt(
-    `Resolve duplicate for ${tx.merchant_name}.\nSelect the matching transaction:\n${options}`,
-    "1",
-  );
-
-  if (!choiceRaw) return;
-  const choiceIndex = Number.parseInt(choiceRaw, 10) - 1;
-  if (!Number.isFinite(choiceIndex) || choiceIndex < 0 || choiceIndex >= candidates.length) {
-    toast.error("Invalid selection.");
+      if (decision === "merge") {
+        next = next.filter((row) => row.id !== target.id);
+      }
+      return next;
+    });
+    toast.success(
+      decision === "merge"
+        ? "Duplicate merged successfully"
+        : "Duplicate dismissed for future imports",
+    );
+    setDuplicateDialog(null);
     return;
   }
-
-  const decisionRaw = window.prompt(
-    'Type "merge" to combine or "ignore" to dismiss future duplicate alerts.',
-    "merge",
-  );
-  if (!decisionRaw) return;
-  const decision = decisionRaw.trim().toLowerCase();
-  if (decision !== "merge" && decision !== "ignore") {
-    toast.error("Decision must be either merge or ignore.");
-    return;
-  }
-
-  const noteInput = window.prompt("Optional note for audit (press cancel to skip).") ?? undefined;
-
-  const target = candidates[choiceIndex];
 
   try {
-    const response = await fetch(`/api/transactions/${tx.id}/duplicates`, {
+    setDuplicateActionLoading(true);
+    setDuplicateActionError(null);
+    const response = await fetch(`/api/transactions/${base.id}/duplicates`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ duplicateId: target.id, decision, note: noteInput }),
+      body: JSON.stringify({ duplicateId: targetId, decision, note }),
     });
 
+    const payload = await response
+      .json()
+      .catch(() => ({ error: "Unable to resolve duplicate" }));
+
     if (!response.ok) {
-      const payload = await response.json().catch(() => ({ error: "Unable to resolve duplicate" }));
       throw new Error(payload.error ?? "Unable to resolve duplicate");
     }
 
-    const payload = (await response.json()) as {
-      transactions?: Array<{
+    const transactions =
+      (payload?.transactions as Array<{
         id: string;
         duplicate_of: string | null;
         duplicate_status: string | null;
         duplicate_reviewed_at: string | null;
-      }>;
-    };
+      }>) ?? [];
 
     setRows((prev) => {
       let next = prev.map((row) => {
-        const match = payload.transactions?.find((item) => item.id === row.id);
+        const match = transactions.find((item) => item.id === row.id);
         if (match) {
           return {
             ...row,
@@ -432,11 +694,9 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
         }
         return row;
       });
-
       if (decision === "merge") {
-        next = next.filter((row) => row.id !== target.id);
+        next = next.filter((row) => row.id !== targetId);
       }
-
       return next;
     });
 
@@ -445,10 +705,14 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
         ? "Duplicate merged successfully"
         : "Duplicate dismissed for future imports",
     );
+    setDuplicateDialog(null);
     router.refresh();
   } catch (error) {
     console.error(error);
+    setDuplicateActionError(error instanceof Error ? error.message : "Unable to resolve duplicate");
     toast.error(error instanceof Error ? error.message : "Unable to resolve duplicate");
+  } finally {
+    setDuplicateActionLoading(false);
   }
 }
 
@@ -494,31 +758,197 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
         ))}
       </section>
 
-      <section className="grid gap-3 rounded-xl border bg-muted/10 p-4 md:grid-cols-5">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search merchant, memo, or label"
-          className="md:col-span-2"
-        />
-        <Input
-          type="date"
-          value={dateFrom}
-          max={dateTo}
-          onChange={(event) => setDateFrom(event.target.value)}
-          className="bg-background"
-        />
-        <Input
-          type="date"
-          value={dateTo}
-          min={dateFrom}
-          onChange={(event) => setDateTo(event.target.value)}
-          className="bg-background"
-        />
-        <Button variant="outline" onClick={() => setCsvOpen(true)}>
-          Import CSV
-        </Button>
+      <section className="grid gap-3 rounded-xl border bg-muted/10 p-4 md:grid-cols-6">
+        <div className="md:col-span-3 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date range</p>
+          <div className="flex flex-wrap gap-2">
+            {datePresets.map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => setDatePreset(preset.key)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                  datePreset === preset.key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="md:col-span-3 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search</p>
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search merchant, memo, or label"
+            className="bg-background"
+          />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">From</p>
+          <Input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(event) => {
+              setDatePreset("custom");
+              setDateFrom(event.target.value);
+            }}
+            className="bg-background"
+          />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">To</p>
+          <Input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(event) => {
+              setDatePreset("custom");
+              setDateTo(event.target.value);
+            }}
+            className="bg-background"
+          />
+        </div>
+        <div className="md:col-span-2 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount range</p>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="Min"
+              value={amountMin}
+              onChange={(event) => setAmountMin(event.target.value)}
+            />
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="Max"
+              value={amountMax}
+              onChange={(event) => setAmountMax(event.target.value)}
+            />
+          </div>
+        </div>
+        {labelOptions.length ? (
+          <div className="md:col-span-3 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Labels</p>
+            <div className="flex flex-wrap gap-2">
+              {labelOptions.map((label) => {
+                const active = labelFilter.includes(label);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => toggleValue(label, labelFilter, setLabelFilter)}
+                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+        {accountOptions.length ? (
+          <div className="md:col-span-2 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Accounts</p>
+            <div className="flex flex-wrap gap-2">
+              {accountOptions.map((account) => {
+                const active = accountFilter.includes(account);
+                return (
+                  <button
+                    key={account}
+                    type="button"
+                    onClick={() => toggleValue(account, accountFilter, setAccountFilter)}
+                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {account}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+        {envelopeOptions.length ? (
+          <div className="md:col-span-2 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Envelopes</p>
+            <div className="flex flex-wrap gap-2">
+              {envelopeOptions.map((envelope) => {
+                const active = envelopeFilter.includes(envelope);
+                return (
+                  <button
+                    key={envelope}
+                    type="button"
+                    onClick={() => toggleValue(envelope, envelopeFilter, setEnvelopeFilter)}
+                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {envelope}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+        <div className="md:col-span-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setStatusFilter("all");
+                setDuplicateFilter("all");
+                setSearch("");
+                setDateFrom(defaultFrom);
+                setDateTo(defaultTo);
+                setDatePreset("this-month");
+                setAmountMin("");
+                setAmountMax("");
+                setLabelFilter([]);
+                setAccountFilter([]);
+                setEnvelopeFilter([]);
+              }}
+            >
+              Reset filters
+            </Button>
+          </div>
+          <Button variant="outline" onClick={() => setCsvOpen(true)}>
+            Import CSV
+          </Button>
+        </div>
       </section>
+
+      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="uppercase tracking-wide">Duplicate status</span>
+        {duplicateFilters.map((filter) => (
+          <button
+            key={filter.key}
+            type="button"
+            onClick={() => setDuplicateFilter(filter.key)}
+            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition ${
+              duplicateFilter === filter.key
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
 
       {isMobile ? (
         <MobileTransactionList
@@ -562,15 +992,20 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
                 const duplicateFlag = duplicateCount > 1;
                 return (
                   <Fragment key={tx.id}>
-                    <tr className="text-sm">
+                    <tr
+                      className={cn(
+                        "text-sm transition",
+                        tx.id === activeRowId && "bg-primary/5",
+                      )}
+                      tabIndex={0}
+                      onClick={() => setActiveRowId(tx.id)}
+                      onFocus={() => setActiveRowId(tx.id)}
+                      aria-selected={tx.id === activeRowId}
+                    >
                       <td className="px-4 py-3 align-top">
                         <div className="font-medium text-secondary flex items-center gap-2">
                           {tx.merchant_name}
-                          {duplicateFlag ? (
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                              Possible duplicate
-                            </span>
-                          ) : null}
+                          {renderDuplicateBadge(tx.duplicate_status, duplicateFlag)}
                         </div>
                         {tx.description ? (
                           <p className="text-xs text-muted-foreground">{tx.description}</p>
@@ -630,7 +1065,10 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleLabels(tx)}
+                            onClick={() => {
+                              setActiveRowId(tx.id);
+                              void handleLabels(tx);
+                            }}
                           >
                             Manage labels
                           </Button>
@@ -646,28 +1084,42 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleAssign(tx)}
+                            onClick={() => {
+                              setActiveRowId(tx.id);
+                              void handleAssign(tx);
+                            }}
                           >
                             Assign
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSplitTransactionId(tx.id)}
+                            onClick={() => {
+                              setActiveRowId(tx.id);
+                              setSplitTransactionId((current) =>
+                                current === tx.id ? null : tx.id,
+                              );
+                            }}
                           >
                             Split
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setReceiptTransactionId(tx.id)}
+                            onClick={() => {
+                              setActiveRowId(tx.id);
+                              setReceiptTransactionId(tx.id);
+                            }}
                           >
                             Receipt
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => handleApprove(tx)}
+                            onClick={() => {
+                              setActiveRowId(tx.id);
+                              void handleApprove(tx);
+                            }}
                             disabled={status === "approved"}
                           >
                             {status === "approved" ? "Approved" : "Approve"}
@@ -784,28 +1236,21 @@ async function handleResolveDuplicate(tx: WorkbenchRow) {
         }}
         transactionId={receiptTransactionId}
       />
+      <DuplicateResolutionDialog
+        open={Boolean(duplicateDialog)}
+        transaction={duplicateDialog?.transaction ?? null}
+        candidates={duplicateDialog?.candidates ?? []}
+        loading={duplicateActionLoading}
+        error={duplicateActionError}
+        onClose={() => {
+          if (!duplicateActionLoading) {
+            setDuplicateDialog(null);
+            setDuplicateActionError(null);
+          }
+        }}
+        onDecision={(decision, targetId, note) => submitDuplicateResolution(decision, targetId, note)}
+      />
     </div>
-  );
-}
-
-function MobileNav() {
-  return (
-    <nav className="fixed inset-x-0 bottom-0 border-t bg-background/95 shadow-lg backdrop-blur md:hidden">
-      <div className="flex items-center justify-around px-4 py-3 text-xs">
-        <Link href="/dashboard" className="text-muted-foreground transition hover:text-primary">
-          Dashboard
-        </Link>
-        <Link href="/envelope-summary" className="text-muted-foreground transition hover:text-primary">
-          Summary
-        </Link>
-        <Link href="/reconcile" className="text-primary font-semibold">
-          Reconcile
-        </Link>
-        <Link href="/envelope-planning" className="text-muted-foreground transition hover:text-primary">
-          Planner
-        </Link>
-      </div>
-    </nav>
   );
 }
 
@@ -862,6 +1307,32 @@ function MobileTransactionList({
       )}
     </div>
   );
+}
+
+function renderDuplicateBadge(status: string | null | undefined, needsReview: boolean) {
+  if (needsReview) {
+    return (
+      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+        Needs review
+      </span>
+    );
+  }
+  const normalised = (status ?? "").toLowerCase();
+  if (normalised === "canonical") {
+    return (
+      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
+        Primary record
+      </span>
+    );
+  }
+  if (normalised === "ignored") {
+    return (
+      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700">
+        Ignored duplicate
+      </span>
+    );
+  }
+  return null;
 }
 
 function MobileTransactionCard({
@@ -967,11 +1438,7 @@ function MobileTransactionCard({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-secondary">
             {transaction.merchant_name}
-            {duplicateFlag ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
-                Possible duplicate
-              </span>
-            ) : null}
+            {renderDuplicateBadge(transaction.duplicate_status, duplicateFlag)}
           </div>
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
@@ -1064,5 +1531,177 @@ function MobileTransactionCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function DuplicateResolutionDialog({
+  open,
+  transaction,
+  candidates,
+  loading,
+  error,
+  onClose,
+  onDecision,
+}: {
+  open: boolean;
+  transaction: WorkbenchRow | null;
+  candidates: WorkbenchRow[];
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+  onDecision: (decision: "merge" | "ignore", targetId: string, note?: string) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedId(candidates[0]?.id ?? null);
+    setNote("");
+  }, [open, candidates]);
+
+  if (!transaction) {
+    return null;
+  }
+
+  const disableActions = loading || !selectedId;
+
+  return (
+    <Dialog.Root open={open} onOpenChange={(value) => (value ? null : onClose())}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/40" />
+        <Dialog.Content className="fixed inset-0 flex items-center justify-center px-4 py-10">
+          <div className="w-full max-w-2xl space-y-5 rounded-3xl border bg-background p-6 shadow-xl">
+            <Dialog.Title className="text-lg font-semibold text-secondary">
+              Resolve duplicate
+            </Dialog.Title>
+            <Dialog.Description className="text-sm text-muted-foreground">
+              Choose the matching transaction and decide whether to merge it or ignore future alerts.
+            </Dialog.Description>
+
+            <div className="rounded-2xl border bg-muted/10 p-4 text-sm text-muted-foreground">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary transaction</p>
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-secondary">
+                <span className="font-medium">{transaction.merchant_name}</span>
+                <span>{formatCurrency(Number(transaction.amount ?? 0))}</span>
+                <span>
+                  {new Date(transaction.occurred_at).toLocaleDateString("en-NZ", {
+                    dateStyle: "medium",
+                  })}
+                </span>
+              </div>
+              <p className="text-xs">
+                {transaction.bank_reference ? `Ref ${transaction.bank_reference} · ` : ""}
+                {transaction.bank_memo ?? ""}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-medium text-secondary">Possible matches</Label>
+              {candidates.length ? (
+                <div className="space-y-2">
+                  {candidates.map((candidate) => {
+                    const isSelected = selectedId === candidate.id;
+                    return (
+                      <label
+                        key={candidate.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition ${
+                          isSelected ? "border-primary bg-primary/5" : "border-border bg-background hover:border-primary/40"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="duplicate-candidate"
+                          value={candidate.id}
+                          checked={isSelected}
+                          onChange={() => setSelectedId(candidate.id)}
+                          className="mt-1"
+                        />
+                        <div className="text-sm text-secondary">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="font-medium">{candidate.merchant_name}</span>
+                            <span>{formatCurrency(Number(candidate.amount ?? 0))}</span>
+                            <span>
+                              {new Date(candidate.occurred_at).toLocaleDateString("en-NZ", {
+                                dateStyle: "medium",
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {candidate.bank_reference ? `Ref ${candidate.bank_reference} · ` : ""}
+                            {candidate.bank_memo ?? ""}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-2xl border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground">
+                  No matching duplicates detected.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-note" className="text-sm font-medium text-secondary">
+                Notes (optional)
+              </Label>
+              <Textarea
+                id="duplicate-note"
+                placeholder="Add additional context for this decision"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                rows={3}
+              />
+            </div>
+
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={disableActions}
+                onClick={() => selectedId && onDecision("ignore", selectedId, note.trim() || undefined)}
+              >
+                Ignore duplicates
+              </Button>
+              <Button
+                type="button"
+                disabled={disableActions}
+                onClick={() => selectedId && onDecision("merge", selectedId, note.trim() || undefined)}
+              >
+                Merge transactions
+              </Button>
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
+function MobileNav() {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 border-t bg-background/95 shadow-lg backdrop-blur md:hidden">
+      <div className="flex items-center justify-around px-4 py-3 text-xs">
+        <Link href="/dashboard" className="text-muted-foreground transition hover:text-primary">
+          Dashboard
+        </Link>
+        <Link href="/envelope-summary" className="text-muted-foreground transition hover:text-primary">
+          Summary
+        </Link>
+        <Link href="/reconcile" className="text-primary font-semibold">
+          Reconcile
+        </Link>
+        <Link href="/envelope-planning" className="text-muted-foreground transition hover:text-primary">
+          Planner
+        </Link>
+      </div>
+    </nav>
   );
 }

@@ -17,6 +17,9 @@ type TransactionRecord = {
   id: string;
   amount: number | string | null;
   occurred_at: string;
+  account_name: string | null;
+  envelope_name: string | null;
+  labels: string[];
 };
 
 type LiabilityRecord = {
@@ -25,6 +28,8 @@ type LiabilityRecord = {
   current_balance: number | string | null;
   interest_rate: number | string | null;
 };
+
+const UNASSIGNED_LABEL = "Unassigned";
 
 export default async function ReportsPage() {
   const supabase = await createClient();
@@ -38,8 +43,9 @@ export default async function ReportsPage() {
   let transfers: TransferHistoryItem[] = [];
 
   if (session) {
+    const monthsBack = 12;
     const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 5, 1);
+    startDate.setMonth(startDate.getMonth() - (monthsBack - 1), 1);
     startDate.setHours(0, 0, 0, 0);
 
     const [envelopeRes, transactionRes, liabilityRes, transfersRes] = await Promise.all([
@@ -49,7 +55,12 @@ export default async function ReportsPage() {
         .order("name"),
       supabase
         .from("transactions")
-        .select("id, amount, occurred_at")
+        .select(
+          `id, amount, occurred_at,
+            account:accounts(name),
+            envelope:envelopes(name),
+            transaction_labels:transaction_labels(label:labels(name))`
+        )
         .gte("occurred_at", startDate.toISOString())
         .order("occurred_at", { ascending: true }),
       supabase.from("liabilities").select("id, name, current_balance, interest_rate"),
@@ -63,7 +74,18 @@ export default async function ReportsPage() {
     ]);
 
     envelopes = (envelopeRes.data ?? []) as EnvelopeRecord[];
-    transactions = (transactionRes.data ?? []) as TransactionRecord[];
+    transactions = (transactionRes.data ?? []).map((transaction: any) => ({
+      id: transaction.id,
+      amount: transaction.amount,
+      occurred_at: transaction.occurred_at,
+      account_name: transaction.account?.name ?? null,
+      envelope_name: transaction.envelope?.name ?? null,
+      labels: Array.isArray(transaction.transaction_labels)
+        ? transaction.transaction_labels
+            .map((entry: any) => entry?.label?.name)
+            .filter(Boolean)
+        : [],
+    }));
     liabilities = (liabilityRes.data ?? []) as LiabilityRecord[];
     transfers = mapTransferHistory(transfersRes.data as any);
   }
@@ -74,6 +96,7 @@ export default async function ReportsPage() {
     liabilities,
     transfers,
     demoMode: !session,
+    monthsBack: session ? 12 : 6,
   });
 
   return <ReportsClient data={data} />;
@@ -85,30 +108,42 @@ function buildReportsData({
   liabilities,
   transfers,
   demoMode,
+  monthsBack,
 }: {
   envelopes: EnvelopeRecord[];
   transactions: TransactionRecord[];
   liabilities: LiabilityRecord[];
   transfers: TransferHistoryItem[];
   demoMode: boolean;
+  monthsBack: number;
 }): ReportsData {
   if (demoMode) {
     return getDemoReportsData();
   }
 
-  const months = createMonthBuckets(6);
+  const months = createMonthBuckets(monthsBack);
   const spendMap = new Map<string, number>();
   const incomeMap = new Map<string, number>();
+  const accountSet = new Set<string>();
+  const envelopeSet = new Set<string>();
+  const labelSet = new Set<string>();
 
   transactions.forEach((transaction) => {
     const amount = toNumber(transaction.amount);
     if (!amount || !transaction.occurred_at) return;
+    const accountLabel = transaction.account_name ?? UNASSIGNED_LABEL;
+    const envelopeLabel = transaction.envelope_name ?? UNASSIGNED_LABEL;
+    if (accountLabel) accountSet.add(accountLabel);
+    if (envelopeLabel) envelopeSet.add(envelopeLabel);
     const key = monthKey(new Date(transaction.occurred_at));
     if (amount < 0) {
       spendMap.set(key, (spendMap.get(key) ?? 0) + Math.abs(amount));
     } else {
       incomeMap.set(key, (incomeMap.get(key) ?? 0) + amount);
     }
+    (transaction.labels ?? []).forEach((label) => {
+      if (label) labelSet.add(label);
+    });
   });
 
   let plannedMonthly = envelopes.reduce((sum, envelope) => sum + toNumber(envelope.pay_cycle_amount), 0);
@@ -181,12 +216,27 @@ function buildReportsData({
     income,
     debts,
     exportLinks: [
-      { label: "Spending detail (CSV)", href: "/api/reports/spending" },
-      { label: "Income summary (CSV)", href: "/api/reports/income" },
-      { label: "Debt payoff plan (PDF)", href: "/api/reports/debt" },
+      { label: "Balance sheet (CSV)", href: "/api/reports/balance-sheet?format=csv" },
+      { label: "Balance sheet (Excel)", href: "/api/reports/balance-sheet?format=xlsx" },
+      { label: "Transactions (CSV)", href: "/api/reports/transactions?format=csv" },
+      { label: "Transactions (Excel)", href: "/api/reports/transactions?format=xlsx" },
+      { label: "Net worth summary (PDF)", href: "/api/reports/net-worth/pdf" },
+      { label: "Envelope summary (PDF)", href: "/api/reports/envelopes/pdf" },
     ],
     demoMode,
     transfers,
+    plannedMonthly,
+    accounts: Array.from(accountSet).sort((a, b) => a.localeCompare(b)),
+    envelopes: Array.from(envelopeSet).sort((a, b) => a.localeCompare(b)),
+    labels: Array.from(labelSet).sort((a, b) => a.localeCompare(b)),
+    transactions: transactions.map((transaction) => ({
+      id: transaction.id,
+      occurredAt: transaction.occurred_at,
+      amount: toNumber(transaction.amount),
+      account: transaction.account_name ?? UNASSIGNED_LABEL,
+      envelope: transaction.envelope_name ?? UNASSIGNED_LABEL,
+      labels: transaction.labels ?? [],
+    })),
   };
 }
 
@@ -252,9 +302,12 @@ function getDemoReportsData(): ReportsData {
     income,
     debts,
     exportLinks: [
-      { label: "Spending detail (CSV)", href: "#" },
-      { label: "Income summary (CSV)", href: "#" },
-      { label: "Debt payoff plan (PDF)", href: "#" },
+      { label: "Balance sheet (CSV)", href: "#" },
+      { label: "Balance sheet (Excel)", href: "#" },
+      { label: "Transactions (CSV)", href: "#" },
+      { label: "Transactions (Excel)", href: "#" },
+      { label: "Net worth summary (PDF)", href: "#" },
+      { label: "Envelope summary (PDF)", href: "#" },
     ],
     demoMode: true,
     transfers: [
@@ -273,6 +326,36 @@ function getDemoReportsData(): ReportsData {
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
         from: { id: "demo-surplus", name: "Surplus" },
         to: { id: "demo-holiday", name: "Holiday savings" },
+      },
+    ],
+    plannedMonthly: planned,
+    accounts: ["Everyday account", "Holiday savings"],
+    envelopes: ["Groceries", "Holiday savings", "Emergency fund", "Income"],
+    labels: ["Groceries", "Income", "Holiday"],
+    transactions: [
+      {
+        id: "demo-tx-1",
+        occurredAt: new Date().toISOString(),
+        amount: -320,
+        account: "Everyday account",
+        envelope: "Groceries",
+        labels: ["Groceries"],
+      },
+      {
+        id: "demo-tx-2",
+        occurredAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 15).toISOString(),
+        amount: 5200,
+        account: "Everyday account",
+        envelope: "Income",
+        labels: ["Income"],
+      },
+      {
+        id: "demo-tx-3",
+        occurredAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 45).toISOString(),
+        amount: -180,
+        account: "Holiday savings",
+        envelope: "Holiday savings",
+        labels: ["Holiday"],
       },
     ],
   };

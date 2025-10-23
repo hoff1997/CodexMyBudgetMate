@@ -90,14 +90,15 @@ export async function GET() {
     .from("recurring_income")
     .select(listColumns.join(", "))
     .eq("user_id", session.user.id)
-    .order("name", { ascending: true });
+    .order("name", { ascending: true })
+    .returns<DbStream[]>();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
   return NextResponse.json({
-    streams: (data ?? []).map((stream) => formatStream(stream as DbStream)),
+    streams: (data ?? []).map((stream) => formatStream(stream)),
   });
 }
 
@@ -137,15 +138,20 @@ export async function POST(request: Request) {
       surplus_envelope: payload.surplusEnvelope ?? null,
     })
     .select(listColumns.join(", "))
+    .returns<DbStream>()
     .maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  if (!data) {
+    return NextResponse.json({ error: "Unable to save income stream" }, { status: 500 });
+  }
+
   return NextResponse.json(
     {
-      stream: formatStream(data as DbStream),
+      stream: formatStream(data),
     },
     { status: 201 },
   );

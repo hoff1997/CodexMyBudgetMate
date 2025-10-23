@@ -230,7 +230,7 @@ export function InteractionsClient({ data }: Props) {
                   {rule.caseSensitive ? <Badge variant="outline">Case sensitive</Badge> : null}
                 </div>
                 <p className="mt-2 text-sm font-semibold text-secondary">
-                  "{rule.pattern}" ➜ {rule.envelopeName ?? "Unmapped envelope"}
+                  <span>&ldquo;{rule.pattern}&rdquo;</span> ➜ {rule.envelopeName ?? "Unmapped envelope"}
                 </p>
                 <p className="text-xs">
                   Updated{" "}

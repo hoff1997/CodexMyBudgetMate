@@ -12,8 +12,13 @@ import {
   CelebrationEvent,
   CelebrationTimeline,
 } from "@/components/layout/dashboard/celebration-timeline";
-import { differenceInCalendarDays } from "date-fns";
-import { getEnvelopeStatus } from "@/lib/finance";
+import { differenceInCalendarDays, formatDistanceToNow } from "date-fns";
+import { formatCurrency, getEnvelopeStatus } from "@/lib/finance";
+import { cn } from "@/lib/cn";
+import {
+  DashboardWidgetGrid,
+  type DashboardWidget,
+} from "@/components/layout/overview/dashboard-widget-grid";
 
 interface Props {
   userId: string;
@@ -74,6 +79,16 @@ const demoTransactions: TransactionRow[] = [
   },
 ];
 
+const WIDGET_STORAGE_KEY = "mbm-dashboard-widget-order";
+const DEFAULT_WIDGET_ORDER = [
+  "income-expense",
+  "overdue",
+  "akahu",
+  "summary",
+  "recent",
+  "celebrations",
+];
+
 export async function BudgetOverview({ userId, demoMode = false }: Props) {
   if (demoMode) {
     const demoIncome = 4500;
@@ -107,22 +122,48 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
         achievedAt: new Date(Date.now() - index * 1000 * 60 * 60 * 24 * 7),
       }));
 
-    return (
-      <div className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+    const demoWidgets: DashboardWidget[] = [
+      {
+        id: "income-expense",
+        className: "lg:col-span-2",
+        node: (
           <IncomeExpenseOverview
             incomeTotal={demoIncome}
             expenseTotal={demoExpenses}
             pendingCount={demoPending}
           />
-          <OverdueEnvelopesCard envelopes={overdue} />
-        </div>
-        <AkahuConnect hasConnection={false} />
-        <BudgetSummaryCards envelopes={demoEnvelopes} />
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-          <RecentTransactions transactions={demoTransactions} />
-          <CelebrationTimeline events={celebrations} />
-        </div>
+        ),
+      },
+      {
+        id: "overdue",
+        className: "lg:col-span-1",
+        node: <OverdueEnvelopesCard envelopes={overdue} />, 
+      },
+      {
+        id: "akahu",
+        className: "lg:col-span-3",
+        node: <AkahuConnect hasConnection={false} />, 
+      },
+      {
+        id: "summary",
+        className: "lg:col-span-3",
+        node: <BudgetSummaryCards envelopes={demoEnvelopes} />,
+      },
+      {
+        id: "recent",
+        className: "lg:col-span-2",
+        node: <RecentTransactions transactions={demoTransactions} />, 
+      },
+      {
+        id: "celebrations",
+        className: "lg:col-span-1",
+        node: <CelebrationTimeline events={celebrations} />, 
+      },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <DashboardWidgetGrid widgets={demoWidgets} storageKey={null} defaultOrder={DEFAULT_WIDGET_ORDER} />
       </div>
     );
   }
@@ -132,33 +173,62 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
   const [
     { data: envelopes, error: envelopesError },
     { data: transactions, error: transactionsError },
-    { data: connection, error: connectionError },
+    { data: connections, error: connectionsError },
   ] = await Promise.all([
     supabase
       .from("envelopes")
-      .select("id, name, target_amount, current_amount, due_date, frequency, next_payment_due, notes, updated_at"),
-      supabase
-        .from("transactions_view")
-        .select(
-          "id, merchant_name, description, amount, occurred_at, status, envelope_name, account_name, bank_reference, bank_memo",
-        )
+      .select(
+        "id, name, target_amount, current_amount, due_date, frequency, next_payment_due, notes, updated_at",
+      ),
+    supabase
+      .from("transactions")
+      .select(
+        `id, merchant_name, description, amount, occurred_at, status,
+          account:accounts(name),
+          envelope:envelopes(name)`
+      )
       .order("occurred_at", { ascending: false })
       .limit(5),
     supabase
-      .from("akahu_tokens")
-      .select("user_id")
+      .from("bank_connections")
+      .select("provider, status, last_synced_at")
       .eq("user_id", userId)
-      .maybeSingle(),
+      .order("last_synced_at", { ascending: false }),
   ]);
 
   const connectUrl =
     process.env.AKAHU_CLIENT_ID && process.env.AKAHU_REDIRECT_URI
-      ? `https://connect.akahu.io/?client=${process.env.AKAHU_CLIENT_ID}&redirect=${encodeURIComponent(process.env.AKAHU_REDIRECT_URI)}`
+      ? `https://connect.akahu.io/?client=${process.env.AKAHU_CLIENT_ID}&redirect=${encodeURIComponent(process.env.AKAHU_REDIRECT_URI)}&metadata[user_id]=${encodeURIComponent(userId)}`
       : undefined;
 
   const safeEnvelopes = envelopesError ? [] : envelopes ?? [];
-  const safeTransactions = transactionsError ? [] : transactions ?? [];
-  const hasConnection = !connectionError && Boolean(connection);
+  const safeTransactions = transactionsError
+    ? []
+    : (transactions ?? []).map((transaction: any) => ({
+        ...transaction,
+        envelope_name: transaction.envelope?.name ?? null,
+        account_name: transaction.account?.name ?? null,
+      }));
+  const primaryConnection = !connectionsError && Array.isArray(connections) ? connections[0] ?? null : null;
+  const hasConnection = Boolean(primaryConnection);
+  const formatStatusLabel = (status: string) =>
+    status
+      .split(/[_\s]+/)
+      .filter(Boolean)
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(" ");
+
+  const connectionStatusLabel = hasConnection
+    ? formatStatusLabel(primaryConnection?.status ?? "connected")
+    : "Disconnected";
+  const connectionTone = hasConnection
+    ? connectionStatusLabel.toLowerCase().includes("connected")
+      ? "positive"
+      : "negative"
+    : "action";
+  const lastSyncedRelative = primaryConnection?.last_synced_at
+    ? formatDistanceToNow(new Date(primaryConnection.last_synced_at), { addSuffix: true })
+    : null;
 
   const incomeTotal = safeTransactions.reduce((sum, tx) => {
     const amount = Number(tx.amount ?? 0);
@@ -206,26 +276,176 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
         title: `${envelope.name} ${status.label.toLowerCase()}`,
         description: `Hit ${Math.round((current / target) * 100)}% of target. Keep it up!`,
         achievedAt: new Date(envelope.updated_at ?? envelope.due_date ?? new Date()),
-      } as CelebrationEvent & { achievedAt: Date };
+      } as CelebrationEvent;
     })
     .filter(Boolean) as CelebrationEvent[];
 
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+  const widgetConfig: DashboardWidget[] = [
+    {
+      id: "income-expense",
+      className: "lg:col-span-2",
+      node: (
         <IncomeExpenseOverview
           incomeTotal={incomeTotal}
           expenseTotal={Math.abs(expenseTotal)}
           pendingCount={pendingCount}
         />
-        <OverdueEnvelopesCard envelopes={overdueEnvelopes} />
+      ),
+    },
+    {
+      id: "overdue",
+      className: "lg:col-span-1",
+      node: <OverdueEnvelopesCard envelopes={overdueEnvelopes} />, 
+    },
+    {
+      id: "akahu",
+      className: "lg:col-span-3",
+      node: (
+        <AkahuConnect
+          hasConnection={hasConnection}
+          connectUrl={connectUrl}
+          statusLabel={connectionStatusLabel}
+          lastSyncedAt={primaryConnection?.last_synced_at ?? null}
+        />
+      ), 
+    },
+    {
+      id: "summary",
+      className: "lg:col-span-3",
+      node: <BudgetSummaryCards envelopes={safeEnvelopes} />, 
+    },
+    {
+      id: "recent",
+      className: "lg:col-span-2",
+      node: <RecentTransactions transactions={safeTransactions} />, 
+    },
+    {
+      id: "celebrations",
+      className: "lg:col-span-1",
+      node: <CelebrationTimeline events={celebrationEvents} />, 
+    },
+  ];
+
+  const nextOverdue = overdueEnvelopes.length
+    ? overdueEnvelopes.reduce((earliest, envelope) => {
+        if (!earliest) return envelope;
+        return envelope.dueDate < earliest.dueDate ? envelope : earliest;
+      })
+    : null;
+
+  const compactStats = [
+    {
+      id: "income",
+      label: "Income this period",
+      value: formatCurrency(incomeTotal),
+      helper: pendingCount ? `${pendingCount} transactions pending` : "All reconciled",
+    },
+    {
+      id: "expenses",
+      label: "Expenses this period",
+      value: formatCurrency(Math.abs(expenseTotal)),
+      helper: expenseTotal ? "Includes pending spend" : "No expenses logged",
+    },
+    {
+      id: "overdue",
+      label: "Envelopes needing top-up",
+      value: overdueEnvelopes.length ? `${overdueEnvelopes.length}` : "0",
+      helper: nextOverdue
+        ? `${nextOverdue.name} due in ${Math.max(0, nextOverdue.dueInDays)} days`
+        : "All envelopes on track",
+    },
+    {
+      id: "celebrations",
+      label: "Recent celebrations",
+      value: celebrationEvents.length ? `${celebrationEvents.length}` : "—",
+      helper: celebrationEvents.length ? "Keep the streak going!" : "No celebrations yet",
+    },
+    {
+      id: "akahu",
+      label: "Bank connection",
+      value: hasConnection ? connectionStatusLabel : "Connect now",
+      helper: hasConnection
+        ? lastSyncedRelative
+          ? `Last sync ${lastSyncedRelative}`
+          : "Sync scheduled"
+        : connectUrl
+        ? "Link an account to import data"
+        : "Set AKAHU env vars to enable sync",
+      emphasis: connectionTone,
+      href: hasConnection ? "/settings#bank-connections" : connectUrl,
+    },
+  ] as const;
+
+  return (
+    <div className="space-y-6">
+      <div className="md:hidden">
+        <MobileCompactStatList items={compactStats} />
       </div>
-      <AkahuConnect hasConnection={hasConnection} connectUrl={connectUrl} />
-      <BudgetSummaryCards envelopes={safeEnvelopes} />
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <RecentTransactions transactions={safeTransactions} />
-        <CelebrationTimeline events={celebrationEvents} />
+      <div className="hidden md:block">
+        <DashboardWidgetGrid
+          widgets={widgetConfig}
+          storageKey={WIDGET_STORAGE_KEY}
+          defaultOrder={DEFAULT_WIDGET_ORDER}
+        />
       </div>
+    </div>
+  );
+}
+
+type CompactStat = {
+  id: string;
+  label: string;
+  value: string;
+  helper?: string;
+  emphasis?: "positive" | "negative" | "action";
+  href?: string;
+};
+
+function MobileCompactStatList({ items }: { items: readonly CompactStat[] }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/20 p-4">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        Overview
+      </h2>
+      <ul className="divide-y divide-border text-sm">
+        {items.map((item) => {
+          const tone =
+            item.emphasis === "positive"
+              ? "text-emerald-600"
+              : item.emphasis === "negative"
+              ? "text-rose-600"
+              : item.emphasis === "action"
+              ? "text-primary"
+              : "text-secondary";
+          const content = (
+            <div className="flex w-full items-start justify-between gap-3 py-3">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {item.label}
+                </p>
+                {item.helper ? (
+                  <p className="mt-1 text-sm text-muted-foreground">{item.helper}</p>
+                ) : null}
+              </div>
+              <p className={cn("text-base font-semibold", tone)}>{item.value}</p>
+            </div>
+          );
+          return (
+            <li key={item.id}>
+              {item.href ? (
+                <a
+                  href={item.href}
+                  className="block rounded-lg px-2 transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {content}
+                </a>
+              ) : (
+                content
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

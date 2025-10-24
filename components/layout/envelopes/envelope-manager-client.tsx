@@ -15,6 +15,8 @@ import { PlannerFrequency, calculateDueProgress, frequencyOptions } from "@/lib/
 import { differenceInCalendarDays, format, isValid } from "date-fns";
 import type { TransferHistoryItem } from "@/lib/types/envelopes";
 import { Progress } from "@/components/ui/progress";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Info } from "lucide-react";
 
 const statusFilters = [
   { key: "all", label: "All" },
@@ -52,6 +54,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [newEnvelope, setNewEnvelope] = useState({
     name: "",
     categoryId: "",
@@ -139,11 +142,25 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-24 pt-12 md:px-10 md:pb-12">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-secondary">Manage envelopes</h1>
-        <p className="text-base text-muted-foreground">
-          Create, edit, transfer, and monitor envelopes. Changes sync with the planner, dashboard,
-          and recurring income tools.
-        </p>
+        <div className="flex items-start gap-3">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold text-secondary">Manage envelopes</h1>
+            <p className="text-base text-muted-foreground">
+              Create, edit, transfer, and monitor envelopes. Changes sync with the planner, dashboard,
+              and recurring income tools.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="ml-auto h-9 w-9 shrink-0"
+            onClick={() => setGuideOpen(true)}
+            aria-label="Show envelope manager guide"
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+        </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -456,6 +473,8 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
       />
 
       <MobileNav />
+
+      <FeatureGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
     </div>
   );
 }
@@ -741,4 +760,74 @@ function getDueDetails(envelope: SummaryEnvelope) {
 function formatFrequency(frequency: PlannerFrequency) {
   const match = frequencyOptions.find((option) => option.value === frequency);
   return match ? match.label.toLowerCase() : "pay";
+}
+
+function FeatureGuideDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Content className="fixed inset-0 z-50 mx-auto flex max-w-3xl flex-col gap-4 overflow-y-auto rounded-3xl bg-background p-6 shadow-2xl md:top-12 md:h-[80vh]">
+          <Dialog.Title className="text-xl font-semibold text-secondary">Envelope manager guide</Dialog.Title>
+          <Dialog.Description className="text-sm text-muted-foreground">
+            Review this checklist whenever features are redesigned so the planner remains feature-complete.
+          </Dialog.Description>
+
+          <div className="space-y-6 text-sm text-muted-foreground">
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Navigation & filters</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Status chips toggle All / On track / Needs attention / Surplus.</li>
+                <li>Category filter supports All, Uncategorised, and individual categories.</li>
+                <li>Search filters by envelope name.</li>
+                <li>Buttons for Transfer funds and Open planner are present.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Metrics & quick add</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Total target, current balance, and funding gap metric cards render.</li>
+                <li>Quick add form accepts name, category, target, per pay, frequency.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Category groups</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Envelopes are grouped by category with per-group collapse/expand.</li>
+                <li>Global expand all / collapse all buttons function.</li>
+                <li>Category headers show envelope counts.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Envelope cards</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Status badges cover On track, Surplus, Needs attention, Due soon (within 3 days).</li>
+                <li>Progress bar reflects current vs target with colour-coded fill.</li>
+                <li>Target amount, formatted due date, and relative due copy display.</li>
+                <li>Required per pay amount shows when additional funding is needed.</li>
+                <li>Per-envelope Edit and Transfer actions open their respective dialogs.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Optimisation & history</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Optimisation helper lists up to five suggested transfers.</li>
+                <li>Transfers trigger history updates and refresh envelope balances.</li>
+              </ul>
+            </section>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Dialog.Close asChild>
+              <Button variant="outline">Close</Button>
+            </Dialog.Close>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
 }

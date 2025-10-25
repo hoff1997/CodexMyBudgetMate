@@ -80,19 +80,17 @@ export async function getPayPlanSummary(
 ): Promise<PayPlanSummary | null> {
   if (!userId) return null;
 
-  const [{ data: incomes, error: incomesError }, { data: envelopes, error: envelopesError }] =
-    await Promise.all([
-      client
-        .from("recurring_income")
-        .select("id, name, amount, frequency, allocations")
-        .eq("user_id", userId)
-        .order("name") as Promise<{ data: RawIncomeRow[] | null; error: any }>,
-      client
-        .from("envelopes")
-        .select("id, name")
-        .eq("user_id", userId)
-        .order("name") as Promise<{ data: RawEnvelope[] | null; error: any }>,
-    ]);
+  const { data: incomes, error: incomesError } = await client
+    .from("recurring_income")
+    .select("id, name, amount, frequency, allocations")
+    .eq("user_id", userId)
+    .order("name");
+
+  const { data: envelopes, error: envelopesError } = await client
+    .from("envelopes")
+    .select("id, name")
+    .eq("user_id", userId)
+    .order("name");
 
   if (incomesError || envelopesError) {
     console.error("Failed to load pay plan data", incomesError ?? envelopesError);

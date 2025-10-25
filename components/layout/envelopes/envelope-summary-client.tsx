@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
 import type { TransferHistoryItem } from "@/lib/types/envelopes";
+import type { PayPlanSummary } from "@/lib/types/pay-plan";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -33,18 +34,31 @@ export function EnvelopeSummaryClient({
   transferHistory,
   defaultTab,
   celebrations,
+  payPlan,
 }: {
   list: SummaryEnvelope[];
   totals: { target: number; current: number };
   transferHistory: TransferHistoryItem[];
   defaultTab?: string;
   celebrations: Array<{ id: string; title: string; description: string | null; achievedAt: string }>;
+  payPlan?: PayPlanSummary | null;
 }) {
   const router = useRouter();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
   const [selectedEnvelope, setSelectedEnvelope] = useState<SummaryEnvelope | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [collapseAll, setCollapseAll] = useState(false);
+
+  const payPlanMap = useMemo(() => {
+    if (!payPlan) return new Map<string, { perPay: number; annual: number }>();
+    return new Map(
+      payPlan.envelopes.map((entry) => [
+        entry.envelopeId,
+        { perPay: entry.perPayAmount, annual: entry.annualAmount },
+      ]),
+    );
+  }, [payPlan]);
+  const planFrequency = payPlan?.primaryFrequency ?? null;
 
   useEffect(() => {
     const sorted = [...list]
@@ -149,6 +163,8 @@ export function EnvelopeSummaryClient({
 
   const defaultValue = defaultTab === "zero-budget" ? "zero-budget" : "summary";
 
+  const selectedPlan = selectedEnvelope ? payPlanMap.get(selectedEnvelope.id) : undefined;
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 pb-24 pt-12 md:px-10 md:pb-12">
       <header className="space-y-2">
@@ -245,6 +261,9 @@ export function EnvelopeSummaryClient({
 
       <EnvelopeEditSheet
         envelope={selectedEnvelope}
+        planPerPay={selectedPlan?.perPay}
+        planAnnual={selectedPlan?.annual}
+        planFrequency={planFrequency ?? undefined}
         onClose={() => setSelectedEnvelope(null)}
         onSave={async (updated) => {
           await fetch(`/api/envelopes/${updated.id}`, {

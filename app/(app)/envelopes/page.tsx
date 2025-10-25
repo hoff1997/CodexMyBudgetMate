@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeManagerClient } from "@/components/layout/envelopes/envelope-manager-client";
 import { mapTransferHistory, type RawTransferRow } from "@/lib/types/envelopes";
+import { getPayPlanSummary } from "@/lib/server/pay-plan";
 
 export default async function EnvelopesPage() {
   const supabase = await createClient();
@@ -42,12 +43,15 @@ export default async function EnvelopesPage() {
     to_envelope: Array.isArray(row.to_envelope) ? row.to_envelope[0] ?? null : row.to_envelope,
   }));
 
+  const payPlan = await getPayPlanSummary(supabase, session?.user.id);
+
   return (
     <EnvelopeManagerClient
       envelopes={envelopes}
       categories={(categoriesResponse.data ?? []).map((category) => ({ id: category.id, name: category.name }))}
       canEdit={Boolean(session)}
       transferHistory={mapTransferHistory(transferRows)}
+      payPlan={payPlan}
     />
   );
 }

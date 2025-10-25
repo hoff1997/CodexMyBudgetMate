@@ -8,14 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlannerFrequency, frequencyOptions } from "@/lib/planner/calculations";
+import { formatCurrency } from "@/lib/finance";
 
 interface Props {
   envelope: SummaryEnvelope | null;
   onClose: () => void;
   onSave: (payload: SummaryEnvelope) => Promise<void> | void;
+  planPerPay?: number | null;
+  planAnnual?: number | null;
+  planFrequency?: PlannerFrequency | null;
 }
 
-export function EnvelopeEditSheet({ envelope, onClose, onSave }: Props) {
+export function EnvelopeEditSheet({ envelope, onClose, onSave, planPerPay, planAnnual, planFrequency }: Props) {
   const [localEnvelope, setLocalEnvelope] = useState<SummaryEnvelope | null>(envelope);
 
   useEffect(() => {
@@ -23,6 +27,11 @@ export function EnvelopeEditSheet({ envelope, onClose, onSave }: Props) {
   }, [envelope]);
 
   if (!localEnvelope) return null;
+
+  const hasPlan = typeof planPerPay === "number" && !Number.isNaN(planPerPay);
+  const planFrequencyLabel = planFrequency
+    ? (frequencyOptions.find((option) => option.value === planFrequency)?.label ?? "Pay cycle")
+    : "Pay cycle";
 
   return (
     <Dialog.Root open={Boolean(envelope)} onOpenChange={(open) => (!open ? onClose() : null)}>
@@ -83,6 +92,21 @@ export function EnvelopeEditSheet({ envelope, onClose, onSave }: Props) {
                 />
               </div>
             </div>
+            {hasPlan ? (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2">
+                  <span>Recurring income plan</span>
+                  <span className="text-sm font-semibold text-secondary">
+                    {formatCurrency(planPerPay ?? 0)} per {planFrequencyLabel.toLowerCase()}
+                  </span>
+                </div>
+                {typeof planAnnual === "number" ? (
+                  <p className="mt-1">
+                    ≈ {formatCurrency(planAnnual)} each year allocated to this envelope.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="frequency">Frequency</Label>

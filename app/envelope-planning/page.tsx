@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PlannerClient, PlannerEnvelope } from "./planner-client";
 import { demoPlannerEnvelopes } from "@/lib/planner/demo-data";
 import { PlannerFrequency } from "@/lib/planner/calculations";
+import { getPayPlanSummary } from "@/lib/server/pay-plan";
 
 export default async function EnvelopePlanningPage() {
   const supabase = await createClient();
@@ -44,5 +45,13 @@ export default async function EnvelopePlanningPage() {
 
   const defaultFrequency: PlannerFrequency = "fortnightly";
 
-  return <PlannerClient initialPayFrequency={defaultFrequency} envelopes={envelopes} />;
+  const payPlan = await getPayPlanSummary(supabase, session?.user.id);
+
+  return (
+    <PlannerClient
+      initialPayFrequency={defaultFrequency}
+      envelopes={envelopes}
+      payPlan={payPlan}
+    />
+  );
 }

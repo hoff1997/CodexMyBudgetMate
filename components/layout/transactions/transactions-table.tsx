@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SplitEditor, type SplitResult } from "@/components/layout/reconcile/split-editor";
 import type { TransactionRow } from "@/lib/auth/types";
+import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -18,6 +19,7 @@ type TransactionItem = TransactionRow & {
 
 type Props = {
   transactions: TransactionRow[];
+  payPlan?: PayPlanSummary | null;
 };
 
 const UNASSIGNED_LABEL = "Unassigned";
@@ -392,7 +394,7 @@ function MobileTransactionDetail({
   );
 }
 
-export function TransactionsTable({ transactions }: Props) {
+export function TransactionsTable({ transactions, payPlan = null }: Props) {
   const router = useRouter();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [items, setItems] = useState<TransactionItem[]>(
@@ -427,6 +429,20 @@ export function TransactionsTable({ transactions }: Props) {
   const [labelFilter, setLabelFilter] = useState<string[]>([]);
   const [accountFilter, setAccountFilter] = useState<string[]>([]);
   const [envelopeFilter, setEnvelopeFilter] = useState<string[]>([]);
+
+  const planTotals = payPlan?.totals ?? null;
+  const planFrequencyLabel = payPlan
+    ? (
+        {
+          weekly: "weekly",
+          fortnightly: "fortnightly",
+          monthly: "monthly",
+          quarterly: "quarterly",
+          annually: "annual",
+          none: "pay cycle",
+        } as Record<string, string>
+      )[payPlan.primaryFrequency] ?? "pay cycle"
+    : null;
 
   useEffect(() => {
     if (datePreset === "custom") return;
@@ -753,6 +769,27 @@ export function TransactionsTable({ transactions }: Props) {
 
   return (
     <section className="space-y-4">
+      {planTotals ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs uppercase tracking-wide">Recurring income plan</span>
+            {planFrequencyLabel ? (
+              <span>Aligned to a {planFrequencyLabel} cycle</span>
+            ) : null}
+          </div>
+          <div className="grid gap-2 text-sm md:grid-cols-3 md:items-center md:gap-6">
+            <span>
+              <strong className="text-secondary">{formatCurrency(planTotals.perPayAllocated)}</strong> planned per pay
+            </span>
+            <span>
+              <strong className="text-secondary">{formatCurrency(planTotals.perPayIncome)}</strong> income per pay
+            </span>
+            <span className={planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600"}>
+              {formatCurrency(planTotals.perPaySurplus)} {planTotals.perPaySurplus >= 0 ? "surplus" : "shortfall"}
+            </span>
+          </div>
+        </div>
+      ) : null}
       <div className="grid gap-3 rounded-xl border bg-muted/10 p-4 md:grid-cols-6">
         <div className="md:col-span-3 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date range</p>

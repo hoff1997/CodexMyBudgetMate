@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeSummaryClient } from "@/components/layout/envelopes/envelope-summary-client";
 import { mapTransferHistory, type RawTransferRow } from "@/lib/types/envelopes";
+import { getPayPlanSummary } from "@/lib/server/pay-plan";
 
 type PageProps = {
   searchParams?: Record<string, string | string[] | undefined>;
@@ -103,6 +104,8 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
     achievedAt: row.achieved_at,
   }));
 
+  const payPlan = await getPayPlanSummary(supabase, session?.user.id);
+
   return (
     <EnvelopeSummaryClient
       list={list}
@@ -110,6 +113,7 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
       transferHistory={transferHistory}
       celebrations={celebrations}
       defaultTab={typeof searchParams?.tab === "string" ? searchParams?.tab : undefined}
+      payPlan={payPlan}
     />
   );
 }

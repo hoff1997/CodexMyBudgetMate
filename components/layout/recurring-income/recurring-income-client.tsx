@@ -11,6 +11,8 @@ import { formatCurrency } from "@/lib/finance";
 import { PlannerFrequency, calculateRequiredContribution, frequencyOptions } from "@/lib/planner/calculations";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import type { PayPlanSummary } from "@/lib/types/pay-plan";
 
 type EnvelopeSummary = {
   id: string;
@@ -39,9 +41,23 @@ interface IncomeStream {
 interface Props {
   incomeStreams: IncomeStream[];
   envelopeSummaries: EnvelopeSummary[];
+  payPlan?: PayPlanSummary | null;
+  streamEvents?: Array<{
+    streamId: string;
+    transactionId: string;
+    transactionAmount: number;
+    expectedAmount: number | null;
+    difference: number | null;
+    appliedAt: string;
+  }>;
 }
 
-export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Props) {
+export function RecurringIncomeClient({
+  incomeStreams,
+  envelopeSummaries,
+  payPlan = null,
+  streamEvents = [],
+}: Props) {
   const router = useRouter();
   const [streams, setStreams] = useState(incomeStreams);
   const [selectedStream, setSelectedStream] = useState<IncomeStream | null>(null);
@@ -49,23 +65,32 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
   const [search, setSearch] = useState("");
   const [frequencyFilter, setFrequencyFilter] = useState<PlannerFrequency | "all">("all");
   const [applyingStreamId, setApplyingStreamId] = useState<string | null>(null);
-  const primaryFrequency = useMemo(() => detectPrimaryFrequency(streams), [streams]);
+  const primaryFrequency = useMemo(
+    () => payPlan?.primaryFrequency ?? detectPrimaryFrequency(streams),
+    [payPlan?.primaryFrequency, streams],
+  );
+
+  const planTotals = payPlan?.totals ?? null;
   const annualIncome = useMemo(
     () => streams.reduce((total, stream) => total + toAnnual(stream.amount, stream.frequency), 0),
     [streams],
   );
-  const monthlyIncome = annualIncome / 12;
-  const annualRequirement = useMemo(
-    () =>
-      envelopeSummaries.reduce(
+  const monthlyIncome = planTotals ? planTotals.annualIncome / 12 : annualIncome / 12;
+
+  const annualRequirement = planTotals
+    ? planTotals.annualAllocated
+    : envelopeSummaries.reduce(
         (sum, envelope) => sum + envelopeAnnualRequirement(envelope, primaryFrequency),
         0,
-      ),
-    [envelopeSummaries, primaryFrequency],
-  );
+      );
   const monthlyRequirement = annualRequirement / 12;
-  const perPayIncome = calculateRequiredContribution(annualIncome, primaryFrequency);
-  const perPayRequirement = calculateRequiredContribution(annualRequirement, primaryFrequency);
+
+  const perPayIncome = planTotals
+    ? planTotals.perPayIncome
+    : calculateRequiredContribution(annualIncome, primaryFrequency);
+  const perPayRequirement = planTotals
+    ? planTotals.perPayAllocated
+    : calculateRequiredContribution(annualRequirement, primaryFrequency);
   const monthlySurplus = monthlyIncome - monthlyRequirement;
   const perPaySurplus = perPayIncome - perPayRequirement;
   const needsTopUp = monthlySurplus < -1;
@@ -148,6 +173,14 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
   );
   const payLabel = frequencyLabel(primaryFrequency);
   const payLabelLower = payLabel.toLowerCase();
+  const planLookup = useMemo(() => {
+    if (!payPlan) return new Map<string, PayPlanSummary["streams"][number]>();
+    return new Map(payPlan.streams.map((stream) => [stream.id, stream]));
+  }, [payPlan]);
+  const eventLookup = useMemo(
+    () => new Map(streamEvents.map((event) => [event.streamId, event])),
+    [streamEvents],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 pb-24 pt-12 md:px-10 md:pb-12">
@@ -237,11 +270,16 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
           <div className="grid gap-4">
             {filteredStreams.length ? (
               filteredStreams.map((stream) => {
-                const { surplus: streamSurplus } = getAllocations(stream);
+                const { surplus: streamSurplus, allocationsTotal } = getAllocations(stream);
                 const hasSurplusToApply = streamSurplus > 0.01 && Boolean(stream.surplusEnvelope);
                 const surplusLabel = stream.surplusEnvelope
                   ? envelopeNameLookup.get(stream.surplusEnvelope) ?? stream.surplusEnvelope
                   : "Unassigned";
+                const planStream = planLookup.get(stream.id) ?? null;
+                const planAllocationsTotal = planStream?.allocationsTotal ?? null;
+                const planSurplus = planStream?.surplus ?? streamSurplus;
+                const latestEvent = eventLookup.get(stream.id) ?? null;
+
                 return (
                   <Card key={stream.id} className="border border-primary/20 bg-white">
                     <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -249,29 +287,61 @@ export function RecurringIncomeClient({ incomeStreams, envelopeSummaries }: Prop
                         <CardTitle>{stream.name}</CardTitle>
                         <p className="text-sm text-muted-foreground">
                           {stream.frequency} · {formatCurrency(stream.amount)}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {hasSurplusToApply ? (
+                        </p>
+                        {planAllocationsTotal !== null ? (
+                          <p className="text-xs text-muted-foreground">
+                            Plan allocates {formatCurrency(planAllocationsTotal)} per cycle ·
+                            {" "}
+                            <span
+                              className={planSurplus >= 0 ? "text-emerald-600" : "text-rose-600"}
+                            >
+                              {planSurplus >= 0 ? "surplus" : "short"} {formatCurrency(Math.abs(planSurplus))}
+                            </span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Allocates {formatCurrency(allocationsTotal)} per cycle
+                          </p>
+                        )}
+                        {latestEvent ? (
+                          <p className="text-xs text-muted-foreground">
+                            Last payroll {format(new Date(latestEvent.appliedAt), "dd MMM yyyy")} ·
+                            {" "}
+                            {formatCurrency(latestEvent.transactionAmount)} received
+                            {latestEvent.difference !== null ? (
+                              <span
+                                className={`ml-1 font-medium ${
+                                  latestEvent.difference >= 0 ? "text-emerald-600" : "text-rose-600"
+                                }`}
+                              >
+                                {latestEvent.difference >= 0 ? "+" : "-"}
+                                {formatCurrency(Math.abs(latestEvent.difference))} vs plan
+                              </span>
+                            ) : null}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {hasSurplusToApply ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleApplySurplus(stream)}
+                            disabled={applyingStreamId === stream.id}
+                          >
+                            {applyingStreamId === stream.id ? "Applying…" : "Apply surplus"}
+                          </Button>
+                        ) : null}
                         <Button
+                          variant="outline"
                           size="sm"
-                          onClick={() => handleApplySurplus(stream)}
-                          disabled={applyingStreamId === stream.id}
+                          onClick={() => {
+                            setSelectedStream(stream);
+                            setShowDrawer(true);
+                          }}
                         >
-                          {applyingStreamId === stream.id ? "Applying…" : "Apply surplus"}
+                          Edit
                         </Button>
-                      ) : null}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedStream(stream);
-                          setShowDrawer(true);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    </div>
+                      </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <AllocationChart

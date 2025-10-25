@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { RecurringIncomeClient } from "@/components/layout/recurring-income/recurring-income-client";
 import { PlannerFrequency } from "@/lib/planner/calculations";
+import { getPayPlanSummary } from "@/lib/server/pay-plan";
 
 export default async function RecurringIncomePage() {
   const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const [incomeResponse, envelopeResponse] = await Promise.all([
+  const [incomeResponse, envelopeResponse, eventsResponse] = await Promise.all([
     session
       ? supabase
           .from("recurring_income")
@@ -20,6 +21,13 @@ export default async function RecurringIncomePage() {
       .select("id, name, pay_cycle_amount, annual_amount, frequency")
       .eq("user_id", session?.user.id ?? "")
       .order("name"),
+    session
+      ? supabase
+          .from("recurring_income_events")
+          .select("stream_id, transaction_id, transaction_amount, expected_amount, difference, applied_at")
+          .eq("user_id", session.user.id)
+          .order("applied_at", { ascending: false })
+      : { data: null },
   ]);
 
   const incomeStreams = (incomeResponse.data ?? []).map((stream) => ({
@@ -47,5 +55,40 @@ export default async function RecurringIncomePage() {
       frequency: (row.frequency as PlannerFrequency | null) ?? null,
     })) ?? [];
 
-  return <RecurringIncomeClient incomeStreams={incomeStreams} envelopeSummaries={envelopeSummaries} />;
+  const payPlan = session ? await getPayPlanSummary(supabase, session.user.id) : null;
+
+  const latestEvents: Array<{
+    streamId: string;
+    transactionId: string;
+    transactionAmount: number;
+    expectedAmount: number | null;
+    difference: number | null;
+    appliedAt: string;
+  }> = [];
+
+  if (eventsResponse.data) {
+    const seen = new Set<string>();
+    for (const row of eventsResponse.data) {
+      if (seen.has(row.stream_id)) continue;
+      seen.add(row.stream_id);
+      latestEvents.push({
+        streamId: row.stream_id,
+        transactionId: row.transaction_id,
+        transactionAmount: Number(row.transaction_amount ?? 0),
+        expectedAmount:
+          row.expected_amount !== null ? Number(row.expected_amount ?? 0) : null,
+        difference: row.difference !== null ? Number(row.difference ?? 0) : null,
+        appliedAt: row.applied_at,
+      });
+    }
+  }
+
+  return (
+    <RecurringIncomeClient
+      incomeStreams={incomeStreams}
+      envelopeSummaries={envelopeSummaries}
+      payPlan={payPlan}
+      streamEvents={latestEvents}
+    />
+  );
 }

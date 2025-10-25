@@ -17,6 +17,7 @@ import type { TransferHistoryItem } from "@/lib/types/envelopes";
 import { Progress } from "@/components/ui/progress";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Info } from "lucide-react";
+import type { PayPlanSummary } from "@/lib/types/pay-plan";
 
 const statusFilters = [
   { key: "all", label: "All" },
@@ -37,14 +38,20 @@ type TransferSuggestion = {
   daysUntil: number;
 };
 
+function frequencyLabel(value: PlannerFrequency) {
+  const option = frequencyOptions.find((item) => item.value === value);
+  return option ? option.label.toLowerCase() : value;
+}
+
 interface Props {
   envelopes: SummaryEnvelope[];
   categories: { id: string; name: string }[];
   canEdit: boolean;
   transferHistory: TransferHistoryItem[];
+  payPlan?: PayPlanSummary | null;
 }
 
-export function EnvelopeManagerClient({ envelopes, categories, canEdit, transferHistory }: Props) {
+export function EnvelopeManagerClient({ envelopes, categories, canEdit, transferHistory, payPlan = null }: Props) {
   const router = useRouter();
   const [selectedEnvelope, setSelectedEnvelope] = useState<SummaryEnvelope | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
@@ -97,6 +104,19 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
     return map;
   }, [categories]);
 
+  const payPlanMap = useMemo(() => {
+    if (!payPlan) return new Map<string, { perPay: number; annual: number }>();
+    return new Map(
+      payPlan.envelopes.map((entry) => [
+        entry.envelopeId,
+        { perPay: entry.perPayAmount, annual: entry.annualAmount },
+      ]),
+    );
+  }, [payPlan]);
+
+  const planTotals = payPlan?.totals ?? null;
+  const planFrequencyLabel = payPlan ? frequencyLabel(payPlan.primaryFrequency) : null;
+
   const groupedEnvelopes = useMemo(() => {
     const map = new Map<
       string,
@@ -139,6 +159,8 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
     setCollapsedCategories(new Set());
   };
 
+  const selectedPlan = selectedEnvelope ? payPlanMap.get(selectedEnvelope.id) : undefined;
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-24 pt-12 md:px-10 md:pb-12">
       <header className="space-y-2">
@@ -152,13 +174,13 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
           </div>
           <Button
             type="button"
-            size="icon"
+            size="sm"
             variant="outline"
-            className="ml-auto h-9 w-9 shrink-0"
+            className="ml-auto gap-2"
             onClick={() => setGuideOpen(true)}
-            aria-label="Show envelope manager guide"
           >
             <Info className="h-4 w-4" />
+            <span>Feature guide</span>
           </Button>
         </div>
       </header>
@@ -168,6 +190,44 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
         <MetricCard title="Current balance" value={formatCurrency(totals.current)} />
         <MetricCard title="Funding gap" value={formatCurrency(Math.max(0, totals.target - totals.current))} />
       </section>
+      {planTotals ? (
+        <Card>
+          <CardContent className="flex flex-col gap-3 pt-6 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-secondary">Recurring income plan</p>
+              {planFrequencyLabel ? (
+                <p className="text-xs text-muted-foreground">
+                  Aggregated on a {planFrequencyLabel} cycle.
+                </p>
+              ) : null}
+            </div>
+            <div className="grid gap-3 text-sm md:grid-cols-3">
+              <div>
+                <p className="text-xs uppercase text-muted-foreground">Budgeted per pay</p>
+                <p className="text-base font-semibold text-secondary">
+                  {formatCurrency(planTotals.perPayAllocated)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground">Income per pay</p>
+                <p className="text-base font-semibold text-secondary">
+                  {formatCurrency(planTotals.perPayIncome)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase text-muted-foreground">Surplus / shortfall</p>
+                <p
+                  className={`text-base font-semibold ${
+                    planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600"
+                  }`}
+                >
+                  {formatCurrency(planTotals.perPaySurplus)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
@@ -438,6 +498,9 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
 
       <EnvelopeEditSheet
         envelope={selectedEnvelope}
+        planPerPay={selectedPlan?.perPay}
+        planAnnual={selectedPlan?.annual}
+        planFrequency={payPlan?.primaryFrequency}
         onClose={() => setSelectedEnvelope(null)}
         onSave={async (payload) => {
           await fetch(`/api/envelopes/${payload.id}`, {

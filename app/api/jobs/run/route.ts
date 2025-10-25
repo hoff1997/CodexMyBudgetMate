@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { createServiceClient } from "@/lib/supabase/service";
 import { runAkahuSync } from "@/lib/jobs/akahu-sync";
 import { runEnvelopeRecalculation } from "@/lib/jobs/envelope-recalc";
+import { runPayPlanSync } from "@/lib/jobs/pay-plan-sync";
 
 function isTaskEnabled(task: string, filter: string) {
   if (filter === "all" || !filter) return true;
@@ -34,6 +35,10 @@ export async function POST(request: Request) {
 
     if (isTaskEnabled("envelopes", taskFilter)) {
       results.envelopes = await runEnvelopeRecalculation(client);
+    }
+
+    if (isTaskEnabled("pay-plan", taskFilter)) {
+      results.payPlan = await runPayPlanSync(client);
     }
 
     return NextResponse.json({ ok: true, task: taskFilter, results });

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { PlannerFrequency, calculateAnnualFromTarget, calculateDueProgress, calculateRequiredContribution, determineStatus, frequencyOptions } from "@/lib/planner/calculations";
 import type { EnvelopeRow } from "@/lib/auth/types";
+import type { PayPlanSummary } from "@/lib/types/pay-plan";
+import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 
 export type PlannerEnvelope = EnvelopeRow & {
@@ -17,6 +19,7 @@ interface Props {
   initialPayFrequency: PlannerFrequency;
   envelopes: PlannerEnvelope[];
   readOnly?: boolean;
+  payPlan?: PayPlanSummary | null;
 }
 
 interface UpdatePayload {
@@ -29,7 +32,12 @@ interface UpdatePayload {
   notes?: string | null;
 }
 
-export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false }: Props) {
+function frequencyLabel(value: PlannerFrequency) {
+  const option = frequencyOptions.find((item) => item.value === value);
+  return option ? option.label.toLowerCase() : value;
+}
+
+export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null }: Props) {
   const [payFrequency, setPayFrequency] = useState<PlannerFrequency>(initialPayFrequency);
   const [rows, setRows] = useState(() =>
     envelopes.map((env) => ({
@@ -79,6 +87,19 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
       { target: 0, annual: 0, current: 0, payCycle: 0 },
     );
   }, [rows]);
+
+  const planByEnvelope = useMemo(() => {
+    if (!payPlan) return new Map<string, { perPay: number; annual: number }>();
+    return new Map(
+      payPlan.envelopes.map((entry) => [
+        entry.envelopeId,
+        { perPay: entry.perPayAmount, annual: entry.annualAmount },
+      ]),
+    );
+  }, [payPlan]);
+
+  const planTotals = payPlan?.totals ?? null;
+  const planFrequencyLabel = payPlan ? frequencyLabel(payPlan.primaryFrequency) : null;
 
   function handleFieldChange(id: string, field: keyof UpdatePayload, value: number | string | null) {
     setRows((prev) =>
@@ -162,6 +183,42 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
           </select>
         </div>
       </section>
+      {planTotals ? (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Recurring income plan
+          </p>
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Budgeted per pay</p>
+              <p className="text-xl font-semibold text-secondary">
+                {formatCurrency(planTotals.perPayAllocated)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Income per pay</p>
+              <p className="text-xl font-semibold text-secondary">
+                {formatCurrency(planTotals.perPayIncome)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Surplus / shortfall</p>
+              <p
+                className={`text-xl font-semibold ${
+                  planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600"
+                }`}
+              >
+                {formatCurrency(planTotals.perPaySurplus)}
+              </p>
+            </div>
+          </div>
+          {planFrequencyLabel ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Calculated from your recurring income split on a {planFrequencyLabel} cycle.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="overflow-x-auto rounded-xl border">
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -169,6 +226,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               <th className="px-4 py-3">Envelope</th>
               <th className="px-4 py-3">Annual amount</th>
               <th className="px-4 py-3">Per pay</th>
+              <th className="px-4 py-3">Plan per pay</th>
               <th className="px-4 py-3">Target</th>
               <th className="px-4 py-3">Current</th>
               <th className="px-4 py-3">Status</th>
@@ -182,6 +240,11 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               const { annual, perPay, expected, status } = recalcRow(row as any);
               const due = calculateDueProgress(row.next_payment_due ?? row.due_date);
               const contributionDelta = Number(row.current_amount ?? 0) - expected;
+              const storedPerPay = Number(row.pay_cycle_amount ?? 0);
+              const planEntry = planByEnvelope.get(row.id);
+              const planPerPay = planEntry?.perPay ?? 0;
+              const planAnnual = planEntry?.annual ?? 0;
+              const planDelta = planEntry ? storedPerPay - planPerPay : null;
               return (
                 <tr key={row.id} className="text-sm">
                   <td className="px-4 py-3 align-top">
@@ -220,6 +283,30 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                         ? `Under by $${Math.abs(contributionDelta).toFixed(2)}`
                         : "On target"}
                     </p>
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    {planEntry ? (
+                      <div className="space-y-1">
+                        <div className="font-medium text-secondary">
+                          {formatCurrency(planPerPay)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          ≈ {formatCurrency(planAnnual)} / yr
+                        </p>
+                        {planDelta !== null && Math.abs(planDelta) > 0.01 ? (
+                          <p
+                            className={`text-xs ${
+                              planDelta >= 0 ? "text-emerald-600" : "text-rose-600"
+                            }`}
+                          >
+                            {planDelta >= 0 ? "+" : "-"}
+                            {formatCurrency(Math.abs(planDelta))}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Not linked</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-top">
                     <Input

@@ -46,7 +46,7 @@ Use this progression checklist to move every legacy Replit feature into the new 
   - [x] Printable PDFs (Net worth, envelope summary).
   - [x] Filters (date presets, account/envelope toggles).
 - [ ] **Recurring income + zero-budget linkage**
-  - [ ] Auto apply surplus allocation plans.
+  - [x] Auto apply surplus allocation plans.
   - [ ] Celebration log stored in Supabase and shown in zero-budget manager.
 
 ---

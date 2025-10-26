@@ -10,6 +10,8 @@ import type { EnvelopeRow } from "@/lib/auth/types";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
+import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
+import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 
 export type PlannerEnvelope = EnvelopeRow & {
   category_name?: string | null;
@@ -24,12 +26,19 @@ interface Props {
 
 interface UpdatePayload {
   id: string;
+  name?: string;
+  category_id?: string | null;
   target_amount?: number;
   annual_amount?: number;
   pay_cycle_amount?: number;
   frequency?: PlannerFrequency;
+  due_date?: string | null;
   next_payment_due?: string | null;
   notes?: string | null;
+  icon?: string | null;
+  is_spending?: boolean;
+  opening_balance?: number;
+  current_amount?: number;
 }
 
 function frequencyLabel(value: PlannerFrequency) {
@@ -39,6 +48,7 @@ function frequencyLabel(value: PlannerFrequency) {
 
 export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null }: Props) {
   const [payFrequency, setPayFrequency] = useState<PlannerFrequency>(initialPayFrequency);
+  const [editEnvelope, setEditEnvelope] = useState<SummaryEnvelope | null>(null);
   const [rows, setRows] = useState(() =>
     envelopes.map((env) => ({
       ...env,
@@ -101,6 +111,25 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   const planTotals = payPlan?.totals ?? null;
   const planFrequencyLabel = payPlan ? frequencyLabel(payPlan.primaryFrequency) : null;
 
+  const toSummaryEnvelope = (row: PlannerEnvelope & Record<string, any>): SummaryEnvelope => ({
+    id: row.id,
+    name: row.name,
+    category_id: row.category_id ?? null,
+    category_name: row.category_name ?? null,
+    target_amount: Number(row.target_amount ?? 0),
+    annual_amount: Number(row.annual_amount ?? 0),
+    pay_cycle_amount: Number(row.pay_cycle_amount ?? 0),
+    opening_balance: Number(row.opening_balance ?? 0),
+    current_amount: Number(row.current_amount ?? 0),
+    due_date: row.due_date ?? null,
+    frequency: row.frequency ?? null,
+    next_payment_due: row.next_payment_due ?? null,
+    notes: row.notes ?? null,
+    icon: row.icon ?? null,
+    sort_order: (row.sort_order as number) ?? null,
+    is_spending: row.is_spending ?? null,
+  });
+
   function handleFieldChange(id: string, field: keyof UpdatePayload, value: number | string | null) {
     setRows((prev) =>
       prev.map((row) =>
@@ -152,12 +181,13 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   }
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border bg-muted/10 p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Annual planned</p>
-          <p className="text-2xl font-semibold text-secondary">${totals.annual.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-        </div>
+    <>
+      <div className="space-y-6">
+        <section className="grid gap-4 md:grid-cols-4">
+          <div className="rounded-xl border bg-muted/10 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Annual planned</p>
+            <p className="text-2xl font-semibold text-secondary">${totals.annual.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          </div>
         <div className="rounded-xl border bg-muted/10 p-4">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Per pay required</p>
           <p className="text-2xl font-semibold text-secondary">
@@ -365,14 +395,24 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                     <p className="text-xs text-muted-foreground mt-1">{due.label}</p>
                   </td>
                   <td className="px-4 py-3 align-top text-right">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleSave(row as any)}
-                      disabled={updateMutation.isPending || readOnly}
-                    >
-                      {readOnly ? "Preview" : "Save"}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
+                        disabled={readOnly}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleSave(row as any)}
+                        disabled={updateMutation.isPending || readOnly}
+                      >
+                        {readOnly ? "Preview" : "Save"}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -380,6 +420,59 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
           </tbody>
         </table>
       </div>
-    </div>
+      </div>
+
+      <EnvelopeEditSheet
+        envelope={editEnvelope}
+        onClose={() => setEditEnvelope(null)}
+        onSave={async (updated) => {
+          setRows((prev) =>
+            prev.map((row) =>
+              row.id === updated.id
+                ? {
+                    ...row,
+                    name: updated.name,
+                    category_id: updated.category_id ?? null,
+                    category_name: updated.category_name ?? row.category_name ?? null,
+                    target_amount: Number(updated.target_amount ?? 0),
+                    annual_amount: Number(updated.annual_amount ?? 0),
+                    pay_cycle_amount: Number(updated.pay_cycle_amount ?? 0),
+                    due_date: updated.due_date ?? null,
+                    next_payment_due: updated.next_payment_due ?? null,
+                    frequency: updated.frequency ?? row.frequency,
+                    notes: updated.notes ?? null,
+                    icon: updated.icon ?? null,
+                    is_spending:
+                      updated.is_spending !== undefined && updated.is_spending !== null
+                        ? updated.is_spending
+                        : row.is_spending ?? null,
+                  }
+                : row,
+            ),
+          );
+
+          const isSpending =
+            updated.is_spending !== undefined && updated.is_spending !== null
+              ? Boolean(updated.is_spending)
+              : undefined;
+
+          updateMutation.mutate({
+            id: updated.id,
+            name: updated.name,
+            category_id: updated.category_id ?? null,
+            target_amount: Number(updated.target_amount ?? 0) || 0,
+            annual_amount: Number(updated.annual_amount ?? 0) || 0,
+            pay_cycle_amount: Number(updated.pay_cycle_amount ?? 0) || 0,
+            frequency: (updated.frequency as PlannerFrequency) ?? "monthly",
+            due_date: updated.due_date ?? null,
+            next_payment_due: updated.next_payment_due ?? null,
+            notes: updated.notes ?? null,
+            icon: updated.icon ?? null,
+            is_spending: isSpending,
+          });
+          setEditEnvelope(null);
+        }}
+      />
+    </>
   );
 }

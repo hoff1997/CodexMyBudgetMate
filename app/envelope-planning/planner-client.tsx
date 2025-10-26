@@ -424,6 +424,9 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
       <EnvelopeEditSheet
         envelope={editEnvelope}
+        planPerPay={editEnvelope ? planByEnvelope.get(editEnvelope.id)?.perPay : undefined}
+        planAnnual={editEnvelope ? planByEnvelope.get(editEnvelope.id)?.annual : undefined}
+        planFrequency={payPlan?.primaryFrequency}
         onClose={() => setEditEnvelope(null)}
         onSave={async (updated) => {
           setRows((prev) =>

@@ -10,7 +10,7 @@ This file maps the major improvements called out in `replit.md` to the fresh Nex
 - **Transactions table**: `app/(app)/transactions/page.tsx` exposes description, bank reference/memo, receipt links, and status badges, matching the richer Replit editing surface (actions stubbed for now).
 - **Banking schema**: Migration `supabase/migrations/0001_init.sql` now includes accounts, bank connections, labels, transaction rules, duplicate references, and receipt storage fields.
 - **Settings hub**: `app/(app)/settings/page.tsx` documents the bank connection manager, Akahu credential inputs, duplicate sensitivity notes, and 2FA reminders.
-- **Quick envelope planner**: `app/envelope-planning/page.tsx` + `planner-client.tsx` now restore annual targets, per-pay maths, progress bars, notes, and Supabase-backed updates that sync through settings & recurring income pages.
+- **Quick envelope planner**: `app/(app)/envelope-planning/page.tsx` + `planner-client.tsx` now restore annual targets, per-pay maths, progress bars, notes, and Supabase-backed updates that sync through settings & recurring income pages.
 - **Merchant memory workspace**: `app/(app)/rules/page.tsx` and `app/(app)/interactions/page.tsx` bring back the rule editor, suggestion feed, automation metrics, and best-practice tips from the Replit build.
 
 ## Still to wire up

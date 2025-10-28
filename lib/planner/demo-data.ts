@@ -1,4 +1,4 @@
-import type { PlannerEnvelope } from "@/app/envelope-planning/planner-client";
+import type { PlannerEnvelope } from "@/app/(app)/envelope-planning/planner-client";
 
 export const demoPlannerEnvelopes: PlannerEnvelope[] = [
   {

@@ -10,6 +10,8 @@ import type { EnvelopeRow } from "@/lib/auth/types";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
+import { Info } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 
@@ -110,6 +112,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
   const planTotals = payPlan?.totals ?? null;
   const planFrequencyLabel = payPlan ? frequencyLabel(payPlan.primaryFrequency) : null;
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const toSummaryEnvelope = (row: PlannerEnvelope & Record<string, any>): SummaryEnvelope => ({
     id: row.id,
@@ -183,6 +186,24 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   return (
     <>
       <div className="space-y-6">
+        <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-secondary">Envelope planning</h1>
+            <p className="text-sm text-muted-foreground">
+              Keep your contributions aligned with the next due dates and expected balances before payday.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-2 self-start md:self-auto"
+            onClick={() => setGuideOpen(true)}
+          >
+            <Info className="h-4 w-4" />
+            <span>Feature guide</span>
+          </Button>
+        </header>
         <section className="grid gap-4 md:grid-cols-4">
           <div className="rounded-xl border bg-muted/10 p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Annual planned</p>
@@ -476,6 +497,58 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
           setEditEnvelope(null);
         }}
       />
+      <PlannerFeatureGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
     </>
+  );
+}
+
+function PlannerFeatureGuideDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+        <Dialog.Content className="fixed inset-0 z-50 mx-auto flex max-w-3xl flex-col gap-4 overflow-y-auto rounded-3xl bg-background p-6 shadow-2xl md:top-12 md:h-[80vh]">
+          <Dialog.Title className="text-xl font-semibold text-secondary">Planner feature guide</Dialog.Title>
+          <Dialog.Description className="text-sm text-muted-foreground">
+            Use this checklist to ensure the planner keeps parity with the recurring income tools and envelope manager.
+          </Dialog.Description>
+
+          <div className="space-y-6 text-sm text-muted-foreground">
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Pay cycle controls</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Pay frequency selector updates every row&rsquo;s required contribution instantly.</li>
+                <li>Metric cards reflect annual funding, per-pay requirement, and current balances.</li>
+                <li>Guide button links back to this reference panel.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Envelope table</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Columns cover target, per-pay requirement, plan comparison, due dates, and status.</li>
+                <li>Save action persists recalculated per-pay contributions to Supabase.</li>
+                <li>Edit opens the full envelope sheet so icons, categories, and notes stay in sync.</li>
+              </ul>
+            </section>
+
+            <section className="space-y-2">
+              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Plan alignment</h2>
+              <ul className="list-disc space-y-1 pl-4">
+                <li>Plan per-pay column compares live planner data with recurring income splits.</li>
+                <li>Positive values highlight surplus, negative values highlight deficits needing action.</li>
+                <li>Editing an envelope keeps the planner, envelope manager, and recurring income views consistent.</li>
+              </ul>
+            </section>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Dialog.Close asChild>
+              <Button variant="outline">Close</Button>
+            </Dialog.Close>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

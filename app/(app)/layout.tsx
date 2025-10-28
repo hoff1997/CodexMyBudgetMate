@@ -1,12 +1,11 @@
 import type { ReactNode } from "react";
 import { CommandPaletteProvider } from "@/providers/command-palette-provider";
+import Sidebar from "@/components/layout/sidebar";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <CommandPaletteProvider>
-      <main className="min-h-screen bg-background">
-        {children}
-      </main>
+      <Sidebar>{children}</Sidebar>
     </CommandPaletteProvider>
   );
 }

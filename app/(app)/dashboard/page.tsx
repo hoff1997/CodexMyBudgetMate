@@ -47,11 +47,26 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const userId = session!.user.id;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_url")
-    .eq("id", userId)
-    .maybeSingle();
+  const [{ data: profile }, { count: envelopeCount }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from("envelopes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
 
-  return <DashboardShell profile={profile} userId={userId} demoMode={false} />;
+  const showDemoCta = (envelopeCount ?? 0) === 0;
+
+  return (
+    <DashboardShell
+      profile={profile}
+      userId={userId}
+      demoMode={false}
+      showDemoCta={showDemoCta}
+    />
+  );
 }

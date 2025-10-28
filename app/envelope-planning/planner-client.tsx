@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlannerFrequency, calculateAnnualFromTarget, calculateDueProgress, calculateRequiredContribution, determineStatus, frequencyOptions } from "@/lib/planner/calculations";
 import type { EnvelopeRow } from "@/lib/auth/types";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
@@ -14,6 +15,7 @@ import { Info } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
+import { DemoSeedCta } from "@/components/layout/dashboard/demo-seed-cta";
 
 export type PlannerEnvelope = EnvelopeRow & {
   category_name?: string | null;
@@ -233,7 +235,22 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
             ))}
           </select>
         </div>
-      </section>
+        </section>
+
+        {!readOnly && rows.length === 0 ? (
+          <Card className="border-dashed border-primary/30 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="text-base text-secondary">Start with demo envelopes</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground">
+                Populate planning rows, recurring income, and transactions with sample data so you can explore every feature.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+              <span>One click to add demo data. You can delete or adjust any envelope afterwards.</span>
+              <DemoSeedCta />
+            </CardContent>
+          </Card>
+        ) : null}
       {planTotals ? (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">

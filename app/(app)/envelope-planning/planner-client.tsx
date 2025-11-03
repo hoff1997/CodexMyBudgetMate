@@ -1,17 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { PlannerFrequency, calculateAnnualFromTarget, calculateDueProgress, calculateRequiredContribution, determineStatus, frequencyOptions } from "@/lib/planner/calculations";
 import type { EnvelopeRow } from "@/lib/auth/types";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
-import { Info } from "lucide-react";
+import { format } from "date-fns";
+import { ArrowLeftRight, CalendarIcon, ChevronLeft, Download, FileText, Info, Plus } from "lucide-react";
+import { cn } from "@/lib/cn";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
@@ -52,6 +57,7 @@ function frequencyLabel(value: PlannerFrequency) {
 
 export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null }: Props) {
   const [payFrequency, setPayFrequency] = useState<PlannerFrequency>(initialPayFrequency);
+  const [payCycleStartDate, setPayCycleStartDate] = useState<Date | null>(null);
   const [editEnvelope, setEditEnvelope] = useState<SummaryEnvelope | null>(null);
   const [rows, setRows] = useState(() =>
     envelopes.map((env) => ({
@@ -63,6 +69,9 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
       current_amount: Number(env.current_amount ?? 0),
     })),
   );
+  const payFrequencyLabel =
+    frequencyOptions.find((option) => option.value === payFrequency)?.label ?? "Pay";
+  const requiredColumnLabel = `Required ${payFrequencyLabel}`;
 
   const updateMutation = useMutation({
     mutationFn: async (payload: UpdatePayload) => {
@@ -185,57 +194,198 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
     }
   }
 
+  function handleExportCsv() {
+    if (rows.length === 0) {
+      toast.info("No envelopes to export yet.");
+      return;
+    }
+
+    const formatNumber = (value: number) => (Number.isFinite(value) ? value.toFixed(2) : "0.00");
+    const escapeCsvValue = (value: string) => `"${value.replace(/"/g, '""')}"`;
+
+    const headers = [
+      "Envelope",
+      "Category",
+      "Target Amount",
+      "Annual Amount",
+      requiredColumnLabel,
+      "Plan Per Pay",
+      "Plan Variance",
+      "Current Balance",
+      "Status",
+      "Next Due",
+      "Due Status",
+      "Frequency",
+      "Notes",
+    ];
+
+    const dataRows = rows.map((row) => {
+      const { annual, perPay, status } = recalcRow(row as any);
+      const planEntry = planByEnvelope.get(row.id);
+      const planPerPay = planEntry?.perPay ?? null;
+      const planVariance = planEntry ? perPay - planPerPay : null;
+      const dueInfo = calculateDueProgress(row.next_payment_due ?? row.due_date);
+      const frequencyText =
+        row.frequency && row.frequency !== "none"
+          ? frequencyLabel(row.frequency as PlannerFrequency)
+          : "";
+
+      return [
+        row.name ?? "",
+        row.category_name ?? "",
+        formatNumber(Number(row.target_amount ?? 0)),
+        formatNumber(annual),
+        formatNumber(perPay),
+        planPerPay !== null ? formatNumber(planPerPay) : "",
+        planVariance !== null ? formatNumber(planVariance) : "",
+        formatNumber(Number(row.current_amount ?? 0)),
+        status.replace("-", " "),
+        dueInfo.formatted ?? "",
+        dueInfo.label,
+        frequencyText,
+        row.notes ?? "",
+      ];
+    });
+
+    const csvContent = [headers, ...dataRows]
+      .map((row) => row.map((value) => escapeCsvValue(value ?? "")).join(","))
+      .join("\n");
+
+    const filename = `envelope-planning-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <>
       <div className="space-y-6">
-        <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-secondary">Envelope planning</h1>
-            <p className="text-sm text-muted-foreground">
-              Keep your contributions aligned with the next due dates and expected balances before payday.
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="w-fit text-muted-foreground hover:text-secondary"
+            >
+              <Link href="/envelope-summary" className="flex items-center gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Link>
+            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <Link href="/envelopes" className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Envelope
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/envelopes?transfer=1" className="flex items-center gap-2">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Move Balances
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/balance-report" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Balance Report
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => handleExportCsv()}
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-secondary">Envelope Planning</h1>
+              <p className="text-sm text-muted-foreground">
+                Plan and track your envelope contributions with detailed calculations.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="flex items-center gap-2 self-start md:self-auto"
+              onClick={() => setGuideOpen(true)}
+            >
+              <Info className="h-4 w-4" />
+              <span>Feature guide</span>
+            </Button>
+          </div>
+        </div>
+
+        <Card>
+          <CardContent className="space-y-6 pt-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pay frequency
+                </p>
+                <select
+                  className="h-9 w-full rounded-md border px-3 text-sm"
+                  value={payFrequency}
+                  onChange={(event) => setPayFrequency(event.target.value as PlannerFrequency)}
+                >
+                  {frequencyOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pay cycle start date
+                </p>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-between",
+                        !payCycleStartDate && "text-muted-foreground"
+                      )}
+                    >
+                      <span>
+                        {payCycleStartDate ? format(payCycleStartDate, "MMMM do, yyyy") : "Select date"}
+                      </span>
+                      <CalendarIcon className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={payCycleStartDate ?? undefined}
+                      onSelect={(date) => setPayCycleStartDate(date ?? null)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pay frequency determines how the “Required” column is calculated from each envelope&apos;s due
+              amount. The pay cycle start date is used to estimate expected balances based on the pay periods
+              that have passed.
             </p>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="flex items-center gap-2 self-start md:self-auto"
-            onClick={() => setGuideOpen(true)}
-          >
-            <Info className="h-4 w-4" />
-            <span>Feature guide</span>
-          </Button>
-        </header>
-        <section className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-xl border bg-muted/10 p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Annual planned</p>
-            <p className="text-2xl font-semibold text-secondary">${totals.annual.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-          </div>
-        <div className="rounded-xl border bg-muted/10 p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Per pay required</p>
-          <p className="text-2xl font-semibold text-secondary">
-            ${calculateRequiredContribution(totals.annual, payFrequency).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          </p>
-        </div>
-        <div className="rounded-xl border bg-muted/10 p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Current balance</p>
-          <p className="text-2xl font-semibold text-secondary">${totals.current.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-        </div>
-        <div className="rounded-xl border bg-muted/10 p-4 space-y-2">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Pay frequency</p>
-          <select
-            className="h-9 w-full rounded-md border px-3 text-sm"
-            value={payFrequency}
-            onChange={(event) => setPayFrequency(event.target.value as PlannerFrequency)}
-          >
-            {frequencyOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        </section>
+          </CardContent>
+        </Card>
 
         {!readOnly && rows.length === 0 ? (
           <Card className="border-dashed border-primary/30 bg-primary/5">

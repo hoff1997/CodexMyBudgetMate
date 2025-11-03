@@ -47,6 +47,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦" },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑" },
+  { id: "feature-requests", label: "Feature Requests", href: "/feature-requests", icon: "💡" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
   { id: "coming-soon", label: "Coming Soon", href: "/coming-soon", icon: "⏳" },
 ];

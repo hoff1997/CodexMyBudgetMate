@@ -2,25 +2,25 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import { PlannerFrequency, calculateAnnualFromTarget, calculateDueProgress, calculateRequiredContribution, determineStatus, frequencyOptions } from "@/lib/planner/calculations";
 import type { EnvelopeRow } from "@/lib/auth/types";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeftRight, CalendarIcon, ChevronLeft, Download, FileText, Info, Plus } from "lucide-react";
+import { ArrowLeftRight, CalendarIcon, ChevronLeft, Download, FileText, Plus, PlusCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
-import * as Dialog from "@radix-ui/react-dialog";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
-import { DemoSeedCta } from "@/components/layout/dashboard/demo-seed-cta";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 
 export type PlannerEnvelope = EnvelopeRow & {
   category_name?: string | null;
@@ -56,9 +56,11 @@ function frequencyLabel(value: PlannerFrequency) {
 }
 
 export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null }: Props) {
+  const router = useRouter();
   const [payFrequency, setPayFrequency] = useState<PlannerFrequency>(initialPayFrequency);
   const [payCycleStartDate, setPayCycleStartDate] = useState<Date | null>(null);
   const [editEnvelope, setEditEnvelope] = useState<SummaryEnvelope | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [rows, setRows] = useState(() =>
     envelopes.map((env) => ({
       ...env,
@@ -123,8 +125,17 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
   const planTotals = payPlan?.totals ?? null;
   const planFrequencyLabel = payPlan ? frequencyLabel(payPlan.primaryFrequency) : null;
-  const [guideOpen, setGuideOpen] = useState(false);
 
+  const categoryOptions = useMemo(() => {
+    const lookup = new Map<string, string>();
+    rows.forEach((row) => {
+      if (row.category_id) {
+        const name = row.category_name ?? "Uncategorised";
+        lookup.set(String(row.category_id), name);
+      }
+    });
+    return Array.from(lookup.entries()).map(([id, name]) => ({ id, name }));
+  }, [rows]);
   const toSummaryEnvelope = (row: PlannerEnvelope & Record<string, any>): SummaryEnvelope => ({
     id: row.id,
     name: row.name,
@@ -146,14 +157,28 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
   function handleFieldChange(id: string, field: keyof UpdatePayload, value: number | string | null) {
     setRows((prev) =>
-      prev.map((row) =>
-        row.id === id
-          ? {
-              ...row,
-              [field]: value,
-            }
-          : row,
-      ),
+      prev.map((row) => {
+        if (row.id !== id) return row;
+        const next: any = { ...row, [field]: value };
+
+        if (field === "target_amount") {
+          const numericTarget = Number(value ?? 0);
+          next.target_amount = numericTarget;
+          next.annual_amount = calculateAnnualFromTarget(
+            numericTarget,
+            (next.frequency as PlannerFrequency) ?? "monthly",
+          );
+        }
+
+        if (field === "frequency") {
+          const frequencyValue = (value as PlannerFrequency) ?? "monthly";
+          next.frequency = frequencyValue;
+          const numericTarget = Number(next.target_amount ?? 0);
+          next.annual_amount = calculateAnnualFromTarget(numericTarget, frequencyValue);
+        }
+
+        return next;
+      }),
     );
   }
 
@@ -166,11 +191,15 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   }
 
   async function handleSave(row: PlannerEnvelope & Record<string, any>) {
-    const { perPay } = recalcRow(row as any);
+    const annualAmount = calculateAnnualFromTarget(
+      Number(row.target_amount ?? 0),
+      (row.frequency as PlannerFrequency) ?? "monthly",
+    );
+    const perPay = calculateRequiredContribution(annualAmount, payFrequency);
     const payload: UpdatePayload = {
       id: row.id,
       target_amount: Number(row.target_amount ?? 0) || 0,
-      annual_amount: Number(row.annual_amount ?? 0) || 0,
+      annual_amount: annualAmount,
       pay_cycle_amount: perPay,
       frequency: (row.frequency as PlannerFrequency) ?? "monthly",
       next_payment_due: row.next_payment_due ?? null,
@@ -265,35 +294,40 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="w-fit text-muted-foreground hover:text-secondary"
-            >
-              <Link href="/envelope-summary" className="flex items-center gap-2">
-                <ChevronLeft className="h-4 w-4" />
-                Back
-              </Link>
-            </Button>
+      <div className="space-y-6 md:space-y-8">
+        <div className="space-y-4">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="w-fit text-muted-foreground hover:text-secondary"
+          >
+            <Link href="/envelope-summary" className="flex items-center gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold text-secondary">Envelope Planning</h1>
+              <p className="text-sm text-muted-foreground">
+                Plan and track your envelope contributions with detailed calculations.
+              </p>
+            </div>
             <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <Link href="/envelopes" className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Envelope
-                </Link>
+              <Button type="button" className="gap-2" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Add Envelope
               </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/envelopes?transfer=1" className="flex items-center gap-2">
+              <Button asChild variant="outline" className="gap-2">
+                <Link href="/envelopes?transfer=1">
                   <ArrowLeftRight className="h-4 w-4" />
                   Move Balances
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/balance-report" className="flex items-center gap-2">
+              <Button asChild variant="outline" className="gap-2">
+                <Link href="/balance-report">
                   <FileText className="h-4 w-4" />
                   Balance Report
                 </Link>
@@ -301,8 +335,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
+                className="gap-2"
                 onClick={() => handleExportCsv()}
               >
                 <Download className="h-4 w-4" />
@@ -310,35 +343,17 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               </Button>
             </div>
           </div>
-          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-secondary">Envelope Planning</h1>
-              <p className="text-sm text-muted-foreground">
-                Plan and track your envelope contributions with detailed calculations.
-              </p>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2 self-start md:self-auto"
-              onClick={() => setGuideOpen(true)}
-            >
-              <Info className="h-4 w-4" />
-              <span>Feature guide</span>
-            </Button>
-          </div>
         </div>
 
-        <Card>
+        <Card className="border-border/60 bg-muted/10 shadow-sm">
           <CardContent className="space-y-6 pt-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Pay frequency
-                </p>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pay Frequency
+                </Label>
                 <select
-                  className="h-9 w-full rounded-md border px-3 text-sm"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   value={payFrequency}
                   onChange={(event) => setPayFrequency(event.target.value as PlannerFrequency)}
                 >
@@ -350,22 +365,22 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                 </select>
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Pay cycle start date
-                </p>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pay Cycle Start Date
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-between",
+                        "h-10 w-full justify-between rounded-lg border border-border bg-background px-3 text-sm font-medium shadow-sm",
                         !payCycleStartDate && "text-muted-foreground"
                       )}
                     >
                       <span>
                         {payCycleStartDate ? format(payCycleStartDate, "MMMM do, yyyy") : "Select date"}
                       </span>
-                      <CalendarIcon className="h-4 w-4 opacity-50" />
+                      <CalendarIcon className="h-4 w-4 opacity-60" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -379,235 +394,184 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                 </Popover>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Pay frequency determines how the “Required” column is calculated from each envelope&apos;s due
-              amount. The pay cycle start date is used to estimate expected balances based on the pay periods
-              that have passed.
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Pay frequency determines how the “Required” column calculates amounts from your due amount.
+              Pay cycle start date is used to calculate expected balances based on actual payment periods since this date.
             </p>
           </CardContent>
         </Card>
 
-        {!readOnly && rows.length === 0 ? (
-          <Card className="border-dashed border-primary/30 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-base text-secondary">Start with demo envelopes</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                Populate planning rows, recurring income, and transactions with sample data so you can explore every feature.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-              <span>One click to add demo data. You can delete or adjust any envelope afterwards.</span>
-              <DemoSeedCta />
-            </CardContent>
-          </Card>
-        ) : null}
-      {planTotals ? (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Recurring income plan
-          </p>
-          <div className="mt-3 grid gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-sm text-muted-foreground">Budgeted per pay</p>
-              <p className="text-xl font-semibold text-secondary">
-                {formatCurrency(planTotals.perPayAllocated)}
-              </p>
+        {planTotals ? (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Recurring income plan</p>
+            <div className="mt-3 grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Budgeted per pay</p>
+                <p className="text-xl font-semibold text-secondary">
+                  {formatCurrency(planTotals.perPayAllocated)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Income per pay</p>
+                <p className="text-xl font-semibold text-secondary">
+                  {formatCurrency(planTotals.perPayIncome)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Surplus / shortfall</p>
+                <p
+                  className={cn(
+                    "text-xl font-semibold",
+                    planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600",
+                  )}
+                >
+                  {formatCurrency(planTotals.perPaySurplus)}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Income per pay</p>
-              <p className="text-xl font-semibold text-secondary">
-                {formatCurrency(planTotals.perPayIncome)}
+            {planFrequencyLabel ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Calculated from your recurring income split on a {planFrequencyLabel} cycle.
               </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Surplus / shortfall</p>
-              <p
-                className={`text-xl font-semibold ${
-                  planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600"
-                }`}
-              >
-                {formatCurrency(planTotals.perPaySurplus)}
-              </p>
-            </div>
+            ) : null}
           </div>
-          {planFrequencyLabel ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Calculated from your recurring income split on a {planFrequencyLabel} cycle.
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-      <div className="overflow-x-auto rounded-xl border">
-        <table className="min-w-full divide-y divide-border">
-          <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Envelope</th>
-              <th className="px-4 py-3">Annual amount</th>
-              <th className="px-4 py-3">Per pay</th>
-              <th className="px-4 py-3">Plan per pay</th>
-              <th className="px-4 py-3">Target</th>
-              <th className="px-4 py-3">Current</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Next due</th>
-              <th className="px-4 py-3">Progress</th>
-              <th className="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border bg-card">
-            {rows.map((row) => {
-              const { annual, perPay, expected, status } = recalcRow(row as any);
-              const due = calculateDueProgress(row.next_payment_due ?? row.due_date);
-              const contributionDelta = Number(row.current_amount ?? 0) - expected;
-              const storedPerPay = Number(row.pay_cycle_amount ?? 0);
-              const planEntry = planByEnvelope.get(row.id);
-              const planPerPay = planEntry?.perPay ?? 0;
-              const planAnnual = planEntry?.annual ?? 0;
-              const planDelta = planEntry ? storedPerPay - planPerPay : null;
-              return (
-                <tr key={row.id} className="text-sm">
-                  <td className="px-4 py-3 align-top">
-                    <div className="font-medium text-secondary">{row.name}</div>
-                    {row.category_name ? (
-                      <p className="text-xs text-muted-foreground">{row.category_name}</p>
-                    ) : null}
-                    <textarea
-                      className="mt-2 w-full rounded-md border px-2 py-1 text-xs"
-                      rows={2}
-                      placeholder="Notes"
-                      value={row.notes ?? ""}
-                      onChange={(event) => handleFieldChange(row.id, "notes", event.target.value)}
-                      disabled={readOnly}
-                    />
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={row.annual_amount ?? annual}
-                      disabled={readOnly}
-                      onChange={(event) =>
-                        handleFieldChange(row.id, "annual_amount", Number(event.target.value))
-                      }
-                    />
-                  </td>
-                  <td className="px-4 py-3 align-top text-muted-foreground">
-                    <div className="font-medium text-secondary">
-                      ${perPay.toFixed(2)}
-                    </div>
-                    <p className="text-xs">
-                      {contributionDelta > 0
-                        ? `Over by $${contributionDelta.toFixed(2)}`
-                        : contributionDelta < 0
-                        ? `Under by $${Math.abs(contributionDelta).toFixed(2)}`
-                        : "On target"}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    {planEntry ? (
+        ) : null}
+
+        <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background shadow-sm">
+          <table className="min-w-full divide-y divide-border/50 text-sm">
+            <thead className="bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold">Name</th>
+                <th className="px-4 py-3 text-left font-semibold">Opening Balance</th>
+                <th className="px-4 py-3 text-left font-semibold">Due Amount</th>
+                <th className="px-4 py-3 text-left font-semibold">Due Date</th>
+                <th className="px-4 py-3 text-left font-semibold">Due Frequency</th>
+                <th className="px-4 py-3 text-left font-semibold">
+                  {requiredColumnLabel} Amount
+                </th>
+                <th className="px-4 py-3 text-left font-semibold">Frequency</th>
+                <th className="px-4 py-3 text-left font-semibold">Actual Balance*</th>
+                <th className="px-4 py-3 text-left font-semibold">Expected</th>
+                <th className="px-4 py-3 text-left font-semibold">Status</th>
+                <th className="px-4 py-3 text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={11} className="px-4 py-12 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-3">
+                      <PlusCircle className="h-12 w-12 text-primary/60" />
                       <div className="space-y-1">
-                        <div className="font-medium text-secondary">
-                          {formatCurrency(planPerPay)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          ≈ {formatCurrency(planAnnual)} / yr
+                        <p className="text-base font-semibold text-secondary">
+                          No envelopes added yet
                         </p>
-                        {planDelta !== null && Math.abs(planDelta) > 0.01 ? (
-                          <p
-                            className={`text-xs ${
-                              planDelta >= 0 ? "text-emerald-600" : "text-rose-600"
-                            }`}
-                          >
-                            {planDelta >= 0 ? "+" : "-"}
-                            {formatCurrency(Math.abs(planDelta))}
-                          </p>
-                        ) : null}
+                        <p className="text-sm">
+                          Use the “Add Envelope” button above to start planning.
+                        </p>
                       </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Not linked</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={row.target_amount ?? 0}
-                      disabled={readOnly}
-                      onChange={(event) =>
-                        handleFieldChange(row.id, "target_amount", Number(event.target.value))
-                      }
-                    />
-                  </td>
-                  <td className="px-4 py-3 align-top text-secondary">
-                    ${Number(row.current_amount ?? 0).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 align-top capitalize">
-                    <span
-                      className={
-                        status === "on-track"
-                          ? "text-emerald-600"
-                          : status === "over"
-                          ? "text-sky-600"
-                          : "text-rose-600"
-                      }
-                    >
-                      {status.replace("-", " ")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 align-top space-y-1">
-                    <Input
-                      type="date"
-                      value={(row.next_payment_due ?? row.due_date ?? "").slice(0, 10)}
-                      disabled={readOnly}
-                      onChange={(event) =>
-                        handleFieldChange(row.id, "next_payment_due", event.target.value)
-                      }
-                    />
-                    <select
-                      className="h-8 w-full rounded-md border px-2 text-xs"
-                      value={(row.frequency as PlannerFrequency) ?? "monthly"}
-                      disabled={readOnly}
-                      onChange={(event) =>
-                        handleFieldChange(row.id, "frequency", event.target.value as PlannerFrequency)
-                      }
-                    >
-                      {frequencyOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-muted-foreground">{due.formatted ?? ""}</p>
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    <Progress value={due.progress} />
-                    <p className="text-xs text-muted-foreground mt-1">{due.label}</p>
-                  </td>
-                  <td className="px-4 py-3 align-top text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
-                        disabled={readOnly}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleSave(row as any)}
-                        disabled={updateMutation.isPending || readOnly}
-                      >
-                        {readOnly ? "Preview" : "Save"}
-                      </Button>
                     </div>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                rows.map((row) => {
+                  const { perPay, expected, status } = recalcRow(row as any);
+                  return (
+                    <tr key={row.id} className="align-top">
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-secondary">{row.name}</div>
+                        {row.category_name ? (
+                          <p className="text-xs text-muted-foreground">{row.category_name}</p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-4 text-secondary">
+                        {formatCurrency(Number(row.opening_balance ?? 0))}
+                      </td>
+                      <td className="px-4 py-4">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={row.target_amount ?? 0}
+                          disabled={readOnly}
+                          onChange={(event) =>
+                            handleFieldChange(row.id, "target_amount", Number(event.target.value))
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <Input
+                          type="date"
+                          value={(row.next_payment_due ?? row.due_date ?? "").slice(0, 10)}
+                          disabled={readOnly}
+                          onChange={(event) =>
+                            handleFieldChange(row.id, "next_payment_due", event.target.value)
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <select
+                          className="h-9 w-full rounded-md border px-2 text-sm"
+                          value={(row.frequency as PlannerFrequency) ?? "monthly"}
+                          disabled={readOnly}
+                          onChange={(event) =>
+                            handleFieldChange(row.id, "frequency", event.target.value as PlannerFrequency)
+                          }
+                        >
+                          {frequencyOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-4 text-secondary">
+                        {formatCurrency(perPay)}
+                      </td>
+                      <td className="px-4 py-4 text-muted-foreground">
+                        {payFrequencyLabel}
+                      </td>
+                      <td className="px-4 py-4 text-secondary">
+                        {formatCurrency(Number(row.current_amount ?? 0))}
+                      </td>
+                      <td className="px-4 py-4 text-secondary">{formatCurrency(expected)}</td>
+                      <td className="px-4 py-4 capitalize">
+                        <span
+                          className={cn(
+                            status === "on-track" && "text-emerald-600",
+                            status === "over" && "text-sky-600",
+                            status === "under" && "text-rose-600",
+                          )}
+                        >
+                          {status.replace("-", " ")}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
+                            disabled={readOnly}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleSave(row as any)}
+                            disabled={updateMutation.isPending || readOnly}
+                          >
+                            {readOnly ? "Preview" : "Save"}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <EnvelopeEditSheet
@@ -633,6 +597,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                     frequency: updated.frequency ?? row.frequency,
                     notes: updated.notes ?? null,
                     icon: updated.icon ?? null,
+                    opening_balance: Number(updated.opening_balance ?? row.opening_balance ?? 0),
                     is_spending:
                       updated.is_spending !== undefined && updated.is_spending !== null
                         ? updated.is_spending
@@ -660,62 +625,22 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
             notes: updated.notes ?? null,
             icon: updated.icon ?? null,
             is_spending: isSpending,
+            opening_balance: Number(updated.opening_balance ?? 0) || 0,
           });
           setEditEnvelope(null);
         }}
+        categories={categoryOptions}
       />
-      <PlannerFeatureGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
+      <EnvelopeCreateDialog
+        open={createOpen}
+        onOpenChange={(value) => {
+          setCreateOpen(value);
+        }}
+        categories={categoryOptions}
+        onCreated={() => {
+          router.refresh();
+        }}
+      />
     </>
-  );
-}
-
-function PlannerFeatureGuideDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (value: boolean) => void }) {
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
-        <Dialog.Content className="fixed inset-0 z-50 mx-auto flex max-w-3xl flex-col gap-4 overflow-y-auto rounded-3xl bg-background p-6 shadow-2xl md:top-12 md:h-[80vh]">
-          <Dialog.Title className="text-xl font-semibold text-secondary">Planner feature guide</Dialog.Title>
-          <Dialog.Description className="text-sm text-muted-foreground">
-            Use this checklist to ensure the planner keeps parity with the recurring income tools and envelope manager.
-          </Dialog.Description>
-
-          <div className="space-y-6 text-sm text-muted-foreground">
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Pay cycle controls</h2>
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Pay frequency selector updates every row&rsquo;s required contribution instantly.</li>
-                <li>Metric cards reflect annual funding, per-pay requirement, and current balances.</li>
-                <li>Guide button links back to this reference panel.</li>
-              </ul>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Envelope table</h2>
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Columns cover target, per-pay requirement, plan comparison, due dates, and status.</li>
-                <li>Save action persists recalculated per-pay contributions to Supabase.</li>
-                <li>Edit opens the full envelope sheet so icons, categories, and notes stay in sync.</li>
-              </ul>
-            </section>
-
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold text-secondary uppercase tracking-wide">Plan alignment</h2>
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Plan per-pay column compares live planner data with recurring income splits.</li>
-                <li>Positive values highlight surplus, negative values highlight deficits needing action.</li>
-                <li>Editing an envelope keeps the planner, envelope manager, and recurring income views consistent.</li>
-              </ul>
-            </section>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Dialog.Close asChild>
-              <Button variant="outline">Close</Button>
-            </Dialog.Close>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }

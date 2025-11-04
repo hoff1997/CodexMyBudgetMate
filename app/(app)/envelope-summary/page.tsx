@@ -114,6 +114,7 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
       celebrations={celebrations}
       defaultTab={typeof searchParams?.tab === "string" ? searchParams?.tab : undefined}
       payPlan={payPlan}
+      categories={(categories ?? []).map((category) => ({ id: category.id, name: category.name }))}
     />
   );
 }

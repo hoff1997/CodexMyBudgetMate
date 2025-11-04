@@ -501,6 +501,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
         planPerPay={selectedPlan?.perPay}
         planAnnual={selectedPlan?.annual}
         planFrequency={payPlan?.primaryFrequency}
+        categories={categories.map((category) => ({ id: category.id, name: category.name }))}
         onClose={() => setSelectedEnvelope(null)}
         onSave={async (payload) => {
           await fetch(`/api/envelopes/${payload.id}`, {
@@ -513,6 +514,10 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
               frequency: payload.frequency,
               next_payment_due: payload.next_payment_due ?? payload.due_date,
               notes: payload.notes,
+              category_id: payload.category_id ?? null,
+              icon: payload.icon ?? null,
+              opening_balance: Number(payload.opening_balance ?? 0),
+              is_spending: Boolean(payload.is_spending),
             }),
           });
           router.refresh();

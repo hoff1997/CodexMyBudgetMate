@@ -28,6 +28,8 @@ const FILTERS = [
 
 type StatusFilter = (typeof FILTERS)[number]["key"];
 
+type CategoryOption = { id: string; name: string };
+
 export function EnvelopeSummaryClient({
   list,
   totals,
@@ -35,6 +37,7 @@ export function EnvelopeSummaryClient({
   defaultTab,
   celebrations,
   payPlan,
+  categories: categoryOptions = [],
 }: {
   list: SummaryEnvelope[];
   totals: { target: number; current: number };
@@ -42,6 +45,7 @@ export function EnvelopeSummaryClient({
   defaultTab?: string;
   celebrations: Array<{ id: string; title: string; description: string | null; achievedAt: string }>;
   payPlan?: PayPlanSummary | null;
+  categories?: CategoryOption[];
 }) {
   const router = useRouter();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
@@ -97,7 +101,7 @@ export function EnvelopeSummaryClient({
     return orderedEnvelopes.filter((envelope) => getStatusBucket(envelope) === statusFilter);
   }, [orderedEnvelopes, statusFilter]);
 
-  const categories = useMemo(() => {
+  const groupedCategories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; envelopes: SummaryEnvelope[] }>();
 
     filteredEnvelopes.forEach((envelope) => {
@@ -230,8 +234,8 @@ export function EnvelopeSummaryClient({
           </div>
           <div className="hidden md:block">
             <div className="space-y-4">
-              {categories.length ? (
-                categories.map((category) => (
+              {groupedCategories.length ? (
+                groupedCategories.map((category) => (
                   <EnvelopeCategoryGroup
                     key={category.id}
                     category={category}
@@ -264,6 +268,7 @@ export function EnvelopeSummaryClient({
         planPerPay={selectedPlan?.perPay}
         planAnnual={selectedPlan?.annual}
         planFrequency={planFrequency ?? undefined}
+        categories={categoryOptions}
         onClose={() => setSelectedEnvelope(null)}
         onSave={async (updated) => {
           await fetch(`/api/envelopes/${updated.id}`, {
@@ -277,6 +282,9 @@ export function EnvelopeSummaryClient({
               next_payment_due: updated.next_payment_due ?? updated.due_date,
               notes: updated.notes,
               is_spending: Boolean(updated.is_spending),
+              category_id: updated.category_id ?? null,
+              icon: updated.icon ?? null,
+              opening_balance: Number(updated.opening_balance ?? 0),
             }),
           });
           router.refresh();

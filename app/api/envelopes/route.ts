@@ -2,15 +2,20 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
+const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
+
 const schema = z.object({
   name: z.string().min(1),
   categoryId: z.string().uuid().optional(),
   categoryName: z.string().min(1).optional(),
   targetAmount: z.number().nonnegative().default(0),
   payCycleAmount: z.number().nonnegative().default(0),
-  frequency: z.string().optional(),
+  frequency: frequencySchema,
   nextDue: z.string().optional(),
   openingBalance: z.number().default(0),
+  notes: z.string().max(2000).optional(),
+  icon: z.string().max(10).optional(),
+  isSpending: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -62,10 +67,13 @@ export async function POST(request: Request) {
     category_id: categoryId,
     target_amount: payload.targetAmount,
     pay_cycle_amount: payload.payCycleAmount,
-    frequency: payload.frequency,
+    frequency: payload.frequency ?? null,
     next_payment_due: payload.nextDue ?? null,
     opening_balance: payload.openingBalance,
     current_amount: payload.openingBalance,
+    notes: payload.notes?.trim() ? payload.notes.trim() : null,
+    icon: payload.icon ?? null,
+    is_spending: payload.isSpending ?? false,
   });
 
   if (error) {

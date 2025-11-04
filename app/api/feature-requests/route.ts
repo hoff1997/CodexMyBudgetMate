@@ -35,14 +35,13 @@ export async function GET(request: Request) {
     .from("feature_requests")
     .select(FEATURE_REQUEST_SELECT_COLUMNS.join(", "))
     .eq("user_id", session.user.id)
-    .order("created_at", { ascending: false })
-    .returns<DbFeatureRequest[]>();
+    .order("created_at", { ascending: false });
 
   if (statuses.length > 0) {
     query = query.in("status", statuses);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.returns<DbFeatureRequest[]>();
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

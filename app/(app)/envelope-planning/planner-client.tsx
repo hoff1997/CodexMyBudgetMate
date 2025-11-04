@@ -9,14 +9,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
 import { PlannerFrequency, calculateAnnualFromTarget, calculateDueProgress, calculateRequiredContribution, determineStatus, frequencyOptions } from "@/lib/planner/calculations";
 import type { EnvelopeRow } from "@/lib/auth/types";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeftRight, CalendarIcon, ChevronLeft, Download, FileText, Plus, PlusCircle } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarIcon,
+  ChevronDown,
+  ChevronLeft,
+  FileBarChart,
+  Plus,
+  PlusCircle,
+} from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
@@ -294,286 +301,289 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
   return (
     <>
-      <div className="space-y-6 md:space-y-8">
-        <div className="space-y-4">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="w-fit text-muted-foreground hover:text-secondary"
-          >
-            <Link href="/envelope-summary" className="flex items-center gap-2">
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </Link>
-          </Button>
+      <div className="min-h-screen bg-[#f5f7fd]">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-16 pt-8 sm:gap-8 sm:px-6 lg:px-8">
+          <div className="space-y-6">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="w-fit px-0 text-sm font-medium text-muted-foreground hover:text-secondary"
+            >
+              <Link href="/envelope-summary" className="flex items-center gap-2">
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Link>
+            </Button>
 
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-secondary">Envelope Planning</h1>
-              <p className="text-sm text-muted-foreground">
-                Plan and track your envelope contributions with detailed calculations.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" className="gap-2" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4" />
-                Add Envelope
-              </Button>
-              <Button asChild variant="outline" className="gap-2">
-                <Link href="/envelopes?transfer=1">
-                  <ArrowLeftRight className="h-4 w-4" />
-                  Move Balances
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="gap-2">
-                <Link href="/balance-report">
-                  <FileText className="h-4 w-4" />
-                  Balance Report
-                </Link>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-2"
-                onClick={() => handleExportCsv()}
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <Card className="border-border/60 bg-muted/10 shadow-sm">
-          <CardContent className="space-y-6 pt-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Pay Frequency
-                </Label>
-                <select
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  value={payFrequency}
-                  onChange={(event) => setPayFrequency(event.target.value as PlannerFrequency)}
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-semibold text-secondary">Envelope Planning</h1>
+                <p className="text-sm text-muted-foreground">
+                  Plan and track your envelope contributions with detailed calculations.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  className="gap-2 rounded-xl bg-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90"
+                  onClick={() => setCreateOpen(true)}
                 >
-                  {frequencyOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Pay Cycle Start Date
-                </Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "h-10 w-full justify-between rounded-lg border border-border bg-background px-3 text-sm font-medium shadow-sm",
-                        !payCycleStartDate && "text-muted-foreground"
-                      )}
-                    >
-                      <span>
-                        {payCycleStartDate ? format(payCycleStartDate, "MMMM do, yyyy") : "Select date"}
-                      </span>
-                      <CalendarIcon className="h-4 w-4 opacity-60" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={payCycleStartDate ?? undefined}
-                      onSelect={(date) => setPayCycleStartDate(date ?? null)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              Pay frequency determines how the “Required” column calculates amounts from your due amount.
-              Pay cycle start date is used to calculate expected balances based on actual payment periods since this date.
-            </p>
-          </CardContent>
-        </Card>
-
-        {planTotals ? (
-          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Recurring income plan</p>
-            <div className="mt-3 grid gap-4 md:grid-cols-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Budgeted per pay</p>
-                <p className="text-xl font-semibold text-secondary">
-                  {formatCurrency(planTotals.perPayAllocated)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Income per pay</p>
-                <p className="text-xl font-semibold text-secondary">
-                  {formatCurrency(planTotals.perPayIncome)}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Surplus / shortfall</p>
-                <p
-                  className={cn(
-                    "text-xl font-semibold",
-                    planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600",
-                  )}
+                  <Plus className="h-4 w-4" />
+                  Add Envelope
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="gap-2 rounded-xl border border-border/80 bg-white px-4 py-2 text-secondary shadow-sm hover:bg-slate-50"
                 >
-                  {formatCurrency(planTotals.perPaySurplus)}
-                </p>
+                  <Link href="/envelopes?transfer=1">
+                    <ArrowLeftRight className="h-4 w-4" />
+                    Move Balances
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="gap-2 rounded-xl border border-border/80 bg-white px-4 py-2 text-secondary shadow-sm hover:bg-slate-50"
+                >
+                  <Link href="/balance-report">
+                    <FileBarChart className="h-4 w-4" />
+                    Balance Report
+                  </Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-xl border border-border/80 bg-white px-4 py-2 text-secondary shadow-sm hover:bg-slate-50"
+                  onClick={() => handleExportCsv()}
+                >
+                  Export CSV
+                </Button>
               </div>
             </div>
-            {planFrequencyLabel ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Calculated from your recurring income split on a {planFrequencyLabel} cycle.
-              </p>
-            ) : null}
-          </div>
-        ) : null}
 
-        <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background shadow-sm">
-          <table className="min-w-full divide-y divide-border/50 text-sm">
-            <thead className="bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold">Name</th>
-                <th className="px-4 py-3 text-left font-semibold">Opening Balance</th>
-                <th className="px-4 py-3 text-left font-semibold">Due Amount</th>
-                <th className="px-4 py-3 text-left font-semibold">Due Date</th>
-                <th className="px-4 py-3 text-left font-semibold">Due Frequency</th>
-                <th className="px-4 py-3 text-left font-semibold">
-                  {requiredColumnLabel} Amount
-                </th>
-                <th className="px-4 py-3 text-left font-semibold">Frequency</th>
-                <th className="px-4 py-3 text-left font-semibold">Actual Balance*</th>
-                <th className="px-4 py-3 text-left font-semibold">Expected</th>
-                <th className="px-4 py-3 text-left font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="px-4 py-12 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center gap-3">
-                      <PlusCircle className="h-12 w-12 text-primary/60" />
-                      <div className="space-y-1">
-                        <p className="text-base font-semibold text-secondary">
-                          No envelopes added yet
-                        </p>
-                        <p className="text-sm">
-                          Use the “Add Envelope” button above to start planning.
-                        </p>
-                      </div>
+            <Card className="rounded-3xl border border-border/40 bg-white shadow-sm">
+              <CardContent className="space-y-6 px-6 py-6 sm:px-8">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-secondary">Pay Frequency:</p>
+                    <div className="relative inline-flex h-10 w-full max-w-[220px] items-center rounded-xl border border-border bg-white px-4 shadow-sm">
+                      <select
+                        className="h-full w-full appearance-none bg-transparent text-sm font-medium text-secondary focus-visible:outline-none"
+                        value={payFrequency}
+                        onChange={(event) => setPayFrequency(event.target.value as PlannerFrequency)}
+                      >
+                        {frequencyOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" />
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                rows.map((row) => {
-                  const { perPay, expected, status } = recalcRow(row as any);
-                  return (
-                    <tr key={row.id} className="align-top">
-                      <td className="px-4 py-4">
-                        <div className="font-medium text-secondary">{row.name}</div>
-                        {row.category_name ? (
-                          <p className="text-xs text-muted-foreground">{row.category_name}</p>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-4 text-secondary">
-                        {formatCurrency(Number(row.opening_balance ?? 0))}
-                      </td>
-                      <td className="px-4 py-4">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={row.target_amount ?? 0}
-                          disabled={readOnly}
-                          onChange={(event) =>
-                            handleFieldChange(row.id, "target_amount", Number(event.target.value))
-                          }
-                        />
-                      </td>
-                      <td className="px-4 py-4">
-                        <Input
-                          type="date"
-                          value={(row.next_payment_due ?? row.due_date ?? "").slice(0, 10)}
-                          disabled={readOnly}
-                          onChange={(event) =>
-                            handleFieldChange(row.id, "next_payment_due", event.target.value)
-                          }
-                        />
-                      </td>
-                      <td className="px-4 py-4">
-                        <select
-                          className="h-9 w-full rounded-md border px-2 text-sm"
-                          value={(row.frequency as PlannerFrequency) ?? "monthly"}
-                          disabled={readOnly}
-                          onChange={(event) =>
-                            handleFieldChange(row.id, "frequency", event.target.value as PlannerFrequency)
-                          }
-                        >
-                          {frequencyOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-4 text-secondary">
-                        {formatCurrency(perPay)}
-                      </td>
-                      <td className="px-4 py-4 text-muted-foreground">
-                        {payFrequencyLabel}
-                      </td>
-                      <td className="px-4 py-4 text-secondary">
-                        {formatCurrency(Number(row.current_amount ?? 0))}
-                      </td>
-                      <td className="px-4 py-4 text-secondary">{formatCurrency(expected)}</td>
-                      <td className="px-4 py-4 capitalize">
-                        <span
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-secondary">Pay Cycle Start Date:</p>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
                           className={cn(
-                            status === "on-track" && "text-emerald-600",
-                            status === "over" && "text-sky-600",
-                            status === "under" && "text-rose-600",
+                            "flex h-10 w-full max-w-[240px] items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-medium text-secondary shadow-sm hover:bg-slate-50",
+                            !payCycleStartDate && "text-muted-foreground",
                           )}
                         >
-                          {status.replace("-", " ")}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
-                            disabled={readOnly}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleSave(row as any)}
-                            disabled={updateMutation.isPending || readOnly}
-                          >
-                            {readOnly ? "Preview" : "Save"}
-                          </Button>
+                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {payCycleStartDate ? format(payCycleStartDate, "MMMM do, yyyy") : "Select date"}
+                          </span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" sideOffset={8}>
+                        <Calendar
+                          mode="single"
+                          selected={payCycleStartDate ?? undefined}
+                          onSelect={(date) => setPayCycleStartDate(date ?? null)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Pay frequency determines how the 'Required' column calculates amounts from your due amount.
+                  Pay cycle start date is used to calculate expected balances based on actual payment periods since this date.
+                </p>
+                <div className="text-sm font-medium text-muted-foreground/80">Collapse All</div>
+              </CardContent>
+            </Card>
+
+            {planTotals ? (
+              <div className="rounded-3xl border border-primary/20 bg-white px-6 py-5 shadow-sm sm:px-8">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Recurring income plan</p>
+                <div className="mt-3 grid gap-4 md:grid-cols-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Budgeted per pay</p>
+                    <p className="text-xl font-semibold text-secondary">
+                      {formatCurrency(planTotals.perPayAllocated)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Income per pay</p>
+                    <p className="text-xl font-semibold text-secondary">
+                      {formatCurrency(planTotals.perPayIncome)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Surplus / shortfall</p>
+                    <p
+                      className={cn(
+                        "text-xl font-semibold",
+                        planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600",
+                      )}
+                    >
+                      {formatCurrency(planTotals.perPaySurplus)}
+                    </p>
+                  </div>
+                </div>
+                {planFrequencyLabel ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Calculated from your recurring income split on a {planFrequencyLabel} cycle.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="overflow-x-auto rounded-3xl border border-border/40 bg-white shadow-sm">
+              <table className="min-w-full divide-y divide-border/40 text-sm text-secondary">
+                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <tr>
+                    <th className="px-6 py-4 text-left">Name</th>
+                    <th className="px-6 py-4 text-left">Opening Balance</th>
+                    <th className="px-6 py-4 text-left">Due Amount</th>
+                    <th className="px-6 py-4 text-left">Due Date</th>
+                    <th className="px-6 py-4 text-left">Due Frequency</th>
+                    <th className="px-6 py-4 text-left">{requiredColumnLabel} Amount</th>
+                    <th className="px-6 py-4 text-left">Frequency</th>
+                    <th className="px-6 py-4 text-left">Actual Balance*</th>
+                    <th className="px-6 py-4 text-left">Expected</th>
+                    <th className="px-6 py-4 text-left">Status</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40 bg-white">
+                  {rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="px-6 py-16 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-3">
+                          <PlusCircle className="h-12 w-12 text-muted-foreground/40" />
+                          <div className="space-y-1">
+                            <p className="text-base font-semibold text-secondary">No envelopes added yet</p>
+                            <p className="text-sm">Click "Add Row" to start planning.</p>
+                          </div>
                         </div>
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    rows.map((row) => {
+                      const { perPay, expected, status } = recalcRow(row as any);
+                      return (
+                        <tr key={row.id} className="align-top transition hover:bg-slate-50/70">
+                          <td className="px-6 py-4">
+                            <div className="font-medium text-secondary">{row.name}</div>
+                            {row.category_name ? (
+                              <p className="text-xs text-muted-foreground">{row.category_name}</p>
+                            ) : null}
+                          </td>
+                          <td className="px-6 py-4 text-secondary">
+                            {formatCurrency(Number(row.opening_balance ?? 0))}
+                          </td>
+                          <td className="px-6 py-4">
+                            <Input
+                              className="rounded-xl border-border/60"
+                              type="number"
+                              step="0.01"
+                              value={row.target_amount ?? 0}
+                              disabled={readOnly}
+                              onChange={(event) =>
+                                handleFieldChange(row.id, 'target_amount', Number(event.target.value))
+                              }
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <Input
+                              className="rounded-xl border-border/60"
+                              type="date"
+                              value={(row.next_payment_due ?? row.due_date ?? '').slice(0, 10)}
+                              disabled={readOnly}
+                              onChange={(event) =>
+                                handleFieldChange(row.id, 'next_payment_due', event.target.value)
+                              }
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <select
+                              className="h-9 w-full rounded-lg border border-border/70 bg-white px-3 text-sm focus-visible:outline-none"
+                              value={(row.frequency as PlannerFrequency) ?? 'monthly'}
+                              disabled={readOnly}
+                              onChange={(event) =>
+                                handleFieldChange(row.id, 'frequency', event.target.value as PlannerFrequency)
+                              }
+                            >
+                              {frequencyOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-6 py-4 text-secondary">{formatCurrency(perPay)}</td>
+                          <td className="px-6 py-4 text-muted-foreground">{payFrequencyLabel}</td>
+                          <td className="px-6 py-4 text-secondary">
+                            {formatCurrency(Number(row.current_amount ?? 0))}
+                          </td>
+                          <td className="px-6 py-4 text-secondary">{formatCurrency(expected)}</td>
+                          <td className="px-6 py-4 capitalize">
+                            <span
+                              className={cn(
+                                status === 'on-track' && 'text-emerald-600',
+                                status === 'over' && 'text-sky-600',
+                                status === 'under' && 'text-rose-600',
+                              )}
+                            >
+                              {status.replace('-', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
+                                disabled={readOnly}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleSave(row as any)}
+                                disabled={updateMutation.isPending || readOnly}
+                              >
+                                {readOnly ? 'Preview' : 'Save'}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
-
       <EnvelopeEditSheet
         envelope={editEnvelope}
         planPerPay={editEnvelope ? planByEnvelope.get(editEnvelope.id)?.perPay : undefined}

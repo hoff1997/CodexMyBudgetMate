@@ -259,7 +259,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
       const { annual, perPay, status } = recalcRow(row as any);
       const planEntry = planByEnvelope.get(row.id);
       const planPerPay = planEntry?.perPay ?? null;
-      const planVariance = planEntry ? perPay - planPerPay : null;
+      const planVariance = planEntry && planPerPay !== null ? perPay - planPerPay : null;
       const dueInfo = calculateDueProgress(row.next_payment_due ?? row.due_date);
       const frequencyText =
         row.frequency && row.frequency !== "none"

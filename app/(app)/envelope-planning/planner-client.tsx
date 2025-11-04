@@ -411,7 +411,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                   </div>
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Pay frequency determines how the 'Required' column calculates amounts from your due amount.
+                  Pay frequency determines how the &lsquo;Required&rsquo; column calculates amounts from your due amount.
                   Pay cycle start date is used to calculate expected balances based on actual payment periods since this date.
                 </p>
                 <div className="text-sm font-medium text-muted-foreground/80">Collapse All</div>
@@ -479,7 +479,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                           <PlusCircle className="h-12 w-12 text-muted-foreground/40" />
                           <div className="space-y-1">
                             <p className="text-base font-semibold text-secondary">No envelopes added yet</p>
-                            <p className="text-sm">Click "Add Row" to start planning.</p>
+                            <p className="text-sm">Click &ldquo;Add Row&rdquo; to start planning.</p>
                           </div>
                         </div>
                       </td>

@@ -15,6 +15,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const allowedFields = [
     "name",
     "category_id",
+    "envelope_type",
     "target_amount",
     "annual_amount",
     "pay_cycle_amount",

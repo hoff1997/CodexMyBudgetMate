@@ -3,11 +3,13 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
+const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
 
 const schema = z.object({
   name: z.string().min(1),
   categoryId: z.string().uuid().optional(),
   categoryName: z.string().min(1).optional(),
+  envelopeType: envelopeTypeSchema,
   targetAmount: z.number().nonnegative().default(0),
   payCycleAmount: z.number().nonnegative().default(0),
   frequency: frequencySchema,
@@ -65,6 +67,7 @@ export async function POST(request: Request) {
     user_id: session.user.id,
     name: payload.name,
     category_id: categoryId,
+    envelope_type: payload.envelopeType ?? 'expense',
     target_amount: payload.targetAmount,
     pay_cycle_amount: payload.payCycleAmount,
     frequency: payload.frequency ?? null,

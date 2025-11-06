@@ -6,6 +6,9 @@ import type { DatabaseProfile } from "@/lib/auth/types";
 import { BudgetOverview } from "@/components/layout/overview/budget-overview";
 import { QuickActionsPanel } from "@/components/layout/dashboard/quick-actions-panel";
 import { DemoSeedCta } from "@/components/layout/dashboard/demo-seed-cta";
+import StatsCards from "@/components/dashboard/stats-cards";
+import MonitoredEnvelopesWidget from "@/components/dashboard/monitored-envelopes-widget";
+import PendingApprovalWidget from "@/components/dashboard/pending-approval-widget";
 
 type Props = {
   profile: DatabaseProfile | null;
@@ -49,6 +52,15 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
         ) : null}
         <div className="mb-6">
           <QuickActionsPanel />
+        </div>
+        <div className="mb-6">
+          <StatsCards showReconciliation={true} />
+        </div>
+        <div className="mb-6">
+          <MonitoredEnvelopesWidget />
+        </div>
+        <div className="mb-6">
+          <PendingApprovalWidget />
         </div>
         <Suspense fallback={<p className="text-muted-foreground">Loading overview…</p>}>
           <BudgetOverview userId={userId} demoMode={demoMode} />

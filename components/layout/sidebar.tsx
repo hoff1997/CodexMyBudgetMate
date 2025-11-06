@@ -35,12 +35,15 @@ type NavItem = {
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "getting-started", label: "Getting Started", href: "/getting-started", icon: "🏠" },
+  { id: "setup", label: "Setup Wizard", href: "/setup", icon: "🧙" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "⏳" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "zero-budget", label: "Zero Budget Manager", href: "/envelope-summary?tab=zero-budget", icon: "🎯" },
+  { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "envelope-planning", label: "Envelope Planning", href: "/envelope-planning", icon: "📋" },
-  { id: "balance-report", label: "Balance Report", href: "/balance-report", icon: "📊" },
+  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰" },
+  { id: "balance-report", label: "Account Balances", href: "/balance-report", icon: "📊" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
   { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
   { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳" },

@@ -23,6 +23,58 @@ function pickColour(index: number) {
   return colourPalette[index % colourPalette.length];
 }
 
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  const { data: transaction, error: txError } = await supabase
+    .from("transactions")
+    .select("id")
+    .eq("id", params.id)
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (txError) {
+    return NextResponse.json({ error: txError.message }, { status: 400 });
+  }
+
+  if (!transaction) {
+    return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+  }
+
+  const { data: transactionLabels, error: labelsError } = await supabase
+    .from("transaction_labels")
+    .select(`
+      label_id,
+      labels (
+        id,
+        name,
+        colour
+      )
+    `)
+    .eq("transaction_id", params.id)
+    .eq("user_id", session.user.id);
+
+  if (labelsError) {
+    return NextResponse.json({ error: labelsError.message }, { status: 400 });
+  }
+
+  const labels = (transactionLabels ?? [])
+    .map((tl: any) => tl.labels)
+    .filter(Boolean);
+
+  return NextResponse.json({ labels });
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { id: string } },

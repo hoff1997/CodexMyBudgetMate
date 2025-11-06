@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import BankConnectionManager from "@/components/bank/bank-connection-manager";
+import CategoryManager from "@/components/settings/category-manager";
 
 type EnvelopeRow = {
   id: string;
@@ -62,6 +64,8 @@ export type SettingsData = {
   security: SecuritySettings;
   webhooks: WebhookSettings;
   demoMode: boolean;
+  userId?: string;
+  username?: string;
 };
 
 type FlashMessage = {
@@ -577,6 +581,8 @@ export function SettingsClient({ data, flash = null }: Props) {
         </CardContent>
       </Card>
 
+      <CategoryManager />
+
       <Card id="bank-connections">
         <CardHeader>
           <CardTitle>Bank connections</CardTitle>
@@ -586,9 +592,10 @@ export function SettingsClient({ data, flash = null }: Props) {
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="connections">Connections</TabsTrigger>
+              <TabsTrigger value="manager">Manager</TabsTrigger>
               <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="mt-4 space-y-3 text-sm text-muted-foreground">
@@ -641,6 +648,18 @@ export function SettingsClient({ data, flash = null }: Props) {
               ) : (
                 <div className="rounded-lg border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
                   No bank connections yet. Connect through Akahu to enable automatic transaction imports.
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="manager" className="mt-4">
+              {data.userId && data.username ? (
+                <BankConnectionManager
+                  userId={data.userId}
+                  username={data.username}
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+                  Please log in to manage bank connections.
                 </div>
               )}
             </TabsContent>

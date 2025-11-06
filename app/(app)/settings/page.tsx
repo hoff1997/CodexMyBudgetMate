@@ -114,6 +114,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           envelopePush: false,
         },
         demoMode: false,
+        userId: session.user.id,
+        username: session.user.email ?? "User",
       }
     : getDemoSettingsData();
 

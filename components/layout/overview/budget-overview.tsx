@@ -12,6 +12,9 @@ import {
   CelebrationEvent,
   CelebrationTimeline,
 } from "@/components/layout/dashboard/celebration-timeline";
+import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-card-holding-widget";
+import { BankConnectionStatusWidget } from "@/components/bank/bank-connection-status-widget";
+import { ZeroBudgetStatusWidget } from "@/components/layout/budget/zero-budget-status-widget";
 import { differenceInCalendarDays, formatDistanceToNow } from "date-fns";
 import { formatCurrency, getEnvelopeStatus } from "@/lib/finance";
 import { cn } from "@/lib/cn";
@@ -83,6 +86,9 @@ const WIDGET_STORAGE_KEY = "mbm-dashboard-widget-order";
 const DEFAULT_WIDGET_ORDER = [
   "income-expense",
   "overdue",
+  "zero-budget-status",
+  "bank-connections",
+  "credit-card-holding",
   "akahu",
   "summary",
   "recent",
@@ -137,12 +143,22 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
       {
         id: "overdue",
         className: "lg:col-span-1",
-        node: <OverdueEnvelopesCard envelopes={overdue} />, 
+        node: <OverdueEnvelopesCard envelopes={overdue} />,
+      },
+      {
+        id: "zero-budget-status",
+        className: "lg:col-span-1",
+        node: <ZeroBudgetStatusWidget />,
+      },
+      {
+        id: "credit-card-holding",
+        className: "lg:col-span-1",
+        node: <CreditCardHoldingWidget />,
       },
       {
         id: "akahu",
         className: "lg:col-span-3",
-        node: <AkahuConnect hasConnection={false} />, 
+        node: <AkahuConnect hasConnection={false} />,
       },
       {
         id: "summary",
@@ -152,12 +168,12 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
       {
         id: "recent",
         className: "lg:col-span-2",
-        node: <RecentTransactions transactions={demoTransactions} />, 
+        node: <RecentTransactions transactions={demoTransactions} />,
       },
       {
         id: "celebrations",
         className: "lg:col-span-1",
-        node: <CelebrationTimeline events={celebrations} />, 
+        node: <CelebrationTimeline events={celebrations} />,
       },
     ];
 
@@ -295,7 +311,22 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
     {
       id: "overdue",
       className: "lg:col-span-1",
-      node: <OverdueEnvelopesCard envelopes={overdueEnvelopes} />, 
+      node: <OverdueEnvelopesCard envelopes={overdueEnvelopes} />,
+    },
+    {
+      id: "zero-budget-status",
+      className: "lg:col-span-1",
+      node: <ZeroBudgetStatusWidget />,
+    },
+    {
+      id: "bank-connections",
+      className: "lg:col-span-1",
+      node: <BankConnectionStatusWidget />,
+    },
+    {
+      id: "credit-card-holding",
+      className: "lg:col-span-1",
+      node: <CreditCardHoldingWidget />,
     },
     {
       id: "akahu",
@@ -307,22 +338,22 @@ export async function BudgetOverview({ userId, demoMode = false }: Props) {
           statusLabel={connectionStatusLabel}
           lastSyncedAt={primaryConnection?.last_synced_at ?? null}
         />
-      ), 
+      ),
     },
     {
       id: "summary",
       className: "lg:col-span-3",
-      node: <BudgetSummaryCards envelopes={safeEnvelopes} />, 
+      node: <BudgetSummaryCards envelopes={safeEnvelopes} />,
     },
     {
       id: "recent",
       className: "lg:col-span-2",
-      node: <RecentTransactions transactions={safeTransactions} />, 
+      node: <RecentTransactions transactions={safeTransactions} />,
     },
     {
       id: "celebrations",
       className: "lg:col-span-1",
-      node: <CelebrationTimeline events={celebrationEvents} />, 
+      node: <CelebrationTimeline events={celebrationEvents} />,
     },
   ];
 

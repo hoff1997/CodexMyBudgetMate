@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import BankConnectionManager from "@/components/bank/bank-connection-manager";
@@ -57,6 +58,7 @@ export type SettingsData = {
     fullName: string;
     avatarUrl: string | null;
     email: string | null;
+    payCycle: string;
   };
   envelopes: EnvelopeRow[];
   labels: LabelRow[];
@@ -82,6 +84,7 @@ export function SettingsClient({ data, flash = null }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [profileName, setProfileName] = useState(data.profile.fullName);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(data.profile.avatarUrl);
+  const [payCycle, setPayCycle] = useState<string>(data.profile.payCycle);
   const [labels, setLabels] = useState<LabelRow[]>(data.labels);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColour, setNewLabelColour] = useState("#0ea5e9");
@@ -289,6 +292,30 @@ export function SettingsClient({ data, flash = null }: Props) {
     toast.success("New backup codes generated");
   }
 
+  async function handlePayCycleChange(newPayCycle: string) {
+    const previousPayCycle = payCycle;
+    setPayCycle(newPayCycle);
+
+    try {
+      const response = await fetch("/api/user/pay-cycle", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payCycle: newPayCycle }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to update pay cycle" }));
+        throw new Error(payload.error ?? "Unable to update pay cycle");
+      }
+
+      toast.success(`Pay cycle updated to ${newPayCycle}`);
+    } catch (error) {
+      console.error(error);
+      setPayCycle(previousPayCycle); // Revert on error
+      toast.error(error instanceof Error ? error.message : "Unable to update pay cycle");
+    }
+  }
+
   function handleConnectionAction(connection: BankConnectionRow, action: "refresh" | "disconnect") {
     const payload = { action };
     toast.promise(
@@ -398,6 +425,24 @@ export function SettingsClient({ data, flash = null }: Props) {
                 <span className="text-muted-foreground">Email</span>
                 <Input value={data.profile.email ?? ""} readOnly />
               </label>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="pay-cycle" className="text-sm text-muted-foreground">
+                Pay frequency
+              </label>
+              <Select value={payCycle} onValueChange={handlePayCycleChange}>
+                <SelectTrigger id="pay-cycle" className="w-full sm:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Used for budget calculations in Zero Budget Setup
+              </p>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSaveProfile}>

@@ -44,7 +44,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   let envelopes: EnvelopeRecord[] = [];
   let labels: LabelRecord[] = [];
   let bankConnections: BankConnectionRecord[] = [];
-  let profile: { full_name: string | null; avatar_url: string | null } | null = null;
+  let profile: { full_name: string | null; avatar_url: string | null; pay_cycle: string | null } | null = null;
 
   if (session) {
     const [envelopeRes, labelRes, bankRes, profileRes] = await Promise.all([
@@ -65,7 +65,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         .select("id, provider, status, last_synced_at, sync_frequency, created_at")
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("full_name, avatar_url").eq("id", session.user.id).maybeSingle(),
+      supabase.from("profiles").select("full_name, avatar_url, pay_cycle").eq("id", session.user.id).maybeSingle(),
     ]);
 
     envelopes = (envelopeRes.data ?? []) as EnvelopeRecord[];
@@ -80,6 +80,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           fullName: profile?.full_name ?? session.user.user_metadata?.full_name ?? "",
           avatarUrl: profile?.avatar_url ?? session.user.user_metadata?.avatar_url ?? null,
           email: session.user.email ?? null,
+          payCycle: profile?.pay_cycle ?? "fortnightly",
         },
         envelopes: envelopes.map((row) => ({
           id: row.id,
@@ -143,6 +144,7 @@ function getDemoSettingsData(): SettingsData {
       fullName: "Demo Budget Mate",
       avatarUrl: null,
       email: "demo@example.com",
+      payCycle: "fortnightly",
     },
     envelopes: [
       {

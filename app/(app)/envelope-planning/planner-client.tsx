@@ -28,6 +28,7 @@ import { cn } from "@/lib/cn";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
+import HelpTooltip from "@/components/ui/help-tooltip";
 
 export type PlannerEnvelope = EnvelopeRow & {
   category_name?: string | null;
@@ -318,7 +319,22 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
-                <h1 className="text-3xl font-semibold text-secondary">Envelope Planning</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-3xl font-semibold text-secondary">Envelope Planning</h1>
+                  <HelpTooltip
+                    title="Envelope Planning"
+                    content={[
+                      "Plan and track contributions for each envelope based on your pay cycle. This page shows you how much you need to set aside each pay period to meet your financial goals.",
+                      "View annual funding requirements, due dates, and track progress toward your targets. The status indicators show whether you're on track, ahead, or behind on your savings goals."
+                    ]}
+                    tips={[
+                      "Click any envelope to edit its details, target amount, or frequency",
+                      "Use the 'Add Envelope' button to create new savings goals",
+                      "Filter by category to focus on specific spending areas",
+                      "Review the summary cards at the top to see your overall funding needs"
+                    ]}
+                  />
+                </div>
                 <p className="text-sm text-muted-foreground">
                   Plan and track your envelope contributions with detailed calculations.
                 </p>

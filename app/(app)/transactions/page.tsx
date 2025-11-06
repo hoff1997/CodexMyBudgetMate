@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { TransactionsTable } from "@/components/layout/transactions/transactions-table";
+import { TransactionsHeader } from "@/components/layout/transactions/transactions-header";
 import { applySignedReceiptUrls } from "@/lib/storage/receipts";
 import type { TransactionRow } from "@/lib/auth/types";
 import { getPayPlanSummary } from "@/lib/server/pay-plan";
@@ -49,12 +50,7 @@ export default async function TransactionsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12 md:px-10">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-secondary">Transactions</h1>
-        <p className="text-base text-muted-foreground">
-          Review the 100 most recent transactions across every connected account.
-        </p>
-      </header>
+      <TransactionsHeader />
       {error && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-6 py-3 text-sm text-destructive">
           Transactions are unavailable until the view is created in Supabase.

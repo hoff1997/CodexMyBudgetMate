@@ -18,6 +18,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import HelpTooltip from "@/components/ui/help-tooltip";
 import { format, addDays, addWeeks, addMonths, addQuarters, addYears } from "date-fns";
 import {
   CalendarIcon,
@@ -798,7 +799,22 @@ export function ZeroBudgetSetupClient({
     <div className="p-4 space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Zero-Based Budget Setup</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Zero-Based Budget Setup</h1>
+            <HelpTooltip
+              title="Zero-Based Budget Setup"
+              content={[
+                "Build a complete zero-based budget where every dollar is assigned to either income or expense envelopes. This ensures your income minus expenses equals zero, giving you full control over your finances.",
+                "Create income envelopes to track paychecks and other earnings. Create expense envelopes for bills, savings goals, and discretionary spending. The dashboard shows whether you have unallocated funds or are over budget."
+              ]}
+              tips={[
+                "Start with income envelopes: add all expected income sources",
+                "Create expense envelopes for fixed bills, then variable expenses",
+                "Use 'Add Envelope' to quickly create new budget categories",
+                "Aim for zero difference (income = expenses) for a balanced budget"
+              ]}
+            />
+          </div>
           <p className="text-muted-foreground">
             Plan and organize your complete budget system
           </p>

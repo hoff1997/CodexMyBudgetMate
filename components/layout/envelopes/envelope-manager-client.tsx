@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Info } from "lucide-react";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
+import HelpTooltip from "@/components/ui/help-tooltip";
 
 const statusFilters = [
   { key: "all", label: "All" },
@@ -160,7 +161,22 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
       <header className="space-y-2">
         <div className="flex items-start gap-3">
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold text-secondary">Manage envelopes</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-semibold text-secondary">Manage envelopes</h1>
+              <HelpTooltip
+                title="Manage Envelopes"
+                content={[
+                  "Create, edit, transfer, and monitor all your envelopes in one place. Track current balances, set targets, and manage money movement between envelopes.",
+                  "Use filters to view envelopes by status (on track, needs attention, surplus) or search by name. Each card shows the current balance, target amount, and visual progress indicator."
+                ]}
+                tips={[
+                  "Click the transfer icon to move money between envelopes",
+                  "Click any envelope card to edit details or adjust targets",
+                  "Use the 'Add New Envelope' button to create spending categories",
+                  "Monitor envelopes marked with attention status to stay on budget"
+                ]}
+              />
+            </div>
             <p className="text-base text-muted-foreground">
               Create, edit, transfer, and monitor envelopes. Changes sync with the planner, dashboard,
               and recurring income tools.

@@ -9,6 +9,7 @@ import { DemoSeedCta } from "@/components/layout/dashboard/demo-seed-cta";
 import StatsCards from "@/components/dashboard/stats-cards";
 import MonitoredEnvelopesWidget from "@/components/dashboard/monitored-envelopes-widget";
 import PendingApprovalWidget from "@/components/dashboard/pending-approval-widget";
+import HelpTooltip from "@/components/ui/help-tooltip";
 
 type Props = {
   profile: DatabaseProfile | null;
@@ -26,9 +27,24 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Kia ora, {profile?.full_name ?? (demoMode ? "Demo Budget Mate" : "Budget Mate")}
             </p>
-            <h1 className="text-2xl font-semibold text-secondary">
-              Your envelopes at a glance
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold text-secondary">
+                Your envelopes at a glance
+              </h1>
+              <HelpTooltip
+                title="Dashboard"
+                content={[
+                  "Your command center for budget management. View key metrics, monitored envelopes, pending transactions, and an overview of all your financial categories.",
+                  "Quick actions allow rapid data entry for transactions, envelopes, and transfers. Stats cards show your current financial position at a glance."
+                ]}
+                tips={[
+                  "Use Quick Actions (Shift + Q) to rapidly log transactions",
+                  "Monitor high-priority envelopes for alerts and warnings",
+                  "Review pending transactions to approve or reject bank imports",
+                  "Check the budget overview to see spending across all categories"
+                ]}
+              />
+            </div>
           </div>
           <Button asChild variant="outline">
             <Link href="/api/auth/sign-out">Sign out</Link>

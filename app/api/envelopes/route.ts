@@ -20,6 +20,29 @@ const schema = z.object({
   isSpending: z.boolean().optional(),
 });
 
+export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  const { data, error } = await supabase
+    .from("envelopes")
+    .select("id, name, envelope_type, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id")
+    .eq("user_id", session.user.id)
+    .order("name");
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json(data || []);
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {

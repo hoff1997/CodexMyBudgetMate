@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,15 +61,8 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [newEnvelope, setNewEnvelope] = useState({
-    name: "",
-    categoryId: "",
-    targetAmount: "",
-    payCycleAmount: "",
-    frequency: "monthly" as PlannerFrequency,
-  });
 
   const filteredEnvelopes = useMemo(() => {
     return envelopes.filter((envelope) => {
@@ -294,82 +288,16 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
         disabled={!canEdit || suggestions.length === 0}
       />
 
-      <form
-        className="grid gap-3 rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-4 md:grid-cols-5"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          setCreating(true);
-          try {
-            const response = await fetch("/api/envelopes", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name: newEnvelope.name,
-                categoryId: newEnvelope.categoryId || undefined,
-                targetAmount: Number(newEnvelope.targetAmount || 0),
-                payCycleAmount: Number(newEnvelope.payCycleAmount || 0),
-                frequency: newEnvelope.frequency,
-              }),
-            });
-            if (!response.ok) {
-              throw new Error("Failed to create envelope");
-            }
-            setNewEnvelope({ name: "", categoryId: "", targetAmount: "", payCycleAmount: "", frequency: "monthly" });
-            router.refresh();
-          } finally {
-            setCreating(false);
-          }
-        }}
-      >
-        <Input
-          placeholder="Envelope name"
-          required
-          value={newEnvelope.name}
-          onChange={(event) => setNewEnvelope((prev) => ({ ...prev, name: event.target.value }))}
-        />
-        <select
-          className="h-10 rounded-md border px-3 text-sm"
-          value={newEnvelope.categoryId}
-          onChange={(event) => setNewEnvelope((prev) => ({ ...prev, categoryId: event.target.value }))}
+      <div className="flex justify-center rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-6">
+        <Button
+          type="button"
+          className="gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold shadow-sm hover:bg-primary/90"
+          onClick={() => setCreateOpen(true)}
         >
-          <option value="">Select category</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <Input
-          placeholder="Target"
-          type="number"
-          step="0.01"
-          value={newEnvelope.targetAmount}
-          onChange={(event) => setNewEnvelope((prev) => ({ ...prev, targetAmount: event.target.value }))}
-        />
-        <Input
-          placeholder="Per pay"
-          type="number"
-          step="0.01"
-          value={newEnvelope.payCycleAmount}
-          onChange={(event) => setNewEnvelope((prev) => ({ ...prev, payCycleAmount: event.target.value }))}
-        />
-        <select
-          className="h-10 rounded-md border px-3 text-sm"
-          value={newEnvelope.frequency}
-          onChange={(event) =>
-            setNewEnvelope((prev) => ({ ...prev, frequency: event.target.value as PlannerFrequency }))
-          }
-        >
-          {frequencyOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" className="md:col-span-5" disabled={creating}>
-          {creating ? "Adding…" : "Quick add envelope"}
+          <span className="text-lg">+</span>
+          Add New Envelope
         </Button>
-      </form>
+      </div>
 
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={handleExpandAll}>
@@ -543,6 +471,15 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
       <MobileNav />
 
       <FeatureGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
+
+      <EnvelopeCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        categories={categories}
+        onCreated={() => {
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeCategoryGroup } from "@/components/layout/envelopes/envelope-category-group";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
-import { EnvelopeForm } from "@/app/(app)/envelope-summary/envelope-form";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { ZeroBudgetManager } from "@/app/(app)/envelope-summary/zero-budget-manager";
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
@@ -50,6 +50,7 @@ export function EnvelopeSummaryClient({
   const router = useRouter();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
   const [selectedEnvelope, setSelectedEnvelope] = useState<SummaryEnvelope | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [collapseAll, setCollapseAll] = useState(false);
 
@@ -185,7 +186,16 @@ export function EnvelopeSummaryClient({
           <TabsTrigger value="zero-budget">Zero budget manager</TabsTrigger>
         </TabsList>
         <TabsContent value="summary" className="space-y-6">
-          <EnvelopeForm />
+          <div className="flex justify-center rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-6">
+            <Button
+              type="button"
+              className="gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold shadow-sm hover:bg-primary/90"
+              onClick={() => setCreateOpen(true)}
+            >
+              <span className="text-lg">+</span>
+              Add New Envelope
+            </Button>
+          </div>
           <section className="grid gap-4 md:grid-cols-3">
             <MetricCard
               title="Total target"
@@ -287,6 +297,15 @@ export function EnvelopeSummaryClient({
               opening_balance: Number(updated.opening_balance ?? 0),
             }),
           });
+          router.refresh();
+        }}
+      />
+
+      <EnvelopeCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        categories={categoryOptions}
+        onCreated={() => {
           router.refresh();
         }}
       />

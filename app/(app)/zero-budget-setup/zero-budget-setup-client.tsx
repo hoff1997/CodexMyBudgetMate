@@ -13,13 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,15 +69,7 @@ export function ZeroBudgetSetupClient({
     field: string;
   } | null>(null);
   const [payCycle, setPayCycle] = useState(initialPayCycle);
-  const [showEnvelopeForm, setShowEnvelopeForm] = useState(false);
-
-  const [newEnvelope, setNewEnvelope] = useState({
-    name: "",
-    envelopeType: "expense",
-    budget: "",
-    frequency: "monthly",
-    notes: "",
-  });
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Get envelopes data
   const { data: envelopes = [] } = useQuery<Envelope[]>({
@@ -123,30 +109,6 @@ export function ZeroBudgetSetupClient({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/envelopes"] });
       toast.success("Envelope deleted successfully");
-    },
-  });
-
-  const createEnvelopeMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch("/api/envelopes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to create envelope");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/envelopes"] });
-      setShowEnvelopeForm(false);
-      setNewEnvelope({
-        name: "",
-        envelopeType: "expense",
-        budget: "",
-        frequency: "monthly",
-        notes: "",
-      });
-      toast.success("Envelope created successfully");
     },
   });
 
@@ -197,26 +159,6 @@ export function ZeroBudgetSetupClient({
     } catch (error) {
       console.error("Failed to update envelope:", error);
       toast.error("Failed to update envelope. Please try again.");
-    }
-  };
-
-  // Handle envelope creation
-  const handleCreateEnvelope = async () => {
-    if (!newEnvelope.name.trim()) return;
-
-    try {
-      const data = {
-        name: newEnvelope.name,
-        envelope_type: newEnvelope.envelopeType,
-        pay_cycle_amount: newEnvelope.budget || "0",
-        frequency: newEnvelope.frequency,
-        notes: newEnvelope.notes || null,
-      };
-
-      await createEnvelopeMutation.mutateAsync(data);
-    } catch (error) {
-      console.error("Failed to create envelope:", error);
-      toast.error("Failed to create envelope. Please try again.");
     }
   };
 
@@ -861,71 +803,10 @@ export function ZeroBudgetSetupClient({
             Plan and organize your complete budget system
           </p>
         </div>
-        <Dialog open={showEnvelopeForm} onOpenChange={setShowEnvelopeForm}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Envelope
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Envelope</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Input
-                placeholder="Envelope name"
-                value={newEnvelope.name}
-                onChange={(e) =>
-                  setNewEnvelope({ ...newEnvelope, name: e.target.value })
-                }
-              />
-              <Select
-                value={newEnvelope.envelopeType}
-                onValueChange={(value) =>
-                  setNewEnvelope({ ...newEnvelope, envelopeType: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">💼 Income</SelectItem>
-                  <SelectItem value="expense">💰 Expense</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder={`Per ${
-                  payCycle === "fortnightly" ? "fortnight" : payCycle
-                } amount`}
-                value={newEnvelope.budget}
-                onChange={(e) =>
-                  setNewEnvelope({ ...newEnvelope, budget: e.target.value })
-                }
-              />
-              <Input
-                placeholder="Notes (optional)"
-                value={newEnvelope.notes}
-                onChange={(e) =>
-                  setNewEnvelope({ ...newEnvelope, notes: e.target.value })
-                }
-              />
-              <div className="flex gap-2">
-                <Button onClick={handleCreateEnvelope} className="flex-1">
-                  Create Envelope
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowEnvelopeForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Envelope
+        </Button>
       </div>
 
       {/* Pay Cycle Configuration */}
@@ -1242,6 +1123,15 @@ export function ZeroBudgetSetupClient({
           </div>
         </div>
       )}
+
+      <EnvelopeCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        categories={[]}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/envelopes"] });
+        }}
+      />
     </div>
   );
 }

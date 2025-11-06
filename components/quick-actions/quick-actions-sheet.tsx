@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useMemo } from "react";
 import { useRegisterCommand } from "@/providers/command-palette-provider";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
+import { useRouter } from "next/navigation";
 
 const demoEnvelopes = [
   "Groceries",
@@ -28,6 +30,8 @@ const demoLabels = ["Household", "Subscriptions", "Treat", "Work expenses"];
 export function QuickActionsSheet() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("transaction");
+  const [createEnvelopeOpen, setCreateEnvelopeOpen] = useState(false);
+  const router = useRouter();
   const quickAction = useMemo(
     () => ({
       id: "open-quick-actions",
@@ -152,47 +156,18 @@ export function QuickActionsSheet() {
                   </form>
                 </TabsContent>
                 <TabsContent value="envelope">
-                  <form
-                    className="grid gap-4 md:grid-cols-2"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      handleSubmit("Envelope", new FormData(event.currentTarget));
-                    }}
-                  >
-                    <Input name="name" placeholder="Envelope name" required />
-                    <Input
-                      name="category"
-                      placeholder="Category/Group"
-                      list="quick-actions-labels"
-                    />
-                    <Input
-                      name="target_amount"
-                      type="number"
-                      step="0.01"
-                      placeholder="Target amount"
-                      required
-                    />
-                    <Input name="frequency" placeholder="Frequency (weekly, fortnightly…)" />
-                    <Input name="next_due" type="date" />
-                    <Input
-                      name="starting_balance"
-                      type="number"
-                      step="0.01"
-                      placeholder="Opening balance"
-                    />
-                    <div className="md:col-span-2 space-y-2">
-                      <label className="text-sm font-medium text-secondary">Notes</label>
-                      <textarea
-                        name="notes"
-                        rows={3}
-                        className="w-full rounded-md border px-3 py-2 text-sm"
-                        placeholder="Guidance, savings target, or reminder"
-                      />
-                    </div>
-                    <Button type="submit" className="md:col-span-2 justify-self-end">
-                      Create envelope
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-primary/30 bg-primary/5 p-8">
+                    <p className="mb-4 text-center text-sm text-muted-foreground">
+                      Use the full envelope creation dialog for all options including pay cycle calculations and frequency settings.
+                    </p>
+                    <Button onClick={() => {
+                      setCreateEnvelopeOpen(true);
+                      setOpen(false);
+                    }}>
+                      <span className="text-lg mr-2">+</span>
+                      Open Envelope Creator
                     </Button>
-                  </form>
+                  </div>
                 </TabsContent>
                 <TabsContent value="account">
                   <form
@@ -305,6 +280,14 @@ export function QuickActionsSheet() {
           </div>
         </div>
       ) : null}
+      <EnvelopeCreateDialog
+        open={createEnvelopeOpen}
+        onOpenChange={setCreateEnvelopeOpen}
+        categories={[]}
+        onCreated={() => {
+          router.refresh();
+        }}
+      />
     </>
   );
 }

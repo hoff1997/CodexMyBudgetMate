@@ -161,8 +161,8 @@ export function EnvelopeCreateDialog({
     <Dialog.Root open={open} onOpenChange={handleClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[1px]" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border/60 bg-background p-6 shadow-2xl focus:outline-none">
-          <div className="flex items-start justify-between gap-4">
+        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-full max-w-xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-3xl border border-border/60 bg-background shadow-2xl focus:outline-none">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border/40 px-6 py-5">
             <div>
               <Dialog.Title className="text-2xl font-semibold text-secondary">Add New Envelope</Dialog.Title>
               <Dialog.Description className="text-sm text-muted-foreground">
@@ -180,7 +180,8 @@ export function EnvelopeCreateDialog({
             </Dialog.Close>
           </div>
 
-          <form className="mt-6 space-y-6" onSubmit={handleSubmit}>
+          <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
+            <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
             <div className="space-y-4 rounded-2xl border border-border/60 bg-muted/30 p-4">
               <div className="space-y-2">
                 <Label htmlFor="envelope-name" className="text-sm font-medium text-secondary">
@@ -382,8 +383,9 @@ export function EnvelopeCreateDialog({
                 <p className="text-lg font-semibold text-secondary">{formatCurrency(annualAmount)}</p>
               </div>
             </div>
+            </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-border/40 px-6 py-4">
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
                 Cancel
               </Button>

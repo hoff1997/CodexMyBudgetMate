@@ -25,6 +25,7 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
+const NAV_VERSION = "v2"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
@@ -63,6 +64,17 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // Check version to force refresh when new items are added
+    const storedVersion = window.localStorage.getItem(STORAGE_KEY + "-version");
+    if (storedVersion !== NAV_VERSION) {
+      // Version mismatch - clear old cache and use defaults
+      window.localStorage.setItem(STORAGE_KEY + "-version", NAV_VERSION);
+      window.localStorage.removeItem(STORAGE_KEY);
+      setNavItems(DEFAULT_NAV_ITEMS);
+      return;
+    }
+
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (!stored) return;
     try {

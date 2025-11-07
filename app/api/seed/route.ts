@@ -14,12 +14,16 @@ export async function POST() {
   }
 
   try {
+    console.log('SUPABASE_SERVICE_ROLE_KEY exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+    console.log('NEXT_PUBLIC_SUPABASE_URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+
     const serviceClient = createServiceClient();
     await seedDemoData(serviceClient, session.user.id, {
       fullName: session.user.user_metadata?.full_name ?? null,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error('Seed error:', error);
     const message = error instanceof Error ? error.message : "Unable to seed demo data";
     return NextResponse.json({ error: message }, { status: 500 });
   }

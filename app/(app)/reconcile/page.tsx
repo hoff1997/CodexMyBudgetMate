@@ -8,7 +8,7 @@ export default async function ReconcilePage() {
   const { data: transactions } = await supabase
     .from("transactions")
     .select(
-      `id, merchant_name, description, amount, occurred_at, status, bank_reference, bank_memo, receipt_url, duplicate_of, duplicate_status, duplicate_reviewed_at,
+      `id, merchant_name, description, amount, occurred_at, status, bank_reference, bank_memo, receipt_url, duplicate_of, duplicate_status, duplicate_reviewed_at, allocation_plan_id, is_auto_allocated, parent_transaction_id,
         account:accounts(name),
         envelope:envelopes(name),
         transaction_labels:transaction_labels(label:labels(name))`
@@ -36,6 +36,9 @@ export default async function ReconcilePage() {
     duplicate_of: transaction.duplicate_of,
     duplicate_status: transaction.duplicate_status,
     duplicate_reviewed_at: transaction.duplicate_reviewed_at,
+    allocation_plan_id: transaction.allocation_plan_id,
+    is_auto_allocated: transaction.is_auto_allocated,
+    parent_transaction_id: transaction.parent_transaction_id,
   }));
 
   const hydrated = await applySignedReceiptUrls(normalised);

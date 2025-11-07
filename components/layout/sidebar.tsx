@@ -42,6 +42,8 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "zero-budget", label: "Zero Budget Manager", href: "/envelope-summary?tab=zero-budget", icon: "🎯" },
   { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "envelope-planning", label: "Envelope Planning", href: "/envelope-planning", icon: "📋" },
+  { id: "payday-allocator", label: "Payday Allocator", href: "/payday-allocator", icon: "💸" },
+  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮" },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰" },
   { id: "balance-report", label: "Account Balances", href: "/balance-report", icon: "📊" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },

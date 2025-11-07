@@ -11,6 +11,7 @@ import { SmartSuggestionsBanner } from "@/components/layout/reconcile/smart-sugg
 import { CsvImportDialog } from "@/components/layout/reconcile/csv-import-dialog";
 import { ReceiptUploadDialog } from "@/components/layout/reconcile/receipt-upload-dialog";
 import { SplitEditor, type SplitResult } from "@/components/layout/reconcile/split-editor";
+import { AutoAllocatedTransactionRow } from "@/components/allocations/auto-allocated-transaction-row";
 import Link from "next/link";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import { useRouter } from "next/navigation";
@@ -950,9 +951,31 @@ async function submitDuplicateResolution(
         ))}
       </div>
 
+      {/* Auto-allocated transactions - shown before regular transactions */}
+      {filtered
+        .filter((tx) => tx.is_auto_allocated && tx.allocation_plan_id && !tx.parent_transaction_id)
+        .map((tx) => (
+          <AutoAllocatedTransactionRow
+            key={tx.id}
+            transaction={{
+              id: tx.id,
+              amount: Number(tx.amount ?? 0),
+              date: tx.occurred_at,
+              description: tx.merchant_name || "Income",
+              allocationPlanId: tx.allocation_plan_id!,
+            }}
+            onReconciled={() => {
+              router.refresh();
+            }}
+            onRejected={() => {
+              router.refresh();
+            }}
+          />
+        ))}
+
       {isMobile ? (
         <MobileTransactionList
-          transactions={filtered}
+          transactions={filtered.filter((tx) => !tx.parent_transaction_id)} // Hide child transactions
           duplicates={duplicates}
           onOpenSheet={setSheetTransaction}
           onAssign={handleAssign}
@@ -983,7 +1006,7 @@ async function submitDuplicateResolution(
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((tx) => {
+              {filtered.filter((tx) => !tx.parent_transaction_id).map((tx) => { // Hide child transactions
                 const status = normaliseStatus(tx.status);
                 const duplicateCount = (() => {
                   const keyValue = duplicateKey(tx);

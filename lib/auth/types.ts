@@ -39,4 +39,7 @@ export type TransactionRow = {
   duplicate_of?: string | null;
   duplicate_status?: string | null;
   duplicate_reviewed_at?: string | null;
+  allocation_plan_id?: string | null;
+  is_auto_allocated?: boolean | null;
+  parent_transaction_id?: string | null;
 };

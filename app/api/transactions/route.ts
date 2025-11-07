@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAutoAllocation, shouldAutoAllocate } from "@/lib/allocations/auto-allocate";
 
 const createTransactionSchema = z.object({
   merchant_name: z.string().min(1, "Merchant name is required"),
@@ -104,6 +105,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: createError.message }, { status: 400 });
   }
 
+  // Trigger auto-allocation if this is an income transaction
+  if (shouldAutoAllocate(transaction)) {
+    const result = await createAutoAllocation(transaction, session.user.id);
+    if (result.success) {
+      console.log(`✅ Auto-allocated transaction ${transaction.id} to plan ${result.planId}`);
+    } else {
+      console.error(`❌ Failed to auto-allocate transaction ${transaction.id}:`, result.error);
+      // Don't fail the transaction creation - just log the error
+    }
+  }
+
   return NextResponse.json({ transaction }, { status: 201 });
 }
 
@@ -128,7 +140,10 @@ export async function GET(request: Request) {
     .select(`
       *,
       envelope:envelopes(id, name),
-      account:accounts(id, name)
+      account:accounts(id, name),
+      allocation_plan_id,
+      is_auto_allocated,
+      parent_transaction_id
     `)
     .eq("user_id", session.user.id)
     .order("occurred_at", { ascending: false });

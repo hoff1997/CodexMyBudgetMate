@@ -161,7 +161,7 @@ export default function PaydayAllocatorPage() {
               {allocation.surplusStatus === "shortfall" && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm font-medium text-red-900">
-                    You're {formatCurrency(Math.abs(allocation.surplus))} short this pay cycle
+                    You&apos;re {formatCurrency(Math.abs(allocation.surplus))} short this pay cycle
                   </p>
                   <p className="text-xs text-red-700 mt-1">
                     Consider pausing some discretionary spending or explore scenarios to free up funds

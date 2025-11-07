@@ -115,7 +115,7 @@ export default function ScenarioPlannerPage() {
           {totalGap > 0 && (
             <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm font-medium text-amber-900">
-                You're ${totalGap.toFixed(2)} behind schedule across {behindCount} envelope
+                You&apos;re ${totalGap.toFixed(2)} behind schedule across {behindCount} envelope
                 {behindCount !== 1 ? "s" : ""}
               </p>
               <p className="text-xs text-amber-700 mt-1">

@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:push": "npx supabase db push",
+    "db:pull": "npx supabase db pull",
+    "db:link": "npx supabase link --project-ref nqmeepudwtwkpjomxqfz"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

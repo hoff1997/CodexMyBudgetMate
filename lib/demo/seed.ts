@@ -72,6 +72,8 @@ export async function seedDemoData(
       id: envelopeIds.rent,
       user_id: userId,
       name: "Rent",
+      envelope_type: "expense",
+      priority: "essential",
       target_amount: 2200,
       annual_amount: 26400,
       pay_cycle_amount: 550,
@@ -89,6 +91,8 @@ export async function seedDemoData(
       id: envelopeIds.groceries,
       user_id: userId,
       name: "Groceries",
+      envelope_type: "expense",
+      priority: "essential",
       target_amount: 600,
       annual_amount: 7200,
       pay_cycle_amount: 150,
@@ -104,6 +108,8 @@ export async function seedDemoData(
       id: envelopeIds.emergency,
       user_id: userId,
       name: "Emergency Fund",
+      envelope_type: "expense",
+      priority: "important",
       target_amount: 1000,
       annual_amount: 0,
       pay_cycle_amount: 250,
@@ -119,6 +125,8 @@ export async function seedDemoData(
       id: envelopeIds.creditCard,
       user_id: userId,
       name: "Credit Card Payment",
+      envelope_type: "expense",
+      priority: "important",
       target_amount: 600,
       annual_amount: 0,
       pay_cycle_amount: 150,
@@ -278,6 +286,7 @@ export async function seedDemoData(
     .upsert({
       id: userId,
       full_name: profileName,
+      pay_cycle: "fortnightly",
     });
 
   if (profileError) {

@@ -8,9 +8,11 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import Link from "next/link";
 
 const schema = z.object({
   email: z.string().email({ message: "Enter a valid email" }),
+  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -36,16 +38,19 @@ export function AuthForm() {
         body: JSON.stringify(values),
         headers: { "Content-Type": "application/json" },
       });
+
+      const data = await response.json();
       setIsLoading(false);
 
       if (!response.ok) {
-        toast.error("Authentication failed. Please try again.");
+        toast.error(data.error || "Authentication failed. Please try again.");
         return;
       }
 
-      toast.success("Check your email for a magic link to sign in.");
+      toast.success("Successfully signed in!");
 
       startTransition(() => {
+        router.push("/dashboard");
         router.refresh();
       });
     } catch (error) {
@@ -63,9 +68,20 @@ export function AuthForm() {
           <p className="text-xs text-destructive">{errors.email.message}</p>
         )}
       </div>
+      <div className="space-y-1">
+        <Input placeholder="Password" type="password" {...register("password")} />
+        {errors.password && (
+          <p className="text-xs text-destructive">{errors.password.message}</p>
+        )}
+      </div>
       <Button className="w-full" type="submit" disabled={isLoading || isPending}>
-        {isLoading || isPending ? "Sending magic link…" : "Send magic link"}
+        {isLoading || isPending ? "Signing in…" : "Sign in"}
       </Button>
+      <div className="text-center text-sm text-muted-foreground">
+        <Link href="/auth/forgot-password" className="text-primary hover:underline">
+          Forgot password?
+        </Link>
+      </div>
     </form>
   );
 }

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 const schema = z.object({
   email: z.string().email(),
+  password: z.string().min(8),
 });
 
 export async function POST(request: Request) {
@@ -14,24 +14,16 @@ export async function POST(request: Request) {
   const result = schema.safeParse(body);
 
   if (!result.success) {
-    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid email or password" }, { status: 400 });
   }
 
-  const origin = headers().get("origin");
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    origin ??
-    `${process.env.VERCEL ? "https://" : "http://"}${process.env.VERCEL_URL ?? "localhost:3000"}`;
-
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.signInWithPassword({
     email: result.data.email,
-    options: {
-      emailRedirectTo: `${siteUrl}/auth/callback`,
-    },
+    password: result.data.password,
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 401 });
   }
 
   return NextResponse.json({ ok: true });

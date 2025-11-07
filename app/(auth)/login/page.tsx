@@ -34,22 +34,22 @@ export default async function LoginPage() {
       <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-16 md:flex-row md:items-start md:justify-between">
         <section className="max-w-xl space-y-6">
           <Badge variant="secondary" className="uppercase tracking-wide">
-            Secure Supabase magic links
+            Secure password login
           </Badge>
           <h1 className="text-3xl font-semibold text-secondary md:text-4xl">
             Kia ora, welcome back to your budget mate.
           </h1>
           <p className="text-sm text-muted-foreground">
-            Pop in your email and we’ll send a one-time magic link. It’s the same flow our Replit build
-            used, now powered by Supabase so your data stays safe and in sync across devices.
+            Sign in with your email and password to access your budget. Your session will stay active
+            so you don&apos;t need to log in every time you visit.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
             {[
               {
                 icon: MailCheck,
-                title: "Magic link, no password",
-                copy: "Skip remembering passwords—open the email and you’re in.",
+                title: "Persistent sessions",
+                copy: "Stay logged in across visits—no need to re-enter credentials every time.",
               },
               {
                 icon: ShieldCheck,
@@ -106,9 +106,9 @@ export default async function LoginPage() {
         <section className="w-full max-w-md">
           <Card className="border shadow-lg">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-secondary">Sign in with a magic link</CardTitle>
+              <CardTitle className="text-2xl text-secondary">Sign in to your account</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                We’ll email you a secure link that expires in 5 minutes. Check your spam folder if it doesn’t arrive straight away.
+                Enter your email and password to access your budget
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -118,9 +118,6 @@ export default async function LoginPage() {
                 <Link href="/signup" className="text-primary underline">
                   Request early access
                 </Link>
-              </p>
-              <p className="mt-2 text-center text-xs text-muted-foreground">
-                Prefer the old Replit login? Use the demo mode above or contact us for migration support.
               </p>
             </CardContent>
           </Card>

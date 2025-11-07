@@ -95,7 +95,7 @@ export async function createAutoAllocation(
         status: "pending",
         regular_total: allocation.totalRegular,
         surplus_total: allocation.surplus,
-        envelope_count: allocation.allocations.length,
+        envelope_count: allocation.regularAllocations.length,
       })
       .select()
       .single();
@@ -106,11 +106,11 @@ export async function createAutoAllocation(
     }
 
     // 4. Create plan items (for detail storage)
-    const planItems = allocation.allocations.map((alloc) => ({
+    const planItems = allocation.regularAllocations.map((alloc) => ({
       plan_id: plan.id,
       envelope_id: alloc.envelopeId,
       amount: alloc.amount,
-      is_regular: alloc.isRegular,
+      is_regular: true,
       priority: alloc.priority,
     }));
 
@@ -124,7 +124,7 @@ export async function createAutoAllocation(
     }
 
     // 5. Create child transactions (unreconciled, pending approval)
-    const childTransactions = allocation.allocations.map((alloc) => ({
+    const childTransactions = allocation.regularAllocations.map((alloc) => ({
       user_id: userId,
       envelope_id: alloc.envelopeId,
       amount: alloc.amount,
@@ -160,7 +160,7 @@ export async function createAutoAllocation(
     }
 
     console.log(
-      `✅ Auto-allocation created: ${allocation.allocations.length} envelopes, plan ${plan.id}`
+      `✅ Auto-allocation created: ${allocation.regularAllocations.length} envelopes, plan ${plan.id}`
     );
 
     return { planId: plan.id, success: true };

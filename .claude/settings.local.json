@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(tree:*)",
+      "Bash(sed:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(test:*)",
+      "Bash(timeout 5 bash:*)",
+      "Bash(npm install)",
+      "Bash(node test-supabase.mjs:*)",
+      "Bash(del test-supabase.mjs)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(rm:*)",
+      "Bash(git add:*)",
+      "Bash(cat:*)",
+      "Bash(node scripts/run-migrations.mjs:*)",
+      "Bash(taskkill:*)",
+      "Bash(curl:*)",
+      "Bash(tail:*)",
+      "Bash(timeout 30 bash:*)",
+      "Bash(git log:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(supabase:*)",
+      "Bash(scoop:*)",
+      "Bash(npm run db:link:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(node scripts/apply-pay-cycle-migration.mjs:*)",
+      "Bash(node scripts/get-user-id.mjs:*)",
+      "Bash(node scripts/get-my-user-id.mjs:*)",
+      "Bash(node scripts/clear-user-data.mjs:*)",
+      "Bash(node scripts/migrate-income-sources.mjs:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

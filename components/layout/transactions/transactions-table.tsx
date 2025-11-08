@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useSwipeable } from "react-swipeable";
 import { cn } from "@/lib/cn";
+import { IncomeAllocationDialog } from "@/components/income/income-allocation-dialog";
 
 type TransactionItem = TransactionRow & {
   labels?: string[];
@@ -85,6 +86,7 @@ type MobileTransactionListProps = {
   onAssign: (transaction: TransactionItem) => void;
   onLabels: (transaction: TransactionItem) => void;
   onSplit: (transaction: TransactionItem) => void;
+  onAllocate: (transaction: TransactionItem) => void;
   swipedId: string | null;
   setSwipedId: (id: string | null) => void;
 };
@@ -99,6 +101,7 @@ function MobileTransactionList({
   onAssign,
   onLabels,
   onSplit,
+  onAllocate,
   swipedId,
   setSwipedId,
 }: MobileTransactionListProps) {
@@ -123,6 +126,7 @@ function MobileTransactionList({
           onAssign={() => onAssign(transaction)}
           onLabels={() => onLabels(transaction)}
           onSplit={() => onSplit(transaction)}
+          onAllocate={() => onAllocate(transaction)}
         />
       ))}
     </div>
@@ -140,6 +144,7 @@ type MobileTransactionRowProps = {
   onAssign: () => void;
   onLabels: () => void;
   onSplit: () => void;
+  onAllocate: () => void;
 };
 
 function MobileTransactionRow({
@@ -153,10 +158,12 @@ function MobileTransactionRow({
   onAssign,
   onLabels,
   onSplit,
+  onAllocate,
 }: MobileTransactionRowProps) {
   const status = (transaction.status ?? "pending").toLowerCase();
   const amount = Number(transaction.amount ?? 0);
   const isExpense = amount < 0;
+  const isIncome = amount > 0;
   const handlers = useSwipeable({
     onSwipedLeft: () => onSwipeChange(true),
     onSwipedRight: () => onSwipeChange(false),
@@ -171,7 +178,23 @@ function MobileTransactionRow({
         active && "border-primary bg-primary/5",
       )}
     >
-      <div className="absolute inset-y-0 right-0 flex w-56 items-stretch justify-between bg-muted/60 px-2">
+      <div className={cn(
+        "absolute inset-y-0 right-0 flex items-stretch justify-between bg-muted/60 px-2",
+        isIncome ? "w-64" : "w-56"
+      )}>
+        {isIncome ? (
+          <button
+            type="button"
+            onClick={() => {
+              onSwipeChange(false);
+              onAllocate();
+            }}
+            disabled={disabled}
+            className="my-2 flex-1 rounded-xl bg-primary text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Allocate
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() => {
@@ -221,7 +244,7 @@ function MobileTransactionRow({
         {...handlers}
         className={cn(
           "relative bg-white transition-transform duration-200 ease-out",
-          swiped ? "-translate-x-56" : "translate-x-0",
+          swiped ? (isIncome ? "-translate-x-64" : "-translate-x-56") : "translate-x-0",
         )}
       >
         <button
@@ -289,6 +312,7 @@ type MobileTransactionDetailProps = {
   onAssign: () => void;
   onLabels: () => void;
   onSplitToggle: () => void;
+  onAllocate?: () => void;
   splitOpen: boolean;
   children?: React.ReactNode;
 };
@@ -300,12 +324,14 @@ function MobileTransactionDetail({
   onAssign,
   onLabels,
   onSplitToggle,
+  onAllocate,
   splitOpen,
   children,
 }: MobileTransactionDetailProps) {
   const status = (transaction.status ?? "pending").toLowerCase();
   const amount = Number(transaction.amount ?? 0);
   const amountTone = amount < 0 ? "text-rose-600" : "text-emerald-600";
+  const isIncome = amount > 0;
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
@@ -371,6 +397,16 @@ function MobileTransactionDetail({
       </dl>
 
       <div className="grid gap-2 sm:grid-cols-2">
+        {isIncome && onAllocate ? (
+          <Button
+            variant="default"
+            disabled={disabled}
+            onClick={onAllocate}
+            className="sm:col-span-2"
+          >
+            Auto-Allocate Income
+          </Button>
+        ) : null}
         <Button
           variant="secondary"
           disabled={disabled || status === "approved"}
@@ -415,6 +451,8 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
   const [detailTransactionId, setDetailTransactionId] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [isRefreshing, startTransition] = useTransition();
+  const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
+  const [allocationTransaction, setAllocationTransaction] = useState<TransactionItem | null>(null);
   const today = new Date();
   const defaultFrom = new Date(today.getFullYear(), today.getMonth(), 1)
     .toISOString()
@@ -745,6 +783,18 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
     }
   }
 
+  function openAllocationDialog(transaction: TransactionItem) {
+    setAllocationTransaction(transaction);
+    setAllocationDialogOpen(true);
+  }
+
+  function handleAllocationComplete() {
+    setAllocationDialogOpen(false);
+    setAllocationTransaction(null);
+    toast.success("Income allocated to envelopes");
+    startTransition(() => router.refresh());
+  }
+
   const splitTarget = splitTargetId ? items.find((item) => item.id === splitTargetId) : null;
   const detailTransaction = detailTransactionId
     ? items.find((item) => item.id === detailTransactionId) ?? null
@@ -972,6 +1022,10 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
             setDetailTransactionId(transaction.id);
             setSplitTargetId(transaction.id);
           }}
+          onAllocate={(transaction) => {
+            setActiveRowId(transaction.id);
+            openAllocationDialog(transaction);
+          }}
           swipedId={swipedId}
           setSwipedId={setSwipedId}
         />
@@ -1086,6 +1140,20 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
                 </td>
                 <td className="px-6 py-3">
                   <div className="flex flex-wrap gap-2">
+                    {Number(transaction.amount ?? 0) > 0 ? (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          setActiveRowId(transaction.id);
+                          openAllocationDialog(transaction);
+                        }}
+                      >
+                        Auto-Allocate
+                      </Button>
+                    ) : null}
                     <Button
                       variant="outline"
                       size="sm"
@@ -1199,6 +1267,10 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
                 current === detailTransaction.id ? null : detailTransaction.id,
               );
             }}
+            onAllocate={() => {
+              setActiveRowId(detailTransaction.id);
+              openAllocationDialog(detailTransaction);
+            }}
             splitOpen={splitTargetId === detailTransaction.id && Boolean(splitTarget)}
           >
             {splitTargetId === detailTransaction.id && splitTarget ? (
@@ -1214,6 +1286,15 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
           </MobileTransactionDetail>
         ) : null}
       </BottomSheet>
+
+      <IncomeAllocationDialog
+        open={allocationDialogOpen}
+        onOpenChange={setAllocationDialogOpen}
+        transactionId={allocationTransaction?.id ?? ""}
+        transactionDescription={allocationTransaction?.description ?? allocationTransaction?.merchant_name ?? ""}
+        transactionAmount={Number(allocationTransaction?.amount ?? 0)}
+        onComplete={handleAllocationComplete}
+      />
     </section>
   );
 }

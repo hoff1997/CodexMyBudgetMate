@@ -4,12 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
 const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
+const prioritySchema = z.enum(["essential", "important", "discretionary"]).optional();
 
 const schema = z.object({
   name: z.string().min(1),
   categoryId: z.string().uuid().optional(),
   categoryName: z.string().min(1).optional(),
   envelopeType: envelopeTypeSchema,
+  priority: prioritySchema,
   targetAmount: z.number().nonnegative().default(0),
   payCycleAmount: z.number().nonnegative().default(0),
   frequency: frequencySchema,
@@ -32,7 +34,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("envelopes")
-    .select("id, name, envelope_type, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id")
+    .select("id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id")
     .eq("user_id", session.user.id)
     .order("name");
 
@@ -91,6 +93,7 @@ export async function POST(request: Request) {
     name: payload.name,
     category_id: categoryId,
     envelope_type: payload.envelopeType ?? 'expense',
+    priority: payload.priority ?? 'important',
     target_amount: payload.targetAmount,
     pay_cycle_amount: payload.payCycleAmount,
     frequency: payload.frequency ?? null,

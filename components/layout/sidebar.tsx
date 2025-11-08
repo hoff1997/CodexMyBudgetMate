@@ -25,7 +25,7 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v2"; // Increment this when adding new menu items
+const NAV_VERSION = "v3"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
@@ -43,7 +43,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "zero-budget", label: "Zero Budget Manager", href: "/envelope-summary?tab=zero-budget", icon: "🎯" },
   { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "envelope-planning", label: "Envelope Planning", href: "/envelope-planning", icon: "📋" },
-  { id: "payday-allocator", label: "Payday Allocator", href: "/payday-allocator", icon: "💸" },
+  { id: "income-allocation", label: "Income & Allocation", href: "/income-allocation", icon: "💰" },
   { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮" },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰" },
   { id: "balance-report", label: "Account Balances", href: "/balance-report", icon: "📊" },

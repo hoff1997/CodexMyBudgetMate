@@ -14,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { CalendarIcon, RefreshCcw, X } from "lucide-react";
 import { add } from "date-fns";
 import { toast } from "sonner";
+import { BudgetImpactWidget } from "@/components/planner/budget-impact-widget";
 
 const ICONS = [
   "💰",
@@ -50,6 +51,7 @@ type FormState = {
   dueAmount: string;
   dueFrequency: PlannerFrequency;
   dueDate: string;
+  priority: "essential" | "important" | "discretionary";
 };
 
 const DEFAULT_FORM: FormState = {
@@ -62,6 +64,7 @@ const DEFAULT_FORM: FormState = {
   dueAmount: "0.00",
   dueFrequency: "monthly",
   dueDate: "",
+  priority: "important",
 };
 
 function calculateNextDue(frequency: PlannerFrequency, base?: string) {
@@ -123,6 +126,7 @@ export function EnvelopeCreateDialog({
         body: JSON.stringify({
           name: form.name.trim(),
           categoryId: form.categoryId || undefined,
+          priority: form.priority,
           targetAmount: dueAmountNumber,
           payCycleAmount: perPayAmount,
           frequency: form.dueFrequency,
@@ -234,6 +238,27 @@ export function EnvelopeCreateDialog({
                       {option.name}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="envelope-priority" className="text-sm font-medium text-secondary">
+                  Priority
+                </Label>
+                <select
+                  id="envelope-priority"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  value={form.priority}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      priority: event.target.value as "essential" | "important" | "discretionary",
+                    }))
+                  }
+                >
+                  <option value="essential">🔴 Essential (Must pay)</option>
+                  <option value="important">🟡 Important (Should pay)</option>
+                  <option value="discretionary">🔵 Discretionary (Nice to have)</option>
                 </select>
               </div>
             </div>
@@ -383,6 +408,14 @@ export function EnvelopeCreateDialog({
                 <p className="text-lg font-semibold text-secondary">{formatCurrency(annualAmount)}</p>
               </div>
             </div>
+
+            {perPayAmount > 0 && (
+              <BudgetImpactWidget
+                action="add"
+                payCycleAmount={perPayAmount}
+                priority={form.priority}
+              />
+            )}
             </div>
 
             <div className="flex shrink-0 justify-end gap-2 border-t border-border/40 px-6 py-4">

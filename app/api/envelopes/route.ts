@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
 const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
 const prioritySchema = z.enum(["essential", "important", "discretionary"]).optional();
+const goalTypeSchema = z.enum(["savings", "debt_payoff", "purchase", "emergency_fund", "other"]).optional();
 
 const schema = z.object({
   name: z.string().min(1),
@@ -20,6 +21,10 @@ const schema = z.object({
   notes: z.string().max(2000).optional(),
   icon: z.string().max(10).optional(),
   isSpending: z.boolean().optional(),
+  // Goal-specific fields
+  isGoal: z.boolean().optional(),
+  goalType: goalTypeSchema,
+  goalTargetDate: z.string().optional(),
 });
 
 export async function GET() {
@@ -34,7 +39,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("envelopes")
-    .select("id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id")
+    .select("id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at")
     .eq("user_id", session.user.id)
     .order("name");
 
@@ -103,6 +108,10 @@ export async function POST(request: Request) {
     notes: payload.notes?.trim() ? payload.notes.trim() : null,
     icon: payload.icon ?? null,
     is_spending: payload.isSpending ?? false,
+    // Goal-specific fields
+    is_goal: payload.isGoal ?? false,
+    goal_type: payload.goalType ?? null,
+    goal_target_date: payload.goalTargetDate ?? null,
   });
 
   if (error) {

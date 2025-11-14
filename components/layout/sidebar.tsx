@@ -25,7 +25,7 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v4"; // Increment this when adding new menu items
+const NAV_VERSION = "v5"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
@@ -44,6 +44,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
+  { id: "goals", label: "Goals", href: "/goals", icon: "🎯" },
   { id: "separator-1", label: "", href: "", icon: "", separator: true },
 
   // Pages needing migration/review

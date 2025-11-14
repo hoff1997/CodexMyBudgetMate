@@ -521,18 +521,37 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
     const min = amountMin.trim() ? Number(amountMin) : null;
     const max = amountMax.trim() ? Number(amountMax) : null;
     const searchLower = search.toLowerCase();
+    const searchTrimmed = search.trim();
     const labelSet = new Set(labelFilter.map((label) => label.toLowerCase()));
     const accountSet = new Set(accountFilter);
     const envelopeSet = new Set(envelopeFilter);
 
+    // Check if search is a number (with optional minus sign and decimal point)
+    const searchAsNumber = searchTrimmed && /^-?\d+\.?\d*$/.test(searchTrimmed)
+      ? Number(searchTrimmed)
+      : null;
+
     return items.filter((item) => {
       if (searchLower) {
+        // First try text search
         const text = `${item.merchant_name} ${item.description ?? ""} ${item.bank_memo ?? ""}`.toLowerCase();
-        if (!text.includes(searchLower)) return false;
+        const amount = Number(item.amount ?? 0);
+
+        // If search is a number, also match against amount
+        if (searchAsNumber !== null) {
+          const amountMatches = Math.abs(amount) === Math.abs(searchAsNumber) ||
+                               amount === searchAsNumber;
+          if (!text.includes(searchLower) && !amountMatches) return false;
+        } else {
+          if (!text.includes(searchLower)) return false;
+        }
       }
-      const occurred = new Date(item.occurred_at).toISOString().slice(0, 10);
-      if (dateFrom && occurred < dateFrom) return false;
-      if (dateTo && occurred > dateTo) return false;
+      // Skip date filtering when searching by amount
+      if (searchAsNumber === null) {
+        const occurred = new Date(item.occurred_at).toISOString().slice(0, 10);
+        if (dateFrom && occurred < dateFrom) return false;
+        if (dateTo && occurred > dateTo) return false;
+      }
       const amount = Number(item.amount ?? 0);
       if (min !== null && Number.isFinite(min) && amount < min) return false;
       if (max !== null && Number.isFinite(max) && amount > max) return false;

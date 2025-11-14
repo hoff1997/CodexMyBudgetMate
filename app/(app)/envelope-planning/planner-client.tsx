@@ -65,6 +65,15 @@ function frequencyLabel(value: PlannerFrequency) {
   return option ? option.label.toLowerCase() : value;
 }
 
+type StatusFilter = "all" | "surplus" | "deficit" | "on-track";
+
+const STATUS_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "surplus", label: "Surplus" },
+  { key: "deficit", label: "Deficit" },
+  { key: "on-track", label: "On track" },
+] as const;
+
 export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null }: Props) {
   const router = useRouter();
   const [payFrequency, setPayFrequency] = useState<PlannerFrequency>(initialPayFrequency);
@@ -73,6 +82,8 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferDefaults, setTransferDefaults] = useState<{ fromId?: string; toId?: string; amount?: number }>({});
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [rows, setRows] = useState(() =>
     envelopes.map((env) => ({
       ...env,
@@ -160,6 +171,60 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
     });
     return Array.from(lookup.entries()).map(([id, name]) => ({ id, name }));
   }, [rows]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<StatusFilter, number> = {
+      all: rows.length,
+      surplus: 0,
+      deficit: 0,
+      "on-track": 0,
+    };
+    rows.forEach((row) => {
+      const { expected } = recalcRow(row as any);
+      const actual = Number(row.current_amount ?? 0);
+      const variance = actual - expected;
+
+      if (variance >= 5) {
+        counts.surplus += 1;
+      } else if (variance <= -5) {
+        counts.deficit += 1;
+      } else {
+        counts["on-track"] += 1;
+      }
+    });
+    return counts;
+  }, [rows, payFrequency, payCycleStartDate]);
+
+  const filteredRows = useMemo(() => {
+    if (statusFilter === "all") return rows;
+
+    return rows.filter((row) => {
+      const { expected } = recalcRow(row as any);
+      const actual = Number(row.current_amount ?? 0);
+      const variance = actual - expected;
+
+      if (statusFilter === "surplus") return variance >= 5;
+      if (statusFilter === "deficit") return variance <= -5;
+      if (statusFilter === "on-track") return variance > -5 && variance < 5;
+      return true;
+    });
+  }, [rows, statusFilter, payFrequency, payCycleStartDate]);
+
+  const groupedRows = useMemo(() => {
+    const groups = new Map<string, { id: string; name: string; rows: typeof rows }>();
+
+    filteredRows.forEach((row) => {
+      const categoryId = row.category_id ? String(row.category_id) : "uncategorised";
+      const categoryName = row.category_name ?? "Uncategorised";
+
+      if (!groups.has(categoryId)) {
+        groups.set(categoryId, { id: categoryId, name: categoryName, rows: [] });
+      }
+      groups.get(categoryId)!.rows.push(row);
+    });
+
+    return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [filteredRows]);
   const toSummaryEnvelope = (row: PlannerEnvelope & Record<string, any>): SummaryEnvelope => ({
     id: row.id,
     name: row.name,
@@ -474,6 +539,46 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               </div>
             ) : null}
 
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {STATUS_FILTERS.map((filter) => (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={() => setStatusFilter(filter.key as StatusFilter)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition",
+                      statusFilter === filter.key
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-muted text-muted-foreground hover:border-primary/40",
+                    )}
+                  >
+                    {filter.label}
+                    <span className="ml-1 text-[10px] opacity-80">({statusCounts[filter.key as StatusFilter]})</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCollapsedCategories(new Set())}
+                >
+                  Expand all
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const allCategoryIds = new Set(groupedRows.map((group) => group.id));
+                    setCollapsedCategories(allCategoryIds);
+                  }}
+                >
+                  Collapse all
+                </Button>
+              </div>
+            </div>
+
             <div className="rounded-3xl border border-border/40 bg-white shadow-sm">
               <div className="w-full">
                 <table className="w-full divide-y divide-border/40 text-sm text-secondary">
@@ -489,20 +594,61 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/40 bg-white">
-                    {rows.length === 0 ? (
+                    {filteredRows.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-16 text-center text-muted-foreground">
                           <div className="flex flex-col items-center gap-3">
                             <PlusCircle className="h-12 w-12 text-muted-foreground/40" />
                             <div className="space-y-1">
-                              <p className="text-base font-semibold text-secondary">No envelopes added yet</p>
-                              <p className="text-sm">Click &ldquo;Add Envelope&rdquo; to start planning.</p>
+                              <p className="text-base font-semibold text-secondary">
+                                {rows.length === 0 ? "No envelopes added yet" : "No envelopes match this filter"}
+                              </p>
+                              <p className="text-sm">
+                                {rows.length === 0
+                                  ? 'Click "Add Envelope" to start planning.'
+                                  : "Try selecting a different filter or add a new envelope."}
+                              </p>
                             </div>
                           </div>
                         </td>
                       </tr>
                     ) : (
-                      rows.map((row) => {
+                      groupedRows.map((group) => {
+                        const isCollapsed = collapsedCategories.has(group.id);
+                        return (
+                          <>
+                            <tr key={`category-${group.id}`} className="bg-slate-50/50">
+                              <td colSpan={7} className="px-4 py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCollapsedCategories((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(group.id)) {
+                                        next.delete(group.id);
+                                      } else {
+                                        next.add(group.id);
+                                      }
+                                      return next;
+                                    });
+                                  }}
+                                  className="flex w-full items-center gap-2 text-left font-semibold text-secondary hover:text-primary"
+                                >
+                                  <ChevronDown
+                                    className={cn(
+                                      "h-4 w-4 transition-transform",
+                                      isCollapsed && "-rotate-90"
+                                    )}
+                                  />
+                                  <span className="text-sm">{group.name}</span>
+                                  <span className="text-xs font-normal text-muted-foreground">
+                                    ({group.rows.length} {group.rows.length === 1 ? "envelope" : "envelopes"})
+                                  </span>
+                                </button>
+                              </td>
+                            </tr>
+                            {!isCollapsed &&
+                              group.rows.map((row) => {
                         const { perPay, expected, status } = recalcRow(row as any);
                         const actual = Number(row.current_amount ?? 0);
                         const variance = actual - expected;
@@ -612,6 +758,9 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                               </div>
                             </td>
                           </tr>
+                        );
+                      })}
+                          </>
                         );
                       })
                     )}

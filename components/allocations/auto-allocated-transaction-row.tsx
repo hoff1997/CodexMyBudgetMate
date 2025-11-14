@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, Check, Edit2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/finance";
@@ -39,13 +39,7 @@ export function AutoAllocatedTransactionRow({
   const [reconciling, setReconciling] = useState(false);
   const [rejecting, setRejecting] = useState(false);
 
-  useEffect(() => {
-    if (expanded && allocations.length === 0) {
-      fetchAllocations();
-    }
-  }, [expanded]);
-
-  async function fetchAllocations() {
+  const fetchAllocations = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -63,7 +57,13 @@ export function AutoAllocatedTransactionRow({
     } finally {
       setLoading(false);
     }
-  }
+  }, [transaction.allocationPlanId]);
+
+  useEffect(() => {
+    if (expanded && allocations.length === 0) {
+      fetchAllocations();
+    }
+  }, [expanded, allocations.length, fetchAllocations]);
 
   async function handleReconcile() {
     setReconciling(true);

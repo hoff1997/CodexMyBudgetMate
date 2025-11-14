@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,11 +58,7 @@ export function IncomeAllocationPreview({
   const [saveChanges, setSaveChanges] = useState(false);
   const [approving, setApproving] = useState(false);
 
-  useEffect(() => {
-    detectIncome();
-  }, [transactionId]);
-
-  async function detectIncome() {
+  const detectIncome = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/income-detection", {
@@ -94,7 +90,11 @@ export function IncomeAllocationPreview({
     } finally {
       setLoading(false);
     }
-  }
+  }, [transactionId, transactionDescription, transactionAmount]);
+
+  useEffect(() => {
+    detectIncome();
+  }, [detectIncome]);
 
   async function handleApprove() {
     if (!preview?.matched || !preview.income_source) return;

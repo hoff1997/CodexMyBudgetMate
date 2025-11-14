@@ -231,7 +231,7 @@ export function MilestoneManager({ goalId, currentAmount, milestones, onUpdate }
         <div className="space-y-2">
           {sortedMilestones.map((milestone, index) => {
             const isAchieved = milestone.achieved_at || isMilestoneAchieved(milestone.milestone_amount, currentAmount);
-            const isAutoAchieved = !milestone.achieved_at && isAchieved;
+            const isAutoAchieved = !milestone.achieved_at && !!isAchieved;
 
             return (
               <div

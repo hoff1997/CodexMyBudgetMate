@@ -123,6 +123,14 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
     }),
   );
 
+  const recalcRow = useCallback((row: PlannerEnvelope & Record<string, any>) => {
+    const annual = Number(row.annual_amount ?? calculateAnnualFromTarget(Number(row.target_amount ?? 0), (row.frequency as PlannerFrequency) ?? "monthly"));
+    const perPay = calculateRequiredContribution(annual, payFrequency);
+    const expected = Number(row.opening_balance ?? 0) + perPay;
+    const status = determineStatus(Number(row.current_amount ?? 0), expected);
+    return { annual, perPay, expected, status };
+  }, [payFrequency]);
+
   const updateMutation = useMutation({
     mutationFn: async (payload: UpdatePayload) => {
       if (readOnly) return { ok: true };
@@ -171,7 +179,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
       },
       { target: 0, annual: 0, current: 0, payCycle: 0, expected: 0, surplus: 0, deficit: 0 },
     );
-  }, [rows, payFrequency, payCycleStartDate]);
+  }, [rows, recalcRow]);
 
   const planByEnvelope = useMemo(() => {
     if (!payPlan) return new Map<string, { perPay: number; annual: number }>();
@@ -218,7 +226,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
       }
     });
     return counts;
-  }, [rows, payFrequency, payCycleStartDate]);
+  }, [rows, recalcRow]);
 
   const filteredRows = useMemo(() => {
     if (statusFilter === "all") return rows;
@@ -233,7 +241,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
       if (statusFilter === "on-track") return variance > -5 && variance < 5;
       return true;
     });
-  }, [rows, statusFilter, payFrequency, payCycleStartDate]);
+  }, [rows, statusFilter, recalcRow]);
 
   const groupedRows = useMemo(() => {
     const groups = new Map<string, { id: string; name: string; rows: typeof rows }>();
@@ -269,7 +277,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
     is_spending: row.is_spending ?? null,
   });
 
-  function handleFieldChange(id: string, field: keyof UpdatePayload, value: number | string | null) {
+  function handleFieldChange(id: string, field: string, value: any) {
     setRows((prev) =>
       prev.map((row) => {
         if (row.id !== id) return row;
@@ -294,14 +302,6 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
         return next;
       }),
     );
-  }
-
-  function recalcRow(row: PlannerEnvelope & Record<string, any>) {
-    const annual = Number(row.annual_amount ?? calculateAnnualFromTarget(Number(row.target_amount ?? 0), (row.frequency as PlannerFrequency) ?? "monthly"));
-    const perPay = calculateRequiredContribution(annual, payFrequency);
-    const expected = Number(row.opening_balance ?? 0) + perPay;
-    const status = determineStatus(Number(row.current_amount ?? 0), expected);
-    return { annual, perPay, expected, status };
   }
 
   async function handleSave(row: PlannerEnvelope & Record<string, any>) {

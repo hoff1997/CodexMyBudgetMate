@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -175,9 +176,11 @@ export function TwoFactorAuthSetup({
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Step 1: Scan QR Code</h3>
                   <div className="flex justify-center">
-                    <img
+                    <Image
                       src={qrCodeUrl}
                       alt="2FA QR Code"
+                      width={300}
+                      height={300}
                       className="border rounded-lg p-4 bg-white"
                     />
                   </div>

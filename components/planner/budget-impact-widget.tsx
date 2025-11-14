@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -32,20 +32,7 @@ export function BudgetImpactWidget({
   const [impact, setImpact] = useState<BudgetImpact | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Debounce API calls
-    const timeout = setTimeout(() => {
-      if (payCycleAmount > 0) {
-        fetchImpact();
-      } else {
-        setImpact(null);
-      }
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [payCycleAmount, action, envelopeId, priority]);
-
-  async function fetchImpact() {
+  const fetchImpact = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/planner/budget-impact", {
@@ -68,7 +55,20 @@ export function BudgetImpactWidget({
     } finally {
       setLoading(false);
     }
-  }
+  }, [action, envelopeId, payCycleAmount, priority]);
+
+  useEffect(() => {
+    // Debounce API calls
+    const timeout = setTimeout(() => {
+      if (payCycleAmount > 0) {
+        fetchImpact();
+      } else {
+        setImpact(null);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [payCycleAmount, fetchImpact]);
 
   if (!impact || payCycleAmount === 0) {
     return null;

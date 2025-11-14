@@ -147,7 +147,7 @@ export function DebtClient({ categories }: DebtClientProps) {
               <div>
                 <p className="font-medium text-amber-900">High Interest Debt Detected</p>
                 <p className="text-sm text-amber-700 mt-1">
-                  "{highestInterestDebt.name}" has an interest rate of {Number(highestInterestDebt.interest_rate).toFixed(2)}%.
+                  &ldquo;{highestInterestDebt.name}&rdquo; has an interest rate of {Number(highestInterestDebt.interest_rate).toFixed(2)}%.
                   Consider prioritizing this debt to minimize interest charges.
                 </p>
               </div>

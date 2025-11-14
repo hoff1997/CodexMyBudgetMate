@@ -1,4 +1,5 @@
 import type { GoalEnvelope, GoalProgress } from '@/lib/types/goals';
+import type { GoalMilestone } from '@/lib/auth/types';
 import { differenceInDays, differenceInMonths } from 'date-fns';
 
 /**
@@ -138,16 +139,18 @@ export function isMilestoneAchieved(milestoneAmount: number, currentAmount: numb
 /**
  * Get next unachieved milestone
  */
-export function getNextMilestone(goal: GoalEnvelope): typeof goal.milestones[number] | null {
+export function getNextMilestone(goal: GoalEnvelope): GoalMilestone | null {
   if (!goal.milestones || goal.milestones.length === 0) {
     return null;
   }
 
   const currentAmount = Number(goal.current_amount ?? 0);
 
-  return goal.milestones
+  const nextMilestone = goal.milestones
     .filter((m) => !m.achieved_at && m.milestone_amount > currentAmount)
-    .sort((a, b) => a.milestone_amount - b.milestone_amount)[0] || null;
+    .sort((a, b) => a.milestone_amount - b.milestone_amount)[0];
+
+  return nextMilestone ?? null;
 }
 
 /**

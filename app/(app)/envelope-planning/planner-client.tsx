@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ import {
   ChevronDown,
   ChevronLeft,
   FileBarChart,
+  GripVertical,
   Plus,
   PlusCircle,
 } from "lucide-react";
@@ -31,6 +32,21 @@ import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-s
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
 import HelpTooltip from "@/components/ui/help-tooltip";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 export type PlannerEnvelope = EnvelopeRow & {
   category_name?: string | null;
@@ -97,6 +113,15 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   const payFrequencyLabel =
     frequencyOptions.find((option) => option.value === payFrequency)?.label ?? "Pay";
   const requiredColumnLabel = `Required ${payFrequencyLabel}`;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const updateMutation = useMutation({
     mutationFn: async (payload: UpdatePayload) => {
@@ -381,6 +406,57 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
     URL.revokeObjectURL(url);
   }
 
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || readOnly) return;
+
+      const activeRow = rows.find((row) => row.id === active.id);
+      const overRow = rows.find((row) => row.id === over.id);
+
+      if (!activeRow || !overRow) return;
+
+      // If dropping on a different category, update the envelope's category
+      const activeCategoryId = activeRow.category_id ? String(activeRow.category_id) : "uncategorised";
+      const overCategoryId = overRow.category_id ? String(overRow.category_id) : "uncategorised";
+
+      if (activeCategoryId !== overCategoryId) {
+        // Move to different category
+        const newCategoryId = overRow.category_id;
+        const newCategoryName = overRow.category_name;
+
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === activeRow.id
+              ? { ...row, category_id: newCategoryId, category_name: newCategoryName }
+              : row
+          )
+        );
+
+        updateMutation.mutate({
+          id: activeRow.id,
+          category_id: newCategoryId,
+        });
+
+        toast.success(`Moved "${activeRow.name}" to ${newCategoryName ?? "Uncategorised"}`);
+      } else {
+        // Reorder within same category
+        const fromIndex = rows.indexOf(activeRow);
+        const toIndex = rows.indexOf(overRow);
+
+        if (fromIndex === toIndex) return;
+
+        const newRows = [...rows];
+        const [movedRow] = newRows.splice(fromIndex, 1);
+        newRows.splice(toIndex, 0, movedRow);
+
+        setRows(newRows);
+        toast.success("Envelope reordered");
+      }
+    },
+    [rows, readOnly, updateMutation]
+  );
+
   return (
     <>
       <div className="min-h-screen bg-[#f5f7fd]">
@@ -647,119 +723,32 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                                 </button>
                               </td>
                             </tr>
-                            {!isCollapsed &&
-                              group.rows.map((row) => {
-                        const { perPay, expected, status } = recalcRow(row as any);
-                        const actual = Number(row.current_amount ?? 0);
-                        const variance = actual - expected;
-                        return (
-                          <tr key={row.id} className="transition hover:bg-slate-50/70">
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-secondary">{row.name}</div>
-                              {row.category_name ? (
-                                <p className="text-xs text-muted-foreground">{row.category_name}</p>
-                              ) : null}
-                            </td>
-                            <td className="px-4 py-3 text-right font-medium text-secondary">
-                              {formatCurrency(actual)}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <Input
-                                className="h-8 w-24 rounded-lg border-border/60 text-right"
-                                type="number"
-                                step="0.01"
-                                value={row.target_amount ?? 0}
-                                disabled={readOnly}
-                                onChange={(event) =>
-                                  handleFieldChange(row.id, 'target_amount', Number(event.target.value))
-                                }
-                              />
-                            </td>
-                            <td className="px-4 py-3">
-                              <select
-                                className="h-8 w-32 rounded-lg border border-border/70 bg-white px-2 text-xs focus-visible:outline-none"
-                                value={(row.frequency as PlannerFrequency) ?? 'monthly'}
-                                disabled={readOnly}
-                                onChange={(event) =>
-                                  handleFieldChange(row.id, 'frequency', event.target.value as PlannerFrequency)
-                                }
-                              >
-                                {frequencyOptions.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-                            <td className="px-4 py-3 text-right text-muted-foreground">{formatCurrency(perPay)}</td>
-                            <td className="px-4 py-3 text-right">
-                              <span
-                                className={cn(
-                                  'font-semibold',
-                                  variance >= 5 && 'text-sky-600',
-                                  variance <= -5 && 'text-rose-600',
-                                  variance > -5 && variance < 5 && 'text-emerald-600',
-                                )}
-                              >
-                                {variance >= 0 ? '+' : ''}{formatCurrency(variance)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex justify-end gap-1.5">
-                                {variance >= 5 ? (
-                                  <Button
-                                    size="sm"
-                                    variant="default"
-                                    className="h-8 gap-1 px-2 text-xs"
-                                    onClick={() => {
-                                      setTransferDefaults({ fromId: row.id, amount: Math.abs(variance) });
-                                      setTransferOpen(true);
-                                    }}
-                                    disabled={readOnly}
-                                    title="Transfer surplus to another envelope"
-                                  >
-                                    <ArrowRight className="h-3 w-3" />
-                                    Move
-                                  </Button>
-                                ) : variance <= -5 ? (
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="h-8 gap-1 px-2 text-xs"
-                                    onClick={() => {
-                                      setTransferDefaults({ toId: row.id, amount: Math.abs(variance) });
-                                      setTransferOpen(true);
-                                    }}
-                                    disabled={readOnly}
-                                    title="Transfer funds to cover deficit"
-                                  >
-                                    <ArrowRight className="h-3 w-3" />
-                                    Fund
-                                  </Button>
-                                ) : null}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 px-3 text-xs"
-                                  onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
-                                  disabled={readOnly}
+                            {!isCollapsed && (
+                              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                                <SortableContext
+                                  items={group.rows.map((row) => row.id)}
+                                  strategy={verticalListSortingStrategy}
                                 >
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-8 px-3 text-xs"
-                                  onClick={() => handleSave(row as any)}
-                                  disabled={updateMutation.isPending || readOnly}
-                                >
-                                  Save
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                                  {group.rows.map((row) => (
+                                    <SortableTableRow
+                                      key={row.id}
+                                      row={row}
+                                      recalcRow={recalcRow}
+                                      handleFieldChange={handleFieldChange}
+                                      handleSave={handleSave}
+                                      setEditEnvelope={setEditEnvelope}
+                                      setTransferDefaults={setTransferDefaults}
+                                      setTransferOpen={setTransferOpen}
+                                      toSummaryEnvelope={toSummaryEnvelope}
+                                      formatCurrency={formatCurrency}
+                                      updateMutation={updateMutation}
+                                      readOnly={readOnly}
+                                      frequencyOptions={frequencyOptions}
+                                    />
+                                  ))}
+                                </SortableContext>
+                              </DndContext>
+                            )}
                           </>
                         );
                       })
@@ -858,5 +847,186 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
         }}
       />
     </>
+  );
+}
+
+interface SortableRowProps {
+  row: PlannerEnvelope & Record<string, any>;
+  recalcRow: (row: any) => { perPay: number; expected: number; status: string };
+  handleFieldChange: (id: string, field: string, value: any) => void;
+  handleSave: (row: any) => void;
+  setEditEnvelope: (envelope: SummaryEnvelope) => void;
+  setTransferDefaults: (defaults: { fromId?: string; toId?: string; amount?: number }) => void;
+  setTransferOpen: (open: boolean) => void;
+  toSummaryEnvelope: (row: any) => SummaryEnvelope;
+  formatCurrency: (value: number) => string;
+  updateMutation: any;
+  readOnly: boolean;
+  frequencyOptions: any[];
+}
+
+function SortableTableRow({
+  row,
+  recalcRow,
+  handleFieldChange,
+  handleSave,
+  setEditEnvelope,
+  setTransferDefaults,
+  setTransferOpen,
+  toSummaryEnvelope,
+  formatCurrency,
+  updateMutation,
+  readOnly,
+  frequencyOptions,
+}: SortableRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: row.id,
+    disabled: readOnly,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const { perPay, expected, status } = recalcRow(row as any);
+  const actual = Number(row.current_amount ?? 0);
+  const variance = actual - expected;
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      key={row.id}
+      className={cn(
+        "transition hover:bg-slate-50/70",
+        isDragging && "opacity-50"
+      )}
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          {!readOnly && (
+            <button
+              type="button"
+              className="cursor-grab text-muted-foreground hover:text-secondary active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
+          <div>
+            <div className="font-medium text-secondary">{row.name}</div>
+            {row.category_name ? (
+              <p className="text-xs text-muted-foreground">{row.category_name}</p>
+            ) : null}
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-right font-medium text-secondary">
+        {formatCurrency(actual)}
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Input
+          className="h-8 w-24 rounded-lg border-border/60 text-right"
+          type="number"
+          step="0.01"
+          value={row.target_amount ?? 0}
+          disabled={readOnly}
+          onChange={(event) =>
+            handleFieldChange(row.id, 'target_amount', Number(event.target.value))
+          }
+        />
+      </td>
+      <td className="px-4 py-3">
+        <select
+          className="h-8 w-32 rounded-lg border border-border/70 bg-white px-2 text-xs focus-visible:outline-none"
+          value={(row.frequency as PlannerFrequency) ?? 'monthly'}
+          disabled={readOnly}
+          onChange={(event) =>
+            handleFieldChange(row.id, 'frequency', event.target.value as PlannerFrequency)
+          }
+        >
+          {frequencyOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-4 py-3 text-right text-muted-foreground">{formatCurrency(perPay)}</td>
+      <td className="px-4 py-3 text-right">
+        <span
+          className={cn(
+            'font-semibold',
+            variance >= 5 && 'text-sky-600',
+            variance <= -5 && 'text-rose-600',
+            variance > -5 && variance < 5 && 'text-emerald-600',
+          )}
+        >
+          {variance >= 0 ? '+' : ''}{formatCurrency(variance)}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-right">
+        <div className="flex justify-end gap-1.5">
+          {variance >= 5 ? (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-8 gap-1 px-2 text-xs"
+              onClick={() => {
+                setTransferDefaults({ fromId: row.id, amount: Math.abs(variance) });
+                setTransferOpen(true);
+              }}
+              disabled={readOnly}
+              title="Transfer surplus to another envelope"
+            >
+              <ArrowRight className="h-3 w-3" />
+              Move
+            </Button>
+          ) : variance <= -5 ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-8 gap-1 px-2 text-xs"
+              onClick={() => {
+                setTransferDefaults({ toId: row.id, amount: Math.abs(variance) });
+                setTransferOpen(true);
+              }}
+              disabled={readOnly}
+              title="Transfer funds to cover deficit"
+            >
+              <ArrowRight className="h-3 w-3" />
+              Fund
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3 text-xs"
+            onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
+            disabled={readOnly}
+          >
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-8 px-3 text-xs"
+            onClick={() => handleSave(row as any)}
+            disabled={updateMutation.isPending || readOnly}
+          >
+            Save
+          </Button>
+        </div>
+      </td>
+    </tr>
   );
 }

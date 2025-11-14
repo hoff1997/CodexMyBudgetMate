@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
-import { calculateGoalProgress, getGoalStatusLabel, getGoalStatusColor, GOAL_TYPE_LABELS } from "@/lib/goals";
+import { formatCurrency } from "@/lib/finance";
+import { calculateGoalProgress, getGoalStatusLabel, getGoalStatusColor } from "@/lib/goals";
+import { GOAL_TYPE_LABELS } from "@/lib/types/goals";
 import { MilestoneManager } from "@/components/goals/milestone-manager";
 import type { GoalEnvelope } from "@/lib/types/goals";
 import { format, differenceInDays } from "date-fns";

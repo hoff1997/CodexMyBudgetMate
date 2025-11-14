@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/finance";
 import { calculateGoalProgress } from "@/lib/goals";
 import type { GoalEnvelope } from "@/lib/types/goals";
 import { Target, TrendingUp, AlertCircle, CheckCircle } from "lucide-react";

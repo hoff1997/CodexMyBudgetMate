@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/finance";
 import { isMilestoneAchieved } from "@/lib/goals";
 import type { GoalMilestone } from "@/lib/auth/types";
 import { format } from "date-fns";

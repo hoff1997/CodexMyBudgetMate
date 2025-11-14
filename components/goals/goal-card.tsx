@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/finance";
 import { calculateGoalProgress, getGoalStatusLabel, getGoalStatusColor } from "@/lib/goals";
 import type { GoalEnvelope } from "@/lib/types/goals";
 import { differenceInDays, format } from "date-fns";

@@ -4,6 +4,8 @@ export type DatabaseProfile = {
   avatar_url: string | null;
 };
 
+export type GoalType = 'savings' | 'debt_payoff' | 'purchase' | 'emergency_fund' | 'other';
+
 export type EnvelopeRow = {
   id: string;
   name: string;
@@ -21,6 +23,25 @@ export type EnvelopeRow = {
   icon?: string | null;
   sort_order?: number | string | null;
   is_spending?: boolean | null;
+  // Goal-specific fields
+  is_goal?: boolean | null;
+  goal_type?: GoalType | null;
+  goal_target_date?: string | null;
+  goal_completed_at?: string | null;
+};
+
+export type GoalMilestone = {
+  id: string;
+  envelope_id: string;
+  user_id: string;
+  milestone_name: string;
+  milestone_amount: number;
+  milestone_date: string | null;
+  achieved_at: string | null;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type TransactionRow = {

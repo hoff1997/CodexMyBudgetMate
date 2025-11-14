@@ -118,22 +118,15 @@ export default function IncomeAllocationPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Detection Rule */}
-                {source.detection_rule_id && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Detection Rule: </span>
-                    <code className="bg-muted px-2 py-1 rounded">
-                      &quot;{source.detection_rule?.pattern || "N/A"}&quot; in description
-                    </code>
-                  </div>
-                )}
-
                 {/* Auto-allocate toggle */}
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground">Auto-allocate:</span>
                   <span className={source.auto_allocate ? "text-green-600" : "text-gray-600"}>
                     {source.auto_allocate ? "ON" : "OFF"}
                   </span>
+                  {source.detection_rule_id && (
+                    <span className="text-xs text-muted-foreground ml-2">(Detection rule configured)</span>
+                  )}
                 </div>
 
                 {/* Envelope Allocations */}

@@ -25,33 +25,38 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v3"; // Increment this when adding new menu items
+const NAV_VERSION = "v4"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
   label: string;
   href: string;
   icon: string;
+  separator?: boolean;
 };
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
-  { id: "getting-started", label: "Getting Started", href: "/getting-started", icon: "🏠" },
+  // Working Pages
   { id: "setup", label: "Setup Wizard", href: "/setup", icon: "🧙" },
+  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
+  { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
+  { id: "income-allocation", label: "Income & Allocation", href: "/income-allocation", icon: "💰" },
+  { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
-  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "⏳" },
+  { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
+  { id: "separator-1", label: "", href: "", icon: "", separator: true },
+
+  // Pages needing migration/review
+  { id: "getting-started", label: "Getting Started", href: "/getting-started", icon: "🏠" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "zero-budget", label: "Zero Budget Manager", href: "/envelope-summary?tab=zero-budget", icon: "🎯" },
-  { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "envelope-planning", label: "Envelope Planning", href: "/envelope-planning", icon: "📋" },
-  { id: "income-allocation", label: "Income & Allocation", href: "/income-allocation", icon: "💰" },
   { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮" },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰" },
   { id: "balance-report", label: "Account Balances", href: "/balance-report", icon: "📊" },
-  { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
   { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
   { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳" },
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦" },
-  { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑" },
   { id: "feature-requests", label: "Feature Requests", href: "/feature-requests", icon: "💡" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
@@ -165,6 +170,15 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
   const isActive =
     typeof activePath === "string" &&
     (activePath === item.href || activePath.startsWith(`${item.href}/`));
+
+  // Render separator
+  if (item.separator) {
+    return (
+      <div ref={setNodeRef} style={style} className="my-3 px-4">
+        <div className="border-t border-border" />
+      </div>
+    );
+  }
 
   return (
     <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-60")}>

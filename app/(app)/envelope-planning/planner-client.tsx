@@ -115,15 +115,27 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   const totals = useMemo(() => {
     return rows.reduce(
       (acc, row) => {
+        const { perPay, expected } = recalcRow(row as any);
+        const actual = Number(row.current_amount ?? 0);
+        const variance = actual - expected;
+
         acc.target += Number(row.target_amount ?? 0);
         acc.annual += Number(row.annual_amount ?? 0);
-        acc.current += Number(row.current_amount ?? 0);
+        acc.current += actual;
         acc.payCycle += Number(row.pay_cycle_amount ?? 0);
+        acc.expected += expected;
+
+        if (variance >= 5) {
+          acc.surplus += variance;
+        } else if (variance <= -5) {
+          acc.deficit += Math.abs(variance);
+        }
+
         return acc;
       },
-      { target: 0, annual: 0, current: 0, payCycle: 0 },
+      { target: 0, annual: 0, current: 0, payCycle: 0, expected: 0, surplus: 0, deficit: 0 },
     );
-  }, [rows]);
+  }, [rows, payFrequency, payCycleStartDate]);
 
   const planByEnvelope = useMemo(() => {
     if (!payPlan) return new Map<string, { perPay: number; annual: number }>();
@@ -385,60 +397,46 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               </div>
             </div>
 
-            <Card className="rounded-3xl border border-border/40 bg-white shadow-sm">
-              <CardContent className="space-y-6 px-6 py-6 sm:px-8">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-secondary">Pay Frequency:</p>
-                    <div className="relative inline-flex h-10 w-full max-w-[220px] items-center rounded-xl border border-border bg-white px-4 shadow-sm">
-                      <select
-                        className="h-full w-full appearance-none bg-transparent text-sm font-medium text-secondary focus-visible:outline-none"
-                        value={payFrequency}
-                        onChange={(event) => setPayFrequency(event.target.value as PlannerFrequency)}
-                      >
-                        {frequencyOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-secondary">Pay Cycle Start Date:</p>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "flex h-10 w-full max-w-[240px] items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-medium text-secondary shadow-sm hover:bg-slate-50",
-                            !payCycleStartDate && "text-muted-foreground",
-                          )}
-                        >
-                          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {payCycleStartDate ? format(payCycleStartDate, "MMMM do, yyyy") : "Select date"}
-                          </span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" sideOffset={8}>
-                        <Calendar
-                          mode="single"
-                          selected={payCycleStartDate ?? undefined}
-                          onSelect={(date) => setPayCycleStartDate(date ?? null)}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Pay frequency determines how the &lsquo;Required&rsquo; column calculates amounts from your due amount.
-                  Pay cycle start date is used to calculate expected balances based on actual payment periods since this date.
-                </p>
-                <div className="text-sm font-medium text-muted-foreground/80">Collapse All</div>
-              </CardContent>
-            </Card>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="rounded-2xl border border-border/40 bg-white shadow-sm">
+                <CardContent className="px-5 py-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Expected</p>
+                  <p className="mt-2 text-2xl font-bold text-secondary">{formatCurrency(totals.expected)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Should be funded</p>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl border border-emerald-200 bg-emerald-50 shadow-sm">
+                <CardContent className="px-5 py-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Surplus</p>
+                  <p className="mt-2 text-2xl font-bold text-emerald-600">{formatCurrency(totals.surplus)}</p>
+                  <p className="mt-1 text-xs text-emerald-600">Over-funded envelopes</p>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl border border-rose-200 bg-rose-50 shadow-sm">
+                <CardContent className="px-5 py-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-rose-700">Deficit</p>
+                  <p className="mt-2 text-2xl font-bold text-rose-600">{formatCurrency(totals.deficit)}</p>
+                  <p className="mt-1 text-xs text-rose-600">Under-funded envelopes</p>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl border border-border/40 bg-white shadow-sm">
+                <CardContent className="px-5 py-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Net Variance</p>
+                  <p className={cn(
+                    "mt-2 text-2xl font-bold",
+                    totals.surplus - totals.deficit >= 0 ? "text-emerald-600" : "text-rose-600"
+                  )}>
+                    {formatCurrency(totals.surplus - totals.deficit)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {totals.surplus - totals.deficit >= 0 ? "Overall surplus" : "Overall shortfall"}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
             {planTotals ? (
               <div className="rounded-3xl border border-primary/20 bg-white px-6 py-5 shadow-sm sm:px-8">

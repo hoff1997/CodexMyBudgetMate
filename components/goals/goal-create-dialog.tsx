@@ -26,6 +26,7 @@ type FormState = {
   payCycleAmount: string;
   openingBalance: string;
   notes: string;
+  interestRate: string;
 };
 
 const DEFAULT_FORM: FormState = {
@@ -38,6 +39,7 @@ const DEFAULT_FORM: FormState = {
   frequency: "monthly",
   payCycleAmount: "0.00",
   openingBalance: "0.00",
+  interestRate: "0.00",
   notes: "",
 };
 
@@ -112,6 +114,7 @@ export function GoalCreateDialog({
           isGoal: true,
           goalType: form.goalType,
           goalTargetDate: form.targetDate || undefined,
+          interestRate: form.goalType === "debt_payoff" ? parseFloat(form.interestRate) || undefined : undefined,
         }),
       });
 
@@ -254,6 +257,27 @@ export function GoalCreateDialog({
                     required
                   />
                 </div>
+
+                {form.goalType === "debt_payoff" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="interest-rate" className="text-sm font-medium text-secondary">
+                      Interest Rate (APR %)
+                    </Label>
+                    <Input
+                      id="interest-rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      placeholder="0.00"
+                      value={form.interestRate}
+                      onChange={(event) => setForm((prev) => ({ ...prev, interestRate: event.target.value }))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter the annual percentage rate (e.g., 19.95 for 19.95%)
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="target-date" className="text-sm font-medium text-secondary">

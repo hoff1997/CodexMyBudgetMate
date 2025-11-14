@@ -14,6 +14,7 @@ const updateSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
   icon: z.string().max(10).optional().nullable(),
   categoryId: z.string().uuid().optional().nullable(),
+  interestRate: z.number().nonnegative().optional().nullable(),
   isCompleted: z.boolean().optional(),
 });
 
@@ -39,7 +40,7 @@ export async function GET(
   // Fetch goal
   const { data: goal, error: goalError } = await supabase
     .from("envelopes")
-    .select("id, name, category_id, target_amount, pay_cycle_amount, opening_balance, current_amount, frequency, notes, icon, is_goal, goal_type, goal_target_date, goal_completed_at, created_at, updated_at")
+    .select("id, name, category_id, target_amount, pay_cycle_amount, opening_balance, current_amount, frequency, notes, icon, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, created_at, updated_at")
     .eq("id", id)
     .eq("user_id", session.user.id)
     .eq("is_goal", true)
@@ -109,6 +110,7 @@ export async function PATCH(
   if (payload.notes !== undefined) updates.notes = payload.notes?.trim() || null;
   if (payload.icon !== undefined) updates.icon = payload.icon;
   if (payload.categoryId !== undefined) updates.category_id = payload.categoryId;
+  if (payload.interestRate !== undefined) updates.interest_rate = payload.interestRate;
 
   // Handle goal completion
   if (payload.isCompleted !== undefined) {

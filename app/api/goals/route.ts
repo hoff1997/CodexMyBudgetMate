@@ -18,7 +18,7 @@ export async function GET() {
   // Fetch goals with their associated milestones
   const { data: goals, error: goalsError } = await supabase
     .from("envelopes")
-    .select("id, name, category_id, target_amount, pay_cycle_amount, opening_balance, current_amount, frequency, notes, icon, is_goal, goal_type, goal_target_date, goal_completed_at, created_at, updated_at")
+    .select("id, name, category_id, target_amount, pay_cycle_amount, opening_balance, current_amount, frequency, notes, icon, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, created_at, updated_at")
     .eq("user_id", session.user.id)
     .eq("is_goal", true)
     .order("created_at", { ascending: false });

@@ -41,7 +41,8 @@
       "Bash(node scripts/seed-transactions.mjs:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")"
+      "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")",
+      "Bash(node scripts/apply-debt-migration.mjs:*)"
     ],
     "deny": [],
     "ask": []

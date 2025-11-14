@@ -28,6 +28,7 @@ export type EnvelopeRow = {
   goal_type?: GoalType | null;
   goal_target_date?: string | null;
   goal_completed_at?: string | null;
+  interest_rate?: string | number | null; // APR for debt payoff goals
 };
 
 export type GoalMilestone = {

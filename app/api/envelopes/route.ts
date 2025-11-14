@@ -25,6 +25,7 @@ const schema = z.object({
   isGoal: z.boolean().optional(),
   goalType: goalTypeSchema,
   goalTargetDate: z.string().optional(),
+  interestRate: z.number().nonnegative().optional(), // For debt payoff goals
 });
 
 export async function GET() {
@@ -39,7 +40,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("envelopes")
-    .select("id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at")
+    .select("id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate")
     .eq("user_id", session.user.id)
     .order("name");
 
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
     is_goal: payload.isGoal ?? false,
     goal_type: payload.goalType ?? null,
     goal_target_date: payload.goalTargetDate ?? null,
+    interest_rate: payload.interestRate ?? null,
   });
 
   if (error) {

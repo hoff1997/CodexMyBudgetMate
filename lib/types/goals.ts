@@ -29,6 +29,7 @@ export interface GoalFormData {
   payCycleAmount: number;
   openingBalance: number;
   notes: string;
+  interestRate?: number; // For debt payoff goals
   milestones: MilestoneFormData[];
 }
 

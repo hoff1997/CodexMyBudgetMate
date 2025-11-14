@@ -34,7 +34,14 @@
       "Bash(node scripts/get-user-id.mjs:*)",
       "Bash(node scripts/get-my-user-id.mjs:*)",
       "Bash(node scripts/clear-user-data.mjs:*)",
-      "Bash(node scripts/migrate-income-sources.mjs:*)"
+      "Bash(node scripts/migrate-income-sources.mjs:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(node scripts/seed-transactions.mjs:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")"
     ],
     "deny": [],
     "ask": []

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   ArrowLeftRight,
+  ArrowRight,
   CalendarIcon,
   ChevronDown,
   ChevronLeft,
@@ -28,6 +29,7 @@ import { cn } from "@/lib/cn";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
+import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
 import HelpTooltip from "@/components/ui/help-tooltip";
 
 export type PlannerEnvelope = EnvelopeRow & {
@@ -69,6 +71,8 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   const [payCycleStartDate, setPayCycleStartDate] = useState<Date | null>(null);
   const [editEnvelope, setEditEnvelope] = useState<SummaryEnvelope | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferDefaults, setTransferDefaults] = useState<{ fromId?: string; toId?: string; amount?: number }>({});
   const [rows, setRows] = useState(() =>
     envelopes.map((env) => ({
       ...env,
@@ -349,14 +353,16 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                   Add Envelope
                 </Button>
                 <Button
-                  asChild
+                  type="button"
                   variant="outline"
                   className="gap-2 rounded-xl border border-border/80 bg-white px-4 py-2 text-secondary shadow-sm hover:bg-slate-50"
+                  onClick={() => {
+                    setTransferDefaults({});
+                    setTransferOpen(true);
+                  }}
                 >
-                  <Link href="/envelopes?transfer=1">
-                    <ArrowLeftRight className="h-4 w-4" />
-                    Move Balances
-                  </Link>
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Transfer Funds
                 </Button>
                 <Button
                   asChild
@@ -470,132 +476,150 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               </div>
             ) : null}
 
-            <div className="overflow-x-auto rounded-3xl border border-border/40 bg-white shadow-sm">
-              <table className="min-w-full divide-y divide-border/40 text-sm text-secondary">
-                <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-6 py-4 text-left">Name</th>
-                    <th className="px-6 py-4 text-left">Opening Balance</th>
-                    <th className="px-6 py-4 text-left">Due Amount</th>
-                    <th className="px-6 py-4 text-left">Due Date</th>
-                    <th className="px-6 py-4 text-left">Due Frequency</th>
-                    <th className="px-6 py-4 text-left">{requiredColumnLabel} Amount</th>
-                    <th className="px-6 py-4 text-left">Frequency</th>
-                    <th className="px-6 py-4 text-left">Actual Balance*</th>
-                    <th className="px-6 py-4 text-left">Expected</th>
-                    <th className="px-6 py-4 text-left">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 bg-white">
-                  {rows.length === 0 ? (
+            <div className="rounded-3xl border border-border/40 bg-white shadow-sm">
+              <div className="w-full">
+                <table className="w-full divide-y divide-border/40 text-sm text-secondary">
+                  <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <tr>
-                      <td colSpan={11} className="px-6 py-16 text-center text-muted-foreground">
-                        <div className="flex flex-col items-center gap-3">
-                          <PlusCircle className="h-12 w-12 text-muted-foreground/40" />
-                          <div className="space-y-1">
-                            <p className="text-base font-semibold text-secondary">No envelopes added yet</p>
-                            <p className="text-sm">Click &ldquo;Add Row&rdquo; to start planning.</p>
-                          </div>
-                        </div>
-                      </td>
+                      <th className="px-4 py-3 text-left">Name</th>
+                      <th className="px-4 py-3 text-right">Current</th>
+                      <th className="px-4 py-3 text-right">Target</th>
+                      <th className="px-4 py-3 text-left">Frequency</th>
+                      <th className="px-4 py-3 text-right">{requiredColumnLabel}</th>
+                      <th className="px-4 py-3 text-right">Over/Under</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
-                  ) : (
-                    rows.map((row) => {
-                      const { perPay, expected, status } = recalcRow(row as any);
-                      return (
-                        <tr key={row.id} className="align-top transition hover:bg-slate-50/70">
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-secondary">{row.name}</div>
-                            {row.category_name ? (
-                              <p className="text-xs text-muted-foreground">{row.category_name}</p>
-                            ) : null}
-                          </td>
-                          <td className="px-6 py-4 text-secondary">
-                            {formatCurrency(Number(row.opening_balance ?? 0))}
-                          </td>
-                          <td className="px-6 py-4">
-                            <Input
-                              className="rounded-xl border-border/60"
-                              type="number"
-                              step="0.01"
-                              value={row.target_amount ?? 0}
-                              disabled={readOnly}
-                              onChange={(event) =>
-                                handleFieldChange(row.id, 'target_amount', Number(event.target.value))
-                              }
-                            />
-                          </td>
-                          <td className="px-6 py-4">
-                            <Input
-                              className="rounded-xl border-border/60"
-                              type="date"
-                              value={(row.next_payment_due ?? row.due_date ?? '').slice(0, 10)}
-                              disabled={readOnly}
-                              onChange={(event) =>
-                                handleFieldChange(row.id, 'next_payment_due', event.target.value)
-                              }
-                            />
-                          </td>
-                          <td className="px-6 py-4">
-                            <select
-                              className="h-9 w-full rounded-lg border border-border/70 bg-white px-3 text-sm focus-visible:outline-none"
-                              value={(row.frequency as PlannerFrequency) ?? 'monthly'}
-                              disabled={readOnly}
-                              onChange={(event) =>
-                                handleFieldChange(row.id, 'frequency', event.target.value as PlannerFrequency)
-                              }
-                            >
-                              {frequencyOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-6 py-4 text-secondary">{formatCurrency(perPay)}</td>
-                          <td className="px-6 py-4 text-muted-foreground">{payFrequencyLabel}</td>
-                          <td className="px-6 py-4 text-secondary">
-                            {formatCurrency(Number(row.current_amount ?? 0))}
-                          </td>
-                          <td className="px-6 py-4 text-secondary">{formatCurrency(expected)}</td>
-                          <td className="px-6 py-4 capitalize">
-                            <span
-                              className={cn(
-                                status === 'on-track' && 'text-emerald-600',
-                                status === 'over' && 'text-sky-600',
-                                status === 'under' && 'text-rose-600',
-                              )}
-                            >
-                              {status.replace('-', ' ')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
-                                disabled={readOnly}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                onClick={() => handleSave(row as any)}
-                                disabled={updateMutation.isPending || readOnly}
-                              >
-                                {readOnly ? 'Preview' : 'Save'}
-                              </Button>
+                  </thead>
+                  <tbody className="divide-y divide-border/40 bg-white">
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-16 text-center text-muted-foreground">
+                          <div className="flex flex-col items-center gap-3">
+                            <PlusCircle className="h-12 w-12 text-muted-foreground/40" />
+                            <div className="space-y-1">
+                              <p className="text-base font-semibold text-secondary">No envelopes added yet</p>
+                              <p className="text-sm">Click &ldquo;Add Envelope&rdquo; to start planning.</p>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      rows.map((row) => {
+                        const { perPay, expected, status } = recalcRow(row as any);
+                        const actual = Number(row.current_amount ?? 0);
+                        const variance = actual - expected;
+                        return (
+                          <tr key={row.id} className="transition hover:bg-slate-50/70">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-secondary">{row.name}</div>
+                              {row.category_name ? (
+                                <p className="text-xs text-muted-foreground">{row.category_name}</p>
+                              ) : null}
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium text-secondary">
+                              {formatCurrency(actual)}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Input
+                                className="h-8 w-24 rounded-lg border-border/60 text-right"
+                                type="number"
+                                step="0.01"
+                                value={row.target_amount ?? 0}
+                                disabled={readOnly}
+                                onChange={(event) =>
+                                  handleFieldChange(row.id, 'target_amount', Number(event.target.value))
+                                }
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <select
+                                className="h-8 w-32 rounded-lg border border-border/70 bg-white px-2 text-xs focus-visible:outline-none"
+                                value={(row.frequency as PlannerFrequency) ?? 'monthly'}
+                                disabled={readOnly}
+                                onChange={(event) =>
+                                  handleFieldChange(row.id, 'frequency', event.target.value as PlannerFrequency)
+                                }
+                              >
+                                {frequencyOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-4 py-3 text-right text-muted-foreground">{formatCurrency(perPay)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <span
+                                className={cn(
+                                  'font-semibold',
+                                  variance >= 5 && 'text-sky-600',
+                                  variance <= -5 && 'text-rose-600',
+                                  variance > -5 && variance < 5 && 'text-emerald-600',
+                                )}
+                              >
+                                {variance >= 0 ? '+' : ''}{formatCurrency(variance)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-1.5">
+                                {variance >= 5 ? (
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    className="h-8 gap-1 px-2 text-xs"
+                                    onClick={() => {
+                                      setTransferDefaults({ fromId: row.id, amount: Math.abs(variance) });
+                                      setTransferOpen(true);
+                                    }}
+                                    disabled={readOnly}
+                                    title="Transfer surplus to another envelope"
+                                  >
+                                    <ArrowRight className="h-3 w-3" />
+                                    Move
+                                  </Button>
+                                ) : variance <= -5 ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-8 gap-1 px-2 text-xs"
+                                    onClick={() => {
+                                      setTransferDefaults({ toId: row.id, amount: Math.abs(variance) });
+                                      setTransferOpen(true);
+                                    }}
+                                    disabled={readOnly}
+                                    title="Transfer funds to cover deficit"
+                                  >
+                                    <ArrowRight className="h-3 w-3" />
+                                    Fund
+                                  </Button>
+                                ) : null}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => setEditEnvelope(toSummaryEnvelope(row as any))}
+                                  disabled={readOnly}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => handleSave(row as any)}
+                                  disabled={updateMutation.isPending || readOnly}
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -664,6 +688,25 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
         }}
         categories={categoryOptions}
         onCreated={() => {
+          router.refresh();
+        }}
+      />
+      <EnvelopeTransferDialog
+        open={transferOpen}
+        onOpenChange={(value) => {
+          setTransferOpen(value);
+          if (!value) {
+            setTransferDefaults({});
+          }
+        }}
+        envelopes={rows.map(toSummaryEnvelope)}
+        defaultFromId={transferDefaults.fromId}
+        defaultToId={transferDefaults.toId}
+        defaultAmount={transferDefaults.amount}
+        history={[]}
+        onTransferComplete={() => {
+          setTransferOpen(false);
+          setTransferDefaults({});
           router.refresh();
         }}
       />

@@ -19,6 +19,7 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
     .select(
       "id, name, target_amount, current_amount, due_date, frequency, next_payment_due, notes, pay_cycle_amount, opening_balance, category_id, icon, sort_order, is_spending",
     )
+    .or("is_goal.is.null,is_goal.eq.false") // Exclude goals
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 

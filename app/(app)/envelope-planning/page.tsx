@@ -28,6 +28,7 @@ export default async function EnvelopePlanningPage() {
         "id, name, category_id, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, due_date, next_payment_due, frequency, notes",
       )
       .eq("user_id", session.user.id)
+      .or("is_goal.is.null,is_goal.eq.false") // Exclude goals
       .order("name"),
   ]);
 

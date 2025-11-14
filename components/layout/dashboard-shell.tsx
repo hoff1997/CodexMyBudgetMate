@@ -9,6 +9,7 @@ import { DemoSeedCta } from "@/components/layout/dashboard/demo-seed-cta";
 import StatsCards from "@/components/dashboard/stats-cards";
 import MonitoredEnvelopesWidget from "@/components/dashboard/monitored-envelopes-widget";
 import PendingApprovalWidget from "@/components/dashboard/pending-approval-widget";
+import GoalsWidget from "@/components/dashboard/goals-widget";
 import HelpTooltip from "@/components/ui/help-tooltip";
 
 type Props = {
@@ -74,6 +75,9 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
         </div>
         <div className="mb-6">
           <MonitoredEnvelopesWidget />
+        </div>
+        <div className="mb-6">
+          <GoalsWidget />
         </div>
         <div className="mb-6">
           <PendingApprovalWidget />

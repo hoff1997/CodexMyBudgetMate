@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +13,16 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, DollarSign, Zap, ShoppingBag, PiggyBank, CheckCircle2, CalendarIcon, AlertTriangle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { CheckCircle2, AlertTriangle, Trash2, Plus } from "lucide-react";
 import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 import type { PersonaType } from "@/lib/onboarding/personas";
-import { getPersona } from "@/lib/onboarding/personas";
-import { calculatePayCycleAmount } from "@/lib/onboarding/pay-cycle-utils";
+import { PERSONAS } from "@/lib/onboarding/personas";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
+import { CalendarIcon } from "lucide-react";
 
 interface EnvelopeCreationStepProps {
   envelopes: EnvelopeData[];
@@ -33,6 +34,13 @@ interface EnvelopeCreationStepProps {
 
 type EnvelopeType = "bill" | "spending" | "savings";
 
+interface MasterEnvelope {
+  name: string;
+  icon: string;
+  priority: 'essential' | 'important' | 'discretionary';
+  category: 'beginner' | 'optimiser' | 'wealth_builder';
+}
+
 export function EnvelopeCreationStep({
   envelopes,
   onEnvelopesChange,
@@ -40,182 +48,142 @@ export function EnvelopeCreationStep({
   useTemplate,
   incomeSources,
 }: EnvelopeCreationStepProps) {
-  const [selectedEnvelopeType, setSelectedEnvelopeType] = useState<EnvelopeType>("bill");
-  const [newEnvelope, setNewEnvelope] = useState<Partial<EnvelopeData>>({
-    name: "",
-    icon: "📊",
-    type: "bill",
-  });
-
-  // Get template envelopes if using template
-  const personaData = persona ? getPersona(persona) : null;
-  const templateEnvelopes = personaData?.envelopeTemplates || [];
-  const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
-
   // Two-step process: select then configure
-  const [configStep, setConfigStep] = useState<'select' | 'configure'>('select');
+  const [step, setStep] = useState<'select' | 'configure'>('select');
+  const [selectedEnvelopes, setSelectedEnvelopes] = useState<string[]>([]);
 
   // Get primary income source for calculations
   const primaryIncome = incomeSources[0];
 
-  // Pre-select Surplus and Emergency Fund on mount
-  useEffect(() => {
-    if (useTemplate && templateEnvelopes.length > 0 && selectedTemplateIds.length === 0) {
-      const defaultSelections = templateEnvelopes
-        .map((template, idx) => ({
-          id: `template-${idx}`,
-          name: template.name
-        }))
-        .filter(item =>
-          item.name.toLowerCase().includes('surplus') ||
-          item.name.toLowerCase().includes('emergency')
-        )
-        .map(item => item.id);
+  // Create master list of ALL envelopes from all personas
+  const getAllEnvelopes = (): MasterEnvelope[] => {
+    const seen = new Set<string>();
+    const allEnvelopes: MasterEnvelope[] = [];
 
-      if (defaultSelections.length > 0) {
-        setSelectedTemplateIds(defaultSelections);
-      }
-    }
-  }, [useTemplate, templateEnvelopes, selectedTemplateIds.length]);
+    Object.values(PERSONAS).forEach(personaData => {
+      personaData.envelopeTemplates.forEach(template => {
+        if (!seen.has(template.name)) {
+          seen.add(template.name);
+          allEnvelopes.push({
+            name: template.name,
+            icon: template.icon,
+            priority: template.priority,
+            category: personaData.key,
+          });
+        }
+      });
+    });
 
-  const handleSelectAllTemplates = () => {
-    setSelectedTemplateIds(templateEnvelopes.map((_, idx) => `template-${idx}`));
+    return allEnvelopes.sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  const handleToggleTemplate = (id: string) => {
-    setSelectedTemplateIds((prev) =>
-      prev.includes(id) ? prev.filter((tid) => tid !== id) : [...prev, id]
+  const masterEnvelopes = getAllEnvelopes();
+
+  // Pre-select Surplus and Emergency Fund
+  useState(() => {
+    const defaultSelections = masterEnvelopes
+      .filter(env =>
+        env.name.toLowerCase().includes('surplus') ||
+        env.name.toLowerCase().includes('emergency')
+      )
+      .map(env => env.name);
+
+    setSelectedEnvelopes(defaultSelections);
+  });
+
+  const handleSelectAll = () => {
+    setSelectedEnvelopes(masterEnvelopes.map(env => env.name));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedEnvelopes([]);
+  };
+
+  const handleToggleEnvelope = (name: string) => {
+    setSelectedEnvelopes(prev =>
+      prev.includes(name)
+        ? prev.filter(n => n !== name)
+        : [...prev, name]
     );
   };
 
-  const handleApplyTemplates = () => {
-    const envelopesToAdd: EnvelopeData[] = templateEnvelopes
-      .map((template, idx) => {
-        if (!selectedTemplateIds.includes(`template-${idx}`)) return null;
+  const handleProceedToConfigure = () => {
+    // Create envelope data objects with empty amounts
+    const newEnvelopes: EnvelopeData[] = selectedEnvelopes.map(name => {
+      const masterEnv = masterEnvelopes.find(e => e.name === name)!;
 
-        // Determine type based on template name keywords
-        let type: EnvelopeType = "bill";
-        const nameLower = template.name.toLowerCase();
+      // Determine type based on name keywords
+      let type: EnvelopeType = "bill";
+      const nameLower = name.toLowerCase();
 
-        if (nameLower.includes("groceries") || nameLower.includes("takeaway") ||
-            nameLower.includes("entertainment") || nameLower.includes("fun")) {
-          type = "spending";
-        } else if (nameLower.includes("savings") || nameLower.includes("surplus") ||
-                   nameLower.includes("emergency")) {
-          type = "savings";
-        }
+      if (nameLower.includes("groceries") || nameLower.includes("takeaway") ||
+          nameLower.includes("entertainment") || nameLower.includes("fun") ||
+          nameLower.includes("dining") || nameLower.includes("miscellaneous") ||
+          nameLower.includes("lifestyle")) {
+        type = "spending";
+      } else if (nameLower.includes("savings") || nameLower.includes("surplus") ||
+                 nameLower.includes("emergency") || nameLower.includes("investment") ||
+                 nameLower.includes("property") || nameLower.includes("giving")) {
+        type = "savings";
+      }
 
-        // Calculate default amount from percentage if available and we have income
-        let defaultAmount = 0;
-        if (template.suggestedPercentage && primaryIncome) {
-          // Convert pay cycle to monthly estimate
-          const payCyclesPerYear = { weekly: 52, fortnightly: 26, twice_monthly: 24, monthly: 12 };
-          const cyclesPerYear = payCyclesPerYear[primaryIncome.frequency];
-          const monthlyIncome = (primaryIncome.amount * cyclesPerYear) / 12;
-          defaultAmount = Math.round((monthlyIncome * template.suggestedPercentage / 100) * 100) / 100;
-        }
+      return {
+        id: `envelope-${Date.now()}-${Math.random()}`,
+        name: masterEnv.name,
+        icon: masterEnv.icon,
+        type,
+        payCycleAmount: 0,
+        // Type-specific fields with empty values
+        ...(type === "bill" && {
+          billAmount: 0,
+          frequency: "monthly" as const,
+          priority: masterEnv.priority,
+        }),
+        ...(type === "spending" && {
+          monthlyBudget: 0,
+          priority: masterEnv.priority,
+        }),
+        ...(type === "savings" && {
+          savingsAmount: 0,
+          goalType: "savings" as const,
+        }),
+      };
+    });
 
-        const envelope: EnvelopeData = {
-          id: `envelope-${Date.now()}-${idx}`,
-          name: template.name,
-          icon: template.icon || "📊",
-          type,
-          // Set default monthly amount based on type
-          ...(type === "bill" && {
-            billAmount: defaultAmount,
-            frequency: "monthly" as const,
-            priority: template.priority,
-          }),
-          ...(type === "spending" && {
-            monthlyBudget: defaultAmount,
-            priority: template.priority,
-          }),
-          ...(type === "savings" && {
-            savingsAmount: defaultAmount,
-            goalType: "savings" as const,
-          }),
-        };
-
-        // Calculate pay cycle amount
-        if (primaryIncome) {
-          envelope.payCycleAmount = calculatePayCycleAmount(
-            defaultAmount,
-            "monthly",
-            primaryIncome.frequency
-          );
-        }
-
-        return envelope;
-      })
-      .filter((env): env is EnvelopeData => env !== null);
-
-    onEnvelopesChange([...envelopes, ...envelopesToAdd]);
-    setSelectedTemplateIds([]);
+    onEnvelopesChange(newEnvelopes);
+    setStep('configure');
   };
 
-  const handleAddEnvelope = () => {
-    if (!newEnvelope.name?.trim()) return;
+  const handleBackToSelect = () => {
+    setStep('select');
+  };
 
-    const envelope: EnvelopeData = {
-      id: `envelope-${Date.now()}`,
-      name: newEnvelope.name,
-      icon: newEnvelope.icon || "📊",
-      type: selectedEnvelopeType,
-      ...(selectedEnvelopeType === "bill" && {
-        billAmount: newEnvelope.billAmount || 0,
-        frequency: (newEnvelope.frequency as any) || "monthly",
-        dueDate: newEnvelope.dueDate || 1,
-        priority: (newEnvelope.priority as any) || "important",
-      }),
-      ...(selectedEnvelopeType === "spending" && {
-        monthlyBudget: newEnvelope.monthlyBudget || 0,
-        priority: (newEnvelope.priority as any) || "discretionary",
-      }),
-      ...(selectedEnvelopeType === "savings" && {
-        savingsAmount: newEnvelope.savingsAmount || 0,
-        goalType: (newEnvelope.goalType as any) || "savings",
-        targetDate: newEnvelope.targetDate,
-      }),
-    };
-
-    // Calculate pay cycle amount
-    if (primaryIncome) {
-      const amount =
-        selectedEnvelopeType === "bill" ? newEnvelope.billAmount :
-        selectedEnvelopeType === "spending" ? newEnvelope.monthlyBudget :
-        newEnvelope.savingsAmount;
-
-      envelope.payCycleAmount = calculatePayCycleAmount(
-        amount || 0,
-        newEnvelope.frequency || "monthly",
-        primaryIncome.frequency
-      );
-    }
-
-    onEnvelopesChange([...envelopes, envelope]);
-
-    // Reset form
-    setNewEnvelope({
-      name: "",
-      icon: "📊",
-      type: selectedEnvelopeType,
+  const handleUpdateEnvelope = (id: string, field: string, value: any) => {
+    const updatedEnvelopes = envelopes.map(env => {
+      if (env.id === id) {
+        return { ...env, [field]: value };
+      }
+      return env;
     });
+    onEnvelopesChange(updatedEnvelopes);
   };
 
   const handleRemoveEnvelope = (id: string) => {
-    onEnvelopesChange(envelopes.filter((env) => env.id !== id));
+    onEnvelopesChange(envelopes.filter(env => env.id !== id));
   };
 
-  const typeIcons = {
-    bill: <Zap className="h-5 w-5" />,
-    spending: <ShoppingBag className="h-5 w-5" />,
-    savings: <PiggyBank className="h-5 w-5" />,
-  };
-
-  const typeColors = {
-    bill: "text-amber-600 bg-amber-100 border-amber-200",
-    spending: "text-blue-600 bg-blue-100 border-blue-200",
-    savings: "text-emerald-600 bg-emerald-100 border-emerald-200",
+  const handleAddNewEnvelope = () => {
+    const newEnvelope: EnvelopeData = {
+      id: `envelope-${Date.now()}`,
+      name: 'New Envelope',
+      icon: '📊',
+      type: 'bill',
+      billAmount: 0,
+      frequency: 'monthly',
+      priority: 'important',
+      payCycleAmount: 0,
+    };
+    onEnvelopesChange([...envelopes, newEnvelope]);
   };
 
   // Calculate budget totals
@@ -240,14 +208,105 @@ export function EnvelopeCreationStep({
     onEnvelopesChange([...envelopes, surplusEnvelope]);
   };
 
+  // SCREEN 1: Selection
+  if (step === 'select') {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold">Select Your Envelopes</h2>
+          <p className="text-muted-foreground">
+            Choose which envelopes you want to include in your budget
+          </p>
+        </div>
+
+        {/* Selection Controls */}
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            {selectedEnvelopes.length} of {masterEnvelopes.length} selected
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSelectAll}
+            >
+              Select All
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDeselectAll}
+            >
+              Deselect All
+            </Button>
+          </div>
+        </div>
+
+        {/* Envelope Selection Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {masterEnvelopes.map((envelope) => {
+            const isSelected = selectedEnvelopes.includes(envelope.name);
+
+            return (
+              <div
+                key={envelope.name}
+                onClick={() => handleToggleEnvelope(envelope.name)}
+                className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                  isSelected
+                    ? "border-emerald-500 bg-emerald-50"
+                    : "border-border bg-background hover:border-emerald-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => handleToggleEnvelope(envelope.name)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="text-2xl">{envelope.icon}</span>
+                    <div>
+                      <p className="font-medium">{envelope.name}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {envelope.priority}
+                      </p>
+                    </div>
+                  </div>
+                  {isSelected && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Proceed Button */}
+        <Button
+          onClick={handleProceedToConfigure}
+          disabled={selectedEnvelopes.length === 0}
+          className="w-full bg-emerald-500 hover:bg-emerald-600 h-12 text-lg"
+          size="lg"
+        >
+          Continue with {selectedEnvelopes.length} Envelope{selectedEnvelopes.length !== 1 ? 's' : ''}
+        </Button>
+      </div>
+    );
+  }
+
+  // SCREEN 2: Configure (Spreadsheet-style table)
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Create Your Envelopes</h2>
-        <p className="text-muted-foreground">
-          Set up your complete budget structure
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold">Configure Your Envelopes</h2>
+          <p className="text-muted-foreground">
+            Enter amounts and details for each envelope
+          </p>
+        </div>
+        <Button variant="outline" onClick={handleBackToSelect}>
+          ← Back to Selection
+        </Button>
       </div>
 
       {/* Budget Tracker */}
@@ -313,359 +372,199 @@ export function EnvelopeCreationStep({
         </Card>
       )}
 
-      {/* Template Selection (if using template) */}
-      {useTemplate && templateEnvelopes.length > 0 && envelopes.length === 0 && (
-        <Card className="p-6 bg-emerald-50/50 border-emerald-200">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-lg">Select from Template</h3>
-              <p className="text-sm text-muted-foreground">
-                Choose which envelopes you want to include
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAllTemplates}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Select All
-            </Button>
-          </div>
+      {/* Spreadsheet-style Table */}
+      <div className="overflow-x-auto border rounded-lg">
+        <table className="w-full">
+          <thead className="bg-muted">
+            <tr>
+              <th className="p-3 text-left text-sm font-semibold w-8">Icon</th>
+              <th className="p-3 text-left text-sm font-semibold">Name</th>
+              <th className="p-3 text-left text-sm font-semibold w-24">Type</th>
+              <th className="p-3 text-left text-sm font-semibold w-32">Amount</th>
+              <th className="p-3 text-left text-sm font-semibold w-28">Frequency</th>
+              <th className="p-3 text-left text-sm font-semibold w-32">Due Date</th>
+              <th className="p-3 text-left text-sm font-semibold w-28">Priority</th>
+              <th className="p-3 text-left text-sm font-semibold w-32">
+                Per {primaryIncome?.frequency || 'Paycheck'}
+              </th>
+              <th className="p-3 text-center text-sm font-semibold w-12">Del</th>
+            </tr>
+          </thead>
+          <tbody>
+            {envelopes.map((envelope, index) => (
+              <tr key={envelope.id} className={`border-t hover:bg-muted/50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                {/* Icon */}
+                <td className="p-2">
+                  <EmojiPicker
+                    value={envelope.icon}
+                    onChange={(emoji) => handleUpdateEnvelope(envelope.id, 'icon', emoji)}
+                  />
+                </td>
 
-          <div className="grid md:grid-cols-2 gap-2 mb-4">
-            {templateEnvelopes.map((template, idx) => {
-              const id = `template-${idx}`;
-              const isSelected = selectedTemplateIds.includes(id);
+                {/* Name */}
+                <td className="p-2">
+                  <Input
+                    value={envelope.name}
+                    onChange={(e) => handleUpdateEnvelope(envelope.id, 'name', e.target.value)}
+                    className="h-9 text-sm font-medium"
+                  />
+                </td>
 
-              return (
-                <div
-                  key={id}
-                  onClick={() => handleToggleTemplate(id)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    isSelected ? "border-emerald-500 bg-emerald-100/50" : "border-border bg-background hover:border-emerald-300"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{template.icon}</span>
-                      <span className="font-medium text-sm">{template.name}</span>
+                {/* Type */}
+                <td className="p-2">
+                  <Select
+                    value={envelope.type}
+                    onValueChange={(value) => handleUpdateEnvelope(envelope.id, 'type', value)}
+                  >
+                    <SelectTrigger className="h-9 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bill">Bill</SelectItem>
+                      <SelectItem value="spending">Spending</SelectItem>
+                      <SelectItem value="savings">Savings</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+
+                {/* Amount */}
+                <td className="p-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={
+                      envelope.type === 'bill' ? envelope.billAmount || 0 :
+                      envelope.type === 'spending' ? envelope.monthlyBudget || 0 :
+                      envelope.savingsAmount || 0
+                    }
+                    onChange={(e) => {
+                      const amount = parseFloat(e.target.value) || 0;
+                      if (envelope.type === 'bill') {
+                        handleUpdateEnvelope(envelope.id, 'billAmount', amount);
+                        handleUpdateEnvelope(envelope.id, 'payCycleAmount', amount);
+                      } else if (envelope.type === 'spending') {
+                        handleUpdateEnvelope(envelope.id, 'monthlyBudget', amount);
+                        handleUpdateEnvelope(envelope.id, 'payCycleAmount', amount);
+                      } else {
+                        handleUpdateEnvelope(envelope.id, 'savingsAmount', amount);
+                        handleUpdateEnvelope(envelope.id, 'payCycleAmount', amount);
+                      }
+                    }}
+                    className="h-9 text-sm text-right"
+                    placeholder="0.00"
+                  />
+                </td>
+
+                {/* Frequency */}
+                <td className="p-2">
+                  {envelope.type === 'bill' ? (
+                    <Select
+                      value={envelope.frequency || 'monthly'}
+                      onValueChange={(value) => handleUpdateEnvelope(envelope.id, 'frequency', value)}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="annual">Annual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="h-9 flex items-center text-sm text-muted-foreground px-3">
+                      N/A
                     </div>
-                    {isSelected && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  )}
+                </td>
 
-          <Button
-            onClick={handleApplyTemplates}
-            disabled={selectedTemplateIds.length === 0}
-            className="w-full bg-emerald-500 hover:bg-emerald-600"
-          >
-            Add {selectedTemplateIds.length} Selected Envelope{selectedTemplateIds.length !== 1 ? "s" : ""}
-          </Button>
-        </Card>
-      )}
-
-      {/* Existing Envelopes List */}
-      {envelopes.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-base">Your Envelopes ({envelopes.length})</Label>
-            <div className="text-sm text-muted-foreground">
-              {primaryIncome && `Per paycheck: $${envelopes.reduce((sum, env) => sum + (env.payCycleAmount || 0), 0).toFixed(2)}`}
-            </div>
-          </div>
-          <div className="space-y-2">
-            {envelopes.map((envelope) => (
-              <Card key={envelope.id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{envelope.icon}</span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{envelope.name}</p>
-                        <Badge variant="outline" className={typeColors[envelope.type]}>
-                          {envelope.type}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        ${envelope.payCycleAmount?.toFixed(2) || "0.00"} per paycheck
-                      </p>
+                {/* Due Date */}
+                <td className="p-2">
+                  {envelope.type === 'bill' ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="h-9 w-full justify-start text-sm" type="button">
+                          <CalendarIcon className="h-3 w-3 mr-2" />
+                          {envelope.dueDate
+                            ? `${envelope.dueDate}${envelope.dueDate === 1 ? 'st' : envelope.dueDate === 2 ? 'nd' : envelope.dueDate === 3 ? 'rd' : 'th'}`
+                            : "Select"
+                          }
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={envelope.dueDate ? new Date(2024, 0, envelope.dueDate) : undefined}
+                          onSelect={(date) => handleUpdateEnvelope(envelope.id, 'dueDate', date ? date.getDate() : undefined)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  ) : envelope.type === 'savings' ? (
+                    <Input
+                      type="date"
+                      value={envelope.targetDate ? new Date(envelope.targetDate).toISOString().split('T')[0] : ''}
+                      onChange={(e) => handleUpdateEnvelope(envelope.id, 'targetDate', e.target.value ? new Date(e.target.value) : undefined)}
+                      className="h-9 text-sm"
+                    />
+                  ) : (
+                    <div className="h-9 flex items-center text-sm text-muted-foreground px-3">
+                      N/A
                     </div>
+                  )}
+                </td>
+
+                {/* Priority */}
+                <td className="p-2">
+                  {envelope.type !== 'savings' ? (
+                    <Select
+                      value={envelope.priority || 'important'}
+                      onValueChange={(value) => handleUpdateEnvelope(envelope.id, 'priority', value)}
+                    >
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="essential">Essential</SelectItem>
+                        <SelectItem value="important">Important</SelectItem>
+                        <SelectItem value="discretionary">Discretionary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="h-9 flex items-center text-sm text-muted-foreground px-3">
+                      N/A
+                    </div>
+                  )}
+                </td>
+
+                {/* Per Paycheck */}
+                <td className="p-2">
+                  <div className="h-9 flex items-center text-sm font-semibold text-blue-600 px-3">
+                    ${(envelope.payCycleAmount || 0).toFixed(2)}
                   </div>
+                </td>
+
+                {/* Delete */}
+                <td className="p-2 text-center">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                     onClick={() => handleRemoveEnvelope(envelope.id)}
                   >
-                    <Trash2 className="h-4 w-4 text-red-500" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
-              </Card>
+                </td>
+              </tr>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Add Custom Envelope Form */}
-      <div className="space-y-4 bg-muted/50 rounded-lg p-6">
-        <h3 className="font-semibold flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Add {envelopes.length === 0 ? "Your First" : "Another"} Envelope
-        </h3>
-
-        {/* Envelope Type Selector */}
-        <div className="space-y-3">
-          <Label>Envelope Type</Label>
-          <div className="grid grid-cols-3 gap-3">
-            {(["bill", "spending", "savings"] as const).map((type) => (
-              <Card
-                key={type}
-                className={`p-4 cursor-pointer transition-all ${
-                  selectedEnvelopeType === type
-                    ? `border-2 ${type === "bill" ? "border-amber-500 bg-amber-50" : type === "spending" ? "border-blue-500 bg-blue-50" : "border-emerald-500 bg-emerald-50"}`
-                    : "border-border hover:border-gray-400"
-                }`}
-                onClick={() => {
-                  setSelectedEnvelopeType(type);
-                  setNewEnvelope({ ...newEnvelope, type });
-                }}
-              >
-                <div className="text-center space-y-2">
-                  <div className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center ${
-                    type === "bill" ? "bg-amber-500" : type === "spending" ? "bg-blue-500" : "bg-emerald-500"
-                  }`}>
-                    <div className="text-white">{typeIcons[type]}</div>
-                  </div>
-                  <p className="font-medium capitalize">{type}</p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Common Fields */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="envName">Envelope Name *</Label>
-            <Input
-              id="envName"
-              value={newEnvelope.name || ""}
-              onChange={(e) => setNewEnvelope({ ...newEnvelope, name: e.target.value })}
-              placeholder="e.g., Electricity"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="envIcon">Icon</Label>
-            <EmojiPicker
-              value={newEnvelope.icon || "📊"}
-              onChange={(emoji) => setNewEnvelope({ ...newEnvelope, icon: emoji })}
-            />
-          </div>
-        </div>
-
-        {/* Type-Specific Fields: BILL */}
-        {selectedEnvelopeType === "bill" && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="billAmount">Monthly Bill Amount *</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="billAmount"
-                    type="number"
-                    step="0.01"
-                    value={newEnvelope.billAmount || ""}
-                    onChange={(e) => setNewEnvelope({ ...newEnvelope, billAmount: parseFloat(e.target.value) })}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="frequency">Frequency</Label>
-                <Select
-                  value={newEnvelope.frequency || "monthly"}
-                  onValueChange={(value) => setNewEnvelope({ ...newEnvelope, frequency: value as any })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annual">Annual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start" type="button">
-                      <CalendarIcon className="h-4 w-4 mr-2" />
-                      {newEnvelope.dueDate
-                        ? `${newEnvelope.dueDate}${newEnvelope.dueDate === 1 ? 'st' : newEnvelope.dueDate === 2 ? 'nd' : newEnvelope.dueDate === 3 ? 'rd' : 'th'} of month`
-                        : "Select date"
-                      }
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newEnvelope.dueDate ? new Date(2024, 0, newEnvelope.dueDate) : undefined}
-                      onSelect={(date) => setNewEnvelope({
-                        ...newEnvelope,
-                        dueDate: date ? date.getDate() : undefined
-                      })}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select
-                  value={newEnvelope.priority || "important"}
-                  onValueChange={(value) => setNewEnvelope({ ...newEnvelope, priority: value as any })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="essential">Essential</SelectItem>
-                    <SelectItem value="important">Important</SelectItem>
-                    <SelectItem value="discretionary">Discretionary</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Type-Specific Fields: SPENDING */}
-        {selectedEnvelopeType === "spending" && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="monthlyBudget">Monthly Budget *</Label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="monthlyBudget"
-                  type="number"
-                  step="0.01"
-                  value={newEnvelope.monthlyBudget || ""}
-                  onChange={(e) => setNewEnvelope({ ...newEnvelope, monthlyBudget: parseFloat(e.target.value) })}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="spendingPriority">Priority</Label>
-              <Select
-                value={newEnvelope.priority || "discretionary"}
-                onValueChange={(value) => setNewEnvelope({ ...newEnvelope, priority: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="essential">Essential</SelectItem>
-                  <SelectItem value="important">Important</SelectItem>
-                  <SelectItem value="discretionary">Discretionary</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {/* Type-Specific Fields: SAVINGS */}
-        {selectedEnvelopeType === "savings" && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="savingsAmount">Monthly Savings Amount *</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="savingsAmount"
-                    type="number"
-                    step="0.01"
-                    value={newEnvelope.savingsAmount || ""}
-                    onChange={(e) => setNewEnvelope({ ...newEnvelope, savingsAmount: parseFloat(e.target.value) })}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="goalType">Goal Type</Label>
-                <Select
-                  value={newEnvelope.goalType || "savings"}
-                  onValueChange={(value) => setNewEnvelope({ ...newEnvelope, goalType: value as any })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="savings">General Savings</SelectItem>
-                    <SelectItem value="emergency_fund">Emergency Fund</SelectItem>
-                    <SelectItem value="purchase">Purchase Goal</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="targetDate">Target Date (Optional)</Label>
-              <Input
-                id="targetDate"
-                type="date"
-                value={newEnvelope.targetDate ? new Date(newEnvelope.targetDate).toISOString().split("T")[0] : ""}
-                onChange={(e) => setNewEnvelope({ ...newEnvelope, targetDate: e.target.value ? new Date(e.target.value) : undefined })}
-              />
-            </div>
-          </>
-        )}
-
-        {/* Pay Cycle Preview */}
-        {primaryIncome && newEnvelope.name && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-900">
-              💡 Based on your <strong>{primaryIncome.frequency}</strong> pay cycle, you&apos;ll allocate{" "}
-              <strong>
-                $
-                {calculatePayCycleAmount(
-                  selectedEnvelopeType === "bill" ? newEnvelope.billAmount || 0 :
-                  selectedEnvelopeType === "spending" ? newEnvelope.monthlyBudget || 0 :
-                  newEnvelope.savingsAmount || 0,
-                  newEnvelope.frequency || "monthly",
-                  primaryIncome.frequency
-                ).toFixed(2)}
-              </strong>{" "}
-              per paycheck to this envelope
-            </p>
-          </div>
-        )}
-
-        <Button
-          onClick={handleAddEnvelope}
-          disabled={!newEnvelope.name?.trim()}
-          className="w-full"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Envelope
-        </Button>
+          </tbody>
+        </table>
       </div>
+
+      {/* Add New Envelope Button */}
+      <Button onClick={handleAddNewEnvelope} variant="outline" className="w-full">
+        <Plus className="mr-2 h-4 w-4" />
+        Add Another Envelope
+      </Button>
     </div>
   );
 }

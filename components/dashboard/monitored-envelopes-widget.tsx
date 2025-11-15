@@ -16,7 +16,11 @@ interface Envelope {
   icon?: string;
 }
 
-export default function MonitoredEnvelopesWidget() {
+interface MonitoredEnvelopesWidgetProps {
+  monitoredEnvelopeIds?: string[];
+}
+
+export default function MonitoredEnvelopesWidget({ monitoredEnvelopeIds = [] }: MonitoredEnvelopesWidgetProps) {
   const [showAll, setShowAll] = useState(false);
   const router = useRouter();
 
@@ -30,7 +34,12 @@ export default function MonitoredEnvelopesWidget() {
   });
 
   const envelopes = envelopesData?.envelopes ?? [];
-  const monitoredEnvelopes = envelopes.filter((env) => env.is_monitored);
+
+  // Filter by user-selected envelopes if any, otherwise fall back to is_monitored flag
+  const monitoredEnvelopes = monitoredEnvelopeIds.length > 0
+    ? envelopes.filter((env) => monitoredEnvelopeIds.includes(env.id))
+    : envelopes.filter((env) => env.is_monitored);
+
   const displayedEnvelopes = showAll
     ? monitoredEnvelopes
     : monitoredEnvelopes.slice(0, 4);

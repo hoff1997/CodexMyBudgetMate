@@ -41,20 +41,52 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         profile={{ id: "demo-user", full_name: "Demo Budget Mate", avatar_url: null }}
         userId="demo-user"
         demoMode
+        context={{
+          envelopeCount: 0,
+          transactionCount: 0,
+          goalCount: 0,
+          hasRecurringIncome: false,
+          hasBankConnected: false,
+          onboardingCompleted: false,
+        }}
       />
     );
   }
 
   const userId = session!.user.id;
 
-  const [{ data: profile }, { count: envelopeCount }] = await Promise.all([
+  // Fetch all context data needed for widget visibility and next steps
+  const [
+    { data: profile },
+    { count: envelopeCount },
+    { count: transactionCount },
+    { count: goalCount },
+    { count: recurringIncomeCount },
+    { count: bankConnectionCount },
+  ] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, avatar_url")
+      .select("id, full_name, avatar_url, user_persona, onboarding_completed")
       .eq("id", userId)
       .maybeSingle(),
     supabase
       .from("envelopes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("goals")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("recurring_income")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    supabase
+      .from("bank_connections")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
   ]);
@@ -67,6 +99,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       userId={userId}
       demoMode={false}
       showDemoCta={showDemoCta}
+      context={{
+        envelopeCount: envelopeCount ?? 0,
+        transactionCount: transactionCount ?? 0,
+        goalCount: goalCount ?? 0,
+        hasRecurringIncome: (recurringIncomeCount ?? 0) > 0,
+        hasBankConnected: (bankConnectionCount ?? 0) > 0,
+        onboardingCompleted: profile?.onboarding_completed ?? false,
+      }}
     />
   );
 }

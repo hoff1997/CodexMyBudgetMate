@@ -45,7 +45,8 @@
       "Bash(node scripts/apply-debt-migration.mjs:*)",
       "Bash(npx supabase:*)",
       "Bash(node scripts/apply-gamification-migration.mjs:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run reset-onboarding:*)"
     ],
     "deny": [],
     "ask": []

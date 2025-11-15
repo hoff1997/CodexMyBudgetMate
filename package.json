@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "db:push": "npx supabase db push",
     "db:pull": "npx supabase db pull",
-    "db:link": "npx supabase link --project-ref nqmeepudwtwkpjomxqfz"
+    "db:link": "npx supabase link --project-ref nqmeepudwtwkpjomxqfz",
+    "reset-onboarding": "node scripts/reset-onboarding.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -97,7 +97,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
         <div className="text-sm text-emerald-900">
           <p className="font-medium mb-1">Why this matters</p>
           <p>
-            We'll use your pay frequency to calculate how much to allocate to each envelope per paycheck.
+            We&apos;ll use your pay frequency to calculate how much to allocate to each envelope per paycheck.
             This ensures your budget aligns with your actual pay cycle.
           </p>
         </div>
@@ -186,7 +186,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
             />
             <div className="flex-1">
               <Label htmlFor="irregularIncome" className="cursor-pointer font-medium">
-                I don't get paid regularly
+                I don&apos;t get paid regularly
               </Label>
               <p className="text-xs text-muted-foreground">
                 Check this if your income varies or is irregular (defaults to monthly budgeting)

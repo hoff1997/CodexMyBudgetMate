@@ -16,7 +16,7 @@ export function WelcomeStep({ isMobile, onContinue }: WelcomeStepProps) {
         <div className="text-6xl mb-4">💰</div>
         <h1 className="text-4xl font-bold">Welcome to My Budget Mate</h1>
         <p className="text-xl text-muted-foreground">
-          You're about to set up your complete envelope budgeting system
+          You&apos;re about to set up your complete envelope budgeting system
         </p>
       </div>
 
@@ -28,7 +28,7 @@ export function WelcomeStep({ isMobile, onContinue }: WelcomeStepProps) {
             <h3 className="font-semibold text-blue-900 text-lg mb-2">Time Required: 20-30 minutes</h3>
             <p className="text-blue-700">
               This is a focused planning exercise that will set you up for budgeting success.
-              Take your time to do it right - it's worth the investment!
+              Take your time to do it right - it&apos;s worth the investment!
             </p>
           </div>
         </div>
@@ -95,7 +95,7 @@ export function WelcomeStep({ isMobile, onContinue }: WelcomeStepProps) {
         <h3 className="font-semibold text-lg mb-3">💡 What is Envelope Budgeting?</h3>
         <p className="text-sm text-gray-700 mb-4">
           Envelope budgeting is a proven method where <strong>every dollar has a job</strong>. You decide where your money goes
-          before you spend it - just like putting cash into labeled envelopes. We'll help you create digital envelopes
+          before you spend it - just like putting cash into labeled envelopes. We&apos;ll help you create digital envelopes
           for your bills, spending, and savings goals.
         </p>
         <p className="text-sm text-gray-700">
@@ -121,7 +121,7 @@ export function WelcomeStep({ isMobile, onContinue }: WelcomeStepProps) {
           size="lg"
           className="bg-emerald-500 hover:bg-emerald-600 text-lg px-8"
         >
-          I'm Ready - Let's Begin
+          I&apos;m Ready - Let&apos;s Begin
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
 

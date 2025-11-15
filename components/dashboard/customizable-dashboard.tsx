@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -43,7 +43,10 @@ const GoalsWidget = dynamic(() => import("@/components/dashboard/goals-widget").
 const PendingApprovalWidget = dynamic(() => import("@/components/dashboard/pending-approval-widget").then(m => ({ default: m.default })));
 
 // BudgetOverview contains its own widget grid
-const BudgetOverview = dynamic(() => import("@/components/layout/overview/budget-overview").then(m => ({ default: m.BudgetOverview })));
+// Commented out due to server component import issues in production build
+// const BudgetOverview = dynamic(() => import("@/components/layout/overview/budget-overview").then(m => ({ default: m.BudgetOverview })), {
+//   ssr: false,
+// });
 
 const STORAGE_KEY = "mbm-dashboard-layout";
 const ENVELOPE_STORAGE_KEY = "mbm-monitored-envelopes";
@@ -285,7 +288,8 @@ export function CustomizableDashboard({
   };
 
   // Check if we should show BudgetOverview section
-  const showBudgetOverview = visibleWidgets.some((w) => w.category === "overview");
+  // Disabled due to server component import issues
+  // const showBudgetOverview = visibleWidgets.some((w) => w.category === "overview");
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -320,13 +324,14 @@ export function CustomizableDashboard({
             })}
 
             {/* BudgetOverview section (contains its own widget grid) */}
-            {showBudgetOverview && (
+            {/* Disabled due to server component import issues in production build */}
+            {/* {showBudgetOverview && (
               <div className="mt-6">
                 <Suspense fallback={<p>Loading overview…</p>}>
                   <BudgetOverview userId={userId} demoMode={demoMode} />
                 </Suspense>
               </div>
-            )}
+            )} */}
           </div>
         </SortableContext>
       </DndContext>

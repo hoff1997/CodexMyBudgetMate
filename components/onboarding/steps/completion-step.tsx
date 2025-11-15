@@ -15,7 +15,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
       {/* Success Animation */}
       <div className="text-center space-y-4">
         <div className="text-8xl mb-4 animate-bounce">🎉</div>
-        <h1 className="text-4xl font-bold">You're All Set!</h1>
+        <h1 className="text-4xl font-bold">You&apos;re All Set!</h1>
         <p className="text-xl text-muted-foreground">
           Congratulations! Your envelope budget is ready to go.
         </p>
@@ -29,7 +29,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
             <h3 className="font-bold text-2xl mb-1">Achievement Unlocked!</h3>
             <h4 className="text-lg font-semibold">Budget Builder</h4>
             <p className="text-sm text-white/90 mt-2">
-              You've completed your budget setup! You're on the path to financial freedom.
+              You've completed your budget setup! You&apos;re on the path to financial freedom.
             </p>
           </div>
           <div className="bg-white/20 rounded-full px-4 py-1 text-sm font-semibold">
@@ -119,7 +119,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
           You've just taken the most important step toward financial control 💪
         </p>
         <p className="text-sm text-gray-600">
-          Remember: budgeting isn't about restriction - it's about <strong>giving yourself permission</strong> to spend
+          Remember: budgeting isn&apos;t about restriction - it&apos;s about <strong>giving yourself permission</strong> to spend
           within your plan. You've got this!
         </p>
       </div>

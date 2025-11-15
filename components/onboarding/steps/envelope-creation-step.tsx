@@ -519,7 +519,7 @@ export function EnvelopeCreationStep({
         {primaryIncome && newEnvelope.name && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-900">
-              💡 Based on your <strong>{primaryIncome.frequency}</strong> pay cycle, you'll allocate{" "}
+              💡 Based on your <strong>{primaryIncome.frequency}</strong> pay cycle, you&apos;ll allocate{" "}
               <strong>
                 $
                 {calculatePayCycleAmount(

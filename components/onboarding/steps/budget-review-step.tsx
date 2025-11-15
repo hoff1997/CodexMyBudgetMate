@@ -49,7 +49,7 @@ export function BudgetReviewStep({
         <div className="text-5xl mb-2">📊</div>
         <h2 className="text-3xl font-bold">Review Your Budget</h2>
         <p className="text-muted-foreground">
-          Let's make sure everything adds up correctly
+          Let&apos;s make sure everything adds up correctly
         </p>
       </div>
 
@@ -195,7 +195,7 @@ export function BudgetReviewStep({
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-red-900">
-                <p className="font-semibold mb-1">⚠️ You're allocating more than you earn</p>
+                <p className="font-semibold mb-1">⚠️ You&apos;re allocating more than you earn</p>
                 <p>
                   You need to reduce your envelope amounts by ${Math.abs(remainingPerCycle).toFixed(2)} per paycheck,
                   or add more income sources.
@@ -232,7 +232,7 @@ export function BudgetReviewStep({
       {/* Continue hint */}
       {!isOverAllocated && (
         <div className="text-center text-sm text-muted-foreground">
-          Click "Continue" when you're happy with your budget
+          Click "Continue" when you&apos;re happy with your budget
         </div>
       )}
     </div>

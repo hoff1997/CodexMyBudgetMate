@@ -32,7 +32,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
             When the envelope is empty, you stop spending in that category until the next pay cycle.
           </p>
           <p>
-            <strong>We use digital "envelopes"</strong> instead of cash, but the principle is the same:
+            <strong>We use digital &ldquo;envelopes&rdquo;</strong> instead of cash, but the principle is the same:
             your money is organized, intentional, and always accounted for.
           </p>
         </div>
@@ -105,7 +105,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
             </div>
             <h4 className="text-lg font-semibold mb-2">Savings</h4>
             <p className="text-sm text-muted-foreground mb-3">
-              Money you're setting aside
+              Money you&apos;re setting aside
             </p>
             <div className="space-y-1 text-sm">
               <p className="font-medium">Examples:</p>
@@ -131,7 +131,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
             <div>
               <p className="font-medium mb-1">Create envelopes for your expenses</p>
               <p className="text-sm text-muted-foreground">
-                You'll set up envelopes for bills, spending categories, and savings goals
+                You&apos;ll set up envelopes for bills, spending categories, and savings goals
               </p>
             </div>
           </div>
@@ -143,7 +143,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
             <div>
               <p className="font-medium mb-1">We calculate how much per paycheck</p>
               <p className="text-sm text-muted-foreground">
-                Based on your pay frequency, we'll show exactly how much to allocate to each envelope every payday
+                Based on your pay frequency, we&apos;ll show exactly how much to allocate to each envelope every payday
               </p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
             <div>
               <p className="font-medium mb-1">Each pay cycle, allocate money to envelopes</p>
               <p className="text-sm text-muted-foreground">
-                When you get paid, you'll fund your envelopes according to the plan
+                When you get paid, you&apos;ll fund your envelopes according to the plan
               </p>
             </div>
           </div>
@@ -183,7 +183,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           <div className="flex items-start gap-2">
             <CheckCircle2 className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <p>
-              <strong>You're building a complete financial plan</strong> - not just a rough estimate
+              <strong>You&apos;re building a complete financial plan</strong> - not just a rough estimate
             </p>
           </div>
           <div className="flex items-start gap-2">
@@ -208,7 +208,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           size="lg"
           className="bg-emerald-500 hover:bg-emerald-600 text-lg px-8"
         >
-          I Understand - Let's Create My Envelopes
+          I Understand - Let&apos;s Create My Envelopes
           <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
 

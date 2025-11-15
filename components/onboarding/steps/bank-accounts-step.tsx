@@ -72,7 +72,7 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-900">
           <strong>Why we need this:</strong> Connecting your accounts helps us track where your money lives
-          and moves. You'll need at least one account to get started.
+          and moves. You&apos;ll need at least one account to get started.
         </p>
       </div>
 

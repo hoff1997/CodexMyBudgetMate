@@ -58,7 +58,7 @@ export function BudgetingApproachStep({
                 <span className="ml-2 text-sm font-normal text-emerald-600">(Recommended)</span>
               </h3>
               <p className="text-sm text-muted-foreground">
-                We'll suggest {envelopeCount} envelopes based on your {personaData?.label || "profile"}.
+                We&apos;ll suggest {envelopeCount} envelopes based on your {personaData?.label || "profile"}.
                 You can customize them all to match your needs.
               </p>
             </div>
@@ -144,7 +144,7 @@ export function BudgetingApproachStep({
 
             <div className="bg-white/50 border rounded-lg p-3 mt-4">
               <p className="text-xs text-muted-foreground">
-                You'll start with a blank canvas and add each envelope one by one.
+                You&apos;ll start with a blank canvas and add each envelope one by one.
                 Takes a bit longer but gives you total flexibility.
               </p>
             </div>
@@ -155,7 +155,7 @@ export function BudgetingApproachStep({
       {/* Helper Text */}
       <div className="bg-muted/50 border rounded-lg p-4 text-center">
         <p className="text-sm text-muted-foreground">
-          💡 Don't worry - {useTemplate ? "you can add, remove, or modify any envelope" : "we'll guide you through creating each envelope"}. This choice just determines your starting point.
+          💡 Don't worry - {useTemplate ? "you can add, remove, or modify any envelope" : "we&apos;ll guide you through creating each envelope"}. This choice just determines your starting point.
         </p>
       </div>
     </div>

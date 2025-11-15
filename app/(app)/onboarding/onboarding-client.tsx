@@ -150,10 +150,32 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
         );
 
       case 2:
-        return <PersonaSelector onSelect={setPersona} selectedPersona={persona} />;
+        return (
+          <PersonaSelector
+            onSelect={(selectedPersona) => {
+              setPersona(selectedPersona);
+              // Auto-advance after a short delay for visual feedback
+              setTimeout(() => {
+                setCurrentStep(3);
+              }, 500);
+            }}
+            selectedPersona={persona}
+          />
+        );
 
       case 3:
-        return <DataChoice onSelect={setDataChoice} isMobile={isMobile} />;
+        return (
+          <DataChoice
+            onSelect={(selectedChoice) => {
+              setDataChoice(selectedChoice);
+              // Auto-advance after a short delay for visual feedback
+              setTimeout(() => {
+                setCurrentStep(4);
+              }, 500);
+            }}
+            isMobile={isMobile}
+          />
+        );
 
       case 4:
         return (

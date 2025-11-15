@@ -25,7 +25,7 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v5"; // Increment this when adding new menu items
+const NAV_VERSION = "v6"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
@@ -36,6 +36,9 @@ type NavItem = {
 };
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
+  // Onboarding & Getting Started
+  { id: "onboarding", label: "Getting Started Journey", href: "/onboarding", icon: "🚀" },
+
   // Working Pages
   { id: "setup", label: "Setup Wizard", href: "/setup", icon: "🧙" },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },

@@ -113,7 +113,7 @@ export function NextStepsWidget({
               <CardTitle>Your Next Steps</CardTitle>
             </div>
             <CardDescription>
-              Keep building momentum! Here's what to focus on next.
+              Keep building momentum! Here&apos;s what to focus on next.
             </CardDescription>
           </div>
           {onDismiss && (
@@ -201,7 +201,7 @@ export function NextStepsWidget({
         {/* Encouragement message */}
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-900">
-            <span className="font-medium">You're making great progress!</span> Every step you take builds better money habits.
+            <span className="font-medium">You&apos;re making great progress!</span> Every step you take builds better money habits.
           </p>
         </div>
       </CardContent>

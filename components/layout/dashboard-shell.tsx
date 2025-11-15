@@ -11,6 +11,7 @@ import MonitoredEnvelopesWidget from "@/components/dashboard/monitored-envelopes
 import PendingApprovalWidget from "@/components/dashboard/pending-approval-widget";
 import GoalsWidget from "@/components/dashboard/goals-widget";
 import HelpTooltip from "@/components/ui/help-tooltip";
+import { DemoConversionWrapper } from "@/components/demo/demo-conversion-wrapper";
 
 type Props = {
   profile: DatabaseProfile | null;
@@ -53,6 +54,13 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl px-6 py-10">
+        {/* Demo Mode Conversion Banner */}
+        {!demoMode && (
+          <div className="mb-6">
+            <DemoConversionWrapper />
+          </div>
+        )}
+
         {!demoMode && showDemoCta ? (
           <Card className="mb-6 border-dashed border-primary/30 bg-primary/5">
             <CardHeader>

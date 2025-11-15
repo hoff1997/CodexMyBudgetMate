@@ -163,7 +163,7 @@ export function DataChoice({ onSelect, isMobile = false }: DataChoiceProps) {
       {/* Help text */}
       <div className="text-center space-y-2">
         <p className="text-sm text-muted-foreground">
-          Not sure? Start with demo data and switch when you're ready.
+          Not sure? Start with demo data and switch when you&apos;re ready.
         </p>
         <p className="text-xs text-muted-foreground">
           All options are secure and your data is never shared without your permission.

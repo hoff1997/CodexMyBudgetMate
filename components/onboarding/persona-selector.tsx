@@ -121,7 +121,7 @@ export function PersonaSelector({ onSelect, selectedPersona }: PersonaSelectorPr
 
       {selected && (
         <div className="text-center text-sm text-muted-foreground">
-          Don't worry - you can always customize everything later!
+          Don&apos;t worry - you can always customize everything later!
         </div>
       )}
     </div>

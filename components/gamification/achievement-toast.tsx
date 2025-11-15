@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { X, Share2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAchievement } from "@/lib/gamification/achievements";
@@ -33,6 +33,14 @@ export function AchievementToast({
   const [isExiting, setIsExiting] = useState(false);
   const achievement = getAchievement(achievementKey);
 
+  const handleDismiss = useCallback(() => {
+    setIsExiting(true);
+    setTimeout(() => {
+      setIsVisible(false);
+      onDismiss?.();
+    }, 300);
+  }, [onDismiss]);
+
   useEffect(() => {
     // Animate in
     setTimeout(() => setIsVisible(true), 100);
@@ -45,15 +53,7 @@ export function AchievementToast({
 
       return () => clearTimeout(timer);
     }
-  }, [autoHide, autoHideDelay]);
-
-  const handleDismiss = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      setIsVisible(false);
-      onDismiss?.();
-    }, 300);
-  };
+  }, [autoHide, autoHideDelay, handleDismiss]);
 
   if (!achievement) return null;
 

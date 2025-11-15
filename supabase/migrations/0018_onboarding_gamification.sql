@@ -40,7 +40,7 @@ COMMENT ON COLUMN public.profiles.last_activity_context IS
 
 CREATE TABLE IF NOT EXISTS public.user_achievements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   achievement_key text NOT NULL,
   achievement_category text NOT NULL CHECK (achievement_category IN ('getting_started', 'mastery', 'goals', 'debt', 'streaks', 'community')),
   points int DEFAULT 0,
@@ -93,7 +93,7 @@ COMMENT ON COLUMN public.user_achievements.metadata IS
 
 CREATE TABLE IF NOT EXISTS public.user_progress (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   feature_key text NOT NULL,
   first_used_at timestamptz NOT NULL DEFAULT now(),
   usage_count int DEFAULT 1,
@@ -158,7 +158,7 @@ CREATE TRIGGER trigger_update_user_progress_updated_at
 
 CREATE TABLE IF NOT EXISTS public.demo_mode_sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES public.profiles(user_id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   started_at timestamptz NOT NULL DEFAULT now(),
   ended_at timestamptz,
   actions_taken int DEFAULT 0,

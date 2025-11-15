@@ -336,12 +336,11 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
         <div className="mb-8">{renderStep()}</div>
 
         {/* Navigation */}
-        {currentStep > 1 && currentStep < STEPS.length && (
+        {currentStep === 4 && (
           <div className="flex items-center justify-between max-w-2xl mx-auto mt-8">
             <Button
               variant="outline"
               onClick={handleBack}
-              disabled={currentStep === 1}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
@@ -349,13 +348,9 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
 
             <Button
               onClick={handleNext}
-              disabled={
-                (currentStep === 2 && !persona) ||
-                (currentStep === 3 && !dataChoice)
-              }
               className="bg-emerald-500 hover:bg-emerald-600"
             >
-              {currentStep === STEPS.length - 1 ? 'Finish' : 'Continue'}
+              Finish
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

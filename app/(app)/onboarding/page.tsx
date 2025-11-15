@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { OnboardingClient } from "./onboarding-client";
+import { UnifiedOnboardingClient } from "./unified-onboarding-client";
 import { headers } from "next/headers";
 
 export const metadata = {
   title: 'Get Started - My Budget Mate',
-  description: 'Set up your budget in just a few minutes',
+  description: 'Set up your complete envelope budget in 20-30 minutes',
 };
 
 export default async function OnboardingPage() {
@@ -22,7 +22,7 @@ export default async function OnboardingPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('onboarding_completed')
-    .eq('user_id', session.user.id)
+    .eq('id', session.user.id)
     .single();
 
   // If onboarding is complete, redirect to dashboard
@@ -35,5 +35,5 @@ export default async function OnboardingPage() {
   const userAgent = headersList.get('user-agent') || '';
   const isMobile = /mobile|android|iphone|ipad|ipod/i.test(userAgent);
 
-  return <OnboardingClient isMobile={isMobile} />;
+  return <UnifiedOnboardingClient isMobile={isMobile} />;
 }

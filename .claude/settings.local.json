@@ -44,7 +44,8 @@
       "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")",
       "Bash(node scripts/apply-debt-migration.mjs:*)",
       "Bash(npx supabase:*)",
-      "Bash(node scripts/apply-gamification-migration.mjs:*)"
+      "Bash(node scripts/apply-gamification-migration.mjs:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

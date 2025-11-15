@@ -161,7 +161,39 @@ export function EnvelopeCreationStep({
   const handleUpdateEnvelope = (id: string, field: string, value: any) => {
     const updatedEnvelopes = envelopes.map(env => {
       if (env.id === id) {
-        return { ...env, [field]: value };
+        const updated = { ...env, [field]: value };
+
+        // When type changes, update type-specific fields
+        if (field === 'type') {
+          if (value === 'bill') {
+            updated.billAmount = updated.billAmount || 0;
+            updated.frequency = updated.frequency || 'monthly';
+            updated.priority = updated.priority || 'important';
+            delete updated.monthlyBudget;
+            delete updated.savingsAmount;
+            delete updated.goalType;
+            delete updated.targetDate;
+          } else if (value === 'spending') {
+            updated.monthlyBudget = updated.monthlyBudget || 0;
+            updated.priority = updated.priority || 'discretionary';
+            delete updated.billAmount;
+            delete updated.frequency;
+            delete updated.dueDate;
+            delete updated.savingsAmount;
+            delete updated.goalType;
+            delete updated.targetDate;
+          } else if (value === 'savings') {
+            updated.savingsAmount = updated.savingsAmount || 0;
+            updated.goalType = updated.goalType || 'savings';
+            delete updated.billAmount;
+            delete updated.frequency;
+            delete updated.dueDate;
+            delete updated.monthlyBudget;
+            delete updated.priority;
+          }
+        }
+
+        return updated;
       }
       return env;
     });
@@ -374,49 +406,55 @@ export function EnvelopeCreationStep({
 
       {/* Spreadsheet-style Table */}
       <div className="overflow-x-auto border rounded-lg">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-muted">
             <tr>
-              <th className="p-3 text-left text-sm font-semibold w-8">Icon</th>
-              <th className="p-3 text-left text-sm font-semibold">Name</th>
-              <th className="p-3 text-left text-sm font-semibold w-24">Type</th>
-              <th className="p-3 text-left text-sm font-semibold w-32">Amount</th>
-              <th className="p-3 text-left text-sm font-semibold w-28">Frequency</th>
-              <th className="p-3 text-left text-sm font-semibold w-32">Due Date</th>
-              <th className="p-3 text-left text-sm font-semibold w-28">Priority</th>
-              <th className="p-3 text-left text-sm font-semibold w-32">
-                Per {primaryIncome?.frequency || 'Paycheck'}
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-12">Icon</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-40">Name</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-24">Type</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-24">Amount</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-24">Frequency</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-28">Due Date</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-24">Priority</th>
+              <th className="px-2 py-1.5 text-left text-xs font-semibold w-24">
+                Per {primaryIncome?.frequency || 'Pay'}
               </th>
-              <th className="p-3 text-center text-sm font-semibold w-12">Del</th>
+              <th className="px-2 py-1.5 text-center text-xs font-semibold w-10">Del</th>
             </tr>
           </thead>
           <tbody>
             {envelopes.map((envelope, index) => (
               <tr key={envelope.id} className={`border-t hover:bg-muted/50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                 {/* Icon */}
-                <td className="p-2">
-                  <EmojiPicker
-                    value={envelope.icon}
-                    onChange={(emoji) => handleUpdateEnvelope(envelope.id, 'icon', emoji)}
-                  />
+                <td className="px-1 py-1">
+                  <button
+                    type="button"
+                    className="text-lg hover:bg-muted rounded px-1"
+                    onClick={() => {
+                      const newIcon = prompt('Enter emoji icon:', envelope.icon);
+                      if (newIcon) handleUpdateEnvelope(envelope.id, 'icon', newIcon);
+                    }}
+                  >
+                    {envelope.icon}
+                  </button>
                 </td>
 
                 {/* Name */}
-                <td className="p-2">
+                <td className="px-1 py-1">
                   <Input
                     value={envelope.name}
                     onChange={(e) => handleUpdateEnvelope(envelope.id, 'name', e.target.value)}
-                    className="h-9 text-sm font-medium"
+                    className="h-7 text-xs font-medium border-0 focus-visible:ring-1"
                   />
                 </td>
 
                 {/* Type */}
-                <td className="p-2">
+                <td className="px-1 py-1">
                   <Select
                     value={envelope.type}
                     onValueChange={(value) => handleUpdateEnvelope(envelope.id, 'type', value)}
                   >
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger className="h-7 text-xs border-0 focus:ring-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -428,17 +466,23 @@ export function EnvelopeCreationStep({
                 </td>
 
                 {/* Amount */}
-                <td className="p-2">
+                <td className="px-1 py-1">
                   <Input
                     type="number"
                     step="0.01"
                     value={
-                      envelope.type === 'bill' ? envelope.billAmount || 0 :
-                      envelope.type === 'spending' ? envelope.monthlyBudget || 0 :
-                      envelope.savingsAmount || 0
+                      envelope.type === 'bill' ? (envelope.billAmount || '') :
+                      envelope.type === 'spending' ? (envelope.monthlyBudget || '') :
+                      (envelope.savingsAmount || '')
                     }
+                    onFocus={(e) => {
+                      // Select all on focus to allow easy overtyping
+                      e.target.select();
+                    }}
                     onChange={(e) => {
-                      const amount = parseFloat(e.target.value) || 0;
+                      const value = e.target.value;
+                      const amount = value === '' ? 0 : parseFloat(value);
+
                       if (envelope.type === 'bill') {
                         handleUpdateEnvelope(envelope.id, 'billAmount', amount);
                         handleUpdateEnvelope(envelope.id, 'payCycleAmount', amount);
@@ -450,19 +494,19 @@ export function EnvelopeCreationStep({
                         handleUpdateEnvelope(envelope.id, 'payCycleAmount', amount);
                       }
                     }}
-                    className="h-9 text-sm text-right"
+                    className="h-7 text-xs text-right border-0 focus-visible:ring-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="0.00"
                   />
                 </td>
 
                 {/* Frequency */}
-                <td className="p-2">
+                <td className="px-1 py-1">
                   {envelope.type === 'bill' ? (
                     <Select
                       value={envelope.frequency || 'monthly'}
                       onValueChange={(value) => handleUpdateEnvelope(envelope.id, 'frequency', value)}
                     >
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger className="h-7 text-xs border-0 focus:ring-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -472,22 +516,22 @@ export function EnvelopeCreationStep({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="h-9 flex items-center text-sm text-muted-foreground px-3">
-                      N/A
+                    <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                      —
                     </div>
                   )}
                 </td>
 
                 {/* Due Date */}
-                <td className="p-2">
+                <td className="px-1 py-1">
                   {envelope.type === 'bill' ? (
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="h-9 w-full justify-start text-sm" type="button">
-                          <CalendarIcon className="h-3 w-3 mr-2" />
+                        <Button variant="outline" className="h-7 w-full justify-start text-xs px-2 border-0 hover:bg-muted" type="button">
+                          <CalendarIcon className="h-3 w-3 mr-1" />
                           {envelope.dueDate
                             ? `${envelope.dueDate}${envelope.dueDate === 1 ? 'st' : envelope.dueDate === 2 ? 'nd' : envelope.dueDate === 3 ? 'rd' : 'th'}`
-                            : "Select"
+                            : "Date"
                           }
                         </Button>
                       </PopoverTrigger>
@@ -504,23 +548,23 @@ export function EnvelopeCreationStep({
                       type="date"
                       value={envelope.targetDate ? new Date(envelope.targetDate).toISOString().split('T')[0] : ''}
                       onChange={(e) => handleUpdateEnvelope(envelope.id, 'targetDate', e.target.value ? new Date(e.target.value) : undefined)}
-                      className="h-9 text-sm"
+                      className="h-7 text-xs border-0 focus-visible:ring-1"
                     />
                   ) : (
-                    <div className="h-9 flex items-center text-sm text-muted-foreground px-3">
-                      N/A
+                    <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                      —
                     </div>
                   )}
                 </td>
 
                 {/* Priority */}
-                <td className="p-2">
+                <td className="px-1 py-1">
                   {envelope.type !== 'savings' ? (
                     <Select
                       value={envelope.priority || 'important'}
                       onValueChange={(value) => handleUpdateEnvelope(envelope.id, 'priority', value)}
                     >
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger className="h-7 text-xs border-0 focus:ring-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -530,28 +574,28 @@ export function EnvelopeCreationStep({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="h-9 flex items-center text-sm text-muted-foreground px-3">
-                      N/A
+                    <div className="h-7 flex items-center text-xs text-muted-foreground px-2">
+                      —
                     </div>
                   )}
                 </td>
 
                 {/* Per Paycheck */}
-                <td className="p-2">
-                  <div className="h-9 flex items-center text-sm font-semibold text-blue-600 px-3">
+                <td className="px-1 py-1">
+                  <div className="h-7 flex items-center text-xs font-semibold text-blue-600 px-2">
                     ${(envelope.payCycleAmount || 0).toFixed(2)}
                   </div>
                 </td>
 
                 {/* Delete */}
-                <td className="p-2 text-center">
+                <td className="px-1 py-1 text-center">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                     onClick={() => handleRemoveEnvelope(envelope.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </td>
               </tr>

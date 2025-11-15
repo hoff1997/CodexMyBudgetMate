@@ -122,7 +122,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
             <div className="text-6xl mb-4">🎉</div>
             <h1 className="text-4xl font-bold">Kia ora! Welcome to My Budget Mate</h1>
             <p className="text-xl text-muted-foreground">
-              You're about to take control of your money. Let's get you set up in just a few minutes.
+              You&apos;re about to take control of your money. Let&apos;s get you set up in just a few minutes.
             </p>
 
             {isMobile && (
@@ -135,7 +135,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
 
             <div className="flex gap-4 justify-center mt-8">
               <Button onClick={handleNext} size="lg" className="bg-emerald-500 hover:bg-emerald-600">
-                Let's Get Started
+                Let&apos;s Get Started
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button variant="outline" size="lg" onClick={handleSkip}>
@@ -161,7 +161,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold">Quick Setup</h2>
               <p className="text-muted-foreground">
-                We'll help you create your first budget based on your choices
+                We&apos;ll help you create your first budget based on your choices
               </p>
             </div>
 
@@ -197,7 +197,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
               <ul className="space-y-2 text-sm text-emerald-700">
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500 mt-0.5">✓</span>
-                  <span>We'll create suggested budget envelopes based on your persona</span>
+                  <span>We&apos;ll create suggested budget envelopes based on your persona</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500 mt-0.5">✓</span>
@@ -205,7 +205,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500 mt-0.5">✓</span>
-                  <span>You'll earn your first achievement badge! 🎉</span>
+                  <span>You&apos;ll earn your first achievement badge! 🎉</span>
                 </li>
               </ul>
             </div>
@@ -216,9 +216,9 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
         return (
           <div className="text-center space-y-6 max-w-2xl mx-auto">
             <div className="text-6xl mb-4 animate-bounce">🎯</div>
-            <h1 className="text-4xl font-bold">You're All Set!</h1>
+            <h1 className="text-4xl font-bold">You&apos;re All Set!</h1>
             <p className="text-xl text-muted-foreground">
-              Congratulations! You've completed setup and earned your first achievement.
+              Congratulations! You&apos;ve completed setup and earned your first achievement.
             </p>
 
             <div className="bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg p-6 my-8">
@@ -230,7 +230,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
                 </div>
               </div>
               <p className="text-sm text-white/90">
-                You've completed setup! You're building strong money habits.
+                You&apos;ve completed setup! You&apos;re building strong money habits.
               </p>
             </div>
 

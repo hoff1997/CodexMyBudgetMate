@@ -204,7 +204,7 @@ export function DemoConversionBanner({
 
             {/* Benefits */}
             <div className="space-y-2 pt-2 border-t">
-              <p className="text-xs font-medium text-muted-foreground uppercase">What You'll Keep</p>
+              <p className="text-xs font-medium text-muted-foreground uppercase">What You&apos;ll Keep</p>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className="h-4 w-4 text-emerald-500" />
@@ -216,7 +216,7 @@ export function DemoConversionBanner({
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  <span>Everything you've learned</span>
+                  <span>Everything you&apos;ve learned</span>
                 </div>
               </div>
             </div>
@@ -256,7 +256,7 @@ export function DemoConversionBanner({
 
               {/* Progress Summary */}
               <div className="bg-gradient-to-r from-emerald-500 to-blue-500 text-white rounded-lg p-6 space-y-3">
-                <p className="font-semibold">You've Made Amazing Progress!</p>
+                <p className="font-semibold">You&apos;ve Made Amazing Progress!</p>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <div className="text-2xl mb-1">🏆</div>
@@ -290,7 +290,7 @@ export function DemoConversionBanner({
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-emerald-500 mt-0.5">✓</span>
-                    <span>Everything you've learned and configured</span>
+                    <span>Everything you&apos;ve learned and configured</span>
                   </li>
                 </ul>
               </div>

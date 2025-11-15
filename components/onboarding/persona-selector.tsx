@@ -46,7 +46,7 @@ export function PersonaSelector({ onSelect, selectedPersona }: PersonaSelectorPr
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold">Which best describes your situation?</h2>
         <p className="text-muted-foreground">
-          This helps us personalize your experience
+          This helps us personalise your experience
         </p>
       </div>
 
@@ -121,7 +121,7 @@ export function PersonaSelector({ onSelect, selectedPersona }: PersonaSelectorPr
 
       {selected && (
         <div className="text-center text-sm text-muted-foreground">
-          Don&apos;t worry - you can always customize everything later!
+          Don&apos;t worry - you can always customise everything later!
         </div>
       )}
     </div>

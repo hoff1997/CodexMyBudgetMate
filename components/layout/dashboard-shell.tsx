@@ -36,13 +36,13 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
               <HelpTooltip
                 title="Dashboard"
                 content={[
-                  "Your customizable command center for budget management. Drag and drop widgets to reorder them, or click 'Customize Dashboard' to show/hide widgets.",
-                  "Your dashboard layout is personalized based on your profile and automatically saves your preferences."
+                  "Your customisable command centre for budget management. Drag and drop widgets to reorder them, or click 'Customise Dashboard' to show/hide widgets.",
+                  "Your dashboard layout is personalised based on your profile and automatically saves your preferences."
                 ]}
                 tips={[
                   "Use Quick Actions (Shift + Q) to rapidly log transactions",
                   "Follow 'Next Steps' suggestions to build momentum",
-                  "Click 'Customize Dashboard' to show/hide widgets",
+                  "Click 'Customise Dashboard' to show/hide widgets",
                   "Drag widgets by the handle to reorder them"
                 ]}
               />

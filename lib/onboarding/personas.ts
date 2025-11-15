@@ -308,14 +308,14 @@ export function getContextualHelp(persona: PersonaType, context: string): string
       transactions: 'Every time you spend money, track it here. This builds awareness of where your money goes.',
     },
     optimiser: {
-      envelopes: 'Import your categories from your spreadsheet or create new ones. You can customize everything.',
+      envelopes: 'Import your categories from your spreadsheet or create new ones. You can customise everything.',
       goals: 'Set specific goals with target dates. The system will calculate how much you need to save each pay cycle.',
       transactions: 'Connect Akahu to automatically import transactions, or continue manual entry if you prefer.',
     },
     wealth_builder: {
-      envelopes: 'Organize your budget with detailed categories. Track both spending and investment allocations.',
+      envelopes: 'Organise your budget with detailed categories. Track both spending and investment allocations.',
       goals: 'Set ambitious long-term goals. Use milestones to track progress on major objectives.',
-      transactions: 'Sync multiple accounts and use auto-categorization to save time on transaction management.',
+      transactions: 'Sync multiple accounts and use auto-categorisation to save time on transaction management.',
     },
   };
 

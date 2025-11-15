@@ -639,7 +639,7 @@ export default function BankConnectionManager({
                   {[
                     {
                       id: "checking",
-                      name: "Checking/Transaction Accounts",
+                      name: "Cheque/Transaction Accounts",
                       icon: Banknote,
                       description: "Day-to-day spending accounts",
                     },
@@ -816,7 +816,7 @@ export default function BankConnectionManager({
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>Enable merchant categorization</Label>
+                      <Label>Enable merchant categorisation</Label>
                       <p className="text-sm text-muted-foreground">
                         Automatically suggest envelope assignments
                       </p>

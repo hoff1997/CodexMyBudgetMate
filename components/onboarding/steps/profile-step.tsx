@@ -24,7 +24,7 @@ export function ProfileStep({
       <div className="text-center space-y-2">
         <h2 className="text-3xl font-bold">Tell Us About You</h2>
         <p className="text-muted-foreground">
-          We&apos;ll personalize your experience based on your profile
+          We&apos;ll personalise your experience based on your profile
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export function ProfileStep({
           autoFocus
         />
         <p className="text-sm text-muted-foreground">
-          We&apos;ll use this to personalize your dashboard
+          We&apos;ll use this to personalise your dashboard
         </p>
       </div>
 

@@ -816,7 +816,7 @@ export function ZeroBudgetSetupClient({
             />
           </div>
           <p className="text-muted-foreground">
-            Plan and organize your complete budget system
+            Plan and organise your complete budget system
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)}>

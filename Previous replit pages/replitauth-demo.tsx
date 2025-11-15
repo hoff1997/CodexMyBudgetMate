@@ -94,7 +94,7 @@ function AuthSystemDemo() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm">Cloud data synchronization</span>
+                  <span className="text-sm">Cloud data synchronisation</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600" />

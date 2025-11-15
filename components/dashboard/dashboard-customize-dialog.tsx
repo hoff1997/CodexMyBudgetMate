@@ -70,7 +70,7 @@ export function DashboardCustomizeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh]">
         <DialogHeader>
-          <DialogTitle>Customize Your Dashboard</DialogTitle>
+          <DialogTitle>Customise Your Dashboard</DialogTitle>
           <DialogDescription>
             Manage your dashboard layout and choose which envelopes to monitor
           </DialogDescription>

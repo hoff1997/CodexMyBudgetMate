@@ -202,11 +202,11 @@ export default function AccountsPage() {
                   <h1 className="text-2xl font-bold text-foreground">Accounts</h1>
                   <p className="text-muted-foreground">Manage your bank accounts and opening balances</p>
                 </div>
-                <HelpTooltip 
+                <HelpTooltip
                   title="Managing Your Accounts"
                   content={[
                     "Set up all your bank accounts with opening balances to track your complete financial picture.",
-                    "Add checking accounts, savings accounts, and credit cards to monitor cash flow.",
+                    "Add cheque accounts, savings accounts, and credit cards to monitor cash flow.",
                     "Opening balances should match your actual account balances when you start using the app."
                   ]}
                   tips={[

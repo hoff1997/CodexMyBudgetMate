@@ -3,7 +3,7 @@ import { ZeroBudgetSetupClient } from "./zero-budget-setup-client";
 
 export const metadata = {
   title: "Zero-Based Budget Setup | My Budget Mate",
-  description: "Plan and organize your complete budget system with inline editing",
+  description: "Plan and organise your complete budget system with inline editing",
 };
 
 export default async function ZeroBudgetSetupPage() {

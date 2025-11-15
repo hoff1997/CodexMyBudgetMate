@@ -230,7 +230,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500 mt-0.5">✓</span>
-                  <span>You can customize everything to match your needs</span>
+                  <span>You can customise everything to match your needs</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-emerald-500 mt-0.5">✓</span>
@@ -269,7 +269,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
                 <div className="border rounded-lg p-3">
                   <span className="text-2xl mb-2 block">📬</span>
                   <p className="font-medium">Create Envelopes</p>
-                  <p className="text-muted-foreground text-xs">Organize your budget</p>
+                  <p className="text-muted-foreground text-xs">Organise your budget</p>
                 </div>
                 <div className="border rounded-lg p-3">
                   <span className="text-2xl mb-2 block">💰</span>

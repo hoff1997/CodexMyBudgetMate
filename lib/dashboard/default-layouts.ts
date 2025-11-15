@@ -134,7 +134,7 @@ export const WEALTH_BUILDER_LAYOUT: PersonaDashboardLayout = {
     // Quick actions
     "quick-actions",
 
-    // Monitoring and optimization
+    // Monitoring and optimisation
     "monitored-envelopes",
     "zero-budget-status",
     "recent-transactions",

@@ -306,7 +306,7 @@ export function SetupClient({ userId }: SetupClientProps) {
                           <FormItem>
                             <FormLabel>Account Name</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="ANZ Checking" />
+                              <Input {...field} placeholder="ANZ Cheque" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

@@ -52,7 +52,7 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
   };
 
   const accountTypeLabels = {
-    checking: "Everyday/Checking",
+    checking: "Everyday/Cheque",
     savings: "Savings",
     credit_card: "Credit Card",
   };
@@ -144,7 +144,7 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="checking">Everyday/Checking</SelectItem>
+                  <SelectItem value="checking">Everyday/Cheque</SelectItem>
                   <SelectItem value="savings">Savings</SelectItem>
                   <SelectItem value="credit_card">Credit Card</SelectItem>
                 </SelectContent>

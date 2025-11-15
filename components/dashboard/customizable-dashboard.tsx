@@ -293,7 +293,7 @@ export function CustomizableDashboard({
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 py-10">
-      {/* Customize button */}
+      {/* Customise button */}
       <div className="flex justify-end mb-4">
         <Button
           variant="outline"
@@ -302,7 +302,7 @@ export function CustomizableDashboard({
           className="gap-2"
         >
           <Settings className="h-4 w-4" />
-          Customize Dashboard
+          Customise Dashboard
         </Button>
       </div>
 

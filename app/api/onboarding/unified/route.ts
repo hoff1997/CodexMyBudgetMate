@@ -35,6 +35,34 @@ export async function POST(request: Request) {
       completedAt: string;
     } = body;
 
+    // Validate required data
+    if (!fullName || !persona) {
+      return NextResponse.json(
+        { error: "Missing required profile data" },
+        { status: 400 }
+      );
+    }
+
+    if (!envelopes || envelopes.length === 0) {
+      return NextResponse.json(
+        { error: "At least one envelope is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!incomeSources || incomeSources.length === 0) {
+      return NextResponse.json(
+        { error: "At least one income source is required" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Processing onboarding for user:", userId, {
+      envelopesCount: envelopes.length,
+      incomeSourcesCount: incomeSources.length,
+      bankAccountsCount: bankAccounts.length,
+    });
+
     // Start transaction-like operations
     // 1. Update profile with name, persona, and onboarding_completed
     const { error: profileError } = await supabase

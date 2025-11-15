@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +13,15 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, DollarSign, Zap, ShoppingBag, PiggyBank, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, DollarSign, Zap, ShoppingBag, PiggyBank, CheckCircle2, CalendarIcon, AlertTriangle } from "lucide-react";
 import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 import type { PersonaType } from "@/lib/onboarding/personas";
 import { getPersona } from "@/lib/onboarding/personas";
 import { calculatePayCycleAmount } from "@/lib/onboarding/pay-cycle-utils";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Progress } from "@/components/ui/progress";
 
 interface EnvelopeCreationStepProps {
   envelopes: EnvelopeData[];
@@ -48,8 +52,31 @@ export function EnvelopeCreationStep({
   const templateEnvelopes = personaData?.envelopeTemplates || [];
   const [selectedTemplateIds, setSelectedTemplateIds] = useState<string[]>([]);
 
+  // Two-step process: select then configure
+  const [configStep, setConfigStep] = useState<'select' | 'configure'>('select');
+
   // Get primary income source for calculations
   const primaryIncome = incomeSources[0];
+
+  // Pre-select Surplus and Emergency Fund on mount
+  useEffect(() => {
+    if (useTemplate && templateEnvelopes.length > 0 && selectedTemplateIds.length === 0) {
+      const defaultSelections = templateEnvelopes
+        .map((template, idx) => ({
+          id: `template-${idx}`,
+          name: template.name
+        }))
+        .filter(item =>
+          item.name.toLowerCase().includes('surplus') ||
+          item.name.toLowerCase().includes('emergency')
+        )
+        .map(item => item.id);
+
+      if (defaultSelections.length > 0) {
+        setSelectedTemplateIds(defaultSelections);
+      }
+    }
+  }, [useTemplate, templateEnvelopes, selectedTemplateIds.length]);
 
   const handleSelectAllTemplates = () => {
     setSelectedTemplateIds(templateEnvelopes.map((_, idx) => `template-${idx}`));
@@ -191,6 +218,28 @@ export function EnvelopeCreationStep({
     savings: "text-emerald-600 bg-emerald-100 border-emerald-200",
   };
 
+  // Calculate budget totals
+  const totalAllocated = envelopes.reduce((sum, env) => sum + (env.payCycleAmount || 0), 0);
+  const totalIncome = primaryIncome?.amount || 0;
+  const remaining = totalIncome - totalAllocated;
+  const isOverspent = remaining < 0;
+  const allocationPercentage = totalIncome > 0 ? Math.min((totalAllocated / totalIncome) * 100, 100) : 0;
+
+  const handleAddSurplus = () => {
+    if (remaining <= 0) return;
+
+    const surplusEnvelope: EnvelopeData = {
+      id: `envelope-surplus-${Date.now()}`,
+      name: 'Surplus',
+      icon: '💵',
+      type: 'savings',
+      savingsAmount: remaining,
+      payCycleAmount: remaining,
+      goalType: 'savings',
+    };
+    onEnvelopesChange([...envelopes, surplusEnvelope]);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
@@ -200,6 +249,69 @@ export function EnvelopeCreationStep({
           Set up your complete budget structure
         </p>
       </div>
+
+      {/* Budget Tracker */}
+      {primaryIncome && envelopes.length > 0 && (
+        <Card className={`p-6 ${isOverspent ? 'bg-red-50 border-red-200' : remaining > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Budget Status</h3>
+                <p className="text-sm text-muted-foreground">
+                  Per {primaryIncome.frequency} paycheck
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold">
+                  {isOverspent ? '-' : '+'}${Math.abs(remaining).toFixed(2)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isOverspent ? 'Overspent' : remaining > 0 ? 'Remaining' : 'Fully Allocated'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Total Income: ${totalIncome.toFixed(2)}</span>
+                <span>Allocated: ${totalAllocated.toFixed(2)}</span>
+              </div>
+              <Progress
+                value={allocationPercentage}
+                className={`h-3 ${isOverspent ? '[&>div]:bg-red-500' : '[&>div]:bg-emerald-500'}`}
+              />
+            </div>
+
+            {isOverspent && (
+              <div className="flex items-start gap-2 p-3 bg-red-100 border border-red-300 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-900">
+                  You're allocating ${Math.abs(remaining).toFixed(2)} more than you earn per paycheck. Reduce your envelope amounts.
+                </p>
+              </div>
+            )}
+
+            {remaining > 0 && (
+              <div className="flex items-center justify-between p-3 bg-white border rounded-lg">
+                <div>
+                  <p className="font-medium">Unallocated Funds</p>
+                  <p className="text-sm text-muted-foreground">
+                    ${remaining.toFixed(2)} available per paycheck
+                  </p>
+                </div>
+                <Button
+                  onClick={handleAddSurplus}
+                  variant="outline"
+                  size="sm"
+                  className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                >
+                  Add Surplus Envelope
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Template Selection (if using template) */}
       {useTemplate && templateEnvelopes.length > 0 && envelopes.length === 0 && (
@@ -348,12 +460,9 @@ export function EnvelopeCreationStep({
 
           <div className="space-y-2">
             <Label htmlFor="envIcon">Icon</Label>
-            <Input
-              id="envIcon"
-              value={newEnvelope.icon || ""}
-              onChange={(e) => setNewEnvelope({ ...newEnvelope, icon: e.target.value })}
-              placeholder="📊"
-              maxLength={2}
+            <EmojiPicker
+              value={newEnvelope.icon || "📊"}
+              onChange={(emoji) => setNewEnvelope({ ...newEnvelope, icon: emoji })}
             />
           </div>
         </div>
@@ -397,15 +506,28 @@ export function EnvelopeCreationStep({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date (day of month)</Label>
-                <Input
-                  id="dueDate"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={newEnvelope.dueDate || ""}
-                  onChange={(e) => setNewEnvelope({ ...newEnvelope, dueDate: parseInt(e.target.value) })}
-                />
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start" type="button">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {newEnvelope.dueDate
+                        ? `${newEnvelope.dueDate}${newEnvelope.dueDate === 1 ? 'st' : newEnvelope.dueDate === 2 ? 'nd' : newEnvelope.dueDate === 3 ? 'rd' : 'th'} of month`
+                        : "Select date"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newEnvelope.dueDate ? new Date(2024, 0, newEnvelope.dueDate) : undefined}
+                      onSelect={(date) => setNewEnvelope({
+                        ...newEnvelope,
+                        dueDate: date ? date.getDate() : undefined
+                      })}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">

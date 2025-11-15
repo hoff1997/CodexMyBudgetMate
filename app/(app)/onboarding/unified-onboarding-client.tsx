@@ -137,6 +137,28 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
     setIsLoading(true);
 
     try {
+      console.log("Starting onboarding completion...", {
+        fullName,
+        persona,
+        bankAccounts: bankAccounts.length,
+        incomeSources: incomeSources.length,
+        envelopes: envelopes.length,
+      });
+
+      // Validate required data
+      if (!fullName || fullName.trim() === "") {
+        throw new Error("Please enter your name");
+      }
+      if (!persona) {
+        throw new Error("Please select a persona");
+      }
+      if (envelopes.length === 0) {
+        throw new Error("Please create at least one envelope");
+      }
+      if (incomeSources.length === 0) {
+        throw new Error("Please add at least one income source");
+      }
+
       // Save all onboarding data
       const response = await fetch("/api/onboarding/unified", {
         method: "POST",
@@ -145,17 +167,25 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           fullName,
           persona,
           bankAccounts,
-          incomeSources,
+          incomeSources: incomeSources.map(source => ({
+            ...source,
+            nextPayDate: source.nextPayDate instanceof Date
+              ? source.nextPayDate.toISOString()
+              : new Date(source.nextPayDate).toISOString()
+          })),
           envelopes,
           completedAt: new Date().toISOString(),
         }),
       });
 
+      const data = await response.json();
+      console.log("API response:", data);
+
       if (!response.ok) {
-        throw new Error("Failed to save onboarding data");
+        throw new Error(data.error || "Failed to save onboarding data");
       }
 
-      // Award achievement
+      // Award achievement (non-blocking)
       try {
         await fetch("/api/achievements/award", {
           method: "POST",
@@ -165,14 +195,23 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           }),
         });
       } catch (error) {
-        console.log("Achievement award skipped");
+        console.warn("Achievement award failed (non-critical):", error);
       }
 
       toast.success("Your budget is ready!");
+
+      // Small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log("Redirecting to dashboard...");
       router.push("/dashboard");
     } catch (error) {
       console.error("Onboarding completion error:", error);
-      toast.error("Something went wrong. Please try again.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }

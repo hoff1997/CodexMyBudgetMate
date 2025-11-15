@@ -155,7 +155,7 @@ export function BudgetingApproachStep({
       {/* Helper Text */}
       <div className="bg-muted/50 border rounded-lg p-4 text-center">
         <p className="text-sm text-muted-foreground">
-          💡 Don't worry - {useTemplate ? "you can add, remove, or modify any envelope" : "we&apos;ll guide you through creating each envelope"}. This choice just determines your starting point.
+          💡 Don't worry - {useTemplate ? "you can add, remove, or modify any envelope" : "we'll guide you through creating each envelope"}. This choice just determines your starting point.
         </p>
       </div>
     </div>

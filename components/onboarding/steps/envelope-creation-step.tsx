@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,8 +55,8 @@ export function EnvelopeCreationStep({
   // Get primary income source for calculations
   const primaryIncome = incomeSources[0];
 
-  // Create master list of ALL envelopes from all personas
-  const getAllEnvelopes = (): MasterEnvelope[] => {
+  // Create master list of ALL envelopes from all personas (memoized)
+  const masterEnvelopes = useMemo(() => {
     const seen = new Set<string>();
     const allEnvelopes: MasterEnvelope[] = [];
 
@@ -75,25 +75,21 @@ export function EnvelopeCreationStep({
     });
 
     return allEnvelopes.sort((a, b) => a.name.localeCompare(b.name));
-  };
-
-  const masterEnvelopes = getAllEnvelopes();
-
-  // Pre-select Surplus and Emergency Fund
-  useEffect(() => {
-    if (selectedEnvelopes.length === 0) {
-      const defaultSelections = masterEnvelopes
-        .filter(env =>
-          env.name.toLowerCase().includes('surplus') ||
-          env.name.toLowerCase().includes('emergency')
-        )
-        .map(env => env.name);
-
-      if (defaultSelections.length > 0) {
-        setSelectedEnvelopes(defaultSelections);
-      }
-    }
   }, []);
+
+  // Pre-select Surplus and Emergency Fund on mount
+  useEffect(() => {
+    const defaultSelections = masterEnvelopes
+      .filter(env =>
+        env.name.toLowerCase().includes('surplus') ||
+        env.name.toLowerCase().includes('emergency')
+      )
+      .map(env => env.name);
+
+    if (defaultSelections.length > 0) {
+      setSelectedEnvelopes(defaultSelections);
+    }
+  }, [masterEnvelopes]);
 
   const handleSelectAll = () => {
     setSelectedEnvelopes(masterEnvelopes.map(env => env.name));

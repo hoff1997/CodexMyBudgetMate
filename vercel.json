@@ -2,6 +2,6 @@
   "buildCommand": "next build",
   "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_BUILD_ID": "force-rebuild-20251117"
+    "NEXT_PUBLIC_BUILD_ID": "force-rebuild-20251117-v2"
   }
 }

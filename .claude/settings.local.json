@@ -47,7 +47,8 @@
       "Bash(node scripts/apply-gamification-migration.mjs:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run reset-onboarding:*)",
-      "Bash(node scripts/reset-onboarding.mjs:*)"
+      "Bash(node scripts/reset-onboarding.mjs:*)",
+      "Bash(head:*)"
     ],
     "deny": [],
     "ask": []

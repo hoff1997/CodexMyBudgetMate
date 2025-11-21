@@ -1,5 +1,8 @@
 // ...existing code...
 const nextConfig = {
+  generateBuildId: async () => {
+    return `build-${Date.now()}`;
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],

@@ -39,31 +39,31 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
     <button
       type="button"
       onClick={() => onSelect?.(envelope)}
-      className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
+      className="w-full rounded-xl border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-lg">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-base">
             {envelope.icon ?? "💼"}
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {envelope.category_name ?? "Uncategorised"}
             </p>
-            <h3 className="text-base font-semibold text-secondary">{envelope.name}</h3>
+            <h3 className="text-sm font-semibold text-secondary">{envelope.name}</h3>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-1">
           <StatusBadge status={statusLabel} />
           {isSpending ? (
-            <span className="rounded-full border border-dashed border-primary/60 px-3 py-1 text-xs font-medium text-primary">
+            <span className="rounded-full border border-dashed border-primary/60 px-2 py-0.5 text-xs font-medium text-primary">
               Spending account
             </span>
           ) : null}
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
         <div className="flex items-center gap-1 text-muted-foreground">
           {isSpending ? (
             <span>Set targets to enable projections</span>
@@ -75,13 +75,13 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
           )}
         </div>
         {!isSpending && (
-          <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+          <div className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             {perPay > 0 ? `$${perPay.toFixed(0)} / ${(envelope.frequency ?? "pay").toLowerCase()}` : "On target"}
           </div>
         )}
       </div>
 
-      <div className="mt-3 space-y-3">
+      <div className="mt-2 space-y-2">
         <Progress
           value={isSpending ? 0 : percentage}
           indicatorClassName={indicatorClass}

@@ -171,22 +171,22 @@ export function EnvelopeSummaryClient({
   const selectedPlan = selectedEnvelope ? payPlanMap.get(selectedEnvelope.id) : undefined;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 pb-24 pt-12 md:px-10 md:pb-12">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-secondary">Envelope summary</h1>
-        <p className="text-base text-muted-foreground">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-12 pt-6 md:px-6 md:pb-8">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold text-secondary">Envelope summary</h1>
+        <p className="text-sm text-muted-foreground">
           Snapshot of every envelope with progress markers so you can quickly see what needs topping
           up before the next payday. Switch tabs to access the full Zero Budget Manager from the
           Replit build.
         </p>
       </header>
-      <Tabs defaultValue={defaultValue} className="space-y-6">
+      <Tabs defaultValue={defaultValue} className="space-y-4">
         <TabsList>
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="zero-budget">Zero budget manager</TabsTrigger>
         </TabsList>
-        <TabsContent value="summary" className="space-y-6">
-          <div className="flex justify-center rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-6">
+        <TabsContent value="summary" className="space-y-4">
+          <div className="flex justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
             <Button
               type="button"
               className="gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold shadow-sm hover:bg-primary/90"
@@ -239,11 +239,11 @@ export function EnvelopeSummaryClient({
             </div>
           </div>
 
-          <div className="space-y-4 md:hidden">
+          <div className="space-y-3 md:hidden">
             <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={setSelectedEnvelope} />
           </div>
           <div className="hidden md:block">
-            <div className="space-y-4">
+            <div className="space-y-3">
               {groupedCategories.length ? (
                 groupedCategories.map((category) => (
                   <EnvelopeCategoryGroup
@@ -256,7 +256,7 @@ export function EnvelopeSummaryClient({
                 ))
               ) : (
                 <Card>
-                  <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
                     No envelopes match this filter yet. Try widening your filter or add a new envelope.
                   </CardContent>
                 </Card>

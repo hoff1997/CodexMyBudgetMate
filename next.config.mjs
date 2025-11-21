@@ -1,6 +1,7 @@
 // ...existing code...
 const nextConfig = {
   generateBuildId: async () => {
+    // Force unique build ID to prevent cache issues
     return `build-${Date.now()}`;
   },
   experimental: {

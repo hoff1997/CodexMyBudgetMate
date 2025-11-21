@@ -113,6 +113,190 @@ export async function GET(
 }
 
 /**
+ * PATCH /api/allocations/plans/:id/update
+ * Updates allocation plan items and optionally updates recurring income plan
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const planId = params.id;
+    const body = await request.json();
+    const { allocations, saveMode } = body;
+
+    if (!allocations || !Array.isArray(allocations)) {
+      return NextResponse.json(
+        { error: "Invalid allocations data" },
+        { status: 400 }
+      );
+    }
+
+    // Validate allocations
+    const totalAllocated = allocations.reduce(
+      (sum: number, a: any) => sum + (a.amount || 0),
+      0
+    );
+
+    // Get plan to verify ownership and get transaction amount
+    const { data: plan, error: planError } = await supabase
+      .from("allocation_plans")
+      .select("id, amount, status, source_transaction_id, user_id")
+      .eq("id", planId)
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+
+    if (planError || !plan) {
+      return NextResponse.json(
+        { error: "Allocation plan not found" },
+        { status: 404 }
+      );
+    }
+
+    if (plan.status === "applied") {
+      return NextResponse.json(
+        { error: "Cannot update an already applied allocation" },
+        { status: 400 }
+      );
+    }
+
+    // Validate balance (allow 1 cent tolerance)
+    if (Math.abs(totalAllocated - plan.amount) >= 0.01) {
+      return NextResponse.json(
+        {
+          error: "Allocations must match transaction amount",
+          totalAllocated,
+          transactionAmount: plan.amount,
+          difference: totalAllocated - plan.amount,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Delete existing allocation items
+    const { error: deleteError } = await supabase
+      .from("allocation_plan_items")
+      .delete()
+      .eq("plan_id", planId);
+
+    if (deleteError) {
+      console.error("Error deleting old allocation items:", deleteError);
+      return NextResponse.json(
+        { error: "Failed to update allocations" },
+        { status: 400 }
+      );
+    }
+
+    // Insert new allocation items
+    const newItems = allocations.map((alloc: any) => ({
+      plan_id: planId,
+      envelope_id: alloc.envelopeId,
+      amount: alloc.amount,
+      is_regular: true, // Default to regular for now
+      priority: "essential", // Default priority
+    }));
+
+    const { error: insertError } = await supabase
+      .from("allocation_plan_items")
+      .insert(newItems);
+
+    if (insertError) {
+      console.error("Error inserting new allocation items:", insertError);
+      return NextResponse.json(
+        { error: "Failed to update allocations" },
+        { status: 400 }
+      );
+    }
+
+    // Update child transactions with new splits
+    const { data: childTransactions, error: childError } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("allocation_plan_id", planId)
+      .eq("reconciled", false);
+
+    if (!childError && childTransactions) {
+      for (const child of childTransactions) {
+        // Delete old splits
+        await supabase
+          .from("transaction_splits")
+          .delete()
+          .eq("transaction_id", child.id);
+
+        // Insert new splits
+        const splits = allocations.map((alloc: any) => ({
+          transaction_id: child.id,
+          envelope_id: alloc.envelopeId,
+          amount: alloc.amount,
+        }));
+
+        await supabase.from("transaction_splits").insert(splits);
+      }
+    }
+
+    // If saveMode is "update-plan", update recurring income
+    if (saveMode === "update-plan") {
+      // Get the source transaction to find the recurring income record
+      const { data: sourceTransaction } = await supabase
+        .from("transactions")
+        .select("description, amount")
+        .eq("id", plan.source_transaction_id)
+        .maybeSingle();
+
+      if (sourceTransaction) {
+        // Find matching recurring income by description or amount
+        const { data: recurringIncomes } = await supabase
+          .from("recurring_income")
+          .select("id, allocation")
+          .eq("user_id", session.user.id)
+          .eq("is_active", true);
+
+        if (recurringIncomes && recurringIncomes.length > 0) {
+          // Update the first matching recurring income
+          // (In a more sophisticated system, we'd match by source/description)
+          const recurringIncome = recurringIncomes[0];
+
+          const updatedAllocation = allocations.map((alloc: any) => ({
+            envelopeId: alloc.envelopeId,
+            amount: alloc.amount,
+          }));
+
+          await supabase
+            .from("recurring_income")
+            .update({
+              allocation: updatedAllocation,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", recurringIncome.id);
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Allocation updated successfully",
+      planId,
+      totalAllocated,
+    });
+  } catch (error) {
+    console.error("Error updating allocation plan:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * DELETE /api/allocations/plans/:id
  * Rejects/cancels an allocation plan and removes associated child transactions
  */

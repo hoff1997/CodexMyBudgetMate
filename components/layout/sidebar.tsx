@@ -25,7 +25,7 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v8"; // Increment this when adding new menu items
+const NAV_VERSION = "v9"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
@@ -53,6 +53,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "zero-budget", label: "Zero Budget Manager", href: "/envelope-summary?tab=zero-budget", icon: "🎯" },
   { id: "envelope-planning", label: "Envelope Planning", href: "/envelope-planning", icon: "📋" },
+  { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅" },
   { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮" },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰" },
   { id: "balance-report", label: "Account Balances", href: "/balance-report", icon: "📊" },

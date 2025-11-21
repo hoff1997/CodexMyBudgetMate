@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Check, Edit2, X } from "lucide-react";
 import { formatCurrency } from "@/lib/finance";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
+import { IncomeAllocationEditor } from "./income-allocation-editor";
 
 type AllocationDetail = {
   envelopeId: string;
@@ -38,6 +39,7 @@ export function AutoAllocatedTransactionRow({
   const [loading, setLoading] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const fetchAllocations = useCallback(async () => {
     setLoading(true);
@@ -368,23 +370,50 @@ export function AutoAllocatedTransactionRow({
                   Reject Auto-Split
                 </Button>
 
-                <Button
-                  size="sm"
-                  onClick={handleReconcile}
-                  disabled={reconciling || rejecting}
-                  className="gap-2"
-                >
-                  {reconciling && (
-                    <span className="h-2 w-2 animate-ping rounded-full bg-primary-foreground" />
-                  )}
-                  <Check className="h-4 w-4" />
-                  Reconcile All
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditorOpen(true)}
+                    disabled={reconciling || rejecting}
+                    className="gap-2"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Edit Allocation
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={handleReconcile}
+                    disabled={reconciling || rejecting}
+                    className="gap-2"
+                  >
+                    {reconciling && (
+                      <span className="h-2 w-2 animate-ping rounded-full bg-primary-foreground" />
+                    )}
+                    <Check className="h-4 w-4" />
+                    Reconcile All
+                  </Button>
+                </div>
               </div>
             </>
           )}
         </div>
       )}
+
+      {/* Income Allocation Editor */}
+      <IncomeAllocationEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        transactionId={transaction.id}
+        transactionAmount={transaction.amount}
+        allocationPlanId={transaction.allocationPlanId}
+        initialAllocations={allocations}
+        onSaved={() => {
+          fetchAllocations();
+          onReconciled?.();
+        }}
+      />
     </div>
   );
 }

@@ -48,7 +48,7 @@ export function EnvelopeCreationStep({
   useTemplate,
   incomeSources,
 }: EnvelopeCreationStepProps) {
-  // Two-step process: select then configure
+  // Two-step process: select then configure envelopes
   const [step, setStep] = useState<'select' | 'configure'>('select');
   const [selectedEnvelopes, setSelectedEnvelopes] = useState<string[]>([]);
 

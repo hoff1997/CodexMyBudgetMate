@@ -12,18 +12,15 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll().map((cookie) => ({ name: cookie.name, value: cookie.value }));
         },
-        setAll(cookies) {
-          const store = cookieStore as unknown as {
-            set?: (options: { name: string; value: string } & CookieOptions) => void;
-            delete?: (options: { name: string } & CookieOptions) => void;
-          };
-          cookies.forEach(({ name, value, options }) => {
-            if (options.maxAge !== undefined && options.maxAge <= 0) {
-              store.delete?.({ name, ...options });
-            } else {
-              store.set?.({ name, value, ...options });
-            }
-          });
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // In Server Components, we can't modify cookies - only read them
+            // This is expected and safe to ignore on pages that only need to read auth state
+          }
         },
       },
     },

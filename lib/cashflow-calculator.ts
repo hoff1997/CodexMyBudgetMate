@@ -43,6 +43,7 @@ export type RecurringIncome = {
 export type Envelope = {
   id: string;
   name: string;
+  icon?: string;
   bill_amount?: number;
   frequency?: PayFrequency;
   due_date?: Date | string;

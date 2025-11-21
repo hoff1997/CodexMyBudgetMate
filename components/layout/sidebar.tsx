@@ -21,11 +21,11 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v9"; // Increment this when adding new menu items
+const NAV_VERSION = "v10"; // Increment this when adding new menu items
 
 type NavItem = {
   id: string;
@@ -33,42 +33,36 @@ type NavItem = {
   href: string;
   icon: string;
   separator?: boolean;
+  isAdvanced?: boolean;
 };
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
-  // Onboarding & Getting Started
+  // Core Features
   { id: "onboarding", label: "Getting Started Journey", href: "/onboarding", icon: "🚀" },
-
-  // Working Pages
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
   { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
   { id: "goals", label: "Goals", href: "/goals", icon: "🎯" },
-  { id: "separator-1", label: "", href: "", icon: "", separator: true },
-
-  // Pages needing migration/review
-  { id: "getting-started", label: "Getting Started", href: "/getting-started", icon: "🏠" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
-  { id: "zero-budget", label: "Zero Budget Manager", href: "/envelope-summary?tab=zero-budget", icon: "🎯" },
-  { id: "envelope-planning", label: "Envelope Planning", href: "/envelope-planning", icon: "📋" },
   { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅" },
-  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮" },
-  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰" },
-  { id: "balance-report", label: "Account Balances", href: "/balance-report", icon: "📊" },
-  { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
-  { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳" },
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦" },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑" },
-  { id: "feature-requests", label: "Feature Requests", href: "/feature-requests", icon: "💡" },
+  { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
+  { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
-  { id: "coming-soon", label: "Coming Soon", href: "/coming-soon", icon: "⏳" },
+
+  // Advanced Tools (collapsible)
+  { id: "separator-advanced", label: "", href: "", icon: "", separator: true },
+  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isAdvanced: true },
+  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isAdvanced: true },
 ];
 
 export default function Sidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
+  const [showAdvanced, setShowAdvanced] = useState(true);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -137,9 +131,33 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
               <nav className="px-2 py-4 space-y-1">
-                {navItems.map((item) => (
-                  <SortableNavItem key={item.id} item={item} activePath={pathname} />
-                ))}
+                {navItems.map((item) => {
+                  // Handle separator for advanced section
+                  if (item.id === "separator-advanced") {
+                    return (
+                      <div key={item.id} className="my-2">
+                        <button
+                          onClick={() => setShowAdvanced(!showAdvanced)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-secondary w-full"
+                        >
+                          {showAdvanced ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                          <span>Advanced Tools</span>
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  // Hide advanced items if section is collapsed
+                  if (item.isAdvanced && !showAdvanced) {
+                    return null;
+                  }
+
+                  return <SortableNavItem key={item.id} item={item} activePath={pathname} />;
+                })}
               </nav>
             </SortableContext>
           </DndContext>

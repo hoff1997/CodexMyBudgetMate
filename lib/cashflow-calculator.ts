@@ -48,6 +48,11 @@ export type Envelope = {
   frequency?: PayFrequency;
   due_date?: Date | string;
   target_amount?: number;
+  funding_sources?: Array<{
+    income_id: string;
+    income_name: string;
+    amount: number;
+  }>;
 };
 
 /**

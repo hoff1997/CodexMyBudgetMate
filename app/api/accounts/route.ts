@@ -10,6 +10,29 @@ const schema = z.object({
   reconciled: z.boolean().optional(),
 });
 
+export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  const { data: accounts, error } = await supabase
+    .from("accounts")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ accounts: accounts || [] });
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {

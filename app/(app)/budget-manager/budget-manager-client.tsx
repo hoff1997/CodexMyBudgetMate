@@ -44,7 +44,9 @@ export function BudgetManagerClient({
   const { data: rawEnvelopes = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/envelopes"],
     queryFn: async () => {
-      const response = await fetch("/api/envelopes");
+      const response = await fetch("/api/envelopes", {
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Failed to fetch envelopes");
       const data = await response.json();
       return Array.isArray(data) ? data : data.envelopes || [];
@@ -56,7 +58,9 @@ export function BudgetManagerClient({
   const { data: rawIncome = [] } = useQuery<any[]>({
     queryKey: ["/api/income-sources"],
     queryFn: async () => {
-      const response = await fetch("/api/income-sources");
+      const response = await fetch("/api/income-sources", {
+        credentials: "include",
+      });
       if (!response.ok) return [];
       const data = await response.json();
       return Array.isArray(data) ? data : [];
@@ -118,6 +122,7 @@ export function BudgetManagerClient({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const response = await fetch(`/api/envelopes/${id}`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
@@ -134,6 +139,7 @@ export function BudgetManagerClient({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/envelopes/${id}`, {
         method: "DELETE",
+        credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to delete envelope");
       return response.json();
@@ -202,6 +208,7 @@ export function BudgetManagerClient({
     try {
       const response = await fetch(`/api/envelopes/${envelopeId}/allocations`, {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ income_source_id: incomeSourceId, amount }),
       });
@@ -245,6 +252,7 @@ export function BudgetManagerClient({
     try {
       const response = await fetch("/api/user/pay-cycle", {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payCycle: value }),
       });

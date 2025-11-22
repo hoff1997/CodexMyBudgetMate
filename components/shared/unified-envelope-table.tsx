@@ -13,7 +13,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Trash2, CalendarIcon, Plus, AlertTriangle } from "lucide-react";
-import { useOpeningBalanceCalculator } from "@/lib/hooks/use-opening-balance-calculator";
+import { calculateOpeningBalance } from "@/lib/hooks/use-opening-balance-calculator";
 import { ValidationWarnings } from "@/components/shared/validation-warnings";
 import type {
   UnifiedEnvelopeTableProps,
@@ -64,7 +64,7 @@ export function UnifiedEnvelopeTable({
   const totalOpeningBalanceNeeded = showOpeningBalance
     ? envelopes.reduce((total, env) => {
         const totalPerCycleAllocation = Object.values(env.incomeAllocations || {}).reduce((s, amt) => s + amt, 0);
-        const result = useOpeningBalanceCalculator({
+        const result = calculateOpeningBalance({
           targetAmount: env.targetAmount || 0,
           frequency: env.frequency || 'monthly',
           dueDate: env.dueDate,
@@ -170,7 +170,7 @@ export function UnifiedEnvelopeTable({
 
     // Opening balance warning (onboarding mode)
     if (showOpeningBalance && envelope.subtype === 'bill') {
-      const result = useOpeningBalanceCalculator({
+      const result = calculateOpeningBalance({
         targetAmount: envelope.targetAmount || 0,
         frequency: envelope.frequency || 'monthly',
         dueDate: envelope.dueDate,
@@ -280,7 +280,7 @@ export function UnifiedEnvelopeTable({
               const warnings = validateEnvelope(envelope);
               const totalAllocation = getTotalAllocation(envelope);
               const openingBalanceCalculation = showOpeningBalance
-                ? useOpeningBalanceCalculator({
+                ? calculateOpeningBalance({
                     targetAmount: envelope.targetAmount || 0,
                     frequency: envelope.frequency || 'monthly',
                     dueDate: envelope.dueDate,

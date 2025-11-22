@@ -86,6 +86,7 @@ export function EnvelopeTransferDialog({
     try {
       const response = await fetch("/api/envelopes/transfer", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fromId,

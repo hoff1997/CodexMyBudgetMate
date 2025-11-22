@@ -122,6 +122,7 @@ export function EnvelopeSummaryClient({
         envelopes.map((envelope, index) =>
           fetch(`/api/envelopes/${envelope.id}`, {
             method: "PATCH",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sort_order: index }),
           }),
@@ -285,6 +286,7 @@ export function EnvelopeSummaryClient({
         onSave={async (updated) => {
           await fetch(`/api/envelopes/${updated.id}`, {
             method: "PATCH",
+            credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: updated.name,

@@ -25,7 +25,8 @@ import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v10"; // Increment this when adding new menu items
+const NAV_VERSION = "v11"; // Increment this when adding new menu items
+const ADMIN_EMAIL = "hoff1997@gmail.com";
 
 type NavItem = {
   id: string;
@@ -34,35 +35,43 @@ type NavItem = {
   icon: string;
   separator?: boolean;
   isAdvanced?: boolean;
+  isFutureFeature?: boolean;
+  isReportsSubmenu?: boolean;
 };
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
-  // Core Features
-  { id: "onboarding", label: "Getting Started Journey", href: "/onboarding", icon: "🚀" },
-  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
+  // Core Features - New Order
+  { id: "onboarding", label: "Getting Started", href: "/onboarding", icon: "🚀" },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
-  { id: "zero-budget-setup", label: "Zero Budget Setup", href: "/zero-budget-setup", icon: "🎯" },
+  { id: "zero-budget-setup", label: "Zero Budget Manager", href: "/zero-budget-setup", icon: "🎯" },
+  { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
+  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
-  { id: "goals", label: "Goals", href: "/goals", icon: "🎯" },
-  { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
-  { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅" },
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦" },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑" },
+  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isReportsSubmenu: true },
   { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
-  { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
 
   // Advanced Tools (collapsible)
   { id: "separator-advanced", label: "", href: "", icon: "", separator: true },
   { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isAdvanced: true },
-  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isAdvanced: true },
+
+  // Future Features (admin only)
+  { id: "separator-future", label: "", href: "", icon: "", separator: true },
+  { id: "goals", label: "Goals", href: "/goals", icon: "🎯", isFutureFeature: true },
+  { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isFutureFeature: true },
+  { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isFutureFeature: true },
 ];
 
-export default function Sidebar({ children }: { children: React.ReactNode }) {
+export default function Sidebar({ children, userEmail }: { children: React.ReactNode; userEmail?: string | null }) {
   const pathname = usePathname();
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
   const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showReportsSubmenu, setShowReportsSubmenu] = useState(false);
+  const [showFutureFeatures, setShowFutureFeatures] = useState(false);
+  const isAdmin = userEmail === ADMIN_EMAIL;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -151,9 +160,85 @@ export default function Sidebar({ children }: { children: React.ReactNode }) {
                     );
                   }
 
+                  // Handle separator for future features section (admin only)
+                  if (item.id === "separator-future") {
+                    if (!isAdmin) return null;
+                    return (
+                      <div key={item.id} className="my-2">
+                        <button
+                          onClick={() => setShowFutureFeatures(!showFutureFeatures)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-secondary w-full"
+                        >
+                          {showFutureFeatures ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                          <span>Future Features</span>
+                        </button>
+                      </div>
+                    );
+                  }
+
                   // Hide advanced items if section is collapsed
                   if (item.isAdvanced && !showAdvanced) {
                     return null;
+                  }
+
+                  // Hide future features if section is collapsed or user is not admin
+                  if (item.isFutureFeature && (!isAdmin || !showFutureFeatures)) {
+                    return null;
+                  }
+
+                  // Handle Reports submenu
+                  if (item.id === "reports") {
+                    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                    return (
+                      <div key={item.id}>
+                        <button
+                          onClick={() => setShowReportsSubmenu(!showReportsSubmenu)}
+                          className={cn(
+                            "flex items-center gap-2 px-4 py-2 text-sm font-medium transition w-full rounded-md",
+                            isActive
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-muted hover:text-secondary"
+                          )}
+                        >
+                          <span>{item.icon}</span>
+                          <span className="flex-1 text-left">{item.label}</span>
+                          {showReportsSubmenu ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  // Hide reports submenu items if collapsed
+                  if (item.isReportsSubmenu && !showReportsSubmenu) {
+                    return null;
+                  }
+
+                  // Render submenu items with indentation
+                  if (item.isReportsSubmenu) {
+                    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                    return (
+                      <Link
+                        key={item.id}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-2 pl-12 pr-4 py-2 text-sm font-medium transition rounded-md",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted hover:text-secondary"
+                        )}
+                      >
+                        <span>{item.icon}</span>
+                        <span>{item.label}</span>
+                      </Link>
+                    );
                   }
 
                   return <SortableNavItem key={item.id} item={item} activePath={pathname} />;

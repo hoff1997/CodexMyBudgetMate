@@ -59,6 +59,7 @@ export type SettingsData = {
     avatarUrl: string | null;
     email: string | null;
     payCycle: string;
+    defaultPage: string;
   };
   envelopes: EnvelopeRow[];
   labels: LabelRow[];
@@ -85,6 +86,7 @@ export function SettingsClient({ data, flash = null }: Props) {
   const [profileName, setProfileName] = useState(data.profile.fullName);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(data.profile.avatarUrl);
   const [payCycle, setPayCycle] = useState<string>(data.profile.payCycle);
+  const [defaultPage, setDefaultPage] = useState<string>(data.profile.defaultPage);
   const [labels, setLabels] = useState<LabelRow[]>(data.labels);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColour, setNewLabelColour] = useState("#0ea5e9");
@@ -316,6 +318,30 @@ export function SettingsClient({ data, flash = null }: Props) {
     }
   }
 
+  async function handleDefaultPageChange(newDefaultPage: string) {
+    const previousDefaultPage = defaultPage;
+    setDefaultPage(newDefaultPage);
+
+    try {
+      const response = await fetch("/api/user/default-page", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ defaultPage: newDefaultPage }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to update default page" }));
+        throw new Error(payload.error ?? "Unable to update default page");
+      }
+
+      toast.success(`Default landing page updated`);
+    } catch (error) {
+      console.error(error);
+      setDefaultPage(previousDefaultPage); // Revert on error
+      toast.error(error instanceof Error ? error.message : "Unable to update default page");
+    }
+  }
+
   function handleConnectionAction(connection: BankConnectionRow, action: "refresh" | "disconnect") {
     const payload = { action };
     toast.promise(
@@ -426,23 +452,48 @@ export function SettingsClient({ data, flash = null }: Props) {
                 <Input value={data.profile.email ?? ""} readOnly />
               </label>
             </div>
-            <div className="space-y-1">
-              <label htmlFor="pay-cycle" className="text-sm text-muted-foreground">
-                Pay frequency
-              </label>
-              <Select value={payCycle} onValueChange={handlePayCycleChange}>
-                <SelectTrigger id="pay-cycle" className="w-full sm:w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Used for budget calculations in Zero Budget Setup
-              </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label htmlFor="pay-cycle" className="text-sm text-muted-foreground">
+                  Pay frequency
+                </label>
+                <Select value={payCycle} onValueChange={handlePayCycleChange}>
+                  <SelectTrigger id="pay-cycle" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Used for budget calculations
+                </p>
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="default-page" className="text-sm text-muted-foreground">
+                  Default landing page
+                </label>
+                <Select value={defaultPage} onValueChange={handleDefaultPageChange}>
+                  <SelectTrigger id="default-page" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="/dashboard">Dashboard</SelectItem>
+                    <SelectItem value="/reconcile">Reconcile</SelectItem>
+                    <SelectItem value="/transactions">Transactions</SelectItem>
+                    <SelectItem value="/envelope-summary">Envelope Summary</SelectItem>
+                    <SelectItem value="/zero-budget-setup">Zero Budget Manager</SelectItem>
+                    <SelectItem value="/accounts">Accounts</SelectItem>
+                    <SelectItem value="/reports">Reports</SelectItem>
+                    <SelectItem value="/net-worth">Net Worth</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Page shown after login
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSaveProfile}>

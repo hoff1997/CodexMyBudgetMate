@@ -25,7 +25,7 @@ import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v11"; // Increment this when adding new menu items
+const NAV_VERSION = "v12"; // Increment this when adding new menu items
 const ADMIN_EMAIL = "hoff1997@gmail.com";
 
 type NavItem = {
@@ -54,24 +54,34 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
 
-  // Advanced Tools (collapsible)
-  { id: "separator-advanced", label: "", href: "", icon: "", separator: true },
-  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isAdvanced: true },
-
   // Future Features (admin only)
   { id: "separator-future", label: "", href: "", icon: "", separator: true },
+  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isFutureFeature: true },
   { id: "goals", label: "Goals", href: "/goals", icon: "🎯", isFutureFeature: true },
   { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isFutureFeature: true },
   { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isFutureFeature: true },
 ];
 
-export default function Sidebar({ children, userEmail }: { children: React.ReactNode; userEmail?: string | null }) {
+export default function Sidebar({
+  children,
+  userEmail,
+  showOnboardingMenu = true,
+}: {
+  children: React.ReactNode;
+  userEmail?: string | null;
+  showOnboardingMenu?: boolean;
+}) {
   const pathname = usePathname();
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
-  const [showAdvanced, setShowAdvanced] = useState(true);
   const [showReportsSubmenu, setShowReportsSubmenu] = useState(false);
   const [showFutureFeatures, setShowFutureFeatures] = useState(false);
   const isAdmin = userEmail === ADMIN_EMAIL;
+
+  // Filter out onboarding if user has completed it
+  const filteredNavItems = useMemo(() => {
+    if (showOnboardingMenu) return navItems;
+    return navItems.filter(item => item.id !== 'onboarding');
+  }, [navItems, showOnboardingMenu]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -127,7 +137,7 @@ export default function Sidebar({ children, userEmail }: { children: React.React
     });
   };
 
-  const ids = useMemo(() => navItems.map((item) => item.id), [navItems]);
+  const ids = useMemo(() => filteredNavItems.map((item) => item.id), [filteredNavItems]);
 
   return (
     <div className="flex min-h-screen">
@@ -140,26 +150,7 @@ export default function Sidebar({ children, userEmail }: { children: React.React
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
               <nav className="px-2 py-4 space-y-1">
-                {navItems.map((item) => {
-                  // Handle separator for advanced section
-                  if (item.id === "separator-advanced") {
-                    return (
-                      <div key={item.id} className="my-2">
-                        <button
-                          onClick={() => setShowAdvanced(!showAdvanced)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-secondary w-full"
-                        >
-                          {showAdvanced ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                          <span>Advanced Tools</span>
-                        </button>
-                      </div>
-                    );
-                  }
-
+                {filteredNavItems.map((item) => {
                   // Handle separator for future features section (admin only)
                   if (item.id === "separator-future") {
                     if (!isAdmin) return null;
@@ -178,11 +169,6 @@ export default function Sidebar({ children, userEmail }: { children: React.React
                         </button>
                       </div>
                     );
-                  }
-
-                  // Hide advanced items if section is collapsed
-                  if (item.isAdvanced && !showAdvanced) {
-                    return null;
                   }
 
                   // Hide future features if section is collapsed or user is not admin

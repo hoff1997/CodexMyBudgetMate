@@ -42,6 +42,7 @@ export async function POST(request: Request) {
         user_persona: persona,
         onboarding_completed: true,
         onboarding_step: 5,
+        show_onboarding_menu: false,
         last_activity_context: {
           action: 'onboarding_complete',
           timestamp: completedAt,

@@ -4,11 +4,7 @@ import { EnvelopeSummaryClient } from "@/components/layout/envelopes/envelope-su
 import { mapTransferHistory, type RawTransferRow } from "@/lib/types/envelopes";
 import { getPayPlanSummary } from "@/lib/server/pay-plan";
 
-type PageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
-};
-
-export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
+export default async function EnvelopeSummaryPage() {
   const supabase = await createClient();
   const {
     data: { session },
@@ -113,7 +109,6 @@ export default async function EnvelopeSummaryPage({ searchParams }: PageProps) {
       totals={totals}
       transferHistory={transferHistory}
       celebrations={celebrations}
-      defaultTab={typeof searchParams?.tab === "string" ? searchParams?.tab : undefined}
       payPlan={payPlan}
       categories={(categories ?? []).map((category) => ({ id: category.id, name: category.name }))}
     />

@@ -4,13 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeCategoryGroup } from "@/components/layout/envelopes/envelope-category-group";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
-import { ZeroBudgetManager } from "@/app/(app)/envelope-summary/zero-budget-manager";
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
@@ -34,7 +32,6 @@ export function EnvelopeSummaryClient({
   list,
   totals,
   transferHistory,
-  defaultTab,
   celebrations,
   payPlan,
   categories: categoryOptions = [],
@@ -42,7 +39,6 @@ export function EnvelopeSummaryClient({
   list: SummaryEnvelope[];
   totals: { target: number; current: number };
   transferHistory: TransferHistoryItem[];
-  defaultTab?: string;
   celebrations: Array<{ id: string; title: string; description: string | null; achievedAt: string }>;
   payPlan?: PayPlanSummary | null;
   categories?: CategoryOption[];
@@ -166,8 +162,6 @@ export function EnvelopeSummaryClient({
     [persistOrder],
   );
 
-  const defaultValue = defaultTab === "zero-budget" ? "zero-budget" : "summary";
-
   const selectedPlan = selectedEnvelope ? payPlanMap.get(selectedEnvelope.id) : undefined;
 
   return (
@@ -176,16 +170,17 @@ export function EnvelopeSummaryClient({
         <h1 className="text-2xl font-semibold text-secondary">Envelope summary</h1>
         <p className="text-sm text-muted-foreground">
           Snapshot of every envelope with progress markers so you can quickly see what needs topping
-          up before the next payday. Switch tabs to access the full Zero Budget Manager from the
-          Replit build.
+          up before the next payday.
         </p>
       </header>
-      <Tabs defaultValue={defaultValue} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="zero-budget">Zero budget manager</TabsTrigger>
-        </TabsList>
-        <TabsContent value="summary" className="space-y-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-secondary">Envelope Summary</h2>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/zero-budget-setup">Open Zero Budget Manager</Link>
+          </Button>
+        </div>
+        <div className="space-y-4">
           <div className="flex justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
             <Button
               type="button"
@@ -263,15 +258,8 @@ export function EnvelopeSummaryClient({
               )}
             </div>
           </div>
-        </TabsContent>
-        <TabsContent value="zero-budget">
-          <ZeroBudgetManager
-            envelopes={orderedEnvelopes}
-            transferHistory={transferHistory}
-            celebrations={celebrations}
-          />
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
 
       <EnvelopeEditSheet
         envelope={selectedEnvelope}

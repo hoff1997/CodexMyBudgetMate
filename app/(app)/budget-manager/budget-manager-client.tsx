@@ -26,11 +26,13 @@ import type { UnifiedEnvelopeData, IncomeSource } from "@/lib/types/unified-enve
 interface BudgetManagerClientProps {
   userId?: string;
   initialPayCycle?: string;
+  demoMode?: boolean;
 }
 
 export function BudgetManagerClient({
   userId,
   initialPayCycle = "monthly",
+  demoMode = false,
 }: BudgetManagerClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -47,6 +49,7 @@ export function BudgetManagerClient({
       const data = await response.json();
       return Array.isArray(data) ? data : data.envelopes || [];
     },
+    enabled: !demoMode, // Skip API call in demo mode
   });
 
   // Fetch income sources
@@ -58,6 +61,7 @@ export function BudgetManagerClient({
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
+    enabled: !demoMode, // Skip API call in demo mode
   });
 
   // Convert raw data to unified format

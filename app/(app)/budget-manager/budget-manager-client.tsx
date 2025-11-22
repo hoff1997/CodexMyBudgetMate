@@ -201,6 +201,13 @@ export function BudgetManagerClient({
 
   // Handle pay cycle change
   const handlePayCycleChange = async (value: string) => {
+    // In demo mode, just update locally without API call
+    if (demoMode) {
+      setPayCycle(value as any);
+      toast.success("Pay cycle updated (demo mode)");
+      return;
+    }
+
     try {
       const response = await fetch("/api/user/pay-cycle", {
         method: "PATCH",
@@ -344,7 +351,7 @@ export function BudgetManagerClient({
           </CardContent>
         </Card>
 
-        <CreditCardHoldingWidget />
+        {!demoMode && <CreditCardHoldingWidget />}
       </div>
 
       {/* Unified Envelope Table */}

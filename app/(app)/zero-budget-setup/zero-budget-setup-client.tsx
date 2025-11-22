@@ -30,6 +30,7 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
 } from "lucide-react";
+import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-card-holding-widget";
 import "./zero-budget-setup.css";
 
 interface EditingField {
@@ -850,7 +851,7 @@ export function ZeroBudgetSetupClient({
       </div>
 
       {/* Budget Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -905,6 +906,9 @@ export function ZeroBudgetSetupClient({
             </div>
           </CardContent>
         </Card>
+
+        {/* Credit Card Holding Widget */}
+        <CreditCardHoldingWidget />
       </div>
 
       {/* Income & Expense Tables */}

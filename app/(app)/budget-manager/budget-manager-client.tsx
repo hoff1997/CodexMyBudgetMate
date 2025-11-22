@@ -160,24 +160,29 @@ export function BudgetManagerClient({
         if (updates.dueDate instanceof Date) {
           // If it's a Date object, convert to ISO string
           apiData.due_date = updates.dueDate.toISOString();
+          console.log('[Budget Manager] Date conversion - Date object to ISO:', updates.dueDate, '→', apiData.due_date);
         } else if (typeof updates.dueDate === 'number') {
           // If it's just a day number, keep it as is
           apiData.due_date = updates.dueDate;
+          console.log('[Budget Manager] Date conversion - keeping day number:', updates.dueDate);
         } else if (typeof updates.dueDate === 'string') {
           // If it's already a string, use it as is
           apiData.due_date = updates.dueDate;
+          console.log('[Budget Manager] Date conversion - keeping string:', updates.dueDate);
         } else {
           apiData.due_date = updates.dueDate;
+          console.log('[Budget Manager] Date conversion - unknown type:', typeof updates.dueDate, updates.dueDate);
         }
       }
       if (updates.priority !== undefined) apiData.priority = updates.priority;
       if (updates.notes !== undefined) apiData.notes = updates.notes;
       if (updates.payCycleAmount !== undefined) apiData.pay_cycle_amount = updates.payCycleAmount;
 
+      console.log('[Budget Manager] Updating envelope:', id, 'with data:', apiData);
       await updateEnvelopeMutation.mutateAsync({ id, data: apiData });
       toast.success("Envelope updated");
     } catch (error) {
-      console.error("Failed to update envelope:", error);
+      console.error("[Budget Manager] Failed to update envelope:", error);
       toast.error("Failed to update envelope");
     }
   };

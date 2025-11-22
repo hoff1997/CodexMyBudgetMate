@@ -4,6 +4,10 @@ import { EnvelopeSummaryClient } from "@/components/layout/envelopes/envelope-su
 import { mapTransferHistory, type RawTransferRow } from "@/lib/types/envelopes";
 import { getPayPlanSummary } from "@/lib/server/pay-plan";
 
+// Force dynamic rendering and disable caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function EnvelopeSummaryPage() {
   const supabase = await createClient();
   const {

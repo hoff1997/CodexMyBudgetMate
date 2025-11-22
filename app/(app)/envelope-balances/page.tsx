@@ -6,6 +6,10 @@ export const metadata = {
   description: "Complete overview of all envelope balances with category grouping, debit/credit columns, and export functionality",
 };
 
+// Force dynamic rendering and disable caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function EnvelopeBalancesPage() {
   const supabase = await createClient();
   const {

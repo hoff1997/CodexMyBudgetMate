@@ -15,7 +15,7 @@ import { BankAccountsStep } from "@/components/onboarding/steps/bank-accounts-st
 import { IncomeStep } from "@/components/onboarding/steps/income-step";
 import { BudgetingApproachStep } from "@/components/onboarding/steps/budgeting-approach-step";
 import { EnvelopeEducationStep } from "@/components/onboarding/steps/envelope-education-step";
-import { EnvelopeCreationStep } from "@/components/onboarding/steps/envelope-creation-step";
+import { EnvelopeCreationStepV2 as EnvelopeCreationStep } from "@/components/onboarding/steps/envelope-creation-step-v2";
 import { EnvelopeAllocationStep } from "@/components/onboarding/steps/envelope-allocation-step";
 import { BudgetReviewStep } from "@/components/onboarding/steps/budget-review-step";
 import { CompletionStep } from "@/components/onboarding/steps/completion-step";

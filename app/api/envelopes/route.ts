@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
 const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
+const subtypeSchema = z.enum(["bill", "spending", "savings", "goal"]).optional();
 const prioritySchema = z.enum(["essential", "important", "discretionary"]).optional();
 const goalTypeSchema = z.enum(["savings", "debt_payoff", "purchase", "emergency_fund", "other"]).optional();
 
@@ -12,6 +13,7 @@ const schema = z.object({
   categoryId: z.string().uuid().optional(),
   categoryName: z.string().min(1).optional(),
   envelopeType: envelopeTypeSchema,
+  subtype: subtypeSchema,
   priority: prioritySchema,
   targetAmount: z.number().nonnegative().default(0),
   payCycleAmount: z.number().nonnegative().default(0),
@@ -26,6 +28,17 @@ const schema = z.object({
   goalType: goalTypeSchema,
   goalTargetDate: z.string().optional(),
   interestRate: z.number().nonnegative().optional(), // For debt payoff goals
+}).superRefine((data, ctx) => {
+  // Validate bill-specific requirements
+  if (data.subtype === 'bill') {
+    if (!data.frequency || data.frequency === 'none') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Bills must have a frequency',
+        path: ['frequency'],
+      });
+    }
+  }
 });
 
 export async function GET() {
@@ -40,7 +53,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("envelopes")
-    .select("id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate")
+    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate")
     .eq("user_id", session.user.id)
     .order("name");
 
@@ -99,6 +112,7 @@ export async function POST(request: Request) {
     name: payload.name,
     category_id: categoryId,
     envelope_type: payload.envelopeType ?? 'expense',
+    subtype: payload.subtype ?? 'bill',
     priority: payload.priority ?? 'important',
     target_amount: payload.targetAmount,
     pay_cycle_amount: payload.payCycleAmount,

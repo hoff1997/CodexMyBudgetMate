@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { ZeroBudgetSetupClient } from "./zero-budget-setup-client";
+import { ZeroBudgetSetupClientV2 as ZeroBudgetSetupClient } from "./zero-budget-setup-client-v2";
 
 export const metadata = {
   title: "Zero-Based Budget Setup | My Budget Mate",

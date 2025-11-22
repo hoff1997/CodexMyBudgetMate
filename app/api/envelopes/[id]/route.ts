@@ -16,6 +16,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "name",
     "category_id",
     "envelope_type",
+    "subtype",
     "priority",
     "target_amount",
     "annual_amount",

@@ -55,7 +55,8 @@
       "Bash(node scripts/check-envelopes.mjs:*)",
       "Bash(node scripts/check-user-envelopes.mjs:*)",
       "Bash(git reset:*)",
-      "Bash(node scripts/apply-user-preferences-migration.mjs:*)"
+      "Bash(node scripts/apply-user-preferences-migration.mjs:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

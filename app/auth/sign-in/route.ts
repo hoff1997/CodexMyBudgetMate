@@ -26,5 +26,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 401 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Clear demo-mode cookie on successful login
+  const response = NextResponse.json({ ok: true });
+  response.cookies.delete("demo-mode");
+
+  return response;
 }

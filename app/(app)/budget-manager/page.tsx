@@ -16,8 +16,9 @@ export default async function BudgetManagerPage() {
 
   const authDisabled =
     process.env.NEXT_PUBLIC_AUTH_DISABLED === "true" || process.env.NODE_ENV !== "production";
+  // Demo mode only if NO session exists
   const demoMode =
-    cookieStore.get("demo-mode")?.value === "true" || (!session && authDisabled);
+    !session && (cookieStore.get("demo-mode")?.value === "true" || authDisabled);
 
   // Get user pay cycle preference
   let payCycle = "monthly";

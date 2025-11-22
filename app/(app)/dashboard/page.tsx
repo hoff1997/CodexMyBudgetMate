@@ -28,8 +28,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const authDisabled =
     process.env.NEXT_PUBLIC_AUTH_DISABLED === "true" || process.env.NODE_ENV !== "production";
+  // Demo mode only if NO session exists
   const demoMode =
-    cookieStore.get("demo-mode")?.value === "true" || (!session && authDisabled);
+    !session && (cookieStore.get("demo-mode")?.value === "true" || authDisabled);
 
   if (!session && !authDisabled && !demoMode) {
     redirect("/login");

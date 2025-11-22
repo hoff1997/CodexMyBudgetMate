@@ -34,7 +34,9 @@ export function CreditCardHoldingWidget() {
   const { data, isLoading, error } = useQuery<CreditCardHoldingStatus>({
     queryKey: ["/api/credit-card-holding"],
     queryFn: async () => {
-      const response = await fetch("/api/credit-card-holding");
+      const response = await fetch("/api/credit-card-holding", {
+        credentials: "include",
+      });
       if (!response.ok) throw new Error("Failed to fetch credit card status");
       return response.json();
     },
@@ -45,6 +47,7 @@ export function CreditCardHoldingWidget() {
     try {
       const response = await fetch("/api/credit-card-holding", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ createNew: true }),
       });

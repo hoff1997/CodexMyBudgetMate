@@ -355,7 +355,13 @@ export function BudgetManagerClient({
       </div>
 
       {/* Unified Envelope Table */}
-      {isLoading ? (
+      {demoMode ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            Demo mode: Sign in to view your budget data.
+          </CardContent>
+        </Card>
+      ) : isLoading ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             Loading envelopes...

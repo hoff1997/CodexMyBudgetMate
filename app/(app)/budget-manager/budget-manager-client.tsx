@@ -155,12 +155,27 @@ export function BudgetManagerClient({
       if (updates.subtype !== undefined) apiData.subtype = updates.subtype;
       if (updates.targetAmount !== undefined) apiData.target_amount = updates.targetAmount;
       if (updates.frequency !== undefined) apiData.frequency = updates.frequency;
-      if (updates.dueDate !== undefined) apiData.due_date = updates.dueDate;
+      if (updates.dueDate !== undefined) {
+        // Handle date conversion: support both number (day) and Date object
+        if (updates.dueDate instanceof Date) {
+          // If it's a Date object, convert to ISO string
+          apiData.due_date = updates.dueDate.toISOString();
+        } else if (typeof updates.dueDate === 'number') {
+          // If it's just a day number, keep it as is
+          apiData.due_date = updates.dueDate;
+        } else if (typeof updates.dueDate === 'string') {
+          // If it's already a string, use it as is
+          apiData.due_date = updates.dueDate;
+        } else {
+          apiData.due_date = updates.dueDate;
+        }
+      }
       if (updates.priority !== undefined) apiData.priority = updates.priority;
       if (updates.notes !== undefined) apiData.notes = updates.notes;
       if (updates.payCycleAmount !== undefined) apiData.pay_cycle_amount = updates.payCycleAmount;
 
       await updateEnvelopeMutation.mutateAsync({ id, data: apiData });
+      toast.success("Envelope updated");
     } catch (error) {
       console.error("Failed to update envelope:", error);
       toast.error("Failed to update envelope");

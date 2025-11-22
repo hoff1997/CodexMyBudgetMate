@@ -35,6 +35,7 @@ export function AuthForm() {
       setIsLoading(true);
       const response = await fetch("/auth/sign-in", {
         method: "POST",
+        credentials: "include",
         body: JSON.stringify(values),
         headers: { "Content-Type": "application/json" },
       });

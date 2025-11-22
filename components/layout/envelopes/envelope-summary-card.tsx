@@ -41,38 +41,41 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
       onClick={() => onSelect?.(envelope)}
       className="w-full rounded-lg border border-border bg-card p-2 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
     >
-      <div className="flex items-center gap-3">
-        {/* Icon and Name */}
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
-            {envelope.icon ?? "💼"}
+      <div className="flex flex-col gap-2">
+        {/* Top Row: Icon, Name, Status, Amount */}
+        <div className="flex items-center gap-3">
+          {/* Icon and Name */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
+              {envelope.icon ?? "💼"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-secondary truncate">{envelope.name}</h3>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-secondary truncate">{envelope.name}</h3>
+
+          {/* Status and Amount Info */}
+          <div className="flex items-center gap-2">
+            <StatusBadge status={statusLabel} />
+            {!isSpending && perPay > 0 && (
+              <span className="hidden lg:inline-block text-xs text-muted-foreground whitespace-nowrap">
+                ${perPay.toFixed(0)}/{(envelope.frequency ?? "pay").toLowerCase()}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="hidden md:flex flex-col flex-1 max-w-[200px]">
+        {/* Bottom Row: Full-width Progress Bar */}
+        <div className="flex flex-col w-full">
           <Progress
             value={isSpending ? 0 : percentage}
             indicatorClassName={indicatorClass}
-            className={cn("h-2", isSpending && "opacity-40")}
+            className={cn("h-2 w-full", isSpending && "opacity-40")}
           />
           <div className="flex items-center justify-between mt-0.5">
             <span className="text-[10px] text-muted-foreground">${current.toFixed(0)}</span>
             <span className="text-[10px] text-muted-foreground">${target.toFixed(0)}</span>
           </div>
-        </div>
-
-        {/* Status and Amount Info */}
-        <div className="flex items-center gap-2">
-          <StatusBadge status={statusLabel} />
-          {!isSpending && perPay > 0 && (
-            <span className="hidden lg:inline-block text-xs text-muted-foreground whitespace-nowrap">
-              ${perPay.toFixed(0)}/{(envelope.frequency ?? "pay").toLowerCase()}
-            </span>
-          )}
         </div>
       </div>
     </button>

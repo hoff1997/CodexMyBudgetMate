@@ -39,57 +39,40 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
     <button
       type="button"
       onClick={() => onSelect?.(envelope)}
-      className="w-full rounded-xl border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
+      className="w-full rounded-lg border border-border bg-card p-2 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-base">
+      <div className="flex items-center gap-3">
+        {/* Icon and Name */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
             {envelope.icon ?? "💼"}
           </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">
-              {envelope.category_name ?? "Uncategorised"}
-            </p>
-            <h3 className="text-sm font-semibold text-secondary">{envelope.name}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-secondary truncate">{envelope.name}</h3>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
+
+        {/* Progress Bar */}
+        <div className="hidden md:flex flex-col flex-1 max-w-[200px]">
+          <Progress
+            value={isSpending ? 0 : percentage}
+            indicatorClassName={indicatorClass}
+            className={cn("h-2", isSpending && "opacity-40")}
+          />
+          <div className="flex items-center justify-between mt-0.5">
+            <span className="text-[10px] text-muted-foreground">${current.toFixed(0)}</span>
+            <span className="text-[10px] text-muted-foreground">${target.toFixed(0)}</span>
+          </div>
+        </div>
+
+        {/* Status and Amount Info */}
+        <div className="flex items-center gap-2">
           <StatusBadge status={statusLabel} />
-          {isSpending ? (
-            <span className="rounded-full border border-dashed border-primary/60 px-2 py-0.5 text-xs font-medium text-primary">
-              Spending account
+          {!isSpending && perPay > 0 && (
+            <span className="hidden lg:inline-block text-xs text-muted-foreground whitespace-nowrap">
+              ${perPay.toFixed(0)}/{(envelope.frequency ?? "pay").toLowerCase()}
             </span>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-        <div className="flex items-center gap-1 text-muted-foreground">
-          {isSpending ? (
-            <span>Set targets to enable projections</span>
-          ) : (
-            <>
-              <span>{percentage}%</span>
-              {dueDate ? <span>· Due {format(new Date(dueDate), "dd/MM/yyyy")}</span> : null}
-            </>
           )}
-        </div>
-        {!isSpending && (
-          <div className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {perPay > 0 ? `$${perPay.toFixed(0)} / ${(envelope.frequency ?? "pay").toLowerCase()}` : "On target"}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-2 space-y-2">
-        <Progress
-          value={isSpending ? 0 : percentage}
-          indicatorClassName={indicatorClass}
-          className={isSpending ? "opacity-40" : undefined}
-        />
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span>Current ${current.toFixed(2)}</span>
-          <span>Target ${target.toFixed(2)}</span>
         </div>
       </div>
     </button>

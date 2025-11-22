@@ -79,7 +79,7 @@ export function EnvelopeCategoryGroup({
       {!collapsed && (
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-2 px-3 py-2">
+            <div className="flex flex-col gap-1 px-2 py-2">
               {category.envelopes.map((envelope) => (
                 <SortableEnvelopeCard
                   key={envelope.id}
@@ -126,20 +126,24 @@ function SortableEnvelopeCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("relative rounded-2xl border border-transparent", isDragging && "border-primary/40 bg-primary/5")}
+      className={cn("flex items-center gap-2 rounded-lg", isDragging && "opacity-50")}
     >
       {!disableDrag ? (
         <button
           type="button"
           aria-label={`Reorder ${envelope.name}`}
-          className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-grab active:cursor-grabbing"
           {...attributes}
           {...listeners}
         >
           <GripVertical className="h-4 w-4" />
         </button>
-      ) : null}
-      <EnvelopeSummaryCard envelope={envelope} onSelect={onSelectEnvelope} />
+      ) : (
+        <div className="w-6" />
+      )}
+      <div className="flex-1 min-w-0">
+        <EnvelopeSummaryCard envelope={envelope} onSelect={onSelectEnvelope} />
+      </div>
     </div>
   );
 }

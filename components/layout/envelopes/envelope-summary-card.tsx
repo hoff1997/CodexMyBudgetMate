@@ -24,7 +24,13 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
   const target = Number(envelope.target_amount ?? 0);
   const perPay = Number(envelope.pay_cycle_amount ?? 0);
   const percentage = target ? Math.min(100, Math.max(0, Math.round((current / target) * 100))) : 0;
-  const dueDate = envelope.next_payment_due ?? envelope.due_date;
+
+  // Calculate surplus/shortfall
+  const difference = current - target;
+  const surplusShortfall = {
+    amount: Math.abs(difference),
+    type: difference >= 0 ? 'surplus' : 'shortfall' as const,
+  };
 
   let indicatorClass = "bg-emerald-500";
   if (!target) {
@@ -39,60 +45,110 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
     <button
       type="button"
       onClick={() => onSelect?.(envelope)}
-      className="w-full rounded-lg border border-border bg-card p-2 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
+      className="w-full rounded-lg border border-border bg-card p-3 text-left shadow-sm transition hover:border-primary/40 hover:shadow"
     >
-      <div className="flex flex-col gap-2">
-        {/* Top Row: Icon, Name, Status, Amount */}
-        <div className="flex items-center gap-3">
-          {/* Icon and Name */}
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
-              {envelope.icon ?? "💼"}
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-semibold text-secondary truncate">{envelope.name}</h3>
-            </div>
-          </div>
+      <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
 
-          {/* Status and Amount Info */}
-          <div className="flex items-center gap-2">
-            <StatusBadge status={statusLabel} />
-            {!isSpending && perPay > 0 && (
-              <span className="hidden lg:inline-block text-xs text-muted-foreground whitespace-nowrap">
-                ${perPay.toFixed(0)}/{(envelope.frequency ?? "pay").toLowerCase()}
-              </span>
-            )}
+        {/* LEFT SECTION: Icon + Name + Bill Info */}
+        <div className="flex items-center gap-2 min-w-0 md:flex-[0_0_240px]">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
+            {envelope.icon ?? "💼"}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-secondary truncate">
+              {envelope.name}
+            </h3>
+            {isSpending ? (
+              <p className="text-xs text-muted-foreground">
+                {current >= 0 ? '+' : ''}{formatCurrency(current)}
+              </p>
+            ) : perPay > 0 ? (
+              <p className="text-xs text-muted-foreground">
+                ${perPay.toFixed(0)}/{(envelope.frequency ?? "month").toLowerCase()}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        {/* Bottom Row: Full-width Progress Bar */}
-        <div className="flex flex-col w-full">
-          <Progress
-            value={isSpending ? 0 : percentage}
-            indicatorClassName={indicatorClass}
-            className={cn("h-2 w-full", isSpending && "opacity-40")}
-          />
-          <div className="flex items-center justify-between mt-0.5">
-            <span className="text-[10px] text-muted-foreground">${current.toFixed(0)}</span>
-            <span className="text-[10px] text-muted-foreground">${target.toFixed(0)}</span>
+        {/* CENTER SECTION: Progress Bar (non-spending only) */}
+        {!isSpending && target > 0 ? (
+          <div className="flex items-center flex-1 min-w-0 md:min-w-[120px] md:max-w-[200px]">
+            <div className="w-full">
+              <Progress
+                value={percentage}
+                indicatorClassName={indicatorClass}
+                className="h-2 w-full"
+              />
+              <div className="flex items-center justify-center mt-1">
+                <span className="text-[10px] text-muted-foreground">
+                  {percentage}%
+                </span>
+              </div>
+            </div>
           </div>
+        ) : (
+          <div className="hidden md:block flex-1 min-w-0" />
+        )}
+
+        {/* RIGHT SECTION: Status Indicator + Amounts + Surplus/Shortfall */}
+        <div className="flex flex-wrap items-center gap-2 md:flex-[0_0_280px] md:justify-end">
+          {/* Status Indicator */}
+          <StatusIndicator status={statusLabel} />
+
+          {/* Current/Target Amounts */}
+          {!isSpending && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+              <span className="font-semibold text-secondary">
+                ${current.toFixed(0)}
+              </span>
+              <span>/</span>
+              <span>${target.toFixed(0)}</span>
+            </div>
+          )}
+
+          {/* Surplus/Shortfall */}
+          {!isSpending && target > 0 && (
+            <span className={cn(
+              "text-xs font-medium whitespace-nowrap",
+              surplusShortfall.type === 'surplus'
+                ? "text-emerald-600"
+                : "text-rose-600"
+            )}>
+              {surplusShortfall.type === 'surplus' ? 'Surplus:' : 'Shortfall:'} ${surplusShortfall.amount.toFixed(0)}
+            </span>
+          )}
         </div>
       </div>
     </button>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+// Status indicator component (dot + text instead of badge)
+function StatusIndicator({ status }: { status: string }) {
   const tone = status.toLowerCase();
   const colour =
     tone.includes("over") || tone.includes("surplus")
-      ? "bg-purple-100 text-purple-700 border-purple-200"
+      ? "bg-purple-500"
       : tone.includes("needs") || tone.includes("under")
-      ? "bg-rose-100 text-rose-700 border-rose-200"
+      ? "bg-rose-500"
       : tone.includes("spending")
-      ? "bg-sky-100 text-sky-700 border-sky-200"
-      : "bg-emerald-100 text-emerald-700 border-emerald-200";
+      ? "bg-sky-500"
+      : "bg-emerald-500";
+
   return (
-    <span className={cn("rounded-full border px-3 py-1 text-xs font-medium", colour)}>{status}</span>
+    <div className="flex items-center gap-1.5">
+      <div className={cn("h-2 w-2 rounded-full", colour)} />
+      <span className="text-xs font-medium text-muted-foreground">
+        {status}
+      </span>
+    </div>
   );
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-NZ", {
+    style: "currency",
+    currency: "NZD",
+    minimumFractionDigits: 0,
+  }).format(value);
 }

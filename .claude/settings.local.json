@@ -50,7 +50,12 @@
       "Bash(node scripts/reset-onboarding.mjs:*)",
       "Bash(head:*)",
       "Bash(git -C \"/c/Users/hoff1/My Budget Mate/Cloned Codex/CodexMyBudgetMate\" log --name-only --since=\"7 days ago\" --pretty=format: --diff-filter=M)",
-      "Bash(git -C \"/c/Users/hoff1/My Budget Mate/Cloned Codex/CodexMyBudgetMate\" log -1 --format=\"%H %s\" --name-status)"
+      "Bash(git -C \"/c/Users/hoff1/My Budget Mate/Cloned Codex/CodexMyBudgetMate\" log -1 --format=\"%H %s\" --name-status)",
+      "Bash(node scripts/seed-envelopes.mjs:*)",
+      "Bash(node scripts/check-envelopes.mjs:*)",
+      "Bash(node scripts/check-user-envelopes.mjs:*)",
+      "Bash(git reset:*)",
+      "Bash(node scripts/apply-user-preferences-migration.mjs:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,6 +9,8 @@ import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-sum
 import { EnvelopeCategoryGroup } from "@/components/layout/envelopes/envelope-category-group";
 import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
+import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
+import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-card-holding-widget";
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
@@ -47,6 +49,7 @@ export function EnvelopeSummaryClient({
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
   const [selectedEnvelope, setSelectedEnvelope] = useState<SummaryEnvelope | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [collapseAll, setCollapseAll] = useState(false);
 
@@ -176,9 +179,14 @@ export function EnvelopeSummaryClient({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-secondary">Envelope Summary</h2>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/zero-budget-setup">Open Zero Budget Manager</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/envelope-balances">View Report</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/zero-budget-setup">Zero Budget Manager</Link>
+            </Button>
+          </div>
         </div>
         <div className="space-y-4">
           <div className="flex justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
@@ -191,7 +199,7 @@ export function EnvelopeSummaryClient({
               Add New Envelope
             </Button>
           </div>
-          <section className="grid gap-4 md:grid-cols-3">
+          <section className="grid gap-4 md:grid-cols-4">
             <MetricCard
               title="Total target"
               value={formatCurrency(totals.target)}
@@ -203,6 +211,9 @@ export function EnvelopeSummaryClient({
               value={formatCurrency(Math.max(0, totals.target - totals.current))}
               description="What is still required to hit targets"
             />
+            <div className="md:col-span-1">
+              <CreditCardHoldingWidget />
+            </div>
           </section>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -225,6 +236,9 @@ export function EnvelopeSummaryClient({
               ))}
             </div>
             <div className="flex gap-2">
+              <Button variant="default" size="sm" onClick={() => setTransferOpen(true)}>
+                Transfer Funds
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setCollapseAll(false)}>
                 Expand all
               </Button>
@@ -294,6 +308,16 @@ export function EnvelopeSummaryClient({
         onOpenChange={setCreateOpen}
         categories={categoryOptions}
         onCreated={() => {
+          router.refresh();
+        }}
+      />
+
+      <EnvelopeTransferDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        envelopes={orderedEnvelopes}
+        history={transferHistory}
+        onTransferComplete={() => {
           router.refresh();
         }}
       />

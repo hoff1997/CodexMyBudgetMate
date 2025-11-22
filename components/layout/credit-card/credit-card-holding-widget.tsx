@@ -157,14 +157,17 @@ export function CreditCardHoldingWidget() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Holding Account Balance */}
+        {/* Actual Balance */}
         <div>
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-muted-foreground">Holding Balance</span>
-            <span className="font-semibold">
+            <span className="text-muted-foreground">Account Balance</span>
+            <span className="font-semibold text-blue-600">
               ${holdingBalance.toFixed(2)}
             </span>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Available in {holdingAccount?.name}
+          </p>
         </div>
 
         {/* Credit Card Debt */}
@@ -177,6 +180,9 @@ export function CreditCardHoldingWidget() {
               ${totalCreditCardDebt.toFixed(2)}
             </span>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Next payment due amount
+          </p>
         </div>
 
         {/* Coverage Progress */}

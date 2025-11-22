@@ -66,6 +66,13 @@ export function BudgetManagerClient({
 
   // Convert raw data to unified format
   useEffect(() => {
+    if (!rawEnvelopes || rawEnvelopes.length === 0) {
+      if (unifiedEnvelopes.length > 0) {
+        setUnifiedEnvelopes([]);
+      }
+      return;
+    }
+
     const unified: UnifiedEnvelopeData[] = rawEnvelopes.map(env => ({
       id: env.id,
       name: env.name,
@@ -84,10 +91,17 @@ export function BudgetManagerClient({
     }));
 
     setUnifiedEnvelopes(unified);
-  }, [rawEnvelopes]);
+  }, [rawEnvelopes, unifiedEnvelopes.length]);
 
   // Convert income data
   useEffect(() => {
+    if (!rawIncome || rawIncome.length === 0) {
+      if (incomeSources.length > 0) {
+        setIncomeSources([]);
+      }
+      return;
+    }
+
     const sources: IncomeSource[] = rawIncome.map(inc => ({
       id: inc.id,
       name: inc.name,
@@ -97,7 +111,7 @@ export function BudgetManagerClient({
     }));
 
     setIncomeSources(sources);
-  }, [rawIncome]);
+  }, [rawIncome, incomeSources.length]);
 
   // Update envelope mutation
   const updateEnvelopeMutation = useMutation({

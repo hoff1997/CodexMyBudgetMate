@@ -10,11 +10,25 @@ export default async function EnvelopeSummaryPage() {
     data: { session },
   } = await supabase.auth.getSession();
 
+  if (!session) {
+    return (
+      <EnvelopeSummaryClient
+        list={[]}
+        totals={{ target: 0, current: 0 }}
+        transferHistory={[]}
+        celebrations={[]}
+        payPlan={null}
+        categories={[]}
+      />
+    );
+  }
+
   const { data: envelopes } = await supabase
     .from("envelopes")
     .select(
       "id, name, target_amount, current_amount, due_date, frequency, next_payment_due, notes, pay_cycle_amount, opening_balance, category_id, icon, sort_order, is_spending",
     )
+    .eq("user_id", session.user.id)
     .or("is_goal.is.null,is_goal.eq.false") // Exclude goals
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
@@ -22,6 +36,7 @@ export default async function EnvelopeSummaryPage() {
   const { data: categories } = await supabase
     .from("envelope_categories")
     .select("id, name")
+    .eq("user_id", session.user.id)
     .order("name");
 
   const { data: transfers } = await supabase
@@ -29,6 +44,7 @@ export default async function EnvelopeSummaryPage() {
     .select(
       "id, amount, note, created_at, from_envelope:from_envelope_id(id, name), to_envelope:to_envelope_id(id, name)",
     )
+    .eq("user_id", session.user.id)
     .order("created_at", { ascending: false })
     .limit(20);
 

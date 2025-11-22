@@ -184,7 +184,7 @@ export function EnvelopeSummaryClient({
               <Link href="/envelope-balances">View Report</Link>
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link href="/zero-budget-setup">Zero Budget Manager</Link>
+              <Link href="/budget-manager">Budget Manager</Link>
             </Button>
           </div>
         </div>

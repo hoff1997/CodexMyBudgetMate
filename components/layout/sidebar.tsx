@@ -43,7 +43,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   // Core Features - New Order
   { id: "onboarding", label: "Getting Started", href: "/onboarding", icon: "🚀" },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
-  { id: "zero-budget-setup", label: "Zero Budget Manager", href: "/zero-budget-setup", icon: "🎯" },
+  { id: "budget-manager", label: "Budget Manager", href: "/budget-manager", icon: "🎯" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },

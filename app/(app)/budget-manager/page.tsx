@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import { ZeroBudgetSetupClientV2 as ZeroBudgetSetupClient } from "./zero-budget-setup-client-v2";
+import { BudgetManagerClient } from "./budget-manager-client";
 
 export const metadata = {
-  title: "Zero-Based Budget Setup | My Budget Mate",
-  description: "Plan and organise your complete budget system with inline editing",
+  title: "Budget Manager | My Budget Mate",
+  description: "Manage your zero-based budget with inline editing",
 };
 
-export default async function ZeroBudgetSetupPage() {
+export default async function BudgetManagerPage() {
   const supabase = await createClient();
   const {
     data: { session },
@@ -26,5 +26,5 @@ export default async function ZeroBudgetSetupPage() {
     }
   }
 
-  return <ZeroBudgetSetupClient userId={session?.user.id} initialPayCycle={payCycle} />;
+  return <BudgetManagerClient userId={session?.user.id} initialPayCycle={payCycle} />;
 }

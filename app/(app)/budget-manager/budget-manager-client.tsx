@@ -23,15 +23,15 @@ import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-
 import { UnifiedEnvelopeTable } from "@/components/shared/unified-envelope-table";
 import type { UnifiedEnvelopeData, IncomeSource } from "@/lib/types/unified-envelope";
 
-interface ZeroBudgetSetupClientV2Props {
+interface BudgetManagerClientProps {
   userId?: string;
   initialPayCycle?: string;
 }
 
-export function ZeroBudgetSetupClientV2({
+export function BudgetManagerClient({
   userId,
   initialPayCycle = "monthly",
-}: ZeroBudgetSetupClientV2Props) {
+}: BudgetManagerClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [payCycle, setPayCycle] = useState<'weekly' | 'fortnightly' | 'monthly'>(initialPayCycle as any);

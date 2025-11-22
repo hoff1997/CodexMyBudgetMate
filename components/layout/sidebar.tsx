@@ -25,7 +25,7 @@ import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v12"; // Increment this when adding new menu items
+const NAV_VERSION = "v13"; // Increment this when adding new menu items
 const ADMIN_EMAIL = "hoff1997@gmail.com";
 
 type NavItem = {

@@ -35,19 +35,26 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 async function seedEnvelopes() {
-  // Get the first user
-  const { data: users, error: usersError } = await supabase
+  // Get user ID from command line argument or use hoff1997's ID
+  const targetUserId = process.argv[2] || '5d029227-09d6-4eab-b899-fbf346dd9e2d';
+
+  // Verify user exists
+  const { data: user, error: userError } = await supabase
     .from('profiles')
     .select('id')
-    .limit(1);
+    .eq('id', targetUserId)
+    .single();
 
-  if (usersError || !users || users.length === 0) {
-    console.error('No users found:', usersError);
+  if (userError || !user) {
+    console.error('User not found:', userError?.message || targetUserId);
+    console.log('\nAvailable users:');
+    const { data: allUsers } = await supabase.from('profiles').select('id');
+    allUsers?.forEach(u => console.log(`  - ${u.id}`));
     process.exit(1);
   }
 
-  const userId = users[0].id;
-  console.log('Seeding envelopes for user:', userId);
+  const userId = user.id;
+  console.log(`Seeding envelopes for user: ${userId}`);
 
   // Define categories with envelopes
   const categoriesWithEnvelopes = [

@@ -10,16 +10,12 @@ export async function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          return cookieStore.getAll().map((cookie) => ({ name: cookie.name, value: cookie.value }));
         },
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, {
-                ...options,
-                sameSite: 'lax',
-                path: '/',
-              });
+              cookieStore.set(name, value, options);
             });
           } catch {
             // In Server Components, we can't modify cookies - only read them

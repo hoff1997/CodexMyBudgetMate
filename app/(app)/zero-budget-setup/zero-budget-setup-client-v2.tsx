@@ -51,9 +51,9 @@ export function ZeroBudgetSetupClientV2({
 
   // Fetch income sources
   const { data: rawIncome = [] } = useQuery<any[]>({
-    queryKey: ["/api/income"],
+    queryKey: ["/api/income-sources"],
     queryFn: async () => {
-      const response = await fetch("/api/income");
+      const response = await fetch("/api/income-sources");
       if (!response.ok) return [];
       const data = await response.json();
       return Array.isArray(data) ? data : [];

@@ -18,7 +18,7 @@ export default function MarketingPage() {
               <Link href="/login">Sign in</Link>
             </Button>
             <Button asChild>
-              <Link href="/login">Launch App</Link>
+              <Link href="/signup">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -38,7 +38,7 @@ export default function MarketingPage() {
           </p>
           <div className="flex flex-col items-center justify-center gap-3 md:flex-row">
             <Button asChild size="lg">
-              <Link href="/login">Get Started Free</Link>
+              <Link href="/signup">Get Started Free</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href="#features">Learn More</Link>
@@ -201,10 +201,10 @@ export default function MarketingPage() {
           </p>
           <div className="mt-6 flex flex-col items-center justify-center gap-3 md:flex-row">
             <Button asChild size="lg">
-              <Link href="/dashboard">Start your journey today</Link>
+              <Link href="/signup">Start your journey today</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/login">Already invited? Sign in</Link>
+              <Link href="/login">Already have an account? Sign in</Link>
             </Button>
           </div>
         </section>

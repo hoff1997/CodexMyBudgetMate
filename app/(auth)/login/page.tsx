@@ -3,9 +3,8 @@ import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PiggyBank, MailCheck, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { PiggyBank } from "lucide-react";
 
 export default async function LoginPage() {
   const supabase = await createClient();
@@ -21,107 +20,51 @@ export default async function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-primary/10">
       <header className="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <PiggyBank className="h-7 w-7 text-primary" />
             <span className="text-lg font-semibold text-secondary">My Budget Mate</span>
-          </div>
-          <Button asChild variant="ghost">
-            <Link href="/">Back to site</Link>
+          </Link>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/">Back to home</Link>
           </Button>
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-16 md:flex-row md:items-start md:justify-between">
-        <section className="max-w-xl space-y-6">
-          <Badge variant="secondary" className="uppercase tracking-wide">
-            Secure password login
-          </Badge>
-          <h1 className="text-3xl font-semibold text-secondary md:text-4xl">
-            Kia ora, welcome back to your budget mate.
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in with your email and password to access your budget. Your session will stay active
-            so you don&apos;t need to log in every time you visit.
-          </p>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {[
-              {
-                icon: MailCheck,
-                title: "Persistent sessions",
-                copy: "Stay logged in across visits—no need to re-enter credentials every time.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "Bank-grade security",
-                copy: "Row-level security and planned 2FA keep access tight.",
-              },
-              {
-                icon: Sparkles,
-                title: "Demo mode available",
-                copy: "Preview the app with sample envelopes before inviting your whānau.",
-              },
-              {
-                icon: Users,
-                title: "Coach friendly",
-                copy: "Partnership programme ready—ask us to enable coach accounts.",
-              },
-            ].map((item) => (
-              <Card key={item.title} className="border-primary/20">
-                <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <item.icon className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-sm font-semibold text-secondary">
-                    {item.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">{item.copy}</p>
-                </CardContent>
-              </Card>
-            ))}
+      <main className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
+        <div className="w-full space-y-6">
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-semibold text-secondary">Welcome back</h1>
+            <p className="text-sm text-muted-foreground">
+              Sign in to your account to continue
+            </p>
           </div>
 
-          <Card className="border-dashed border-primary/30 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="text-base text-secondary">Need a demo account?</CardTitle>
-              <CardDescription className="text-xs text-muted-foreground">
-                Perfect for testing or showcasing the budgeting flows without sending a magic link.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3 text-sm">
-              <p className="text-muted-foreground">
-                In local development, set <code className="rounded bg-muted px-1">NEXT_PUBLIC_AUTH_DISABLED=true</code> and hop
-                straight into the app.
-              </p>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/api/demo-mode/enter?redirect=/dashboard">Explore in demo mode</Link>
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Want real access? Email <a className="underline" href="mailto:hello@mybudgetmate.co.nz">hello@mybudgetmate.co.nz</a> with a short intro.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="w-full max-w-md">
           <Card className="border shadow-lg">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-secondary">Sign in to your account</CardTitle>
+            <CardHeader>
+              <CardTitle className="text-xl text-secondary">Sign in</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
-                Enter your email and password to access your budget
+                Enter your email and password
               </CardDescription>
             </CardHeader>
             <CardContent>
               <AuthForm />
-              <p className="mt-6 text-center text-xs text-muted-foreground">
-                Need an account? {" "}
-                <Link href="/signup" className="text-primary underline">
-                  Request early access
-                </Link>
-              </p>
+              <div className="mt-6 space-y-3">
+                <p className="text-center text-xs text-muted-foreground">
+                  Need an account?{" "}
+                  <Link href="/signup" className="text-primary underline hover:no-underline">
+                    Request early access
+                  </Link>
+                </p>
+                <p className="text-center text-xs text-muted-foreground">
+                  Or{" "}
+                  <Link href="/api/demo-mode/enter?redirect=/dashboard" className="text-primary underline hover:no-underline">
+                    explore in demo mode
+                  </Link>
+                </p>
+              </div>
             </CardContent>
           </Card>
-        </section>
+        </div>
       </main>
     </div>
   );

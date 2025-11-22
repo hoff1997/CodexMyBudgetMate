@@ -9,7 +9,7 @@ import type {
  */
 function calculateCyclesUntilDue(
   dueDate: number | Date | undefined,
-  payCycle: 'weekly' | 'fortnightly' | 'monthly'
+  payCycle: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly'
 ): number {
   if (!dueDate) return 0;
 
@@ -31,7 +31,10 @@ function calculateCyclesUntilDue(
   const daysUntilDue = Math.max(0, Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
 
   // Calculate cycles based on pay cycle
-  const daysPerCycle = payCycle === 'weekly' ? 7 : payCycle === 'fortnightly' ? 14 : 30;
+  const daysPerCycle = payCycle === 'weekly' ? 7
+    : payCycle === 'fortnightly' ? 14
+    : payCycle === 'twice_monthly' ? 15
+    : 30;
   return Math.max(1, Math.ceil(daysUntilDue / daysPerCycle));
 }
 
@@ -121,7 +124,7 @@ export function calculateTotalOpeningBalanceNeeded(
     dueDate?: number | Date;
     totalPerCycleAllocation: number;
   }>,
-  payCycle: 'weekly' | 'fortnightly' | 'monthly'
+  payCycle: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly'
 ): number {
   return envelopes.reduce((total, envelope) => {
     const result = calculateOpeningBalance({

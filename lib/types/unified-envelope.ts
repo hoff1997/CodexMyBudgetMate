@@ -14,7 +14,7 @@ export interface IncomeSource {
   id: string;
   name: string;
   amount: number;
-  frequency: 'weekly' | 'fortnightly' | 'monthly';
+  frequency: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly';
   isActive?: boolean;
 }
 
@@ -88,7 +88,7 @@ export interface UnifiedEnvelopeTableProps {
   mode: 'onboarding' | 'maintenance';
 
   // Pay cycle for the user (affects calculations)
-  payCycle?: 'weekly' | 'fortnightly' | 'monthly';
+  payCycle?: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly';
 
   // Bank balance for opening balance validation (onboarding only)
   bankBalance?: number;
@@ -115,7 +115,7 @@ export interface OpeningBalanceCalculatorInput {
   frequency: FrequencyType;
   dueDate?: number | Date;
   totalPerCycleAllocation: number;
-  payCycle: 'weekly' | 'fortnightly' | 'monthly';
+  payCycle: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly';
 }
 
 /**

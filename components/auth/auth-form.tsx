@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
+import { login } from "@/app/(auth)/login/actions";
 
 const schema = z.object({
   email: z.string().email({ message: "Enter a valid email" }),
@@ -18,8 +18,6 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function AuthForm() {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -34,28 +32,21 @@ export function AuthForm() {
     try {
       setIsLoading(true);
 
-      // Use Supabase client-side auth instead of API route
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
+      // Create FormData for server action
+      const formData = new FormData();
+      formData.append("email", values.email);
+      formData.append("password", values.password);
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: values.email,
-        password: values.password,
-      });
+      const result = await login(formData);
 
-      setIsLoading(false);
-
-      if (error) {
-        toast.error(error.message || "Authentication failed. Please try again.");
+      if (result?.error) {
+        toast.error(result.error || "Authentication failed. Please try again.");
+        setIsLoading(false);
         return;
       }
 
+      // Server action will redirect, no need to do anything here
       toast.success("Successfully signed in!");
-
-      startTransition(() => {
-        router.push("/dashboard");
-        router.refresh();
-      });
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again shortly.");
@@ -77,8 +68,8 @@ export function AuthForm() {
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
       </div>
-      <Button className="w-full" type="submit" disabled={isLoading || isPending}>
-        {isLoading || isPending ? "Signing in…" : "Sign in"}
+      <Button className="w-full" type="submit" disabled={isLoading}>
+        {isLoading ? "Signing in…" : "Sign in"}
       </Button>
       <div className="text-center text-sm text-muted-foreground">
         <Link href="/auth/forgot-password" className="text-primary hover:underline">

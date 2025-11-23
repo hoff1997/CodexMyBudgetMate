@@ -33,18 +33,20 @@ export function AuthForm() {
   async function onSubmit(values: FormValues) {
     try {
       setIsLoading(true);
-      const response = await fetch("/auth/sign-in", {
-        method: "POST",
-        credentials: "include",
-        body: JSON.stringify(values),
-        headers: { "Content-Type": "application/json" },
+
+      // Use Supabase client-side auth instead of API route
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
       });
 
-      const data = await response.json();
       setIsLoading(false);
 
-      if (!response.ok) {
-        toast.error(data.error || "Authentication failed. Please try again.");
+      if (error) {
+        toast.error(error.message || "Authentication failed. Please try again.");
         return;
       }
 

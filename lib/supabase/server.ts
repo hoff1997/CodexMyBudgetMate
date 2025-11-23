@@ -17,9 +17,13 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
             });
-          } catch {
+          } catch (error) {
             // In Server Components, we can't modify cookies - only read them
             // This is expected and safe to ignore on pages that only need to read auth state
+            // Log the error in development to help debug authentication issues
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Failed to set cookies:', error);
+            }
           }
         },
       },

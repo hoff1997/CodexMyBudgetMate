@@ -8,8 +8,6 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-
   const body = await request.json();
   const result = schema.safeParse(body);
 
@@ -17,7 +15,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 400 });
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: result.data.email,
     password: result.data.password,
   });
@@ -27,7 +27,11 @@ export async function POST(request: Request) {
   }
 
   // Clear demo-mode cookie on successful login
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json({
+    ok: true,
+    user: data.user,
+    session: data.session
+  });
   response.cookies.delete("demo-mode");
 
   return response;

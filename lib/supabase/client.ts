@@ -14,7 +14,7 @@ export const createClient = () =>
         set(name: string, value: string, options: any) {
           let cookie = `${name}=${value}`;
           if (options?.maxAge) cookie += `; max-age=${options.maxAge}`;
-          if (options?.path) cookie += `; path=${options.path}`;
+          cookie += `; path=${options?.path || '/'}`;
           if (options?.domain) cookie += `; domain=${options.domain}`;
           if (options?.sameSite) cookie += `; samesite=${options.sameSite}`;
           if (options?.secure) cookie += '; secure';

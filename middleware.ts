@@ -59,9 +59,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - api (API routes handle their own auth)
-     * - auth (Auth routes handle their own cookies)
+     * - auth/ (Auth routes handle their own cookies)
+     *
+     * Note: We DO run middleware on /api routes to refresh sessions
      */
-    "/((?!_next/static|_next/image|favicon.ico|api/|auth/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|auth/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

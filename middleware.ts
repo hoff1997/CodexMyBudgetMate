@@ -25,9 +25,8 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           console.log("🔵 [MIDDLEWARE] setAll() called with:", cookiesToSet.map(c => c.name).join(", "));
-          cookiesToSet.forEach(({ name, value, options }) =>
-            request.cookies.set(name, value)
-          );
+          // Only set cookies on response, not request - fixes Set-Cookie header conflicts
+          // Per https://github.com/supabase/ssr/issues/36
           response = NextResponse.next({
             request,
           });

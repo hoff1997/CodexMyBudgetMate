@@ -62,8 +62,16 @@ export async function POST(request: NextRequest) {
 
   // Set all captured cookies on the response
   cookiesToSet.forEach(({ name, value, options }) => {
-    console.log(`🟢 [API /auth/sign-in] Setting cookie on response: ${name}, maxAge: ${options?.maxAge}, path: ${options?.path}`);
-    response.cookies.set(name, value, options);
+    console.log(`🟢 [API /auth/sign-in] Setting cookie on response: ${name}, maxAge: ${options?.maxAge}, path: ${options?.path}, sameSite: ${options?.sameSite}, secure: ${options?.secure}`);
+
+    // Ensure cookies work on Vercel (HTTPS)
+    const cookieOptions = {
+      ...options,
+      secure: true, // Always true on Vercel (HTTPS)
+      sameSite: 'lax' as const, // Required for cross-page navigation
+    };
+
+    response.cookies.set(name, value, cookieOptions);
   });
 
   // Clear demo-mode cookie on successful login

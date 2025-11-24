@@ -1,63 +1,54 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
-
-const schema = z.object({
-  email: z.string().email({ message: "Enter a valid email" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-});
-
-type FormValues = z.infer<typeof schema>;
+import { login } from "@/app/(auth)/login/actions";
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-  });
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
 
-  async function onSubmit(values: FormValues) {
+    // Reset errors
+    setEmailError("");
+    setPasswordError("");
+
+    // Validate
+    if (!email || !email.includes("@")) {
+      setEmailError("Enter a valid email");
+      return;
+    }
+    if (!password || password.length < 8) {
+      setPasswordError("Password must be at least 8 characters");
+      return;
+    }
+
     try {
       setIsLoading(true);
 
-      // Use the sign-in API route which has proper Response control for cookies
-      const response = await fetch("/auth/sign-in", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          email: values.email,
-          password: values.password,
-        }),
-      });
+      // Use Server Action for proper cookie handling
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
 
-      const data = await response.json();
+      const result = await login(formData);
 
-      if (!response.ok || data.error) {
-        toast.error(data.error || "Authentication failed. Please try again.");
+      if (result?.error) {
+        toast.error(result.error);
         setIsLoading(false);
         return;
       }
 
+      // Server action will handle redirect
       toast.success("Successfully signed in!");
-
-      // Give cookies time to be set before navigating
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      window.location.href = "/dashboard";
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again shortly.");
@@ -66,17 +57,27 @@ export function AuthForm() {
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-1">
-        <Input placeholder="Email" type="email" {...register("email")} />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
+        <Input
+          placeholder="Email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        {emailError && (
+          <p className="text-xs text-destructive">{emailError}</p>
         )}
       </div>
       <div className="space-y-1">
-        <Input placeholder="Password" type="password" {...register("password")} />
-        {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
+        <Input
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        {passwordError && (
+          <p className="text-xs text-destructive">{passwordError}</p>
         )}
       </div>
       <Button className="w-full" type="submit" disabled={isLoading}>

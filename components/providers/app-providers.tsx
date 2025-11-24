@@ -5,29 +5,31 @@ import { ReactNode, useState } from "react";
 import { Toaster } from "sonner";
 import { CommandPaletteProvider } from "@/providers/command-palette-provider";
 
-export default function AppProviders({ children }: { children: ReactNode }) {
-  // Set up the global fetch wrapper on client-side only
-  if (typeof window !== "undefined") {
-    const originalFetch = window.fetch;
+// Set up global fetch wrapper ONCE at module load (not in component render)
+// This ensures all fetch calls include credentials before any components mount
+if (typeof window !== "undefined") {
+  const originalFetch = window.fetch;
 
-    // Only override if not already overridden
-    if (!window.fetch.toString().includes("credentials")) {
-      window.fetch = function fetchWithCredentials(input, init?) {
-        // Only add credentials to same-origin requests (our API routes)
-        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-        const isSameOrigin = url.startsWith("/") || url.startsWith(window.location.origin);
+  // Only override if not already overridden
+  if (!window.fetch.toString().includes("credentials")) {
+    window.fetch = function fetchWithCredentials(input, init?) {
+      // Only add credentials to same-origin requests (our API routes)
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const isSameOrigin = url.startsWith("/") || url.startsWith(window.location.origin);
 
-        if (isSameOrigin) {
-          return originalFetch(input, {
-            ...init,
-            credentials: "include",
-          });
-        }
+      if (isSameOrigin) {
+        return originalFetch(input, {
+          ...init,
+          credentials: "include",
+        });
+      }
 
-        return originalFetch(input, init);
-      };
-    }
+      return originalFetch(input, init);
+    };
   }
+}
+
+export default function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({

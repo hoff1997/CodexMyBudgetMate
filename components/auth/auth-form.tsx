@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
-import { login } from "@/app/(auth)/login/actions";
 
 export function AuthForm() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,21 +35,30 @@ export function AuthForm() {
     try {
       setIsLoading(true);
 
-      // Use Server Action for proper cookie handling
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("password", password);
+      // Call Route Handler which properly sets cookies
+      const response = await fetch("/auth/sign-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
+      });
 
-      const result = await login(formData);
+      const data = await response.json();
 
-      if (result?.error) {
-        toast.error(result.error);
+      if (!response.ok || data.error) {
+        toast.error(data.error || "Authentication failed");
         setIsLoading(false);
         return;
       }
 
-      // Server action will handle redirect
+      // Success! Cookies are now set by the Route Handler
       toast.success("Successfully signed in!");
+
+      // Wait a bit for cookies to be stored, then redirect client-side
+      setTimeout(() => {
+        router.push("/dashboard");
+        router.refresh();
+      }, 100);
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again shortly.");

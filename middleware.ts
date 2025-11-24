@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  console.log("🔵 [MIDDLEWARE] Request:", request.nextUrl.pathname);
+
+  const requestCookies = request.cookies.getAll();
+  console.log("🔵 [MIDDLEWARE] Incoming cookies:", requestCookies.map(c => c.name).join(", ") || "NONE");
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -14,9 +19,12 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          const cookies = request.cookies.getAll();
+          console.log("🔵 [MIDDLEWARE] getAll() called:", cookies.map(c => c.name).join(", ") || "NONE");
+          return cookies;
         },
         setAll(cookiesToSet) {
+          console.log("🔵 [MIDDLEWARE] setAll() called with:", cookiesToSet.map(c => c.name).join(", "));
           cookiesToSet.forEach(({ name, value, options }) =>
             request.cookies.set(name, value)
           );
@@ -32,7 +40,15 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error) {
+    console.log("🔴 [MIDDLEWARE] Auth error:", error.message);
+  } else if (user) {
+    console.log("🟢 [MIDDLEWARE] User authenticated:", user.email);
+  } else {
+    console.log("🟡 [MIDDLEWARE] No user found");
+  }
 
   return response;
 }

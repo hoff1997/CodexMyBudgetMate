@@ -8,14 +8,22 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log("🟠 [API /credit-card-holding] GET request received");
+
     const supabase = await createClient();
     const {
       data: { session },
+      error: sessionError,
     } = await supabase.auth.getSession();
 
+    console.log("🟠 [API /credit-card-holding] Session check - exists:", !!session, "error:", sessionError?.message || "none");
+
     if (!session) {
+      console.log("🔴 [API /credit-card-holding] Returning 401 - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    console.log("🟢 [API /credit-card-holding] Session valid for user:", session.user.email);
 
     // Get holding account
     const { data: holdingAccount, error: holdingError } = await supabase

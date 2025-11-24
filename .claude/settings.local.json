@@ -56,7 +56,18 @@
       "Bash(node scripts/check-user-envelopes.mjs:*)",
       "Bash(git reset:*)",
       "Bash(node scripts/apply-user-preferences-migration.mjs:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(node scripts/apply-envelope-subtype-migration.mjs:*)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(git pull:*)",
+      "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\" log --oneline --all)",
+      "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\" status)",
+      "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\" diff HEAD \"Source Replit/vercel.json\")",
+      "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\" submodule status)",
+      "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\\Source Replit\" log --oneline)",
+      "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\\Source Replit\" status)",
+      "Bash(nul)",
+      "Bash(npx next info:*)"
     ],
     "deny": [],
     "ask": []

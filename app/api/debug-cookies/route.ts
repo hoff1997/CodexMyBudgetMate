@@ -19,9 +19,9 @@ export async function GET() {
       name: c.name,
       value: c.value.substring(0, 50) + (c.value.length > 50 ? "..." : ""),
     })),
-    session: session ? {
-      user: user.email,
-      expiresAt: session.expires_at,
+    user: user ? {
+      email: user.email,
+      id: user.id,
     } : null,
     error: error?.message,
   });

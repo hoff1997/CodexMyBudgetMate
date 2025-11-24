@@ -34,15 +34,15 @@ const UNASSIGNED_LABEL = "Unassigned";
 export default async function ReportsPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   let envelopes: EnvelopeRecord[] = [];
   let transactions: TransactionRecord[] = [];
   let liabilities: LiabilityRecord[] = [];
   let transfers: TransferHistoryItem[] = [];
 
-  if (session) {
+  if (user) {
     const monthsBack = 12;
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - (monthsBack - 1), 1);

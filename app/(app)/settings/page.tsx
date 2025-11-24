@@ -38,34 +38,34 @@ type SettingsPageProps = {
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   let envelopes: EnvelopeRecord[] = [];
   let labels: LabelRecord[] = [];
   let bankConnections: BankConnectionRecord[] = [];
   let profile: { full_name: string | null; avatar_url: string | null; pay_cycle: string | null; default_page: string | null } | null = null;
 
-  if (session) {
+  if (user) {
     const [envelopeRes, labelRes, bankRes, profileRes] = await Promise.all([
       supabase
         .from("envelopes")
         .select(
           "id, name, category_id, target_amount, annual_amount, pay_cycle_amount, frequency, next_payment_due, notes",
         )
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .order("name"),
       supabase
         .from("labels")
         .select("id, name, colour, description, usage_count")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .order("name"),
       supabase
         .from("bank_connections")
         .select("id, provider, status, last_synced_at, sync_frequency, created_at")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("full_name, avatar_url, pay_cycle, default_page").eq("id", session.user.id).maybeSingle(),
+      supabase.from("profiles").select("full_name, avatar_url, pay_cycle, default_page").eq("id", user.id).maybeSingle(),
     ]);
 
     envelopes = (envelopeRes.data ?? []) as EnvelopeRecord[];
@@ -77,9 +77,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const data: SettingsData = session
     ? {
         profile: {
-          fullName: profile?.full_name ?? session.user.user_metadata?.full_name ?? "",
-          avatarUrl: profile?.avatar_url ?? session.user.user_metadata?.avatar_url ?? null,
-          email: session.user.email ?? null,
+          fullName: profile?.full_name ?? user.user_metadata?.full_name ?? "",
+          avatarUrl: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+          email: user.email ?? null,
           payCycle: profile?.pay_cycle ?? "fortnightly",
           defaultPage: profile?.default_page ?? "/reconcile",
         },
@@ -116,8 +116,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           envelopePush: false,
         },
         demoMode: false,
-        userId: session.user.id,
-        username: session.user.email ?? "User",
+        userId: user.id,
+        username: user.email ?? "User",
       }
     : getDemoSettingsData();
 

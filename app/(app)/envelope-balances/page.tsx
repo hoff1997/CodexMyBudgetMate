@@ -13,10 +13,10 @@ export const revalidate = 0;
 export default async function EnvelopeBalancesPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-background pb-20">
         <div className="container mx-auto p-6 max-w-6xl">
@@ -41,7 +41,7 @@ export default async function EnvelopeBalancesPage() {
        category_id,
        envelope_categories!category_id(id, name, sort_order)`
     )
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("is_active", true)
     .order("name", { ascending: true });
 
@@ -60,7 +60,7 @@ export default async function EnvelopeBalancesPage() {
   const { data: categories, error: categoriesError } = await supabase
     .from("envelope_categories")
     .select("id, name, sort_order")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("sort_order", { ascending: true });
 
   const safeEnvelopes = envelopesError ? [] : envelopes;

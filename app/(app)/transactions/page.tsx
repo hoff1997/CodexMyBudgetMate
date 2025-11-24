@@ -8,8 +8,8 @@ import { getPayPlanSummary } from "@/lib/server/pay-plan";
 export default async function TransactionsPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: transactions, error } = await supabase
     .from("transactions")
     .select(

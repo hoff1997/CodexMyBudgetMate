@@ -5,10 +5,10 @@ import { GoalDetailClient } from "./goal-detail-client";
 export default async function GoalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -19,7 +19,7 @@ export default async function GoalDetailPage({ params }: { params: Promise<{ id:
     .from("envelopes")
     .select("*, envelope_goal_milestones(*)")
     .eq("id", id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("is_goal", true)
     .maybeSingle();
 

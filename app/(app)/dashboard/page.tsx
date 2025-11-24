@@ -23,20 +23,20 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const cookieStore = cookies();
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const authDisabled =
     process.env.NEXT_PUBLIC_AUTH_DISABLED === "true" || process.env.NODE_ENV !== "production";
-  // Demo mode only if NO session exists
+  // Demo mode only if NO user exists
   const demoMode =
-    !session && (cookieStore.get("demo-mode")?.value === "true" || authDisabled);
+    !user && (cookieStore.get("demo-mode")?.value === "true" || authDisabled);
 
-  if (!session && !authDisabled && !demoMode) {
+  if (!user && !authDisabled && !demoMode) {
     redirect("/login");
   }
 
-  if (!session && demoMode) {
+  if (!user && demoMode) {
     return (
       <DashboardShell
         profile={{ id: "demo-user", full_name: "Demo Budget Mate", avatar_url: null }}
@@ -54,7 +54,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     );
   }
 
-  const userId = session!.user.id;
+  const userId = user!.id;
 
   // Fetch all context data needed for widget visibility and next steps
   const [

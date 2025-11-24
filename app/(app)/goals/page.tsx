@@ -5,10 +5,10 @@ import { GoalsClient } from "./goals-client";
 export default async function GoalsPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -16,7 +16,7 @@ export default async function GoalsPage() {
   const { data: categories } = await supabase
     .from("envelope_categories")
     .select("id, name")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("name");
 
   return <GoalsClient categories={categories || []} />;

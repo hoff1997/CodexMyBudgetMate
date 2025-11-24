@@ -5,8 +5,8 @@ import type { AssetRow, LiabilityRow, NetWorthSnapshotRow } from "@/lib/types/ne
 export default async function NetWorthPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
   const [assetsRes, liabilitiesRes, snapshotsRes, monthlyRes] = await Promise.all([
     supabase
       .from("assets")
@@ -41,7 +41,7 @@ export default async function NetWorthPage() {
     net_worth: number;
   }>;
 
-  if (!session) {
+  if (!user) {
     assets = [
       {
         id: crypto.randomUUID(),

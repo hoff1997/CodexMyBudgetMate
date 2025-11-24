@@ -9,10 +9,10 @@ export const metadata = {
 export default async function TestTransactionsPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-background pb-20">
         <div className="container mx-auto p-6 max-w-6xl">
@@ -26,8 +26,8 @@ export default async function TestTransactionsPage() {
 
   return (
     <TestTransactionsClient
-      userId={session.user.id}
-      username={session.user.email || "User"}
+      userId={user.id}
+      username={user.email || "User"}
     />
   );
 }

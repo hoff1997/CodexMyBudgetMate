@@ -5,10 +5,10 @@ import { FeatureRequestsClient } from "@/components/layout/feature-requests/feat
 export default async function FeatureRequestsPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 

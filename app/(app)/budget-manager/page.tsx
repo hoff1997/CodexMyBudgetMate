@@ -11,8 +11,8 @@ export default async function BudgetManagerPage() {
   const cookieStore = cookies();
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const authDisabled =
     process.env.NEXT_PUBLIC_AUTH_DISABLED === "true" || process.env.NODE_ENV !== "production";
@@ -29,11 +29,11 @@ export default async function BudgetManagerPage() {
     userId = "demo-user";
   }
 
-  if (session) {
+  if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("pay_cycle")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single();
 
     if (profile?.pay_cycle) {

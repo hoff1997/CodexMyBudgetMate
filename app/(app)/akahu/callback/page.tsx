@@ -25,14 +25,14 @@ export default async function AkahuCallbackPage({ searchParams }: CallbackProps)
 
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
-  const userId = session.user.id;
+  const userId = user.id;
 
   try {
     const tokens = await exchangeAkahuCode(code!);

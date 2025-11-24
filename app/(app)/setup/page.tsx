@@ -10,22 +10,22 @@ export const metadata = {
 export default async function SetupPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Optional: Check if user has already completed setup
   // and redirect to dashboard if so
-  if (session) {
+  if (user) {
     const { data: accounts } = await supabase
       .from("accounts")
       .select("id")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .limit(1);
 
     const { data: envelopes } = await supabase
       .from("envelopes")
       .select("id")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .limit(1);
 
     // If user already has accounts and envelopes, maybe redirect to dashboard

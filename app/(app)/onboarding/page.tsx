@@ -11,10 +11,10 @@ export const metadata = {
 export default async function OnboardingPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -22,7 +22,7 @@ export default async function OnboardingPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('onboarding_completed')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   // If onboarding is complete, redirect to dashboard

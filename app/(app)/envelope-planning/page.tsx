@@ -7,10 +7,10 @@ import { getPayPlanSummary } from "@/lib/server/pay-plan";
 export default async function EnvelopePlanningPage() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return (
       <PlannerClient
         initialPayFrequency="fortnightly"
@@ -27,7 +27,7 @@ export default async function EnvelopePlanningPage() {
       .select(
         "id, name, category_id, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, due_date, next_payment_due, frequency, notes",
       )
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .or("is_goal.is.null,is_goal.eq.false") // Exclude goals
       .order("name"),
   ]);

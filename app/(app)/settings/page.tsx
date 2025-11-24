@@ -74,7 +74,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     profile = profileRes.data ?? null;
   }
 
-  const data: SettingsData = session
+  const data: SettingsData = user
     ? {
         profile: {
           fullName: profile?.full_name ?? user.user_metadata?.full_name ?? "",

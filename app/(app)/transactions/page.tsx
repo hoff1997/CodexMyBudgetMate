@@ -46,7 +46,7 @@ export default async function TransactionsPage() {
       }));
 
   const hydrated = await applySignedReceiptUrls(list);
-  const payPlan = await getPayPlanSummary(supabase, session?.user.id);
+  const payPlan = await getPayPlanSummary(supabase, user?.id);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12 md:px-10">

@@ -11,22 +11,22 @@ export default async function NetWorthPage() {
     supabase
       .from("assets")
       .select("id, name, asset_type, current_value, notes, updated_at")
-      .eq("user_id", session?.user.id ?? "")
+      .eq("user_id", user?.id ?? "")
       .order("updated_at", { ascending: false }),
     supabase
       .from("liabilities")
       .select("id, name, liability_type, current_balance, interest_rate, notes, updated_at")
-      .eq("user_id", session?.user.id ?? "")
+      .eq("user_id", user?.id ?? "")
       .order("updated_at", { ascending: false }),
     supabase
       .from("net_worth_snapshots")
       .select("id, snapshot_date, total_assets, total_liabilities, net_worth")
-      .eq("user_id", session?.user.id ?? "")
+      .eq("user_id", user?.id ?? "")
       .order("snapshot_date", { ascending: true }),
     supabase
       .from("net_worth_snapshots_monthly")
       .select("month_date, source_snapshot_date, total_assets, total_liabilities, net_worth")
-      .eq("user_id", session?.user.id ?? "")
+      .eq("user_id", user?.id ?? "")
       .order("month_date", { ascending: true }),
   ]);
 
@@ -99,7 +99,7 @@ export default async function NetWorthPage() {
       liabilities={liabilities}
       snapshots={snapshots}
       monthlySnapshots={monthly}
-      canEdit={Boolean(session)}
+      canEdit={Boolean(user)}
     />
   );
 }

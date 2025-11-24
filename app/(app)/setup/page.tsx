@@ -32,5 +32,5 @@ export default async function SetupPage() {
     // For now, we'll allow them to run setup again
   }
 
-  return <SetupClient userId={session?.user.id} />;
+  return <SetupClient userId={user?.id} />;
 }

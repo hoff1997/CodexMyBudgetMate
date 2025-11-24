@@ -14,5 +14,5 @@ export default async function AccountsPage() {
 
   const list = error ? [] : (data ?? []);
 
-  return <AccountManagerClient accounts={list as AccountRow[]} canEdit={Boolean(session)} />;
+  return <AccountManagerClient accounts={list as AccountRow[]} canEdit={Boolean(user)} />;
 }

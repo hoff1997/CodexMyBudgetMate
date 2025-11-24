@@ -95,8 +95,8 @@ export default async function ReportsPage() {
     transactions,
     liabilities,
     transfers,
-    demoMode: !session,
-    monthsBack: session ? 12 : 6,
+    demoMode: !user,
+    monthsBack: user ? 12 : 6,
   });
 
   return <ReportsClient data={data} />;

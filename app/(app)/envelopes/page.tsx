@@ -43,13 +43,13 @@ export default async function EnvelopesPage() {
     to_envelope: Array.isArray(row.to_envelope) ? row.to_envelope[0] ?? null : row.to_envelope,
   }));
 
-  const payPlan = await getPayPlanSummary(supabase, session?.user.id);
+  const payPlan = await getPayPlanSummary(supabase, user?.id);
 
   return (
     <EnvelopeManagerClient
       envelopes={envelopes}
       categories={(categoriesResponse.data ?? []).map((category) => ({ id: category.id, name: category.name }))}
-      canEdit={Boolean(session)}
+      canEdit={Boolean(user)}
       transferHistory={mapTransferHistory(transferRows)}
       payPlan={payPlan}
     />

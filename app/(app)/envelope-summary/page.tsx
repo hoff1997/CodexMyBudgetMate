@@ -121,7 +121,7 @@ export default async function EnvelopeSummaryPage() {
     achievedAt: row.achieved_at,
   }));
 
-  const payPlan = await getPayPlanSummary(supabase, session?.user.id);
+  const payPlan = await getPayPlanSummary(supabase, user?.id);
 
   return (
     <EnvelopeSummaryClient

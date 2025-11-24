@@ -9,7 +9,7 @@ export default async function RecurringIncomePage() {
     data: { user },
   } = await supabase.auth.getUser();
   const [incomeResponse, envelopeResponse, eventsResponse] = await Promise.all([
-    session
+    user
       ? supabase
           .from("recurring_income")
           .select("id, name, amount, frequency, next_date, allocations, surplus_envelope")
@@ -19,9 +19,9 @@ export default async function RecurringIncomePage() {
     supabase
       .from("envelopes")
       .select("id, name, pay_cycle_amount, annual_amount, frequency")
-      .eq("user_id", session?.user.id ?? "")
+      .eq("user_id", user?.id ?? "")
       .order("name"),
-    session
+    user
       ? supabase
           .from("recurring_income_events")
           .select("stream_id, transaction_id, transaction_amount, expected_amount, difference, applied_at")
@@ -55,7 +55,7 @@ export default async function RecurringIncomePage() {
       frequency: (row.frequency as PlannerFrequency | null) ?? null,
     })) ?? [];
 
-  const payPlan = session ? await getPayPlanSummary(supabase, user.id) : null;
+  const payPlan = user ? await getPayPlanSummary(supabase, user.id) : null;
 
   const latestEvents: Array<{
     streamId: string;

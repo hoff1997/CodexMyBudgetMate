@@ -30,9 +30,15 @@ export async function middleware(request: NextRequest) {
           response = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Ensure secure flag is set for production (Vercel uses HTTPS)
+            const cookieOptions = {
+              ...options,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: (options?.sameSite as 'lax' | 'strict' | 'none' | undefined) || 'lax',
+            };
+            response.cookies.set(name, value, cookieOptions);
+          });
         },
       },
     }

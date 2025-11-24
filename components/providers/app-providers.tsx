@@ -5,6 +5,9 @@ import { ReactNode, useState } from "react";
 import { Toaster } from "sonner";
 import { CommandPaletteProvider } from "@/providers/command-palette-provider";
 
+// Save the original fetch before overriding
+const originalFetch = typeof window !== "undefined" ? window.fetch : undefined;
+
 // Create a custom fetch wrapper that automatically includes credentials
 const fetchWithCredentials: typeof fetch = (input, init?) => {
   // Only add credentials to same-origin requests (our API routes)
@@ -12,17 +15,17 @@ const fetchWithCredentials: typeof fetch = (input, init?) => {
   const isSameOrigin = url.startsWith("/") || url.startsWith(window.location.origin);
 
   if (isSameOrigin) {
-    return fetch(input, {
+    return originalFetch!(input, {
       ...init,
       credentials: "include",
     });
   }
 
-  return fetch(input, init);
+  return originalFetch!(input, init);
 };
 
 // Override global fetch for client-side components
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && originalFetch) {
   window.fetch = fetchWithCredentials;
 }
 

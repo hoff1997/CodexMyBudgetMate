@@ -8,12 +8,17 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  console.log("🟢 [API /auth/sign-in] POST request received");
+
   const body = await request.json();
   const result = schema.safeParse(body);
 
   if (!result.success) {
+    console.log("🔴 [API /auth/sign-in] Validation failed");
     return NextResponse.json({ error: "Invalid email or password" }, { status: 400 });
   }
+
+  console.log("🟢 [API /auth/sign-in] Attempting sign in for:", result.data.email);
 
   const supabase = await createClient();
 
@@ -23,8 +28,12 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    console.log("🔴 [API /auth/sign-in] Sign in failed:", error.message);
     return NextResponse.json({ error: error.message }, { status: 401 });
   }
+
+  console.log("🟢 [API /auth/sign-in] Sign in successful, user:", data.user?.email);
+  console.log("🟢 [API /auth/sign-in] Session exists:", !!data.session);
 
   // Clear demo-mode cookie on successful login
   const response = NextResponse.json({
@@ -33,6 +42,8 @@ export async function POST(request: Request) {
     session: data.session
   });
   response.cookies.delete("demo-mode");
+
+  console.log("🟢 [API /auth/sign-in] Returning success response");
 
   return response;
 }

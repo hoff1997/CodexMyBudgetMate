@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
-import { login } from "@/app/(auth)/login/actions";
 
 const schema = z.object({
   email: z.string().email({ message: "Enter a valid email" }),
@@ -32,21 +31,33 @@ export function AuthForm() {
     try {
       setIsLoading(true);
 
-      // Create FormData for server action
-      const formData = new FormData();
-      formData.append("email", values.email);
-      formData.append("password", values.password);
+      // Use the sign-in API route which has proper Response control for cookies
+      const response = await fetch("/auth/sign-in", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          email: values.email,
+          password: values.password,
+        }),
+      });
 
-      const result = await login(formData);
+      const data = await response.json();
 
-      if (result?.error) {
-        toast.error(result.error || "Authentication failed. Please try again.");
+      if (!response.ok || data.error) {
+        toast.error(data.error || "Authentication failed. Please try again.");
         setIsLoading(false);
         return;
       }
 
-      // Server action will redirect, no need to do anything here
       toast.success("Successfully signed in!");
+
+      // Give cookies time to be set before navigating
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error(error);
       toast.error("Something went wrong. Please try again shortly.");

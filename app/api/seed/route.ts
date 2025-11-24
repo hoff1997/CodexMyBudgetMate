@@ -6,10 +6,10 @@ import { seedDemoData } from "@/lib/demo/seed";
 export async function POST() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -18,8 +18,8 @@ export async function POST() {
     console.log('NEXT_PUBLIC_SUPABASE_URL exists:', !!process.env.NEXT_PUBLIC_SUPABASE_URL);
 
     const serviceClient = createServiceClient();
-    await seedDemoData(serviceClient, session.user.id, {
-      fullName: session.user.user_metadata?.full_name ?? null,
+    await seedDemoData(serviceClient, user.id, {
+      fullName: user.user_metadata?.full_name ?? null,
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

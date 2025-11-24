@@ -16,10 +16,10 @@ export async function PATCH(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -60,7 +60,7 @@ export async function PATCH(
     .from("feature_requests")
     .update(updates)
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .select(FEATURE_REQUEST_SELECT_COLUMNS.join(", "))
     .returns<DbFeatureRequest>()
     .maybeSingle();
@@ -82,10 +82,10 @@ export async function DELETE(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -97,7 +97,7 @@ export async function DELETE(
     .from("feature_requests")
     .delete()
     .eq("id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

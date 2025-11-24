@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -62,7 +62,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .from("envelopes")
     .update(payload)
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .select("id")
     .maybeSingle();
 

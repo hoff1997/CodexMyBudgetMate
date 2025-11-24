@@ -21,10 +21,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -40,7 +40,7 @@ export async function POST(
     .from("transactions")
     .select("id, status")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (transactionError) {
@@ -59,7 +59,7 @@ export async function POST(
       .from("envelopes")
       .select("id, name")
       .eq("id", envelopeId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (envelopeError) {
@@ -75,7 +75,7 @@ export async function POST(
     const { data: envelopes, error: envelopesError } = await supabase
       .from("envelopes")
       .select("id, name")
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (envelopesError) {
       return NextResponse.json({ error: envelopesError.message }, { status: 400 });
@@ -106,7 +106,7 @@ export async function POST(
     .from("transactions")
     .update({ envelope_id: envelopeId, status: nextStatus, updated_at: new Date().toISOString() })
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .select("id, status, envelope_id")
     .maybeSingle();
 

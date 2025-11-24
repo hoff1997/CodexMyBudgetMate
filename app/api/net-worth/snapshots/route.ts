@@ -27,17 +27,17 @@ function normaliseSnapshotDate(value?: string) {
 export async function GET() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   const { data, error } = await supabase
     .from("net_worth_snapshots")
     .select(listColumns.join(", "))
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("snapshot_date", { ascending: true });
 
   if (error) {
@@ -50,10 +50,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   const { data: inserted, error } = await supabase
     .from("net_worth_snapshots")
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       total_assets: parsed.data.totalAssets,
       total_liabilities: parsed.data.totalLiabilities,
       net_worth: parsed.data.netWorth,

@@ -28,10 +28,10 @@ export async function GET(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -42,7 +42,7 @@ export async function GET(
     .from("envelopes")
     .select("id, name, category_id, target_amount, pay_cycle_amount, opening_balance, current_amount, frequency, notes, icon, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, created_at, updated_at")
     .eq("id", id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("is_goal", true)
     .maybeSingle();
 
@@ -81,10 +81,10 @@ export async function PATCH(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -125,7 +125,7 @@ export async function PATCH(
     .from("envelopes")
     .update(updates)
     .eq("id", id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("is_goal", true);
 
   if (error) {
@@ -145,10 +145,10 @@ export async function DELETE(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -158,7 +158,7 @@ export async function DELETE(
     .from("envelopes")
     .delete()
     .eq("id", id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("is_goal", true);
 
   if (error) {

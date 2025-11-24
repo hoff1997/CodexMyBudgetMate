@@ -5,10 +5,10 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest) {
     const { error } = await supabase
       .from("profiles")
       .update({ pay_cycle: payCycle })
-      .eq("id", session.user.id);
+      .eq("id", user.id);
 
     if (error) {
       console.error("Error updating pay cycle:", error);

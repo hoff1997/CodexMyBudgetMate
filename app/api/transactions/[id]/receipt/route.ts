@@ -8,10 +8,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -19,7 +19,7 @@ export async function POST(
     .from("transactions")
     .select("id")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (transactionError || !transaction) {
@@ -36,7 +36,7 @@ export async function POST(
 
   try {
     const { uploadUrl, path } = await createReceiptUploadUrl({
-      userId: session.user.id,
+      userId: user.id,
       transactionId: params.id,
       fileName,
     });
@@ -63,10 +63,10 @@ export async function PATCH(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -76,7 +76,7 @@ export async function PATCH(
     return NextResponse.json({ error: "receiptPath is required" }, { status: 400 });
   }
 
-  const expectedPrefix = `${session.user.id}/`;
+  const expectedPrefix = `${user.id}/`;
   if (!receiptPath.startsWith(expectedPrefix)) {
     return NextResponse.json({ error: "Path does not belong to user" }, { status: 400 });
   }
@@ -85,7 +85,7 @@ export async function PATCH(
     .from("transactions")
     .select("id, receipt_url")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (existingError) {
@@ -102,7 +102,7 @@ export async function PATCH(
     .from("transactions")
     .update({ receipt_url: receiptPath })
     .eq("id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

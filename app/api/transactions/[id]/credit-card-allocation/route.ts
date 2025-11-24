@@ -14,10 +14,10 @@ export async function POST(
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,7 +28,7 @@ export async function POST(
       .from("transactions")
       .select("*, account:accounts(*), envelope:envelopes(*)")
       .eq("id", transactionId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
 
     if (txError || !transaction) {
@@ -58,7 +58,7 @@ export async function POST(
     const { data: holdingAccount, error: holdingError } = await supabase
       .from("accounts")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("is_credit_card_holding", true)
       .single();
 
@@ -92,7 +92,7 @@ export async function POST(
     const { error: allocationError } = await supabase
       .from("credit_card_allocations")
       .insert({
-        user_id: session.user.id,
+        user_id: user.id,
         transaction_id: transactionId,
         envelope_id: transaction.envelope_id,
         holding_account_id: holdingAccount.id,
@@ -174,10 +174,10 @@ export async function GET(
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -185,7 +185,7 @@ export async function GET(
       .from("credit_card_allocations")
       .select("*, envelope:envelopes(*), holding_account:accounts!holding_account_id(*)")
       .eq("transaction_id", params.id)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
 
     if (error && error.code !== "PGRST116") {
@@ -222,10 +222,10 @@ export async function DELETE(
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -234,7 +234,7 @@ export async function DELETE(
       .from("credit_card_allocations")
       .select("*")
       .eq("transaction_id", params.id)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
 
     if (allocationError || !allocation) {

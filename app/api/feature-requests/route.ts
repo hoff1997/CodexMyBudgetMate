@@ -15,10 +15,10 @@ import {
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   let query = supabase
     .from("feature_requests")
     .select(FEATURE_REQUEST_SELECT_COLUMNS.join(", "))
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (statuses.length > 0) {
@@ -64,10 +64,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("feature_requests")
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       title: payload.title,
       description: payload.description ? payload.description : null,
       status: payload.status,

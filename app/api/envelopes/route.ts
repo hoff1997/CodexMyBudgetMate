@@ -44,17 +44,17 @@ const schema = z.object({
 export async function GET() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   const { data, error } = await supabase
     .from("envelopes")
     .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("name");
 
   if (error) {
@@ -67,10 +67,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     const { data: existingCategory } = await supabase
       .from("envelope_categories")
       .select("id")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .ilike("name", payload.categoryName)
       .maybeSingle();
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     } else {
       const { data: categoryInsert, error: categoryError } = await supabase
         .from("envelope_categories")
-        .insert({ user_id: session.user.id, name: payload.categoryName })
+        .insert({ user_id: user.id, name: payload.categoryName })
         .select("id")
         .maybeSingle();
 
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
   }
 
   const { error } = await supabase.from("envelopes").insert({
-    user_id: session.user.id,
+    user_id: user.id,
     name: payload.name,
     category_id: categoryId,
     envelope_type: payload.envelopeType ?? 'expense',

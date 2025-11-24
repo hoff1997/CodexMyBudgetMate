@@ -13,10 +13,10 @@ const schema = z.object({
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       reconciled: payload.reconciled,
     })
     .eq("id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -54,10 +54,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -65,7 +65,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     .from("accounts")
     .delete()
     .eq("id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

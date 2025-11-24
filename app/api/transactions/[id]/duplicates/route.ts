@@ -14,10 +14,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -30,7 +30,7 @@ export async function POST(
   const { duplicateId, decision, note } = payload.data;
 
   const { data: event, error } = await supabase.rpc("resolve_transaction_duplicate", {
-    p_user_id: session.user.id,
+    p_user_id: user.id,
     p_primary_transaction_id: params.id,
     p_duplicate_transaction_id: duplicateId,
     p_decision: decision,

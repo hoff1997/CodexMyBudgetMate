@@ -29,10 +29,10 @@ export async function GET(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -40,7 +40,7 @@ export async function GET(
     .from("transactions")
     .select("id")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (txError) {
@@ -62,7 +62,7 @@ export async function GET(
       )
     `)
     .eq("transaction_id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (labelsError) {
     return NextResponse.json({ error: labelsError.message }, { status: 400 });
@@ -81,10 +81,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -110,7 +110,7 @@ export async function POST(
     .from("transactions")
     .select("id")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (txError) {
@@ -124,7 +124,7 @@ export async function POST(
   const { data: existingLabels, error: labelsError } = await supabase
     .from("labels")
     .select("id, name, colour")
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (labelsError) {
     return NextResponse.json({ error: labelsError.message }, { status: 400 });
@@ -151,7 +151,7 @@ export async function POST(
       .from("labels")
       .insert(
         missingLabels.map((label, index) => ({
-          user_id: session.user.id,
+          user_id: user.id,
           name: label,
           colour: pickColour(index),
         })),
@@ -176,7 +176,7 @@ export async function POST(
       .from("transaction_labels")
       .delete()
       .eq("transaction_id", params.id)
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (!finalLabels.length) {
       return NextResponse.json({
@@ -199,7 +199,7 @@ export async function POST(
     finalLabels.map((label) => ({
       transaction_id: params.id,
       label_id: label.id,
-      user_id: session.user.id,
+      user_id: user.id,
     })),
     { onConflict: "transaction_id,label_id" },
   );

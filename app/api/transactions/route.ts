@@ -32,10 +32,10 @@ const updateTransactionSchema = z.object({
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       .from("envelopes")
       .select("id")
       .eq("id", data.envelope_id)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (envelopeError || !envelope) {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       .from("accounts")
       .select("id")
       .eq("id", data.account_id)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (accountError || !account) {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
   const { data: transaction, error: createError } = await supabase
     .from("transactions")
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       merchant_name: data.merchant_name,
       description: data.description,
       amount: data.amount,
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
 
   // Trigger auto-allocation if this is an income transaction
   if (shouldAutoAllocate(transaction)) {
-    const result = await createAutoAllocation(transaction, session.user.id);
+    const result = await createAutoAllocation(transaction, user.id);
     if (result.success) {
       console.log(`✅ Auto-allocated transaction ${transaction.id} to plan ${result.planId}`);
     } else {
@@ -122,10 +122,10 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -145,7 +145,7 @@ export async function GET(request: Request) {
       is_auto_allocated,
       parent_transaction_id
     `)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("occurred_at", { ascending: false });
 
   if (status) {

@@ -15,10 +15,10 @@ const schema = z.object({
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
           dataChoice,
         },
       })
-      .eq('user_id', session.user.id);
+      .eq('user_id', user.id);
 
     if (profileError) {
       console.error('Profile update error:', profileError);
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
     // Track onboarding completion feature
     const { error: progressError } = await supabase.rpc('track_feature_usage', {
-      p_user_id: session.user.id,
+      p_user_id: user.id,
       p_feature_key: 'onboarding',
       p_metadata: { persona, dataChoice, completedAt },
     });
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       const { error: demoError } = await supabase
         .from('demo_mode_sessions')
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           started_at: completedAt,
           session_metadata: { persona, source: 'onboarding' },
         });

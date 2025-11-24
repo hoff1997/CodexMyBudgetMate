@@ -15,10 +15,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -33,7 +33,7 @@ export async function POST(
     .from("recurring_income")
     .select("id, name, amount, allocations, surplus_envelope")
     .eq("id", id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (streamError) {
@@ -69,7 +69,7 @@ export async function POST(
   const { data: envelopes, error: envelopesError } = await supabase
     .from("envelopes")
     .select("id, name, current_amount, target_amount")
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (envelopesError) {
     return NextResponse.json({ error: envelopesError.message }, { status: 400 });
@@ -153,7 +153,7 @@ export async function POST(
     const { data: transfer, error: transferError } = await supabase.rpc(
       "transfer_between_envelopes",
       {
-        p_user_id: session.user.id,
+        p_user_id: user.id,
         p_from_envelope_id: sourceEnvelope.id,
         p_to_envelope_id: deficit.id,
         p_amount: allocation,
@@ -179,7 +179,7 @@ export async function POST(
 
   const celebration = await maybeLogCelebration({
     supabase,
-    userId: session.user.id,
+    userId: user.id,
     originalSurplus: rawSurplus,
     applied: available - remaining,
     streamName: stream.name,

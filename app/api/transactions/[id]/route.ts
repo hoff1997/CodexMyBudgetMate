@@ -20,10 +20,10 @@ export async function PATCH(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -42,7 +42,7 @@ export async function PATCH(
     .from("transactions")
     .select("id")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (transactionError || !existingTransaction) {
@@ -58,7 +58,7 @@ export async function PATCH(
       .from("envelopes")
       .select("id")
       .eq("id", data.envelope_id)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (envelopeError || !envelope) {
@@ -75,7 +75,7 @@ export async function PATCH(
       .from("accounts")
       .select("id")
       .eq("id", data.account_id)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (accountError || !account) {
@@ -91,7 +91,7 @@ export async function PATCH(
     .from("transactions")
     .update(data)
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .select()
     .single();
 
@@ -108,10 +108,10 @@ export async function DELETE(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -120,7 +120,7 @@ export async function DELETE(
     .from("transactions")
     .select("id")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (transactionError || !existingTransaction) {
@@ -135,7 +135,7 @@ export async function DELETE(
     .from("transactions")
     .delete()
     .eq("id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 400 });
@@ -150,10 +150,10 @@ export async function GET(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -166,7 +166,7 @@ export async function GET(
       account:accounts(id, name)
     `)
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (error || !transaction) {

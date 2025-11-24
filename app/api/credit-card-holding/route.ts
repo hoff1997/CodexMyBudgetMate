@@ -12,24 +12,24 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
     const {
-      data: { session },
+      data: { user },
       error: sessionError,
-    } = await supabase.auth.getSession();
+    } = await supabase.auth.getUser();
 
-    console.log("🟠 [API /credit-card-holding] Session check - exists:", !!session, "error:", sessionError?.message || "none");
+    console.log("🟠 [API /credit-card-holding] Session check - exists:", !!user, "error:", sessionError?.message || "none");
 
-    if (!session) {
+    if (!user) {
       console.log("🔴 [API /credit-card-holding] Returning 401 - no session");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("🟢 [API /credit-card-holding] Session valid for user:", session.user.email);
+    console.log("🟢 [API /credit-card-holding] Session valid for user:", user.email);
 
     // Get holding account
     const { data: holdingAccount, error: holdingError } = await supabase
       .from("accounts")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("is_credit_card_holding", true)
       .single();
 
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const { data: creditCardAccounts, error: ccError } = await supabase
       .from("accounts")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("type", "debt");
 
     const creditCards = creditCardAccounts || [];
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         credit_card:accounts!credit_card_account_id(id, name)
       `
       )
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .order("allocated_at", { ascending: false })
       .limit(10);
 
@@ -120,10 +120,10 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -136,14 +136,14 @@ export async function POST(request: NextRequest) {
       await supabase
         .from("accounts")
         .update({ is_credit_card_holding: false })
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("is_credit_card_holding", true);
 
       // Create new account
       const { data: newAccount, error: createError } = await supabase
         .from("accounts")
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           name: name || "Credit Card Holding",
           type: "transaction", // Regular transaction account
           current_balance: 0,
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         .from("accounts")
         .select("*")
         .eq("id", accountId)
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .single();
 
       if (accountError || !account) {
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
       await supabase
         .from("accounts")
         .update({ is_credit_card_holding: false })
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .eq("is_credit_card_holding", true)
         .neq("id", accountId);
 

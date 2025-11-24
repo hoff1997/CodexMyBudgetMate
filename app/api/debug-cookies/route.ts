@@ -12,7 +12,7 @@ export async function GET() {
   const allCookies = cookieStore.getAll();
 
   const supabase = await createClient();
-  const { data: { session }, error } = await supabase.auth.getSession();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
   return NextResponse.json({
     cookies: allCookies.map(c => ({
@@ -20,7 +20,7 @@ export async function GET() {
       value: c.value.substring(0, 50) + (c.value.length > 50 ? "..." : ""),
     })),
     session: session ? {
-      user: session.user.email,
+      user: user.email,
       expiresAt: session.expires_at,
     } : null,
     error: error?.message,

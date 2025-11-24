@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,7 +20,7 @@ export async function GET() {
     const { data: demoSession } = await supabase
       .from('demo_mode_sessions')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .is('converted_at', null)
       .order('started_at', { ascending: false })
       .limit(1)
@@ -41,25 +41,25 @@ export async function GET() {
     const { data: achievements, count: achievementCount } = await supabase
       .from('user_achievements')
       .select('*', { count: 'exact' })
-      .eq('user_id', session.user.id);
+      .eq('user_id', user.id);
 
     // Get envelope count
     const { count: envelopeCount } = await supabase
       .from('envelopes')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id);
+      .eq('user_id', user.id);
 
     // Get transaction count
     const { count: transactionCount } = await supabase
       .from('transactions')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id);
+      .eq('user_id', user.id);
 
     // Get goal count
     const { count: goalCount } = await supabase
       .from('goals')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.user.id);
+      .eq('user_id', user.id);
 
     // Get dismissal count from metadata
     const metadata = demoSession.session_metadata || {};

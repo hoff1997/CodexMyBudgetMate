@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const { data: demoSession } = await supabase
       .from('demo_mode_sessions')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .is('converted_at', null)
       .order('started_at', { ascending: false })
       .limit(1)

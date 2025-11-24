@@ -22,10 +22,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -47,7 +47,7 @@ export async function POST(
     .from("transactions")
     .select("id, amount")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (transactionError) {
@@ -73,7 +73,7 @@ export async function POST(
   const { data: envelopeList, error: envelopeError } = await supabase
     .from("envelopes")
     .select("id, name")
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (envelopeError) {
     return NextResponse.json({ error: envelopeError.message }, { status: 400 });
@@ -114,7 +114,7 @@ export async function POST(
   }));
 
   const { data: savedSplits, error: saveError } = await supabase.rpc("save_transaction_splits", {
-    p_user_id: session.user.id,
+    p_user_id: user.id,
     p_transaction_id: params.id,
     p_splits: rpcPayload,
   });

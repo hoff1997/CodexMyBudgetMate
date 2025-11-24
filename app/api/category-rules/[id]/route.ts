@@ -7,10 +7,10 @@ const MATCH_TYPES = new Set(["contains", "starts_with", "exact"]);
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -20,7 +20,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       "id, pattern, merchant_normalized, envelope_id, is_active, match_type, case_sensitive, created_at, updated_at",
     )
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (existingError || !existing) {
@@ -69,7 +69,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .from("transaction_rules")
     .update(update)
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .select(
       "id, pattern, merchant_normalized, envelope_id, is_active, match_type, case_sensitive, created_at, updated_at",
     )
@@ -93,10 +93,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -104,7 +104,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     .from("transaction_rules")
     .delete()
     .eq("id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

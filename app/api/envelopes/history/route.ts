@@ -5,10 +5,10 @@ import { mapTransferHistory } from "@/lib/types/envelopes";
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     .select(
       "id, amount, note, created_at, from_envelope:from_envelope_id(id, name), to_envelope:to_envelope_id(id, name)",
     )
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(Number.isFinite(limit) && limit > 0 ? limit : 20);
 

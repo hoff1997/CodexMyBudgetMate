@@ -11,17 +11,17 @@ const createCategorySchema = z.object({
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   const { data: categories, error } = await supabase
     .from("envelope_categories")
     .select("*")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -49,10 +49,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   const { data: existingCategories } = await supabase
     .from("envelope_categories")
     .select("sort_order")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("sort_order", { ascending: false })
     .limit(1);
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       name,
       icon,
       color,
-      user_id: session.user.id,
+      user_id: user.id,
       sort_order: nextSortOrder,
       is_collapsed: false,
       is_active: true,

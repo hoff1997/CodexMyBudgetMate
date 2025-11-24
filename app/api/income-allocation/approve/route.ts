@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -50,11 +50,11 @@ export async function POST(request: Request) {
         .from("envelope_income_allocations")
         .delete()
         .eq("income_source_id", income_source_id)
-        .eq("user_id", session.user.id);
+        .eq("user_id", user.id);
 
       // Insert new allocations
       const newAllocations = allocations.map((alloc: any, index: number) => ({
-        user_id: session.user.id,
+        user_id: user.id,
         income_source_id,
         envelope_id: alloc.envelope_id,
         allocation_amount: alloc.amount,
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     const { data: allocationPlan, error: planError } = await supabase
       .from("allocation_plans")
       .insert({
-        user_id: session.user.id,
+        user_id: user.id,
         income_source_id,
         status: "approved",
         pay_amount: transaction_amount,
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     // Create transaction splits for each allocation
     const splits = [
       ...allocations.map((alloc: any) => ({
-        user_id: session.user.id,
+        user_id: user.id,
         transaction_id,
         envelope_id: alloc.envelope_id,
         amount: alloc.amount,
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
 
     if (surplus_amount > 0 && surplus_envelope_id) {
       splits.push({
-        user_id: session.user.id,
+        user_id: user.id,
         transaction_id,
         envelope_id: surplus_envelope_id,
         amount: surplus_amount,

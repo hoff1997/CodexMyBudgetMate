@@ -12,10 +12,10 @@ const schema = z.object({
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const { data: envelopes, error } = await supabase
     .from("envelopes")
     .select("id, current_amount")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .in("id", [fromId, toId]);
 
   if (error) {
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   const { data: transfer, error: transferError } = await supabase.rpc(
     "transfer_between_envelopes",
     {
-      p_user_id: session.user.id,
+      p_user_id: user.id,
       p_from_envelope_id: fromId,
       p_to_envelope_id: toId,
       p_amount: amount,
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
   const { data: updatedEnvelopes } = await supabase
     .from("envelopes")
     .select("id, current_amount")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .in("id", [fromId, toId]);
 
   return NextResponse.json({

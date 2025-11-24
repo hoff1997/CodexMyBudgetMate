@@ -26,10 +26,10 @@ type LiabilityRow = {
 export async function GET(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -49,12 +49,12 @@ export async function GET(request: Request) {
     supabase
       .from("assets")
       .select("id, name, asset_type, current_value, notes")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .order("name"),
     supabase
       .from("liabilities")
       .select("id, name, liability_type, current_balance, notes")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .order("name"),
   ]);
 

@@ -7,10 +7,10 @@ const MATCH_TYPES = new Set(["contains", "starts_with", "exact"]);
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   const { data: inserted, error } = await supabase
     .from("transaction_rules")
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       pattern,
       merchant_normalized: normalized,
       envelope_id: envelopeId,

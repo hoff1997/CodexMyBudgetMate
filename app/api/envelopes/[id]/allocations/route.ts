@@ -18,10 +18,10 @@ const schema = z.object({
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     .from("envelope_income_allocations")
     .select("*")
     .eq("envelope_id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -46,10 +46,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -67,7 +67,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     .from("envelopes")
     .select("id")
     .eq("id", params.id)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (envelopeError || !envelope) {
@@ -79,7 +79,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     .from("envelope_income_allocations")
     .delete()
     .eq("envelope_id", params.id)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 400 });
@@ -93,7 +93,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       .from("envelope_income_allocations")
       .insert(
         nonZeroAllocations.map((alloc, index) => ({
-          user_id: session.user.id,
+          user_id: user.id,
           envelope_id: params.id,
           income_source_id: alloc.income_source_id,
           allocation_amount: alloc.amount,
@@ -116,10 +116,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -137,7 +137,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       .delete()
       .eq("envelope_id", params.id)
       .eq("income_source_id", income_source_id)
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -151,7 +151,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .from("envelope_income_allocations")
     .upsert(
       {
-        user_id: session.user.id,
+        user_id: user.id,
         envelope_id: params.id,
         income_source_id,
         allocation_amount: amount,

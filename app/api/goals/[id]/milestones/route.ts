@@ -33,10 +33,10 @@ export async function POST(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -47,7 +47,7 @@ export async function POST(
     .from("envelopes")
     .select("id")
     .eq("id", goalId)
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("is_goal", true)
     .maybeSingle();
 
@@ -78,7 +78,7 @@ export async function POST(
     .from("envelope_goal_milestones")
     .insert({
       envelope_id: goalId,
-      user_id: session.user.id,
+      user_id: user.id,
       milestone_name: payload.name,
       milestone_amount: payload.amount,
       milestone_date: payload.date || null,
@@ -103,10 +103,10 @@ export async function PATCH(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -143,7 +143,7 @@ export async function PATCH(
     .update(updates)
     .eq("id", payload.milestoneId)
     .eq("envelope_id", goalId)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -162,10 +162,10 @@ export async function DELETE(
 ) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -184,7 +184,7 @@ export async function DELETE(
     .delete()
     .eq("id", milestoneId)
     .eq("envelope_id", goalId)
-    .eq("user_id", session.user.id);
+    .eq("user_id", user.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

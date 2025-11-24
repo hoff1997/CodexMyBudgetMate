@@ -8,10 +8,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         *,
         detection_rule:transaction_rules(id, pattern, merchant_normalized, match_type, case_sensitive)
       `)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("is_active", true);
 
     if (incomeError) {
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
     const { data: surplusEnvelope } = await supabase
       .from("envelopes")
       .select("id, name")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("name", "Surplus")
       .single();
 

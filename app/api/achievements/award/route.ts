@@ -15,10 +15,10 @@ const schema = z.object({
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   try {
     // Award achievement using database function
     const { data, error } = await supabase.rpc('award_achievement', {
-      p_user_id: session.user.id,
+      p_user_id: user.id,
       p_achievement_key: achievementKey,
       p_category: achievement.category,
       p_points: achievement.points,
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
             achievementKey,
           },
         })
-        .eq('user_id', session.user.id);
+        .eq('user_id', user.id);
     }
 
     return NextResponse.json({

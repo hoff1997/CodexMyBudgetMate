@@ -12,10 +12,10 @@ export async function GET(
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -36,7 +36,7 @@ export async function GET(
         source_transaction_id
       `)
       .eq("id", planId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (planError) {
@@ -123,10 +123,10 @@ export async function PATCH(
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -152,7 +152,7 @@ export async function PATCH(
       .from("allocation_plans")
       .select("id, amount, status, source_transaction_id, user_id")
       .eq("id", planId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (planError || !plan) {
@@ -257,7 +257,7 @@ export async function PATCH(
         const { data: recurringIncomes } = await supabase
           .from("recurring_income")
           .select("id, allocation")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .eq("is_active", true);
 
         if (recurringIncomes && recurringIncomes.length > 0) {
@@ -307,10 +307,10 @@ export async function DELETE(
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -321,7 +321,7 @@ export async function DELETE(
       .from("allocation_plans")
       .select("id, status, source_transaction_id")
       .eq("id", planId)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (planError || !plan) {

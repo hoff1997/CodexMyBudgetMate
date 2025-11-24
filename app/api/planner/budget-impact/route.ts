@@ -31,10 +31,10 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("pay_cycle")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .maybeSingle();
 
     const payCycle: PayCycle = (profile?.pay_cycle as PayCycle) || "fortnightly";
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       .select(
         "id, name, envelope_type, priority, target_amount, annual_amount, pay_cycle_amount, current_amount, frequency, next_payment_due, category_id"
       )
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (envelopesError) {
       return NextResponse.json({ error: envelopesError.message }, { status: 400 });

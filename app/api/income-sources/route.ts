@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -19,7 +19,7 @@ export async function GET() {
         *,
         detection_rule:transaction_rules(id, pattern, merchant_normalized)
       `)
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .order("created_at");
 
     if (incomeError) {
@@ -85,10 +85,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       const { data: rule, error: ruleError } = await supabase
         .from("transaction_rules")
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           merchant_normalized: detection_pattern.toUpperCase(),
           pattern: detection_pattern,
           match_type: "contains",
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     const { data: incomeSource, error: incomeError } = await supabase
       .from("income_sources")
       .insert({
-        user_id: session.user.id,
+        user_id: user.id,
         name,
         pay_cycle,
         typical_amount,
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
     // Create envelope allocations
     if (allocations && allocations.length > 0) {
       const allocationRecords = allocations.map((alloc: any, index: number) => ({
-        user_id: session.user.id,
+        user_id: user.id,
         envelope_id: alloc.envelope_id,
         income_source_id: incomeSource.id,
         allocation_amount: alloc.amount,

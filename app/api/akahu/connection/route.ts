@@ -18,14 +18,14 @@ export async function POST(request: Request) {
 
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  const userId = session.user.id;
+  const userId = user.id;
 
   if (payload.data.action === "disconnect") {
     await supabase.from("akahu_tokens").delete().eq("user_id", userId);

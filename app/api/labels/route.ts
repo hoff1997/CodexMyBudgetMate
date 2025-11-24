@@ -15,17 +15,17 @@ const schema = z.object({
 export async function GET() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
   const { data, error } = await supabase
     .from("labels")
     .select("id, name, colour, description, usage_count")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .order("usage_count", { ascending: false })
     .order("name", { ascending: true });
 
@@ -39,10 +39,10 @@ export async function GET() {
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("labels")
     .insert({
-      user_id: session.user.id,
+      user_id: user.id,
       name: payload.name,
       colour: payload.colour ?? null,
       description: payload.description ?? null,

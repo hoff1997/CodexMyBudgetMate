@@ -26,7 +26,7 @@ if (typeof window !== "undefined") {
   window.fetch = fetchWithCredentials;
 }
 
-export default function AppProviders({ children }: { ReactNode }) {
+export default function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({

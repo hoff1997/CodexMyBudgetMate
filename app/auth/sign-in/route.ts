@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
 
   console.log("🟢 [API /auth/sign-in] Attempting sign in for:", result.data.email);
 
+  // Get the cookies store
+  const cookieStore = await cookies();
+
   // Store cookies that need to be set
   const cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }> = [];
 
@@ -31,11 +34,15 @@ export async function POST(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return cookieStore.getAll();
         },
         setAll(cookies) {
           console.log("🟢 [API /auth/sign-in] Supabase wants to set cookies:", cookies.map(c => c.name).join(", "));
           cookiesToSet.push(...cookies);
+          // Also set them directly on the cookie store
+          cookies.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }

@@ -136,7 +136,13 @@ function CommandPalette({
   const { data: envelopeResults } = useQuery({
     queryKey: ["command-envelopes", debouncedQuery],
     queryFn: async () => {
-      if (!debouncedQuery?.trim()) return [];
+      if (!debouncedQuery?.trim()) return [] as Array<{
+        id: string;
+        name: string;
+        category_id: string;
+        target_amount: number;
+        current_amount: number;
+      }>;
       const { data } = await supabase
         .from("envelopes")
         .select("id, name, category_id, target_amount, current_amount")
@@ -150,7 +156,13 @@ function CommandPalette({
   const { data: transactionResults } = useQuery({
     queryKey: ["command-transactions", debouncedQuery],
     queryFn: async () => {
-      if (!debouncedQuery?.trim()) return [];
+      if (!debouncedQuery?.trim()) return [] as Array<{
+        id: string;
+        merchant_name: string | null;
+        amount: number;
+        occurred_at: string;
+        envelope_name: string | null;
+      }>;
       const { data } = await supabase
         .from("transactions_view")
         .select("id, merchant_name, amount, occurred_at, envelope_name")

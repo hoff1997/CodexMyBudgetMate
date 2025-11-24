@@ -21,13 +21,13 @@ export async function POST(request: NextRequest) {
 
   console.log("🟢 [API /auth/sign-in] Attempting sign in for:", result.data.email);
 
+  // Create response object first
+  const response = NextResponse.json({ ok: true });
+
   // Get the cookies store
   const cookieStore = await cookies();
 
-  // Store cookies that need to be set
-  const cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }> = [];
-
-  // Create Supabase client with cookie handlers that capture cookies
+  // Create Supabase client with cookie handlers that set on BOTH cookieStore and response
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,12 +36,23 @@ export async function POST(request: NextRequest) {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookies) {
-          console.log("🟢 [API /auth/sign-in] Supabase wants to set cookies:", cookies.map(c => c.name).join(", "));
-          cookiesToSet.push(...cookies);
-          // Also set them directly on the cookie store
-          cookies.forEach(({ name, value, options }) => {
+        setAll(cookiesToSet) {
+          console.log("🟢 [API /auth/sign-in] Supabase wants to set cookies:", cookiesToSet.map(c => c.name).join(", "));
+
+          // Set cookies on BOTH the cookie store AND the response object
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Set on cookie store for server-side reads
             cookieStore.set(name, value, options);
+
+            // Set on response object to send to browser
+            response.cookies.set(name, value, {
+              ...options,
+              httpOnly: true,
+              secure: true,
+              sameSite: 'lax',
+            });
+
+            console.log(`🟢 [API /auth/sign-in] Set cookie: ${name}, maxAge: ${options?.maxAge}, path: ${options?.path}`);
           });
         },
       },
@@ -61,22 +72,21 @@ export async function POST(request: NextRequest) {
   console.log("🟢 [API /auth/sign-in] Sign in successful, user:", data.user?.email);
   console.log("🟢 [API /auth/sign-in] Session exists:", !!data.session);
 
-  // Create response with user data
-  const response = NextResponse.json({
+  // Update response body with user data
+  const finalResponse = NextResponse.json({
     ok: true,
     user: data.user,
   });
 
-  // DON'T set cookies on response - they were already set in cookieStore by setAll
-  // Just log what was set
-  cookiesToSet.forEach(({ name, value, options }) => {
-    console.log(`🟢 [API /auth/sign-in] Cookie was set in cookieStore: ${name}, maxAge: ${options?.maxAge}, path: ${options?.path}, sameSite: ${options?.sameSite}, secure: ${options?.secure}, domain: ${options?.domain}`);
+  // Copy all cookies from the first response to the final response
+  response.cookies.getAll().forEach(cookie => {
+    finalResponse.cookies.set(cookie);
   });
 
   // Clear demo-mode cookie on successful login
-  response.cookies.delete("demo-mode");
+  finalResponse.cookies.delete("demo-mode");
 
-  console.log(`🟢 [API /auth/sign-in] Returning success response with ${cookiesToSet.length} cookies`);
+  console.log(`🟢 [API /auth/sign-in] Returning success response with ${response.cookies.getAll().length} cookies`);
 
-  return response;
+  return finalResponse;
 }

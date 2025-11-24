@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export async function login(formData: FormData) {
@@ -26,6 +27,11 @@ export async function login(formData: FormData) {
 
   console.log("🟢 [LOGIN ACTION] Sign in successful, user:", authData.user?.email);
   console.log("🟢 [LOGIN ACTION] Session exists:", !!authData.session);
+
+  // Clear demo-mode cookie on successful login
+  const cookieStore = await cookies();
+  cookieStore.delete("demo-mode");
+  console.log("🟢 [LOGIN ACTION] Cleared demo-mode cookie");
 
   revalidatePath("/", "layout");
   redirect("/dashboard");

@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   console.log("🟢 [API /auth/sign-in] POST request received");
 
   const body = await request.json();
@@ -20,7 +21,25 @@ export async function POST(request: Request) {
 
   console.log("🟢 [API /auth/sign-in] Attempting sign in for:", result.data.email);
 
-  const supabase = await createClient();
+  // Store cookies that need to be set
+  const cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }> = [];
+
+  // Create Supabase client with cookie handlers that capture cookies
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookies) {
+          console.log("🟢 [API /auth/sign-in] Supabase wants to set cookies:", cookies.map(c => c.name).join(", "));
+          cookiesToSet.push(...cookies);
+        },
+      },
+    }
+  );
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email: result.data.email,
@@ -35,43 +54,22 @@ export async function POST(request: Request) {
   console.log("🟢 [API /auth/sign-in] Sign in successful, user:", data.user?.email);
   console.log("🟢 [API /auth/sign-in] Session exists:", !!data.session);
 
-  // Create response
+  // Create response with user data
   const response = NextResponse.json({
     ok: true,
     user: data.user,
-    session: data.session
   });
 
-  // Manually set the session cookies on the response
-  if (data.session) {
-    const cookiePrefix = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0] || 'supabase';
-    const maxAge = 100 * 365 * 24 * 60 * 60; // ~100 years
-
-    // Set the auth token cookie
-    response.cookies.set({
-      name: `sb-${cookiePrefix}-auth-token`,
-      value: JSON.stringify({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        expires_in: data.session.expires_in,
-        expires_at: data.session.expires_at,
-        token_type: data.session.token_type,
-        user: data.session.user,
-      }),
-      path: '/',
-      maxAge,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: false, // Must be accessible to client-side Supabase client
-    });
-
-    console.log(`🟢 [API /auth/sign-in] Set cookie: sb-${cookiePrefix}-auth-token`);
-  }
+  // Set all captured cookies on the response
+  cookiesToSet.forEach(({ name, value, options }) => {
+    console.log(`🟢 [API /auth/sign-in] Setting cookie on response: ${name}, maxAge: ${options?.maxAge}, path: ${options?.path}`);
+    response.cookies.set(name, value, options);
+  });
 
   // Clear demo-mode cookie on successful login
   response.cookies.delete("demo-mode");
 
-  console.log("🟢 [API /auth/sign-in] Returning success response");
+  console.log(`🟢 [API /auth/sign-in] Returning success response with ${cookiesToSet.length} cookies`);
 
   return response;
 }

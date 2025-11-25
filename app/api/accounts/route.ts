@@ -32,8 +32,8 @@ export async function GET() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 400 });
   }
 
   return NextResponse.json({ accounts: accounts || [] });

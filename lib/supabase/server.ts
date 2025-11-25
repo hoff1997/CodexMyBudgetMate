@@ -15,19 +15,10 @@ export async function createClient() {
           return allCookies;
         },
         setAll(cookiesToSet) {
-          console.log("🟣 [SERVER CLIENT] setAll() called with:", cookiesToSet.map(c => c.name).join(", "));
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              console.log(`🟣 [SERVER CLIENT] Setting cookie: ${name}, path: ${options?.path}, maxAge: ${options?.maxAge}`);
-              cookieStore.set(name, value, options);
-            });
-            console.log("🟢 [SERVER CLIENT] All cookies set successfully");
-          } catch (error) {
-            // In Server Components, we can't modify cookies - only read them
-            // This is expected and safe to ignore on pages that only need to read auth state
-            // Log the error in development to help debug authentication issues
-            console.error('🔴 [SERVER CLIENT] Failed to set cookies:', error);
-          }
+          // In Server Components/API Routes, we can only READ cookies, not set them
+          // Session refresh and cookie updates happen in middleware, not here
+          // Attempting to set cookies here causes them to be deleted
+          console.log("🟣 [SERVER CLIENT] setAll() called with:", cookiesToSet.map(c => c.name).join(", "), "- ignoring (read-only context)");
         },
       },
     },

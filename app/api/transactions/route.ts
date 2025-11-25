@@ -30,12 +30,18 @@ const updateTransactionSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  console.log('🟢 [API /transactions] POST request received');
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  console.log('🟢 [API /transactions] Auth check:', {
+    hasUser: !!user,
+    userId: user?.id,
+    error: error?.message
+  });
 
   if (!user) {
+    console.log('🔴 [API /transactions] Unauthorized - no user');
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
@@ -120,12 +126,18 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  console.log('🟢 [API /transactions] GET request received');
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  console.log('🟢 [API /transactions] Auth check:', {
+    hasUser: !!user,
+    userId: user?.id,
+    error: error?.message
+  });
 
   if (!user) {
+    console.log('🔴 [API /transactions] Unauthorized - no user');
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 

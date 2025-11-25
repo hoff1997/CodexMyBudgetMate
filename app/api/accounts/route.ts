@@ -11,12 +11,18 @@ const schema = z.object({
 });
 
 export async function GET() {
+  console.log('🟢 [API /accounts] GET request received');
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  console.log('🟢 [API /accounts] Auth check:', {
+    hasUser: !!user,
+    userId: user?.id,
+    error: error?.message
+  });
 
   if (!user) {
+    console.log('🔴 [API /accounts] Unauthorized - no user');
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 

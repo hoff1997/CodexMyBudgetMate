@@ -49,7 +49,7 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
             </div>
           </div>
           <Button asChild variant="outline">
-            <Link href="/api/auth/sign-out">Sign out</Link>
+            <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
           </Button>
         </div>
       </header>

@@ -235,7 +235,7 @@ export default function Sidebar({
         </div>
         <div className="px-6 py-4">
           <Button asChild variant="outline" className="w-full">
-            <Link href="/api/auth/sign-out">Sign out</Link>
+            <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
           </Button>
         </div>
       </aside>

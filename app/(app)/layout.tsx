@@ -9,14 +9,17 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch user profile for onboarding status
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('onboarding_completed, show_onboarding_menu')
-    .eq('user_id', user?.id)
-    .single();
+  // Fetch user profile for onboarding status (only if user exists)
+  let showOnboarding = true;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed, show_onboarding_menu')
+      .eq('id', user.id)
+      .maybeSingle();
 
-  const showOnboarding = profile?.show_onboarding_menu ?? true;
+    showOnboarding = profile?.show_onboarding_menu ?? true;
+  }
 
   return (
     <CommandPaletteProvider>

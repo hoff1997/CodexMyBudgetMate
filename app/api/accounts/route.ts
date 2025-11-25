@@ -13,12 +13,12 @@ const schema = z.object({
 export async function GET() {
   console.log('🟢 [API /accounts] GET request received');
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   console.log('🟢 [API /accounts] Auth check:', {
     hasUser: !!user,
     userId: user?.id,
-    error: error?.message
+    error: authError?.message
   });
 
   if (!user) {
@@ -26,7 +26,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  const { data: accounts, error } = await supabase
+  const { data: accounts, error: queryError } = await supabase
     .from("accounts")
     .select("*")
     .eq("user_id", user.id)

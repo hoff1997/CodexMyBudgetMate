@@ -32,12 +32,12 @@ const updateTransactionSchema = z.object({
 export async function POST(request: Request) {
   console.log('🟢 [API /transactions] POST request received');
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   console.log('🟢 [API /transactions] Auth check:', {
     hasUser: !!user,
     userId: user?.id,
-    error: error?.message
+    error: authError?.message
   });
 
   if (!user) {
@@ -128,12 +128,12 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   console.log('🟢 [API /transactions] GET request received');
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   console.log('🟢 [API /transactions] Auth check:', {
     hasUser: !!user,
     userId: user?.id,
-    error: error?.message
+    error: authError?.message
   });
 
   if (!user) {
@@ -176,10 +176,10 @@ export async function GET(request: Request) {
     query = query.limit(Number.parseInt(limit, 10));
   }
 
-  const { data: transactions, error } = await query;
+  const { data: transactions, error: queryError } = await query;
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (queryError) {
+    return NextResponse.json({ error: queryError.message }, { status: 400 });
   }
 
   return NextResponse.json({ transactions });

@@ -279,7 +279,7 @@ export function BudgetManagerClient({
   const difference = totalIncome - totalAllocated;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-20 pt-6 md:px-6 md:pb-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 pb-16 pt-4 md:px-6 md:pb-6 md:gap-4">
       {/* Header */}
       <header className="space-y-1">
         <div className="flex items-center justify-between">
@@ -314,8 +314,8 @@ export function BudgetManagerClient({
 
       {/* Pay Cycle Configuration */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-3">
             <label htmlFor="payCycle" className="text-sm font-medium">
               How often do you get paid?
             </label>
@@ -337,7 +337,7 @@ export function BudgetManagerClient({
       </Card>
 
       {/* Budget Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -356,7 +356,7 @@ export function BudgetManagerClient({
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Target className="h-4 w-4" />
               Total Allocated
@@ -373,7 +373,7 @@ export function BudgetManagerClient({
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Target className="h-4 w-4" />
               Difference
@@ -399,19 +399,19 @@ export function BudgetManagerClient({
       {/* Unified Envelope Table */}
       {demoMode ? (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
+          <CardContent className="p-6 text-center text-muted-foreground">
             Demo mode: Sign in to view your budget data.
           </CardContent>
         </Card>
       ) : isLoading ? (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
+          <CardContent className="p-6 text-center text-muted-foreground">
             Loading envelopes...
           </CardContent>
         </Card>
       ) : unifiedEnvelopes.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
+          <CardContent className="p-6 text-center text-muted-foreground">
             No envelopes created yet. Create your first envelope to get started.
           </CardContent>
         </Card>
@@ -434,7 +434,7 @@ export function BudgetManagerClient({
 
       {/* Grand Total Summary */}
       <Card className="bg-slate-100">
-        <CardContent className="pt-6">
+        <CardContent className="pt-4">
           <div className="flex items-center justify-between">
             <div className="text-sm font-bold">
               Net Difference (Income - Allocations)

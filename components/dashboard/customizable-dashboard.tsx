@@ -292,9 +292,9 @@ export function CustomizableDashboard({
   // const showBudgetOverview = visibleWidgets.some((w) => w.category === "overview");
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-6 py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">
       {/* Customise button */}
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-3">
         <Button
           variant="outline"
           size="sm"
@@ -309,7 +309,7 @@ export function CustomizableDashboard({
       {/* Customizable widgets with drag-and-drop */}
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <SortableContext items={visibleWidgets.map((w) => w.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-5">
             {visibleWidgets.map((widget) => {
               // Skip overview widgets - they're in BudgetOverview
               if (widget.category === "overview" || widget.category === "banking") {

@@ -24,7 +24,7 @@ export default function DashboardShell({ profile, userId, demoMode = false, show
   return (
     <div className="grid min-h-screen grid-rows-[auto,1fr] bg-background">
       <header className="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
           <div>
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
               Kia ora, {profile?.full_name ?? (demoMode ? "Demo Budget Mate" : "Budget Mate")}

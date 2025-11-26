@@ -169,7 +169,7 @@ export function EnvelopeSummaryClient({
   const selectedPlan = selectedEnvelope ? payPlanMap.get(selectedEnvelope.id) : undefined;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-12 pt-6 md:px-6 md:pb-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 pb-8 pt-4 md:px-6 md:pb-6 md:gap-4">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold text-secondary">Envelope summary</h1>
         <p className="text-sm text-muted-foreground">
@@ -177,7 +177,7 @@ export function EnvelopeSummaryClient({
           up before the next payday.
         </p>
       </header>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-secondary">Envelope Summary</h2>
           <div className="flex gap-2">
@@ -189,18 +189,18 @@ export function EnvelopeSummaryClient({
             </Button>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="flex justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
+        <div className="space-y-3">
+          <div className="flex justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-3">
             <Button
               type="button"
-              className="gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold shadow-sm hover:bg-primary/90"
+              className="gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90"
               onClick={() => setCreateOpen(true)}
             >
               <span className="text-lg">+</span>
               Add New Envelope
             </Button>
           </div>
-          <section className="grid gap-4 md:grid-cols-4">
+          <section className="grid gap-3 md:grid-cols-4">
             <MetricCard
               title="Total target"
               value={formatCurrency(totals.target)}
@@ -217,7 +217,7 @@ export function EnvelopeSummaryClient({
             </div>
           </section>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
             <div className="flex flex-wrap gap-2">
               {FILTERS.map((filter) => (
                 <button
@@ -249,11 +249,11 @@ export function EnvelopeSummaryClient({
             </div>
           </div>
 
-          <div className="space-y-3 md:hidden">
+          <div className="space-y-2 md:hidden">
             <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={setSelectedEnvelope} />
           </div>
           <div className="hidden md:block">
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {groupedCategories.length ? (
                 groupedCategories.map((category) => (
                   <EnvelopeCategoryGroup
@@ -266,7 +266,7 @@ export function EnvelopeSummaryClient({
                 ))
               ) : (
                 <Card>
-                  <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                  <CardContent className="p-4 text-center text-sm text-muted-foreground">
                     No envelopes match this filter yet. Try widening your filter or add a new envelope.
                   </CardContent>
                 </Card>
@@ -325,7 +325,7 @@ export function EnvelopeSummaryClient({
       />
 
       <nav className="fixed inset-x-0 bottom-0 border-t bg-background/95 shadow-lg backdrop-blur md:hidden">
-        <div className="flex items-center justify-around px-4 py-3 text-xs">
+        <div className="flex items-center justify-around px-4 py-2.5 text-xs">
           <Link href="/dashboard" className="text-muted-foreground transition hover:text-primary">
             Dashboard
           </Link>
@@ -354,7 +354,7 @@ function MobileEnvelopeList({
   if (!envelopes.length) {
     return (
       <Card>
-        <CardContent className="p-8 text-center text-sm text-muted-foreground">
+        <CardContent className="p-4 text-center text-sm text-muted-foreground">
           No envelopes match this filter yet. Try widening your filter or add a new envelope.
         </CardContent>
       </Card>

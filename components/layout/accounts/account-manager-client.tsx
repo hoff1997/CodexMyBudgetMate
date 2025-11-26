@@ -87,21 +87,21 @@ export function AccountManagerClient({ accounts, canEdit }: Props) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-24 pt-12 md:px-10 md:pb-12">
-      <header className="space-y-2">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-20 pt-6 md:px-6 md:pb-8 md:gap-5">
+      <header className="space-y-1.5">
         <h1 className="text-3xl font-semibold text-secondary">Accounts</h1>
         <p className="text-base text-muted-foreground">
           Manage every account feeding your budget. Balances sync with the planner, dashboard, and reconciliation tools.
         </p>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-3 md:grid-cols-3">
         <MetricCard title="Assets" value={formatCurrency(totals.assets)} />
         <MetricCard title="Liabilities" value={formatCurrency(totals.liabilities)} />
         <MetricCard title="Net position" value={formatCurrency(totals.assets - totals.liabilities)} />
       </section>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
         <div className="flex flex-wrap gap-2">
           <select
             className="h-9 rounded-md border px-3 text-sm"
@@ -142,32 +142,32 @@ export function AccountManagerClient({ accounts, canEdit }: Props) {
         <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3">Account</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Institution</th>
-              <th className="px-4 py-3">Balance</th>
-              <th className="px-4 py-3">Reconciled</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-3 py-2.5 md:px-4">Account</th>
+              <th className="px-3 py-2.5 md:px-4">Type</th>
+              <th className="px-3 py-2.5 md:px-4">Institution</th>
+              <th className="px-3 py-2.5 md:px-4">Balance</th>
+              <th className="px-3 py-2.5 md:px-4">Reconciled</th>
+              <th className="px-3 py-2.5 md:px-4">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.map((account) => (
               <tr key={account.id} className="text-sm">
-                <td className="px-4 py-3">
+                <td className="px-3 py-2.5 md:px-4">
                   <div className="font-medium text-secondary">{account.name}</div>
                   <p className="text-xs text-muted-foreground">
                     {account.updated_at ? new Date(account.updated_at).toLocaleDateString("en-NZ") : ""}
                   </p>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">
+                <td className="px-3 py-2.5 md:px-4 text-muted-foreground">
                   {typeLabels[account.type] ?? account.type}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{account.institution ?? "—"}</td>
-                <td className="px-4 py-3 font-medium">
+                <td className="px-3 py-2.5 md:px-4 text-muted-foreground">{account.institution ?? "—"}</td>
+                <td className="px-3 py-2.5 md:px-4 font-medium">
                   {formatCurrency(Number(account.current_balance ?? 0))}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{account.reconciled ? "Yes" : "No"}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-2.5 md:px-4 text-muted-foreground">{account.reconciled ? "Yes" : "No"}</td>
+                <td className="px-3 py-2.5 md:px-4">
                   <div className="flex flex-wrap gap-2">
                     <Button
                       variant="outline"
@@ -189,7 +189,7 @@ export function AccountManagerClient({ accounts, canEdit }: Props) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td className="px-4 py-10 text-center text-sm text-muted-foreground" colSpan={6}>
+                <td className="px-4 py-8 text-center text-sm text-muted-foreground" colSpan={6}>
                   No accounts match the current filters.
                 </td>
               </tr>
@@ -275,12 +275,12 @@ function AccountDrawer({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-        <Dialog.Content className="fixed inset-y-0 right-0 flex w-full max-w-lg flex-col gap-4 bg-background p-6 shadow-xl">
+        <Dialog.Content className="fixed inset-y-0 right-0 flex w-full max-w-lg flex-col gap-4 bg-background p-5 shadow-xl">
           <Dialog.Title className="text-lg font-semibold text-secondary">
             {account ? "Edit account" : "Add account"}
           </Dialog.Title>
           {localAccount ? (
-            <form className="flex flex-1 flex-col gap-4" onSubmit={handleEditSubmit}>
+            <form className="flex flex-1 flex-col gap-3" onSubmit={handleEditSubmit}>
               <Input
                 placeholder="Name"
                 value={localAccount.name}
@@ -337,7 +337,7 @@ function AccountDrawer({
               </div>
             </form>
           ) : (
-            <form className="flex flex-1 flex-col gap-4" onSubmit={handleCreateSubmit}>
+            <form className="flex flex-1 flex-col gap-3" onSubmit={handleCreateSubmit}>
               <Input
                 placeholder="Name"
                 required
@@ -381,7 +381,7 @@ function AccountDrawer({
 function MobileNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 border-t bg-background/95 shadow-lg backdrop-blur md:hidden">
-      <div className="flex items-center justify-around px-4 py-3 text-xs">
+      <div className="flex items-center justify-around px-4 py-2.5 text-xs">
         <Link href="/dashboard" className="text-muted-foreground transition hover:text-primary">
           Dashboard
         </Link>

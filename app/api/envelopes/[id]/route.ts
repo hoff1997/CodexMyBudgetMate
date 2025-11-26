@@ -56,6 +56,29 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     payload.opening_balance = Number.isFinite(value) ? value : 0;
   }
 
+  // Handle due_date conversion
+  if ("due_date" in payload) {
+    if (typeof payload.due_date === "number") {
+      // If it's a day number (1-31), convert to a date in the current month
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const day = Math.max(1, Math.min(31, payload.due_date));
+      const date = new Date(year, month, day);
+      payload.due_date = date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    } else if (typeof payload.due_date === "string") {
+      // If it's already a string, validate it's a proper date format
+      const dateObj = new Date(payload.due_date);
+      if (!isNaN(dateObj.getTime())) {
+        payload.due_date = dateObj.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      } else {
+        payload.due_date = null;
+      }
+    } else if (payload.due_date === null || payload.due_date === undefined) {
+      payload.due_date = null;
+    }
+  }
+
   payload.updated_at = new Date().toISOString();
 
   const { error } = await supabase

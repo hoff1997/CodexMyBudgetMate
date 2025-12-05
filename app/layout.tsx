@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "My Budget Mate",
   description:
     "Personalised envelope budgeting with Supabase persistence and Akahu-powered bank connections.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

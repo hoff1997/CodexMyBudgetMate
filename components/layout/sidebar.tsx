@@ -25,7 +25,7 @@ import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v13"; // Increment this when adding new menu items
+const NAV_VERSION = "v14"; // Increment this when adding new menu items
 const ADMIN_EMAIL = "hoff1997@gmail.com";
 
 type NavItem = {
@@ -44,6 +44,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "onboarding", label: "Getting Started", href: "/onboarding", icon: "🚀" },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
   { id: "budget-manager", label: "Budget Manager", href: "/budget-manager", icon: "🎯" },
+  { id: "allocation", label: "Allocation", href: "/allocation", icon: "💰" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
@@ -141,24 +142,24 @@ export default function Sidebar({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-64 flex-col justify-between border-r bg-white">
+      <aside className="flex w-56 flex-col justify-between border-r bg-white">
         <div>
-          <div className="px-6 py-4 text-lg font-bold">My Budget Mate</div>
-          <div className="px-4">
+          <div className="px-3 py-2 text-base font-bold">My Budget Mate</div>
+          <div className="px-2">
             <QuickActionsSheet />
           </div>
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-              <nav className="px-2 py-4 space-y-1">
+              <nav className="px-1 py-2 space-y-0.5">
                 {filteredNavItems.map((item) => {
                   // Handle separator for future features section (admin only)
                   if (item.id === "separator-future") {
                     if (!isAdmin) return null;
                     return (
-                      <div key={item.id} className="my-2">
+                      <div key={item.id} className="my-1">
                         <button
                           onClick={() => setShowFutureFeatures(!showFutureFeatures)}
-                          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-secondary w-full"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-secondary w-full"
                         >
                           {showFutureFeatures ? (
                             <ChevronDown className="h-4 w-4" />
@@ -184,7 +185,7 @@ export default function Sidebar({
                         <button
                           onClick={() => setShowReportsSubmenu(!showReportsSubmenu)}
                           className={cn(
-                            "flex items-center gap-2 px-4 py-2 text-sm font-medium transition w-full rounded-md",
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
                             isActive
                               ? "bg-primary text-primary-foreground"
                               : "text-muted-foreground hover:bg-muted hover:text-secondary"
@@ -215,7 +216,7 @@ export default function Sidebar({
                         key={item.id}
                         href={item.href}
                         className={cn(
-                          "flex items-center gap-2 pl-12 pr-4 py-2 text-sm font-medium transition rounded-md",
+                          "flex items-center gap-1.5 pl-8 pr-3 py-1.5 text-xs font-medium transition rounded-md",
                           isActive
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:bg-muted hover:text-secondary"
@@ -233,8 +234,8 @@ export default function Sidebar({
             </SortableContext>
           </DndContext>
         </div>
-        <div className="px-6 py-4">
-          <Button asChild variant="outline" className="w-full">
+        <div className="px-3 py-2">
+          <Button asChild variant="outline" className="w-full text-xs h-8">
             <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
           </Button>
         </div>
@@ -266,7 +267,7 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
   // Render separator
   if (item.separator) {
     return (
-      <div ref={setNodeRef} style={style} className="my-3 px-4">
+      <div ref={setNodeRef} style={style} className="my-1.5 px-3">
         <div className="border-t border-border" />
       </div>
     );
@@ -276,7 +277,7 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
     <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-60")}>
       <div
         className={cn(
-          "flex items-center gap-2 rounded-lg px-2 py-1 transition",
+          "flex items-center gap-1 rounded-lg px-1 py-0.5 transition",
           isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/20",
         )}
       >
@@ -285,16 +286,16 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
           aria-label={`Reorder ${item.label}`}
           {...attributes}
           {...listeners}
-          className="rounded-md p-1 text-muted-foreground hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="rounded-md p-0.5 text-muted-foreground hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <GripVertical className="h-4 w-4" />
+          <GripVertical className="h-3 w-3" />
         </button>
         <Link
           href={item.href}
-          className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2"
+          className="flex flex-1 items-center gap-2 rounded-lg px-2 py-1.5"
         >
-          <span className="text-lg">{item.icon}</span>
-          <span>{item.label}</span>
+          <span className="text-base">{item.icon}</span>
+          <span className="text-xs">{item.label}</span>
         </Link>
       </div>
     </div>

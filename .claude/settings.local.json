@@ -67,7 +67,16 @@
       "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\\Source Replit\" log --oneline)",
       "Bash(git -C \"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\\Source Replit\" status)",
       "Bash(nul)",
-      "Bash(npx next info:*)"
+      "Bash(npx next info:*)",
+      "Bash(\"c:\\Users\\hoff1\\My Budget Mate\\Cloned Codex\\CodexMyBudgetMate\\app\\api\\envelopes\\[id]\\route.ts\")",
+      "Bash(set PORT=3005)",
+      "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3005 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")",
+      "Bash(node scripts/apply-default-envelopes-migration.mjs:*)",
+      "Bash(node scripts/apply-cc-debt-migration.mjs:*)",
+      "Bash(node scripts/apply-envelope-tracking-migration.mjs:*)",
+      "Bash(node scripts/apply-ideal-allocation-migration.mjs:*)",
+      "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3001 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")",
+      "Bash(timeout 15 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")"
     ],
     "deny": [],
     "ask": []

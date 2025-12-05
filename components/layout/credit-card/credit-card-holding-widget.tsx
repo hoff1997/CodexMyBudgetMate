@@ -30,7 +30,12 @@ interface CreditCardHoldingStatus {
   allocations: any[];
 }
 
-export function CreditCardHoldingWidget() {
+interface CreditCardHoldingWidgetProps {
+  compact?: boolean;
+  horizontal?: boolean;
+}
+
+export function CreditCardHoldingWidget({ compact = false, horizontal = false }: CreditCardHoldingWidgetProps) {
   const { data, isLoading, error } = useQuery<CreditCardHoldingStatus>({
     queryKey: ["/api/credit-card-holding"],
     queryFn: async () => {
@@ -66,9 +71,9 @@ export function CreditCardHoldingWidget() {
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
+        <CardHeader className={compact ? "pb-2" : ""}>
+          <CardTitle className={`${compact ? "text-sm" : "text-lg"} font-medium flex items-center gap-2`}>
+            <CreditCard className={compact ? "h-4 w-4" : "h-5 w-5"} />
             Credit Card Holding
           </CardTitle>
         </CardHeader>
@@ -85,9 +90,9 @@ export function CreditCardHoldingWidget() {
   if (error) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
+        <CardHeader className={compact ? "pb-2" : ""}>
+          <CardTitle className={`${compact ? "text-sm" : "text-lg"} font-medium flex items-center gap-2`}>
+            <CreditCard className={compact ? "h-4 w-4" : "h-5 w-5"} />
             Credit Card Holding
           </CardTitle>
         </CardHeader>
@@ -104,9 +109,9 @@ export function CreditCardHoldingWidget() {
   if (!data?.hasHoldingAccount) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
+        <CardHeader className={compact ? "pb-2" : ""}>
+          <CardTitle className={`${compact ? "text-sm" : "text-lg"} font-medium flex items-center gap-2`}>
+            <CreditCard className={compact ? "h-4 w-4" : "h-5 w-5"} />
             Credit Card Holding
           </CardTitle>
         </CardHeader>
@@ -138,6 +143,140 @@ export function CreditCardHoldingWidget() {
     coveragePercentage,
   } = data;
 
+  // Horizontal version for full-width 2-line layout
+  if (horizontal) {
+    return (
+      <Card className={isFullyCovered ? "border-green-200" : "border-orange-200"}>
+        <CardContent className="py-3">
+          {/* Line 1: Title + Key Metrics in 4 columns */}
+          <div className="grid grid-cols-4 gap-4 items-center mb-2">
+            {/* Column 1: Title */}
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              <span className="text-sm font-medium">Credit Card Holding</span>
+            </div>
+
+            {/* Column 2: Balance */}
+            <div className="text-center">
+              <div className="text-xs text-muted-foreground mb-1">Balance</div>
+              <div className="text-base font-semibold text-blue-600">
+                ${holdingBalance.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Column 3: Debt */}
+            <div className="text-center">
+              <div className="text-xs text-muted-foreground mb-1">Debt ({creditCardAccounts.length})</div>
+              <div className="text-base font-semibold text-red-600">
+                ${totalCreditCardDebt.toFixed(2)}
+              </div>
+            </div>
+
+            {/* Column 4: Coverage */}
+            <div className="text-center">
+              <div className="text-xs text-muted-foreground mb-1">Coverage</div>
+              <div className={`text-base font-semibold ${isFullyCovered ? "text-green-600" : "text-orange-600"}`}>
+                {coveragePercentage.toFixed(0)}%
+              </div>
+            </div>
+          </div>
+
+          {/* Line 2: Progress Bar + Status Message */}
+          <div className="flex items-center gap-3">
+            <Progress
+              value={Math.min(coveragePercentage, 100)}
+              className={`h-2 flex-1 ${
+                isFullyCovered ? "[&>*]:bg-green-500" : "[&>*]:bg-orange-500"
+              }`}
+            />
+            <span className={`text-xs font-medium whitespace-nowrap ${
+              isFullyCovered ? "text-green-600" : "text-orange-600"
+            }`}>
+              {isFullyCovered ? "✓ All covered!" : `⚠ Shortfall: $${shortfall.toFixed(2)}`}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Compact version for metric card grid
+  if (compact) {
+    return (
+      <Card className={isFullyCovered ? "border-green-200" : "border-orange-200"}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Credit Card Holding
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Status Badge */}
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-muted-foreground">Status</span>
+            <span className={`text-xs font-semibold ${isFullyCovered ? "text-green-600" : "text-orange-600"}`}>
+              {isFullyCovered ? "Covered" : "Shortfall"}
+            </span>
+          </div>
+
+          {/* Account Balance */}
+          <div>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Account Balance</span>
+              <span className="font-semibold text-blue-600">
+                ${holdingBalance.toFixed(2)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Available in {holdingAccount?.name}
+            </p>
+          </div>
+
+          {/* Credit Card Debt */}
+          <div>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">
+                Total CC Debt ({creditCardAccounts.length})
+              </span>
+              <span className="font-semibold text-red-600">
+                ${totalCreditCardDebt.toFixed(2)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Next payment due amount
+            </p>
+          </div>
+
+          {/* Coverage Progress */}
+          <div>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">Coverage</span>
+              <span className="font-medium">{coveragePercentage.toFixed(0)}%</span>
+            </div>
+            <Progress
+              value={Math.min(coveragePercentage, 100)}
+              className={`h-2 ${
+                isFullyCovered ? "[&>*]:bg-green-500" : "[&>*]:bg-orange-500"
+              }`}
+            />
+          </div>
+
+          {/* Status Message */}
+          {isFullyCovered ? (
+            <p className="text-xs text-green-600">
+              All credit card debt is fully covered!
+            </p>
+          ) : (
+            <p className="text-xs text-orange-600">
+              Shortfall: ${shortfall.toFixed(2)}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Full version (existing detailed view)
   return (
     <Card className={isFullyCovered ? "border-green-200" : "border-orange-200"}>
       <CardHeader className="pb-3">

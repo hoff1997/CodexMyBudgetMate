@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { calculateTotalMinimumPayment, calculatePaymentStrategy, type CreditCardForStrategy } from "@/lib/services/payment-strategy";
+import { calculateSimpleInterest, getTotalInterest } from "@/lib/services/credit-card-interest";
 
 /**
  * GET /api/credit-card-holding
@@ -64,6 +66,47 @@ export async function GET(request: NextRequest) {
     const isFullyCovered = holdingBalance >= totalCreditCardDebt;
     const shortfall = totalCreditCardDebt - holdingBalance;
 
+    // Prepare credit cards for payment strategy calculations
+    const cardsForStrategy: CreditCardForStrategy[] = creditCards.map((acc) => ({
+      id: acc.id,
+      name: acc.name,
+      currentBalance: Math.abs(parseFloat(String(acc.current_balance))),
+      apr: acc.apr || 0,
+      minimumPayment: acc.minimum_payment_amount || (acc.minimum_payment_percentage
+        ? Math.abs(parseFloat(String(acc.current_balance))) * (acc.minimum_payment_percentage / 100)
+        : Math.abs(parseFloat(String(acc.current_balance))) * 0.02), // Default 2%
+      creditLimit: acc.credit_limit || undefined,
+      payoffPriority: acc.payoff_priority || undefined,
+    }));
+
+    // Calculate minimum payments and interest
+    const totalMinimumPayment = calculateTotalMinimumPayment(cardsForStrategy);
+    const totalMonthlyInterest = getTotalInterest(
+      creditCards.map(acc => ({
+        id: acc.id,
+        name: acc.name,
+        current_balance: parseFloat(String(acc.current_balance)),
+        apr: acc.apr || 0,
+        last_interest_charge_date: acc.last_interest_charge_date,
+        last_interest_amount: acc.last_interest_amount,
+      })),
+      30 // 30 days
+    );
+
+    // Calculate payment strategy if surplus is available
+    const surplusAvailable = Math.max(0, shortfall < 0 ? Math.abs(shortfall) : 0);
+    let paymentStrategy = null;
+
+    if (creditCards.length > 0) {
+      // Use the first card's strategy or default to pay_off
+      const defaultStrategy = creditCards[0]?.payment_strategy || 'pay_off';
+      paymentStrategy = calculatePaymentStrategy(
+        cardsForStrategy,
+        defaultStrategy as any,
+        surplusAvailable
+      );
+    }
+
     // Get recent allocations
     const { data: allocations, error: allocError } = await supabase
       .from("credit_card_allocations")
@@ -91,6 +134,17 @@ export async function GET(request: NextRequest) {
         name: acc.name,
         balance: parseFloat(String(acc.current_balance)),
         debt: Math.abs(parseFloat(String(acc.current_balance))),
+        apr: acc.apr,
+        creditLimit: acc.credit_limit,
+        paymentStrategy: acc.payment_strategy,
+        minimumPayment: acc.minimum_payment_amount || (acc.minimum_payment_percentage
+          ? Math.abs(parseFloat(String(acc.current_balance))) * (acc.minimum_payment_percentage / 100)
+          : null),
+        paymentDueDay: acc.payment_due_day,
+        amountDueNextStatement: acc.amount_due_next_statement,
+        utilization: acc.credit_limit && acc.credit_limit > 0
+          ? (Math.abs(parseFloat(String(acc.current_balance))) / acc.credit_limit) * 100
+          : null,
       })),
       totalCreditCardDebt,
       holdingBalance,
@@ -100,6 +154,10 @@ export async function GET(request: NextRequest) {
         totalCreditCardDebt > 0
           ? (holdingBalance / totalCreditCardDebt) * 100
           : 100,
+      totalMinimumPayment,
+      totalMonthlyInterest,
+      paymentStrategy,
+      surplusAvailable,
       allocations: allocations || [],
     });
   } catch (error) {

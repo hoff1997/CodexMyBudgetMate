@@ -3,7 +3,7 @@
  * Shared types for envelope configuration across onboarding and maintenance pages
  */
 
-export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal';
+export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
 export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annual' | 'annually';
 export type PriorityType = 'essential' | 'important' | 'discretionary';
 
@@ -13,8 +13,13 @@ export type PriorityType = 'essential' | 'important' | 'discretionary';
 export interface IncomeSource {
   id: string;
   name: string;
-  amount: number;
+  amount: number;           // Normalized to user's pay cycle
+  rawAmount?: number;       // Original amount per source's frequency
   frequency: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly';
+  nextPayDate?: string;     // ISO date string - when next payment expected
+  startDate?: string;       // ISO date string - when income stream started
+  endDate?: string;         // ISO date string - when income stream ends (null = ongoing)
+  replacedById?: string;    // UUID - links to successor income source
   isActive?: boolean;
 }
 
@@ -68,6 +73,11 @@ export interface UnifiedEnvelopeData {
   currentAmount?: number; // Current balance (maintenance mode only)
   openingBalance?: number; // User-set opening balance (onboarding mode)
 
+  // Envelope flags
+  is_goal?: boolean; // Goal envelope (doesn't need budget)
+  is_spending?: boolean; // Spending envelope (doesn't need budget)
+  is_tracking_only?: boolean; // Tracking-only envelope (e.g., reimbursements - doesn't need budget)
+
   // Validation
   validationWarnings?: ValidationWarning[];
 
@@ -75,6 +85,14 @@ export interface UnifiedEnvelopeData {
   categoryId?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+/**
+ * Category option for envelope categorization
+ */
+export interface CategoryOption {
+  id: string;
+  name: string;
 }
 
 /**
@@ -93,18 +111,42 @@ export interface UnifiedEnvelopeTableProps {
   // Bank balance for opening balance validation (onboarding only)
   bankBalance?: number;
 
+  // Categories for envelope organization
+  categories?: CategoryOption[];
+
   // Feature flags
   showIncomeColumns?: boolean; // Default true
   showOpeningBalance?: boolean; // True for onboarding, false for maintenance
   showCurrentBalance?: boolean; // False for onboarding, true for maintenance
   showNotes?: boolean; // Default true
+  showCategories?: boolean; // Default true in maintenance mode
   enableDragAndDrop?: boolean; // True for maintenance mode
+  isDragDisabled?: boolean; // Disable drag when filtering or sorting
+  hideHeader?: boolean; // Hide table header (for shared sticky header)
+
+  // Gap analysis data (maintenance mode only)
+  gapAnalysisData?: GapAnalysisData[];
 
   // Callbacks
   onEnvelopeUpdate: (id: string, updates: Partial<UnifiedEnvelopeData>) => void | Promise<void>;
   onEnvelopeDelete: (id: string) => void | Promise<void>;
   onAllocationUpdate?: (envelopeId: string, incomeSourceId: string, amount: number) => void | Promise<void>;
   onReorder?: (fromIndex: number, toIndex: number) => void | Promise<void>;
+}
+
+/**
+ * Gap analysis data for an envelope
+ */
+export interface GapAnalysisData {
+  envelope_id: string;
+  envelope_name: string;
+  ideal_per_pay: number;
+  expected_balance: number;
+  actual_balance: number;
+  gap: number;
+  payCyclesElapsed: number;
+  status: "on_track" | "slight_deviation" | "needs_attention";
+  is_locked: boolean;
 }
 
 /**

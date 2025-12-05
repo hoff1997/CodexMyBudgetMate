@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       .from("envelope_income_allocations")
       .select(`
         *,
-        envelope:envelopes(id, name, priority, current_balance)
+        envelope:envelopes(id, name, priority, current_amount)
       `)
       .eq("income_source_id", matchedSource.id)
       .order("priority");

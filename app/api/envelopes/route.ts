@@ -53,9 +53,10 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("envelopes")
-    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate")
+    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order")
     .eq("user_id", user.id)
-    .order("name");
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

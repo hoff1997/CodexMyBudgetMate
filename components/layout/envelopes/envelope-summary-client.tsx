@@ -5,15 +5,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import HelpTooltip from "@/components/ui/help-tooltip";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeCategoryGroup } from "@/components/layout/envelopes/envelope-category-group";
-import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-sheet";
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
 import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-card-holding-widget";
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
+import { Target, Wallet, TrendingDown } from "lucide-react";
 import type { TransferHistoryItem } from "@/lib/types/envelopes";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 
@@ -24,6 +25,7 @@ const FILTERS = [
   { key: "surplus", label: "Surplus" },
   { key: "no-target", label: "No target" },
   { key: "spending", label: "Spending" },
+  { key: "tracking", label: "Tracking" },
 ] as const;
 
 type StatusFilter = (typeof FILTERS)[number]["key"];
@@ -47,11 +49,15 @@ export function EnvelopeSummaryClient({
 }) {
   const router = useRouter();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
-  const [selectedEnvelope, setSelectedEnvelope] = useState<SummaryEnvelope | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [collapseAll, setCollapseAll] = useState(false);
+
+  // Handle envelope edit by navigating to Budget Manager with deep link
+  const handleEnvelopeEdit = useCallback((envelope: SummaryEnvelope) => {
+    router.push(`/budget-manager?envelope=${envelope.id}`);
+  }, [router]);
 
   const payPlanMap = useMemo(() => {
     if (!payPlan) return new Map<string, { perPay: number; annual: number }>();
@@ -88,6 +94,7 @@ export function EnvelopeSummaryClient({
       surplus: 0,
       "no-target": 0,
       spending: 0,
+      tracking: 0,
     };
     orderedEnvelopes.forEach((envelope) => {
       const bucket = getStatusBucket(envelope);
@@ -166,12 +173,18 @@ export function EnvelopeSummaryClient({
     [persistOrder],
   );
 
-  const selectedPlan = selectedEnvelope ? payPlanMap.get(selectedEnvelope.id) : undefined;
-
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 pb-8 pt-4 md:px-6 md:pb-6 md:gap-4">
       <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-secondary">Envelope summary</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-secondary">Envelope summary</h1>
+          <HelpTooltip
+            title="Envelope Summary"
+            content={[
+              "Monitor envelope health and track progress toward your budget goals. View balances, identify envelopes needing attention, and manage transfers between envelopes."
+            ]}
+          />
+        </div>
         <p className="text-sm text-muted-foreground">
           Snapshot of every envelope with progress markers so you can quickly see what needs topping
           up before the next payday.
@@ -190,32 +203,29 @@ export function EnvelopeSummaryClient({
           </div>
         </div>
         <div className="space-y-3">
-          <div className="flex justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-3">
-            <Button
-              type="button"
-              className="gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90"
-              onClick={() => setCreateOpen(true)}
-            >
-              <span className="text-lg">+</span>
-              Add New Envelope
-            </Button>
-          </div>
-          <section className="grid gap-3 md:grid-cols-4">
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <MetricCard
               title="Total target"
               value={formatCurrency(totals.target)}
               description={`Across ${orderedEnvelopes.length} envelopes`}
+              icon={Target}
             />
-            <MetricCard title="Current balance" value={formatCurrency(totals.current)} description="Inclusive of pending envelopes" />
+            <MetricCard
+              title="Current balance"
+              value={formatCurrency(totals.current)}
+              description="Inclusive of pending envelopes"
+              icon={Wallet}
+            />
             <MetricCard
               title="Funding gap"
               value={formatCurrency(Math.max(0, totals.target - totals.current))}
               description="What is still required to hit targets"
+              icon={TrendingDown}
             />
-            <div className="md:col-span-1">
-              <CreditCardHoldingWidget />
-            </div>
           </section>
+
+          {/* Full-width Credit Card Widget */}
+          <CreditCardHoldingWidget horizontal />
 
           <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
             <div className="flex flex-wrap gap-2">
@@ -250,7 +260,7 @@ export function EnvelopeSummaryClient({
           </div>
 
           <div className="space-y-2 md:hidden">
-            <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={setSelectedEnvelope} />
+            <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={handleEnvelopeEdit} />
           </div>
           <div className="hidden md:block">
             <div className="space-y-2 md:space-y-3">
@@ -260,7 +270,8 @@ export function EnvelopeSummaryClient({
                     key={category.id}
                     category={category}
                     collapsedAll={collapseAll}
-                    onSelectEnvelope={setSelectedEnvelope}
+                    isDragDisabled={statusFilter !== "all"}
+                    onSelectEnvelope={handleEnvelopeEdit}
                     onReorder={(from, to) => handleReorder(category.id, from, to)}
                   />
                 ))
@@ -275,35 +286,6 @@ export function EnvelopeSummaryClient({
           </div>
         </div>
       </div>
-
-      <EnvelopeEditSheet
-        envelope={selectedEnvelope}
-        planPerPay={selectedPlan?.perPay}
-        planAnnual={selectedPlan?.annual}
-        planFrequency={planFrequency ?? undefined}
-        categories={categoryOptions}
-        onClose={() => setSelectedEnvelope(null)}
-        onSave={async (updated) => {
-          await fetch(`/api/envelopes/${updated.id}`, {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: updated.name,
-              target_amount: Number(updated.target_amount ?? 0),
-              pay_cycle_amount: Number(updated.pay_cycle_amount ?? 0),
-              frequency: updated.frequency,
-              next_payment_due: updated.next_payment_due ?? updated.due_date,
-              notes: updated.notes,
-              is_spending: Boolean(updated.is_spending),
-              category_id: updated.category_id ?? null,
-              icon: updated.icon ?? null,
-              opening_balance: Number(updated.opening_balance ?? 0),
-            }),
-          });
-          router.refresh();
-        }}
-      />
 
       <EnvelopeCreateDialog
         open={createOpen}
@@ -409,18 +391,23 @@ function MetricCard({
   title,
   value,
   description,
+  icon: Icon,
 }: {
   title: string;
   value: string;
   description: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4" />}
+          {title}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold text-secondary">{value}</p>
+        <p className="text-2xl font-bold text-secondary">{value}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
@@ -428,6 +415,7 @@ function MetricCard({
 }
 
 function getStatusBucket(envelope: SummaryEnvelope): StatusFilter {
+  if (envelope.is_tracking_only) return "tracking";
   if (envelope.is_spending) return "spending";
   const target = Number(envelope.target_amount ?? 0);
   if (!target) return "no-target";
@@ -449,6 +437,8 @@ function getStatusLabel(status: StatusFilter) {
       return "No target";
     case "spending":
       return "Spending";
+    case "tracking":
+      return "Tracking";
     default:
       return "All";
   }

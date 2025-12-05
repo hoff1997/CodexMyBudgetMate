@@ -9,6 +9,7 @@ export interface SummaryEnvelope extends EnvelopeRow {
   pay_cycle_amount?: number | string | null;
   sort_order?: number | null;
   is_spending?: boolean | null;
+  is_tracking_only?: boolean | null;
 }
 
 interface Props {

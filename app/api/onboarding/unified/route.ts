@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { EnvelopeData, BankAccount, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
+import { createOpeningBalanceTransactions } from "@/lib/server/create-opening-balance-transactions";
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
       incomeSources,
       envelopes,
       envelopeAllocations,
+      openingBalances,
       completedAt,
     }: {
       fullName: string;
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
       incomeSources: IncomeSource[];
       envelopes: EnvelopeData[];
       envelopeAllocations?: { [envelopeId: string]: { [incomeId: string]: number } };
+      openingBalances?: { [envelopeId: string]: number };
       completedAt: string;
     } = body;
 
@@ -146,6 +149,39 @@ export async function POST(request: Request) {
         }
 
         envelopeIdMap.set(envelope.id, createdEnvelope.id);
+      }
+    }
+
+    // 3.5. Create opening balance transactions if provided
+    if (openingBalances && Object.keys(openingBalances).length > 0) {
+      const allocations = [];
+
+      for (const [tempEnvelopeId, amount] of Object.entries(openingBalances)) {
+        const realEnvelopeId = envelopeIdMap.get(tempEnvelopeId);
+        const envelope = envelopes.find(e => e.id === tempEnvelopeId);
+
+        if (realEnvelopeId && envelope && amount > 0) {
+          allocations.push({
+            envelope_id: realEnvelopeId,
+            envelope_name: envelope.name,
+            amount,
+          });
+        }
+      }
+
+      if (allocations.length > 0) {
+        const result = await createOpeningBalanceTransactions(
+          supabase,
+          userId,
+          allocations
+        );
+
+        if (!result.success) {
+          console.error("Opening balance transactions error:", result.error);
+          // Continue anyway - this is not critical to onboarding completion
+        } else {
+          console.log(`Created ${result.transactions_created} opening balance transactions`);
+        }
       }
     }
 

@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, AlertTriangle, CheckCircle2, Zap, ShoppingBag, PiggyBank, Plus } from "lucide-react";
+import { Edit, AlertTriangle, CheckCircle2, Zap, ShoppingBag, PiggyBank, Plus, TrendingUp } from "lucide-react";
+import { useBudgetValidation } from "@/lib/hooks/use-budget-validation";
+import { AllocateSurplusDialog } from "@/components/dialogs/allocate-surplus-dialog";
+import { trackSurplusAllocation } from "@/lib/analytics/events";
 import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface BudgetReviewStepProps {
@@ -24,6 +28,8 @@ export function BudgetReviewStep({
   incomeSources,
   onEditEnvelopes,
 }: BudgetReviewStepProps) {
+  const [showSurplusDialog, setShowSurplusDialog] = useState(false);
+
   // Calculate totals
   const primaryIncome = incomeSources[0];
   const totalIncomePerCycle = incomeSources.reduce((sum, source) => sum + source.amount, 0);
@@ -39,8 +45,25 @@ export function BudgetReviewStep({
   const totalAllocatedPerCycle = totalBillsPerCycle + totalSpendingPerCycle + totalSavingsPerCycle;
   const remainingPerCycle = totalIncomePerCycle - totalAllocatedPerCycle;
 
+  // Use budget validation hook
+  const budgetValidation = useBudgetValidation(totalIncomePerCycle, totalAllocatedPerCycle);
+
   const isOverAllocated = remainingPerCycle < 0;
   const hasLeftover = remainingPerCycle > 0;
+
+  // Handle surplus allocation (placeholder - would need actual implementation)
+  const handleAllocateSurplus = async () => {
+    console.log("Allocating surplus in onboarding - would save to Surplus envelope");
+
+    // Track analytics event
+    trackSurplusAllocation({
+      amount: budgetValidation.difference,
+      incomeSourceCount: incomeSources.length,
+      context: 'onboarding',
+    });
+
+    // This would need to actually create/update envelope allocations
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -209,20 +232,32 @@ export function BudgetReviewStep({
           <div className="mt-4 bg-green-100 border border-green-300 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-green-900">
+              <div className="text-sm text-green-900 flex-1">
                 <p className="font-semibold mb-1">Great! You have money left over</p>
-                <p className="mb-2">
-                  Consider creating a "Surplus" or "Buffer" savings envelope for this ${remainingPerCycle.toFixed(2)}.
+                <p className="mb-3">
+                  You have ${budgetValidation.difference.toFixed(2)} unallocated.
+                  You can allocate this to a Surplus envelope or leave it unallocated for now.
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onEditEnvelopes}
-                  className="border-green-600 text-green-700 hover:bg-green-100"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Surplus Envelope
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSurplusDialog(true)}
+                    className="bg-white hover:bg-green-50"
+                  >
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    Allocate to Surplus
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onEditEnvelopes}
+                    className="border-green-600 text-green-700 hover:bg-green-50"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Surplus Envelope
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -235,6 +270,19 @@ export function BudgetReviewStep({
           Click "Continue" when you&apos;re happy with your budget
         </div>
       )}
+
+      {/* Allocate Surplus Dialog */}
+      <AllocateSurplusDialog
+        open={showSurplusDialog}
+        onOpenChange={setShowSurplusDialog}
+        surplusAmount={budgetValidation.difference}
+        incomeSources={incomeSources.map(source => ({
+          id: source.id,
+          name: source.name,
+          amount: budgetValidation.difference / incomeSources.length, // Distribute evenly for onboarding
+        }))}
+        onConfirm={handleAllocateSurplus}
+      />
     </div>
   );
 }

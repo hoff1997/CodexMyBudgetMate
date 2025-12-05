@@ -1,7 +1,23 @@
+/**
+ * @deprecated This API is deprecated. Use /api/budget/allocate-surplus instead.
+ *
+ * The recurring_income table is being phased out in favor of:
+ * - income_sources (for income stream configuration)
+ * - envelope_income_allocations (for allocation rules)
+ *
+ * This endpoint remains functional for backwards compatibility but will be removed
+ * in a future release. All new development should use /api/budget/allocate-surplus.
+ */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/finance";
+
+// Deprecation warning header
+const DEPRECATION_HEADER = {
+  "X-Deprecated": "true",
+  "X-Deprecation-Notice": "Use /api/budget/allocate-surplus instead. This endpoint will be removed in a future release.",
+};
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -185,12 +201,17 @@ export async function POST(
     streamName: stream.name,
   });
 
-  return NextResponse.json({
-    applied: available - remaining,
-    remaining,
-    transfers,
-    celebration,
-  });
+  return NextResponse.json(
+    {
+      applied: available - remaining,
+      remaining,
+      transfers,
+      celebration,
+      _deprecated: true,
+      _notice: "This API is deprecated. Use /api/budget/allocate-surplus instead.",
+    },
+    { headers: DEPRECATION_HEADER }
+  );
 }
 
 async function maybeLogCelebration({

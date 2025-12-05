@@ -417,7 +417,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
                                 Target {formatCurrency(Number(envelope.target_amount ?? 0))}
                                 {dueDetails?.formatted ? ` · Due ${dueDetails.formatted}` : ""}
                               </span>
-                              <span className="font-medium text-blue-600">{requiredLabel}</span>
+                              <span className="font-medium text-sky-500">{requiredLabel}</span>
                             </div>
                             {dueDetails?.relative ? (
                               <p className="text-xs text-muted-foreground">{dueDetails.relative}</p>
@@ -687,7 +687,7 @@ function getStatusBadgeProps(envelope: SummaryEnvelope) {
     if (!Number.isNaN(dueDate.getTime())) {
       const daysUntil = differenceInCalendarDays(dueDate, new Date());
       if (daysUntil <= 3 && daysUntil >= 0) {
-        return { text: "Due soon", className: "bg-yellow-100 text-yellow-800 border-yellow-200" };
+        return { text: "Due soon", className: "bg-amber-100 text-amber-800 border-amber-200" };
       }
     }
   }
@@ -695,12 +695,12 @@ function getStatusBadgeProps(envelope: SummaryEnvelope) {
   const status = getStatusBucket(envelope);
   switch (status) {
     case "surplus":
-      return { text: "Surplus", className: "bg-purple-100 text-purple-800 border-purple-200" };
+      return { text: "Surplus", className: "bg-sky-100 text-sky-800 border-sky-200" };
     case "healthy":
-      return { text: "On track", className: "bg-green-100 text-green-800 border-green-200" };
+      return { text: "On track", className: "bg-emerald-100 text-emerald-800 border-emerald-200" };
     case "attention":
     default:
-      return { text: "Needs attention", className: "bg-red-100 text-red-800 border-red-200" };
+      return { text: "Needs attention", className: "bg-amber-100 text-amber-800 border-amber-200" };
   }
 }
 

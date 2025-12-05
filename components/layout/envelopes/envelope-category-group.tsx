@@ -27,6 +27,7 @@ interface Props {
     envelopes: SummaryEnvelope[];
   };
   collapsedAll?: boolean;
+  isDragDisabled?: boolean;
   onSelectEnvelope?: (envelope: SummaryEnvelope) => void;
   onReorder?: (sourceIndex: number, destinationIndex: number) => void;
 }
@@ -34,6 +35,7 @@ interface Props {
 export function EnvelopeCategoryGroup({
   category,
   collapsedAll = false,
+  isDragDisabled = false,
   onSelectEnvelope,
   onReorder,
 }: Props) {
@@ -85,7 +87,7 @@ export function EnvelopeCategoryGroup({
                   key={envelope.id}
                   envelope={envelope}
                   onSelectEnvelope={onSelectEnvelope}
-                  disableDrag={!onReorder || category.envelopes.length <= 1}
+                  disableDrag={isDragDisabled || !onReorder || category.envelopes.length <= 1}
                 />
               ))}
             </div>

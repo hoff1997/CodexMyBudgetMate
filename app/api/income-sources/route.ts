@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { z } from "zod";
+
+const createIncomeSourceSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  pay_cycle: z.enum(["weekly", "fortnightly", "monthly"]),
+  typical_amount: z.number().min(0).optional(),
+  detection_pattern: z.string().optional(),
+  next_pay_date: z.string().optional().nullable(),
+  start_date: z.string().optional().nullable(),
+  end_date: z.string().optional().nullable(),
+  is_active: z.boolean().optional(),
+  allocations: z.array(z.object({
+    envelope_id: z.string(),
+    amount: z.number(),
+  })).optional(),
+});
 
 export async function GET() {
   const supabase = await createClient();
@@ -12,11 +28,22 @@ export async function GET() {
   }
 
   try {
-    // Fetch income sources with their allocations
+    // Fetch income sources with their allocations (including lifecycle fields)
     const { data: incomeSources, error: incomeError } = await supabase
       .from("income_sources")
       .select(`
-        *,
+        id,
+        user_id,
+        name,
+        pay_cycle,
+        typical_amount,
+        is_active,
+        next_pay_date,
+        start_date,
+        end_date,
+        replaced_by_id,
+        created_at,
+        updated_at,
         detection_rule:transaction_rules(id, pattern, merchant_normalized)
       `)
       .eq("user_id", user.id)
@@ -37,7 +64,7 @@ export async function GET() {
           .from("envelope_income_allocations")
           .select(`
             *,
-            envelope:envelopes(id, name, priority, current_balance)
+            envelope:envelopes(id, name, priority, current_amount)
           `)
           .eq("income_source_id", source.id)
           .order("priority");
@@ -94,7 +121,26 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, pay_cycle, typical_amount, detection_pattern, allocations } = body;
+    const parsed = createIncomeSourceSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const {
+      name,
+      pay_cycle,
+      typical_amount,
+      detection_pattern,
+      next_pay_date,
+      start_date,
+      end_date,
+      is_active,
+      allocations
+    } = parsed.data;
 
     // Create transaction rule if detection pattern provided
     let detectionRuleId = null;
@@ -119,7 +165,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create income source
+    // Create income source with lifecycle fields
     const { data: incomeSource, error: incomeError } = await supabase
       .from("income_sources")
       .insert({
@@ -129,9 +175,25 @@ export async function POST(request: Request) {
         typical_amount,
         detection_rule_id: detectionRuleId,
         auto_allocate: true,
-        is_active: true,
+        is_active: is_active ?? true,
+        next_pay_date: next_pay_date || null,
+        start_date: start_date || new Date().toISOString().split("T")[0],
+        end_date: end_date || null,
       })
-      .select()
+      .select(`
+        id,
+        user_id,
+        name,
+        pay_cycle,
+        typical_amount,
+        is_active,
+        next_pay_date,
+        start_date,
+        end_date,
+        replaced_by_id,
+        created_at,
+        updated_at
+      `)
       .single();
 
     if (incomeError) {

@@ -6,6 +6,8 @@ export type DatabaseProfile = {
 
 export type GoalType = 'savings' | 'debt_payoff' | 'purchase' | 'emergency_fund' | 'other';
 
+export type EnvelopePriority = 'essential' | 'important' | 'discretionary';
+
 export type EnvelopeRow = {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export type EnvelopeRow = {
   icon?: string | null;
   sort_order?: number | string | null;
   is_spending?: boolean | null;
+  priority?: EnvelopePriority | null;
   // Goal-specific fields
   is_goal?: boolean | null;
   goal_type?: GoalType | null;

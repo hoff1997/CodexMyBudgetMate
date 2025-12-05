@@ -1,6 +1,23 @@
+/**
+ * @deprecated This API is deprecated. Use /api/income-sources instead.
+ *
+ * The recurring_income table is being phased out in favor of:
+ * - income_sources (for income stream configuration)
+ * - envelope_income_allocations (for allocation rules)
+ * - income_reconciliation_events (for reconciliation audit trail)
+ *
+ * This endpoint remains functional for backwards compatibility but will be removed
+ * in a future release. All new development should use /api/income-sources.
+ */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+// Deprecation warning header
+const DEPRECATION_HEADER = {
+  "X-Deprecated": "true",
+  "X-Deprecation-Notice": "Use /api/income-sources instead. This endpoint will be removed in a future release.",
+};
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]);
 
@@ -97,9 +114,14 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({
-    streams: (data ?? []).map((stream) => formatStream(stream)),
-  });
+  return NextResponse.json(
+    {
+      streams: (data ?? []).map((stream) => formatStream(stream)),
+      _deprecated: true,
+      _notice: "This API is deprecated. Use /api/income-sources instead.",
+    },
+    { headers: DEPRECATION_HEADER }
+  );
 }
 
 export async function POST(request: Request) {
@@ -152,7 +174,9 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       stream: formatStream(data),
+      _deprecated: true,
+      _notice: "This API is deprecated. Use /api/income-sources instead.",
     },
-    { status: 201 },
+    { status: 201, headers: DEPRECATION_HEADER },
   );
 }

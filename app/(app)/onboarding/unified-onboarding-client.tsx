@@ -17,6 +17,7 @@ import { BudgetingApproachStep } from "@/components/onboarding/steps/budgeting-a
 import { EnvelopeEducationStep } from "@/components/onboarding/steps/envelope-education-step";
 import { EnvelopeCreationStepV2 as EnvelopeCreationStep } from "@/components/onboarding/steps/envelope-creation-step-v2";
 import { EnvelopeAllocationStep } from "@/components/onboarding/steps/envelope-allocation-step";
+import { OpeningBalanceStep } from "@/components/onboarding/steps/opening-balance-step";
 import { BudgetReviewStep } from "@/components/onboarding/steps/budget-review-step";
 import { CompletionStep } from "@/components/onboarding/steps/completion-step";
 
@@ -72,8 +73,9 @@ const STEPS: OnboardingStep[] = [
   { id: 6, title: "Learn", description: "Envelope budgeting" },
   { id: 7, title: "Envelopes", description: "Create your budget" },
   { id: 8, title: "Allocate", description: "Fund your envelopes" },
-  { id: 9, title: "Review", description: "Validate & adjust" },
-  { id: 10, title: "Complete", description: "You're all set!" },
+  { id: 9, title: "Opening Balance", description: "Initial funds" },
+  { id: 10, title: "Review", description: "Validate & adjust" },
+  { id: 11, title: "Complete", description: "You're all set!" },
 ];
 
 interface UnifiedOnboardingClientProps {
@@ -93,6 +95,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const [useTemplate, setUseTemplate] = useState<boolean | undefined>();
   const [envelopes, setEnvelopes] = useState<EnvelopeData[]>([]);
   const [envelopeAllocations, setEnvelopeAllocations] = useState<{ [envelopeId: string]: { [incomeId: string]: number } }>({});
+  const [openingBalances, setOpeningBalances] = useState<{ [envelopeId: string]: number }>({});
 
   const progress = (currentStep / STEPS.length) * 100;
 
@@ -178,6 +181,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           })),
           envelopes,
           envelopeAllocations,
+          openingBalances,
           completedAt: new Date().toISOString(),
         }),
       });
@@ -286,6 +290,16 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
 
       case 9:
         return (
+          <OpeningBalanceStep
+            envelopes={envelopes}
+            incomeSources={incomeSources}
+            bankAccounts={bankAccounts}
+            onOpeningBalancesChange={setOpeningBalances}
+          />
+        );
+
+      case 10:
+        return (
           <BudgetReviewStep
             envelopes={envelopes}
             incomeSources={incomeSources}
@@ -293,7 +307,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           />
         );
 
-      case 10:
+      case 11:
         return <CompletionStep isLoading={isLoading} onComplete={handleNext} />;
 
       default:
@@ -302,7 +316,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   };
 
   // Determine if "Continue" button should be shown
-  const showContinueButton = ![1, 6, 10].includes(currentStep); // Steps with their own continue buttons
+  const showContinueButton = ![1, 6, 11].includes(currentStep); // Steps with their own continue buttons
 
   return (
     <div className="min-h-screen bg-background">

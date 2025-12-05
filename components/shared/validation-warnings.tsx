@@ -18,10 +18,10 @@ export function ValidationWarnings({ warnings, className = "" }: ValidationWarni
           key={index}
           className={`flex items-start gap-1.5 text-xs rounded px-2 py-1 ${
             warning.type === 'error'
-              ? 'bg-red-50 text-red-700 border border-red-200'
+              ? 'bg-rose-50 text-rose-700 border border-rose-200'
               : warning.type === 'warning'
-              ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-              : 'bg-blue-50 text-blue-700 border border-blue-200'
+              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+              : 'bg-sky-50 text-sky-700 border border-sky-200'
           }`}
         >
           {warning.type === 'error' ? (
@@ -46,10 +46,10 @@ export function InlineWarningBadge({ warning }: { warning: ValidationWarning }) 
     <div
       className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
         warning.type === 'error'
-          ? 'bg-red-100 text-red-700'
+          ? 'bg-rose-100 text-rose-700'
           : warning.type === 'warning'
-          ? 'bg-yellow-100 text-yellow-700'
-          : 'bg-blue-100 text-blue-700'
+          ? 'bg-amber-100 text-amber-700'
+          : 'bg-sky-100 text-sky-700'
       }`}
       title={warning.message}
     >

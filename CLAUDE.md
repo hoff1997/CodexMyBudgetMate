@@ -94,3 +94,73 @@ Verify:
 This project has been carefully configured to handle authentication correctly in Next.js 14 with Supabase SSR. The auth setup is complex and was debugged extensively.
 
 **If you're unsure about a change - especially anything related to authentication, cookies, or middleware - please ask the user before proceeding.**
+
+## 📊 Budget Manager Features (Updated Dec 2025)
+
+### Envelope Types
+The Budget Manager supports **5 envelope subtypes**:
+
+| Subtype | Description | Needs Budget? | Priority Column? |
+|---------|-------------|---------------|------------------|
+| `bill` | Recurring bills with due dates | ✅ Yes | ✅ Yes |
+| `spending` | Spending tracking only | ❌ No | ✅ Yes |
+| `savings` | Savings goals | ❌ No | ❌ No |
+| `goal` | One-time goals | ❌ No | ❌ No |
+| `tracking` | Tracking-only (reimbursements) | ❌ No | ❌ No |
+
+**Key Files:**
+- Type definition: `lib/types/unified-envelope.ts` (`EnvelopeSubtype`)
+- Table component: `components/shared/unified-envelope-table.tsx`
+- API auto-sync: `app/api/envelopes/[id]/route.ts` (syncs `is_tracking_only` flag)
+- Database migration: `supabase/migrations/0024_envelope_tracking_flag.sql`
+
+### Sortable Columns
+All major columns in the Budget Manager table are sortable:
+- Click column header to sort ascending
+- Click again to sort descending
+- Click third time to clear sort
+- Sort icons: `ArrowUpDown` (neutral), `ArrowUp` (asc), `ArrowDown` (desc)
+
+**Sortable columns:** Name, Priority, Type, Target, Frequency, Due Date, Current, Total Funded
+
+### Priority Traffic Light System
+Priority column uses compact traffic light dots:
+- 🔴 **Essential** - Must-have expenses
+- 🟡 **Important** - Should-have expenses
+- 🟢 **Discretionary** - Nice-to-have expenses
+
+Displayed as small colored circles that expand to dropdown on click.
+
+### Warning System (Hover Tooltip)
+Validation warnings appear as hover icons near the delete button:
+- **Red triangle** (`AlertTriangle`) - Error warnings
+- **Amber triangle** - Warning warnings
+- **Blue triangle** - Info warnings
+
+Hover over the icon to see the full warning message with details.
+
+**Warning types checked:**
+- Name required
+- Target amount required (bills only)
+- Frequency required (bills only)
+- Under/over-allocated amounts
+- Opening balance recommendations
+
+### Gap Analysis Columns (Maintenance Mode)
+In maintenance mode, the table shows additional columns:
+- **Expected** - What balance should be based on ideal allocations
+- **Gap** - Difference between actual and expected (color-coded)
+- **Status** - On Track (🟢), Slight Deviation (🟡), Needs Attention (🔴)
+
+## 🔄 Subtype-to-Flag Sync
+
+When changing envelope subtype via API, the system auto-syncs related flags:
+
+```typescript
+// In app/api/envelopes/[id]/route.ts
+if ("subtype" in payload) {
+  payload.is_tracking_only = payload.subtype === "tracking";
+}
+```
+
+This ensures database consistency with the `is_tracking_only` boolean column.

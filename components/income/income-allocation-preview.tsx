@@ -1,11 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { IncomeVarianceDialog } from "@/components/dialogs/income-variance-dialog";
+import { IncomeShortfallDialog } from "@/components/dialogs/income-shortfall-dialog";
+import { detectIncomeVariance, type IncomeVariance } from "@/lib/services/income-variance-detector";
+import { toast } from "sonner";
 
 interface AllocationItem {
   envelope_id: string;
@@ -52,11 +57,18 @@ export function IncomeAllocationPreview({
   onApprove,
   onSkip,
 }: IncomeAllocationPreviewProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<AllocationPreview | null>(null);
   const [editedAllocations, setEditedAllocations] = useState<Array<{ envelope_id: string; amount: number }>>([]);
   const [saveChanges, setSaveChanges] = useState(false);
   const [approving, setApproving] = useState(false);
+
+  // Variance detection state
+  const [detectedVariance, setDetectedVariance] = useState<IncomeVariance | null>(null);
+  const [showBonusDialog, setShowBonusDialog] = useState(false);
+  const [showShortfallDialog, setShowShortfallDialog] = useState(false);
+  const [varianceHandled, setVarianceHandled] = useState(false);
 
   const detectIncome = useCallback(async () => {
     setLoading(true);
@@ -75,7 +87,7 @@ export function IncomeAllocationPreview({
         const data = await response.json();
         setPreview(data);
 
-        if (data.matched) {
+        if (data.matched && data.income_source) {
           // Initialize edited allocations with current values
           setEditedAllocations(
             data.allocations.map((a: AllocationItem) => ({
@@ -83,6 +95,34 @@ export function IncomeAllocationPreview({
               amount: a.allocation_amount,
             }))
           );
+
+          // Check for income variance if not already handled
+          if (!varianceHandled && data.income_source.typical_amount) {
+            const variance = detectIncomeVariance(
+              {
+                amount: transactionAmount,
+                income_source_id: data.income_source.id,
+                id: transactionId,
+              },
+              {
+                id: data.income_source.id,
+                name: data.income_source.name,
+                amount: data.income_source.typical_amount,
+                rawAmount: data.income_source.typical_amount,
+                frequency: data.income_source.pay_cycle || 'fortnightly',
+              }
+            );
+
+            if (variance) {
+              setDetectedVariance(variance);
+              // Show appropriate dialog based on variance type
+              if (variance.varianceType === "bonus") {
+                setShowBonusDialog(true);
+              } else {
+                setShowShortfallDialog(true);
+              }
+            }
+          }
         }
       }
     } catch (error) {
@@ -90,7 +130,7 @@ export function IncomeAllocationPreview({
     } finally {
       setLoading(false);
     }
-  }, [transactionId, transactionDescription, transactionAmount]);
+  }, [transactionId, transactionDescription, transactionAmount, varianceHandled]);
 
   useEffect(() => {
     detectIncome();
@@ -139,6 +179,79 @@ export function IncomeAllocationPreview({
       )
     );
   }
+
+  // Handle one-time bonus (extra income)
+  async function handleOneTimeBonus(variance: IncomeVariance) {
+    // Add the bonus amount to surplus and continue with allocation
+    // The extra amount will automatically go to surplus envelope
+    setVarianceHandled(true);
+    setShowBonusDialog(false);
+    toast.success(`$${variance.difference.toFixed(2)} will be added to Surplus envelope`);
+  }
+
+  // Handle permanent income change (for both bonus and shortfall)
+  async function handlePermanentChange(variance: IncomeVariance) {
+    try {
+      // Update the income source with new amount
+      const response = await fetch(`/api/income-sources/${variance.incomeSourceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          typical_amount: variance.actualAmount,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update income source");
+      }
+
+      setVarianceHandled(true);
+      setShowBonusDialog(false);
+      setShowShortfallDialog(false);
+
+      toast.success("Income updated - redirecting to Budget Manager");
+      router.push("/budget-manager");
+    } catch (error) {
+      console.error("Error updating income:", error);
+      toast.error("Failed to update income source");
+    }
+  }
+
+  // Handle one-time reduction (shortfall)
+  async function handleOneTimeReduction(
+    variance: IncomeVariance,
+    reductions: Array<{ envelopeId: string; amount: number }>
+  ) {
+    try {
+      // Apply reductions to the allocations
+      setEditedAllocations((prev) =>
+        prev.map((alloc) => {
+          const reduction = reductions.find((r) => r.envelopeId === alloc.envelope_id);
+          if (reduction) {
+            return { ...alloc, amount: Math.max(0, alloc.amount - reduction.amount) };
+          }
+          return alloc;
+        })
+      );
+
+      setVarianceHandled(true);
+      setShowShortfallDialog(false);
+      toast.success("Allocations adjusted for this cycle");
+    } catch (error) {
+      console.error("Error applying reductions:", error);
+      toast.error("Failed to apply reductions");
+    }
+  }
+
+  // Convert allocations to envelope format for shortfall dialog
+  const envelopesForShortfall = preview?.allocations?.map((alloc) => ({
+    id: alloc.envelope_id,
+    name: alloc.envelope_name,
+    priority: alloc.envelope_priority,
+    incomeAllocations: preview.income_source
+      ? { [preview.income_source.id]: alloc.allocation_amount }
+      : {},
+  })) || [];
 
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
 
@@ -321,6 +434,28 @@ export function IncomeAllocationPreview({
           </Button>
         </div>
       </CardContent>
+
+      {/* Variance Dialogs */}
+      {detectedVariance && detectedVariance.varianceType === "bonus" && (
+        <IncomeVarianceDialog
+          open={showBonusDialog}
+          onOpenChange={setShowBonusDialog}
+          variance={detectedVariance}
+          onOneTimeBonus={handleOneTimeBonus}
+          onPermanentChange={handlePermanentChange}
+        />
+      )}
+
+      {detectedVariance && detectedVariance.varianceType === "shortfall" && (
+        <IncomeShortfallDialog
+          open={showShortfallDialog}
+          onOpenChange={setShowShortfallDialog}
+          variance={detectedVariance}
+          envelopes={envelopesForShortfall}
+          onOneTimeReduction={handleOneTimeReduction}
+          onPermanentChange={handlePermanentChange}
+        />
+      )}
     </Card>
   );
 }

@@ -1,6 +1,23 @@
+/**
+ * @deprecated This API is deprecated. Use /api/income-sources/[id] instead.
+ *
+ * The recurring_income table is being phased out in favor of:
+ * - income_sources (for income stream configuration)
+ * - envelope_income_allocations (for allocation rules)
+ * - income_reconciliation_events (for reconciliation audit trail)
+ *
+ * This endpoint remains functional for backwards compatibility but will be removed
+ * in a future release. All new development should use /api/income-sources.
+ */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+// Deprecation warning header
+const DEPRECATION_HEADER = {
+  "X-Deprecated": "true",
+  "X-Deprecation-Notice": "Use /api/income-sources/[id] instead. This endpoint will be removed in a future release.",
+};
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]);
 
@@ -142,9 +159,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Income stream not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    stream: formatStream(data),
-  });
+  return NextResponse.json(
+    {
+      stream: formatStream(data),
+      _deprecated: true,
+      _notice: "This API is deprecated. Use /api/income-sources/[id] instead.",
+    },
+    { headers: DEPRECATION_HEADER }
+  );
 }
 
 export async function DELETE(
@@ -174,5 +196,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Income stream not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(
+    {
+      ok: true,
+      _deprecated: true,
+      _notice: "This API is deprecated. Use /api/income-sources/[id] instead.",
+    },
+    { headers: DEPRECATION_HEADER }
+  );
 }

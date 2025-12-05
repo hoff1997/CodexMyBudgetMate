@@ -2,16 +2,20 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  console.log('🟢 [API /envelopes/[id]] PATCH request received for ID:', params.id);
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    console.log('🔴 [API /envelopes/[id]] Unauthorized - no user');
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
+  console.log('🟢 [API /envelopes/[id]] User authenticated:', user.email);
   const body = await request.json();
+  console.log('🟢 [API /envelopes/[id]] Request body:', body);
   const allowedFields = [
     "name",
     "category_id",
@@ -27,6 +31,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "notes",
     "sort_order",
     "is_spending",
+    "is_goal",
+    "is_tracking_only",
     "icon",
     "opening_balance",
   ];
@@ -49,6 +55,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if ("icon" in payload && !payload.icon) {
     payload.icon = null;
+  }
+
+  // Sync is_tracking_only flag when subtype changes
+  if ("subtype" in payload) {
+    payload.is_tracking_only = payload.subtype === "tracking";
   }
 
   if ("opening_balance" in payload) {
@@ -81,7 +92,37 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   payload.updated_at = new Date().toISOString();
 
-  const { error } = await supabase
+  // Auto-unlock allocations if bill details change
+  // Check if critical fields that affect ideal allocation are being changed
+  const criticalFieldsChanged =
+    "target_amount" in payload ||
+    "frequency" in payload ||
+    "due_date" in payload;
+
+  if (criticalFieldsChanged) {
+    console.log('🟡 [API /envelopes/[id]] Critical fields changed, unlocking allocations for envelope:', params.id);
+
+    // Unlock all allocations for this envelope
+    const { error: unlockError } = await supabase
+      .from("envelope_income_allocations")
+      .update({
+        allocation_locked: false,
+        locked_at: null,
+      })
+      .eq("envelope_id", params.id)
+      .eq("user_id", user.id)
+      .eq("allocation_locked", true); // Only update if currently locked
+
+    if (unlockError) {
+      console.log('🔴 [API /envelopes/[id]] Failed to unlock allocations:', unlockError);
+      // Continue anyway - envelope update is more important
+    } else {
+      console.log('🟢 [API /envelopes/[id]] Successfully unlocked allocations');
+    }
+  }
+
+  console.log('🟢 [API /envelopes/[id]] Final payload to database:', payload);
+  const { data, error } = await supabase
     .from("envelopes")
     .update(payload)
     .eq("id", params.id)
@@ -90,8 +131,40 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .maybeSingle();
 
   if (error) {
+    console.log('🔴 [API /envelopes/[id]] Database error:', error);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  console.log('🟢 [API /envelopes/[id]] Successfully updated envelope:', data);
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  console.log('🟢 [API /envelopes/[id]] DELETE request received for ID:', params.id);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    console.log('🔴 [API /envelopes/[id]] Unauthorized - no user');
+    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+  }
+
+  console.log('🟢 [API /envelopes/[id]] User authenticated:', user.email);
+
+  const { error } = await supabase
+    .from("envelopes")
+    .delete()
+    .eq("id", params.id)
+    .eq("user_id", user.id);
+
+  if (error) {
+    console.log('🔴 [API /envelopes/[id]] Database error:', error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  console.log('🟢 [API /envelopes/[id]] Successfully deleted envelope');
+  return NextResponse.json({ ok: true });
+}
+

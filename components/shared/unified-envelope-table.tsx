@@ -366,7 +366,7 @@ export function UnifiedEnvelopeTable({
                 </p>
               </div>
               {totalOpeningBalanceNeeded > bankBalance && (
-                <div className="flex items-center gap-2 text-rose-700">
+                <div className="flex items-center gap-2 text-blue">
                   <AlertTriangle className="h-4 w-4" />
                   <span className="text-sm font-medium">
                     Shortfall: ${(totalOpeningBalanceNeeded - bankBalance).toFixed(2)}
@@ -753,9 +753,9 @@ function SortableTableRow({
         <td className="w-12 min-w-[48px] max-w-[48px] px-0.5 py-0.5">
           <div className="h-6 flex items-center justify-end text-[11px] text-muted-foreground pr-1">
             {openingBalanceCalculation?.isFullyFunded ? (
-              <span className="text-emerald-500">$0.00</span>
+              <span className="text-sage">$0.00</span>
             ) : (
-              <span className="text-amber-500">
+              <span className="text-blue">
                 ${openingBalanceCalculation?.openingBalanceNeeded.toFixed(2)}
               </span>
             )}
@@ -871,9 +871,9 @@ function SortableTableRow({
               {target === 0 || perPayNeeded === 0 ? (
                 <span className="text-muted-foreground text-[10px]">—</span>
               ) : isFullyAllocated ? (
-                <span className="text-emerald-500 font-bold text-sm" title={isOverAllocated ? `Over by $${(totalAllocation - perPayNeeded).toFixed(2)}` : 'Fully funded'}>✓</span>
+                <span className="text-sage font-bold text-sm" title={isOverAllocated ? `Over by $${(totalAllocation - perPayNeeded).toFixed(2)}` : 'Fully funded'}>✓</span>
               ) : (
-                <span className="text-amber-500 font-semibold text-[10px]" title={`Need $${(perPayNeeded - totalAllocation).toFixed(2)} more`}>
+                <span className="text-blue font-semibold text-[10px]" title={`Need $${(perPayNeeded - totalAllocation).toFixed(2)} more`}>
                   -${(perPayNeeded - totalAllocation).toFixed(2)}
                 </span>
               )}
@@ -908,19 +908,19 @@ function SortableTableRow({
           switch (status) {
             case "on_track":
               return (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[9px] px-0.5 py-0">
+                <Badge variant="outline" className="bg-sage-very-light text-sage-dark border-sage-light text-[9px] px-0.5 py-0">
                   OK
                 </Badge>
               );
             case "slight_deviation":
               return (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[9px] px-0.5 py-0">
+                <Badge variant="outline" className="bg-gold-light text-[#8B7035] border-gold text-[9px] px-0.5 py-0">
                   Gap
                 </Badge>
               );
             case "needs_attention":
               return (
-                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[9px] px-0.5 py-0">
+                <Badge variant="outline" className="bg-blue-light text-[#4A7BA8] border-blue text-[9px] px-0.5 py-0">
                   !
                 </Badge>
               );
@@ -940,10 +940,10 @@ function SortableTableRow({
             <td className="w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5">
               <div className={`h-6 flex items-center justify-end text-[11px] font-semibold pr-1 ${
                 gap.gap >= 0
-                  ? "text-green-600"
+                  ? "text-sage"
                   : gap.gap > -50
-                  ? "text-amber-600"
-                  : "text-red-600"
+                  ? "text-gold"
+                  : "text-blue"
               }`}>
                 {gap.gap >= 0 ? "+" : ""}{gap.gap.toFixed(2)}
               </div>
@@ -998,8 +998,8 @@ function SortableTableRow({
           {warnings.length > 0 && (
             <div className="relative group">
               <AlertTriangle className={`h-3 w-3 cursor-help ${
-                warnings.some((w: any) => w.type === 'error') ? 'text-rose-500' :
-                warnings.some((w: any) => w.type === 'warning') ? 'text-amber-500' : 'text-sky-500'
+                warnings.some((w: any) => w.type === 'error') ? 'text-blue' :
+                warnings.some((w: any) => w.type === 'warning') ? 'text-gold' : 'text-blue'
               }`} />
               <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50">
                 <div className="bg-popover border border-border rounded-md shadow-lg p-2 min-w-[180px] max-w-[250px]">
@@ -1007,8 +1007,8 @@ function SortableTableRow({
                   <ul className="text-xs text-muted-foreground space-y-0.5">
                     {warnings.map((warning: any, wIndex: number) => (
                       <li key={wIndex} className={`flex items-start gap-1 ${
-                        warning.type === 'error' ? 'text-rose-600' :
-                        warning.type === 'warning' ? 'text-amber-600' : 'text-sky-600'
+                        warning.type === 'error' ? 'text-blue' :
+                        warning.type === 'warning' ? 'text-gold' : 'text-blue'
                       }`}>
                         <span className="mt-0.5">•</span>
                         <span>{warning.message}</span>
@@ -1023,7 +1023,7 @@ function SortableTableRow({
           <Button
             variant="ghost"
             size="sm"
-            className="h-4 w-4 p-0 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+            className="h-4 w-4 p-0 text-silver hover:text-blue hover:bg-blue-light"
             onClick={() => {
               if (confirm(`Delete "${envelope.name}"?`)) {
                 onEnvelopeDelete(envelope.id);

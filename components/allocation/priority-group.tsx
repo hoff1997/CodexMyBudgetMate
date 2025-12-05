@@ -27,30 +27,30 @@ const PRIORITY_CONFIG: Record<PriorityLevel, {
   essential: {
     label: "ESSENTIAL",
     icon: "🔴",
-    color: "text-red-700",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    color: "text-text-dark",
+    bgColor: "bg-silver-very-light",
+    borderColor: "border-silver-light",
   },
   important: {
     label: "IMPORTANT",
     icon: "🟡",
-    color: "text-amber-700",
-    bgColor: "bg-amber-50",
-    borderColor: "border-amber-200",
+    color: "text-text-dark",
+    bgColor: "bg-silver-very-light",
+    borderColor: "border-silver-light",
   },
   discretionary: {
     label: "DISCRETIONARY",
     icon: "🟢",
-    color: "text-emerald-700",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-200",
+    color: "text-text-dark",
+    bgColor: "bg-silver-very-light",
+    borderColor: "border-silver-light",
   },
   unfunded: {
     label: "UNFUNDED",
     icon: "⚠️",
-    color: "text-orange-700",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-200",
+    color: "text-blue",
+    bgColor: "bg-blue-light",
+    borderColor: "border-blue",
   },
 };
 
@@ -163,7 +163,7 @@ export function PriorityGroup({
                     <td className="px-3 py-2 text-right">
                       <span className={cn(
                         "font-semibold",
-                        isFullyFunded ? "text-foreground" : "text-amber-600"
+                        isFullyFunded ? "text-foreground" : "text-blue"
                       )}>
                         ${total.toFixed(2)}
                       </span>
@@ -174,9 +174,9 @@ export function PriorityGroup({
                       {perPay === 0 ? (
                         <span className="text-muted-foreground text-xs">—</span>
                       ) : isFullyFunded ? (
-                        <span className="text-emerald-500 font-bold" title="Fully funded">✓</span>
+                        <span className="text-sage font-bold" title="Fully funded">✓</span>
                       ) : (
-                        <span className="text-amber-500 font-semibold text-xs" title={`Need $${shortfall.toFixed(2)} more`}>
+                        <span className="text-blue font-semibold text-xs" title={`Need $${shortfall.toFixed(2)} more`}>
                           -${shortfall.toFixed(2)}
                         </span>
                       )}

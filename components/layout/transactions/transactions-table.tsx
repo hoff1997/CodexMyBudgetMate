@@ -270,7 +270,7 @@ function MobileTransactionRow({
               <p
                 className={cn(
                   "text-sm font-semibold",
-                  isExpense ? "text-rose-600" : "text-emerald-600",
+                  isExpense ? "text-blue" : "text-sage",
                 )}
               >
                 {formatCurrency(amount)}
@@ -330,7 +330,7 @@ function MobileTransactionDetail({
 }: MobileTransactionDetailProps) {
   const status = (transaction.status ?? "pending").toLowerCase();
   const amount = Number(transaction.amount ?? 0);
-  const amountTone = amount < 0 ? "text-rose-600" : "text-emerald-600";
+  const amountTone = amount < 0 ? "text-blue" : "text-sage";
   const isIncome = amount > 0;
   return (
     <div className="space-y-5">
@@ -853,7 +853,7 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
             <span>
               <strong className="text-secondary">{formatCurrency(planTotals.perPayIncome)}</strong> income per pay
             </span>
-            <span className={planTotals.perPaySurplus >= 0 ? "text-emerald-600" : "text-rose-600"}>
+            <span className={planTotals.perPaySurplus >= 0 ? "text-sage" : "text-blue"}>
               {formatCurrency(planTotals.perPaySurplus)} {planTotals.perPaySurplus >= 0 ? "surplus" : "shortfall"}
             </span>
           </div>
@@ -1094,15 +1094,15 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
                   <div className="flex items-center gap-2">
                     {transaction.merchant_name}
                     {status === "unmatched" ? (
-                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">
+                      <span className="rounded-full bg-blue-light px-2 py-0.5 text-xs text-blue">
                         Needs review
                       </span>
                     ) : status === "approved" ? (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
+                      <span className="rounded-full bg-sage-very-light px-2 py-0.5 text-xs text-sage-dark">
                         ✓
                       </span>
                     ) : status === "pending" ? (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                      <span className="rounded-full bg-gold-light px-2 py-0.5 text-xs text-gold">
                         ⏳
                       </span>
                     ) : null}

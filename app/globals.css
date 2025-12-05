@@ -23,6 +23,37 @@
   --destructive-foreground: 0 85.7% 97.3%;
   --ring: 215 20.2% 65.1%;
   --radius: 0.75rem;
+
+  /* ========================================
+     STYLE GUIDE COLORS (My Budget Mate)
+     ======================================== */
+
+  /* Sage - Positives (surplus, on track, funded) */
+  --sage: #7A9E9A;
+  --sage-dark: #5A7E7A;
+  --sage-light: #B8D4D0;
+  --sage-very-light: #E2EEEC;
+
+  /* Blue - Negatives / Info (debt, over budget, review items) */
+  --blue: #6B9ECE;
+  --blue-light: #DDEAF5;
+
+  /* Silver - UI Structure (borders, backgrounds, disabled) */
+  --silver: #9CA3AF;
+  --silver-light: #E5E7EB;
+  --silver-very-light: #F3F4F6;
+
+  /* Gold - Celebrations (milestones, achievements) */
+  --gold: #D4A853;
+  --gold-light: #F5E6C4;
+
+  /* Text Colors */
+  --text-dark: #3D3D3D;
+  --text-medium: #6B6B6B;
+  --text-light: #9CA3AF;
+
+  /* Background */
+  --bg-white: #FFFFFF;
 }
 
 .dark {

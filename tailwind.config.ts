@@ -51,6 +51,31 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Style Guide Colors - My Budget Mate
+        sage: {
+          DEFAULT: "var(--sage)",
+          dark: "var(--sage-dark)",
+          light: "var(--sage-light)",
+          "very-light": "var(--sage-very-light)",
+        },
+        blue: {
+          DEFAULT: "var(--blue)",
+          light: "var(--blue-light)",
+        },
+        silver: {
+          DEFAULT: "var(--silver)",
+          light: "var(--silver-light)",
+          "very-light": "var(--silver-very-light)",
+        },
+        gold: {
+          DEFAULT: "var(--gold)",
+          light: "var(--gold-light)",
+        },
+        text: {
+          dark: "var(--text-dark)",
+          medium: "var(--text-medium)",
+          light: "var(--text-light)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -142,9 +142,9 @@ export default function Sidebar({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-56 flex-col justify-between border-r bg-white">
+      <aside className="flex w-56 flex-col justify-between border-r border-silver-light bg-silver-very-light">
         <div>
-          <div className="px-3 py-2 text-base font-bold">My Budget Mate</div>
+          <div className="px-3 py-2 text-base font-bold text-text-dark">My Budget Mate</div>
           <div className="px-2">
             <QuickActionsSheet />
           </div>
@@ -159,7 +159,7 @@ export default function Sidebar({
                       <div key={item.id} className="my-1">
                         <button
                           onClick={() => setShowFutureFeatures(!showFutureFeatures)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-secondary w-full"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-light hover:text-text-dark w-full"
                         >
                           {showFutureFeatures ? (
                             <ChevronDown className="h-4 w-4" />
@@ -187,8 +187,8 @@ export default function Sidebar({
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
                             isActive
-                              ? "bg-primary text-primary-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-secondary"
+                              ? "bg-white text-text-dark border-l-3 border-l-sage"
+                              : "text-text-medium hover:bg-silver-light hover:text-text-dark"
                           )}
                         >
                           <span>{item.icon}</span>
@@ -218,8 +218,8 @@ export default function Sidebar({
                         className={cn(
                           "flex items-center gap-1.5 pl-8 pr-3 py-1.5 text-xs font-medium transition rounded-md",
                           isActive
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-secondary"
+                            ? "bg-white text-text-dark border-l-3 border-l-sage"
+                            : "text-text-medium hover:bg-silver-light hover:text-text-dark"
                         )}
                       >
                         <span>{item.icon}</span>
@@ -278,7 +278,9 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
       <div
         className={cn(
           "flex items-center gap-1 rounded-lg px-1 py-0.5 transition",
-          isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/20",
+          isActive
+            ? "bg-white text-text-dark font-medium border-l-3 border-l-sage"
+            : "text-text-medium hover:bg-silver-light",
         )}
       >
         <button
@@ -286,7 +288,7 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
           aria-label={`Reorder ${item.label}`}
           {...attributes}
           {...listeners}
-          className="rounded-md p-0.5 text-muted-foreground hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="rounded-md p-0.5 text-silver hover:text-text-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sage"
         >
           <GripVertical className="h-3 w-3" />
         </button>

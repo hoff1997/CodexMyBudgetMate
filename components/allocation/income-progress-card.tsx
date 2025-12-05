@@ -45,17 +45,17 @@ export function IncomeProgressCard({
 
   // Color based on allocation percentage
   const getProgressColor = () => {
-    if (isOverAllocated) return "bg-red-500";
-    if (percentUsed >= 95) return "bg-red-500";
-    if (percentUsed >= 80) return "bg-amber-500";
-    return "bg-emerald-500";
+    if (isOverAllocated) return "bg-blue";
+    if (percentUsed >= 95) return "bg-blue";
+    if (percentUsed >= 80) return "bg-gold";
+    return "bg-sage";
   };
 
   const getTextColor = () => {
-    if (isOverAllocated) return "text-red-600";
-    if (percentUsed >= 95) return "text-red-600";
-    if (percentUsed >= 80) return "text-amber-600";
-    return "text-emerald-600";
+    if (isOverAllocated) return "text-blue";
+    if (percentUsed >= 95) return "text-blue";
+    if (percentUsed >= 80) return "text-gold";
+    return "text-sage";
   };
 
   return (
@@ -92,7 +92,7 @@ export function IncomeProgressCard({
         </span>
         <span className={cn(
           "font-medium",
-          isOverAllocated ? "text-red-600" : "text-muted-foreground"
+          isOverAllocated ? "text-blue" : "text-muted-foreground"
         )}>
           {isOverAllocated ? (
             <>Over by: ${Math.abs(remaining).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>

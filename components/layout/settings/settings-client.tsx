@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield } from "lucide-react";
+import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield, Loader2 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 
@@ -143,6 +143,9 @@ export function SettingsClient({ data, flash = null }: Props) {
   const [editIncomeOpen, setEditIncomeOpen] = useState(false);
   const [endIncomeOpen, setEndIncomeOpen] = useState(false);
   const [selectedIncome, setSelectedIncome] = useState<IncomeSourceRow | null>(null);
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
 
   // Separate active and archived income
   const activeIncome = useMemo(() => incomeSources.filter(i => i.is_active), [incomeSources]);
@@ -450,14 +453,41 @@ export function SettingsClient({ data, flash = null }: Props) {
     }
   }
 
-  function handleExportData() {
-    toast.success("Data export started. Check your downloads.");
+  async function handleExportData() {
+    if (isExporting) return;
+
+    try {
+      setIsExporting(true);
+
+      const response = await fetch("/api/export");
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      // Get the blob and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `my-budget-mate-export-${new Date().toISOString().split("T")[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Your data has been exported");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to export data. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function handleDeleteAccount() {
-    if (window.confirm("Are you sure you want to delete your account? This cannot be undone.")) {
-      toast.error("Account deletion is not yet implemented.");
-    }
+    // Show info toast instead of error - feature coming soon
+    toast.info("Account deletion is coming soon. Contact support@mybudgetmate.co.nz if you need to delete your account now.");
   }
 
   return (
@@ -827,29 +857,45 @@ export function SettingsClient({ data, flash = null }: Props) {
         <div className="px-3 py-2 flex items-center justify-between border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">
             <span className="text-sm text-[#3D3D3D]">Export your data</span>
-            <span className="text-xs text-[#9CA3AF]">— Download all data as CSV</span>
+            <span className="text-xs text-[#9CA3AF]">— Download all data as ZIP</span>
           </div>
           <button
             onClick={handleExportData}
-            className="flex items-center gap-1 px-2 py-1 text-sm border border-[#E5E7EB] rounded-lg hover:bg-[#F3F4F6]"
+            disabled={isExporting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#5A7E7A] bg-[#E2EEEC] hover:bg-[#D4E8E4] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-3.5 h-3.5" />
-            Export
+            {isExporting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                Export
+              </>
+            )}
           </button>
         </div>
         {/* Delete Row */}
         <div className="px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-[#6B9ECE]">Delete account</span>
+            <span className="text-sm text-[#9CA3AF]">Delete account</span>
             <span className="text-xs text-[#9CA3AF]">— Permanently remove account and data</span>
           </div>
-          <button
-            onClick={handleDeleteAccount}
-            className="flex items-center gap-1 px-2 py-1 text-sm text-[#6B9ECE] border border-[#6B9ECE] rounded-lg hover:bg-[#DDEAF5]"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[#9CA3AF] bg-[#F3F4F6] px-2 py-0.5 rounded">
+              Coming soon
+            </span>
+            <button
+              onClick={handleDeleteAccount}
+              className="flex items-center gap-1 px-2 py-1 text-sm text-[#9CA3AF] border border-[#E5E7EB] rounded-lg cursor-not-allowed opacity-60"
+              title="Account deletion is coming soon"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete
+            </button>
+          </div>
         </div>
       </section>
 

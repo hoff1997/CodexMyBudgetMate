@@ -23,7 +23,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
+import { GripVertical, ChevronDown, ChevronRight, X, Menu } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
@@ -104,7 +104,30 @@ export default function Sidebar({
   const [showReportsSubmenu, setShowReportsSubmenu] = useState(false);
   const [showFutureFeatures, setShowFutureFeatures] = useState(false);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isAdmin = userEmail === ADMIN_EMAIL;
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  // Handle escape key and body scroll lock
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMobileMenuOpen(false);
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
+  }, [isMobileMenuOpen]);
 
   // Fetch onboarding draft status
   useEffect(() => {
@@ -195,149 +218,209 @@ export default function Sidebar({
 
   const ids = useMemo(() => filteredNavItems.map((item) => item.id), [filteredNavItems]);
 
+  // Shared navigation content
+  const navigationContent = (
+    <>
+      <div className="px-2 space-y-2">
+        <GlobalSearch />
+        {/* Quick Actions removed for V1 - see FUTURE_ENHANCEMENTS.md */}
+      </div>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <nav className="px-1 py-2 space-y-0.5">
+            {filteredNavItems.map((item) => {
+              // Handle separator for future features section (admin only)
+              if (item.id === "separator-future") {
+                if (!isAdmin) return null;
+                return (
+                  <div key={item.id} className="my-1">
+                    <button
+                      onClick={() => setShowFutureFeatures(!showFutureFeatures)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-light hover:text-text-dark w-full"
+                    >
+                      {showFutureFeatures ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                      <span>Future Features</span>
+                    </button>
+                  </div>
+                );
+              }
+
+              // Hide future features if section is collapsed or user is not admin
+              if (item.isFutureFeature && (!isAdmin || !showFutureFeatures)) {
+                return null;
+              }
+
+              // Handle Getting Started (Onboarding) - clicking goes directly to onboarding
+              if (item.id === "onboarding") {
+                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                const currentStepInfo = onboardingDraft
+                  ? ONBOARDING_STEPS.find(s => s.step === onboardingDraft.currentStep)
+                  : null;
+
+                return (
+                  <div key={item.id}>
+                    <Link
+                      href="/onboarding"
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
+                        isActive
+                          ? "bg-white text-text-dark border-l-3 border-l-sage"
+                          : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {onboardingDraft && (
+                        <span className="px-1.5 py-0.5 text-[10px] bg-[#7A9E9A] text-white rounded-full">
+                          {onboardingDraft.currentStep}/11
+                        </span>
+                      )}
+                    </Link>
+                    {/* Show current step info if there's a draft */}
+                    {onboardingDraft && currentStepInfo && (
+                      <div className="pl-8 pr-3 py-1 text-[10px] text-text-light">
+                        Currently on: {currentStepInfo.icon} {currentStepInfo.label}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Hide onboarding submenu items (they're rendered inline above)
+              if (item.isOnboardingSubmenu) {
+                return null;
+              }
+
+              // Handle Reports submenu
+              if (item.id === "reports") {
+                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                return (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => setShowReportsSubmenu(!showReportsSubmenu)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
+                        isActive
+                          ? "bg-white text-text-dark border-l-3 border-l-sage"
+                          : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                      )}
+                    >
+                      <span>{item.icon}</span>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {showReportsSubmenu ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                );
+              }
+
+              // Hide reports submenu items if collapsed
+              if (item.isReportsSubmenu && !showReportsSubmenu) {
+                return null;
+              }
+
+              // Render submenu items with indentation
+              if (item.isReportsSubmenu) {
+                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-1.5 pl-8 pr-3 py-1.5 text-xs font-medium transition rounded-md",
+                      isActive
+                        ? "bg-white text-text-dark border-l-3 border-l-sage"
+                        : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                    )}
+                  >
+                    <span>{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
+              return <SortableNavItem key={item.id} item={item} activePath={pathname} />;
+            })}
+          </nav>
+        </SortableContext>
+      </DndContext>
+    </>
+  );
+
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-56 flex-col justify-between border-r border-silver-light bg-silver-very-light">
-        <div>
-          <div className="px-3 py-2 text-base font-bold text-text-dark">My Budget Mate</div>
-          <div className="px-2 space-y-2">
-            <GlobalSearch />
-            {/* Quick Actions removed for V1 - see FUTURE_ENHANCEMENTS.md */}
-          </div>
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-              <nav className="px-1 py-2 space-y-0.5">
-                {filteredNavItems.map((item) => {
-                  // Handle separator for future features section (admin only)
-                  if (item.id === "separator-future") {
-                    if (!isAdmin) return null;
-                    return (
-                      <div key={item.id} className="my-1">
-                        <button
-                          onClick={() => setShowFutureFeatures(!showFutureFeatures)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-light hover:text-text-dark w-full"
-                        >
-                          {showFutureFeatures ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                          <span>Future Features</span>
-                        </button>
-                      </div>
-                    );
-                  }
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-[#E5E7EB] z-30 flex items-center px-4">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 -ml-2 text-[#6B6B6B] hover:bg-[#F3F4F6] rounded-lg"
+          aria-label="Open menu"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        <span className="ml-3 font-semibold text-[#3D3D3D]">My Budget Mate</span>
+      </div>
 
-                  // Hide future features if section is collapsed or user is not admin
-                  if (item.isFutureFeature && (!isAdmin || !showFutureFeatures)) {
-                    return null;
-                  }
+      {/* Mobile Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-                  // Handle Getting Started (Onboarding) - clicking goes directly to onboarding
-                  if (item.id === "onboarding") {
-                    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                    const currentStepInfo = onboardingDraft
-                      ? ONBOARDING_STEPS.find(s => s.step === onboardingDraft.currentStep)
-                      : null;
-
-                    return (
-                      <div key={item.id}>
-                        <Link
-                          href="/onboarding"
-                          className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
-                            isActive
-                              ? "bg-white text-text-dark border-l-3 border-l-sage"
-                              : "text-text-medium hover:bg-silver-light hover:text-text-dark"
-                          )}
-                        >
-                          <span>{item.icon}</span>
-                          <span className="flex-1 text-left">{item.label}</span>
-                          {onboardingDraft && (
-                            <span className="px-1.5 py-0.5 text-[10px] bg-[#7A9E9A] text-white rounded-full">
-                              {onboardingDraft.currentStep}/11
-                            </span>
-                          )}
-                        </Link>
-                        {/* Show current step info if there's a draft */}
-                        {onboardingDraft && currentStepInfo && (
-                          <div className="pl-8 pr-3 py-1 text-[10px] text-text-light">
-                            Currently on: {currentStepInfo.icon} {currentStepInfo.label}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // Hide onboarding submenu items (they're rendered inline above)
-                  if (item.isOnboardingSubmenu) {
-                    return null;
-                  }
-
-                  // Handle Reports submenu
-                  if (item.id === "reports") {
-                    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                    return (
-                      <div key={item.id}>
-                        <button
-                          onClick={() => setShowReportsSubmenu(!showReportsSubmenu)}
-                          className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
-                            isActive
-                              ? "bg-white text-text-dark border-l-3 border-l-sage"
-                              : "text-text-medium hover:bg-silver-light hover:text-text-dark"
-                          )}
-                        >
-                          <span>{item.icon}</span>
-                          <span className="flex-1 text-left">{item.label}</span>
-                          {showReportsSubmenu ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    );
-                  }
-
-                  // Hide reports submenu items if collapsed
-                  if (item.isReportsSubmenu && !showReportsSubmenu) {
-                    return null;
-                  }
-
-                  // Render submenu items with indentation
-                  if (item.isReportsSubmenu) {
-                    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                    return (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-1.5 pl-8 pr-3 py-1.5 text-xs font-medium transition rounded-md",
-                          isActive
-                            ? "bg-white text-text-dark border-l-3 border-l-sage"
-                            : "text-text-medium hover:bg-silver-light hover:text-text-dark"
-                        )}
-                      >
-                        <span>{item.icon}</span>
-                        <span>{item.label}</span>
-                      </Link>
-                    );
-                  }
-
-                  return <SortableNavItem key={item.id} item={item} activePath={pathname} />;
-                })}
-              </nav>
-            </SortableContext>
-          </DndContext>
+      {/* Sidebar - Desktop (always visible) and Mobile (slide-in) */}
+      <aside
+        className={cn(
+          "fixed top-0 left-0 h-full bg-silver-very-light border-r border-silver-light z-50 flex flex-col justify-between transition-transform duration-200 ease-out",
+          // Mobile styles
+          "w-64 lg:w-56",
+          // Mobile: slide in/out
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop: always visible, static positioning
+          "lg:translate-x-0 lg:static"
+        )}
+      >
+        {/* Mobile close button and header */}
+        <div className="lg:hidden flex items-center justify-between px-3 py-2 border-b border-silver-light">
+          <span className="text-base font-bold text-text-dark">My Budget Mate</span>
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 -mr-2 text-[#6B6B6B] hover:bg-[#E5E7EB] rounded-lg"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <div className="px-3 py-2">
+
+        {/* Desktop header */}
+        <div className="hidden lg:block px-3 py-2 text-base font-bold text-text-dark">
+          My Budget Mate
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto">
+          {navigationContent}
+        </div>
+
+        {/* Footer */}
+        <div className="px-3 py-2 border-t border-silver-light">
           <Button asChild variant="outline" className="w-full text-xs h-8">
             <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
           </Button>
         </div>
       </aside>
-      <main className="flex-1">{children}</main>
+
+      {/* Main Content */}
+      <main className="flex-1 pt-14 lg:pt-0">{children}</main>
     </div>
   );
 }

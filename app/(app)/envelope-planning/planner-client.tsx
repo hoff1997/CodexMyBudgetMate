@@ -52,11 +52,18 @@ export type PlannerEnvelope = EnvelopeRow & {
   category_name?: string | null;
 };
 
+interface CategoryWithSort {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
 interface Props {
   initialPayFrequency: PlannerFrequency;
   envelopes: PlannerEnvelope[];
   readOnly?: boolean;
   payPlan?: PayPlanSummary | null;
+  categories?: CategoryWithSort[];
 }
 
 interface UpdatePayload {
@@ -90,7 +97,7 @@ const STATUS_FILTERS = [
   { key: "on-track", label: "On track" },
 ] as const;
 
-export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null }: Props) {
+export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false, payPlan = null, categories = [] }: Props) {
   const router = useRouter();
   const [payFrequency, setPayFrequency] = useState<PlannerFrequency>(initialPayFrequency);
   const [payCycleStartDate, setPayCycleStartDate] = useState<Date | null>(null);
@@ -244,20 +251,29 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
   }, [rows, statusFilter, recalcRow]);
 
   const groupedRows = useMemo(() => {
-    const groups = new Map<string, { id: string; name: string; rows: typeof rows }>();
+    const groups = new Map<string, { id: string; name: string; sortOrder: number; rows: typeof rows }>();
 
     filteredRows.forEach((row) => {
       const categoryId = row.category_id ? String(row.category_id) : "uncategorised";
       const categoryName = row.category_name ?? "Uncategorised";
+      const category = categories.find(c => c.id === categoryId);
+      const sortOrder = category?.sortOrder ?? 999; // Uncategorised goes last
 
       if (!groups.has(categoryId)) {
-        groups.set(categoryId, { id: categoryId, name: categoryName, rows: [] });
+        groups.set(categoryId, { id: categoryId, name: categoryName, sortOrder, rows: [] });
       }
       groups.get(categoryId)!.rows.push(row);
     });
 
-    return Array.from(groups.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [filteredRows]);
+    return Array.from(groups.values()).sort((a, b) => {
+      // Put "Uncategorised" at the end
+      if (a.id === "uncategorised") return 1;
+      if (b.id === "uncategorised") return -1;
+      // Sort by sortOrder first, then by name
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredRows, categories]);
   const toSummaryEnvelope = (row: PlannerEnvelope & Record<string, any>): SummaryEnvelope => ({
     id: row.id,
     name: row.name,

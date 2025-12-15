@@ -249,7 +249,7 @@ export default function PaydayAllocatorPage() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold flex items-center gap-2">
                       <span>{PRIORITY_DEFINITIONS.discretionary.icon}</span>
-                      Discretionary
+                      Flexible
                     </h3>
                     <p className="text-sm font-medium">
                       {formatCurrency(allocation.summary.discretionaryTotal)}

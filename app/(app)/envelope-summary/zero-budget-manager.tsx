@@ -390,7 +390,7 @@ export function ZeroBudgetManager({
             <tr>
               <th className="px-4 py-3">Envelope</th>
               <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Target</th>
+              <th className="px-4 py-3">Payment Amount</th>
               <th className="px-4 py-3">Actual</th>
               <th className="px-4 py-3">Per pay</th>
               <th className="px-4 py-3">Next due</th>

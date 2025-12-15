@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { BudgetManagerClient } from "./budget-manager-client";
 
 export const metadata = {
-  title: "Budget Manager | My Budget Mate",
-  description: "Manage your zero-based budget with inline editing",
+  title: "Old Budget Manager | My Budget Mate",
+  description: "Legacy budget manager - Manage your zero-based budget with inline editing",
 };
 
 export default async function BudgetManagerPage() {

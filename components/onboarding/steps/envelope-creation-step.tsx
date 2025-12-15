@@ -77,12 +77,13 @@ export function EnvelopeCreationStep({
     return allEnvelopes.sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
-  // Pre-select Surplus and Emergency Fund on mount
+  // Pre-select Surplus, Emergency Fund, and Credit Card Holding on mount
   useEffect(() => {
     const defaultSelections = masterEnvelopes
       .filter(env =>
         env.name.toLowerCase().includes('surplus') ||
-        env.name.toLowerCase().includes('emergency')
+        env.name.toLowerCase().includes('emergency') ||
+        env.name.toLowerCase().includes('credit card')
       )
       .map(env => env.name);
 
@@ -286,8 +287,8 @@ export function EnvelopeCreationStep({
                 onClick={() => handleToggleEnvelope(envelope.name)}
                 className={`p-4 rounded-lg border cursor-pointer transition-all ${
                   isSelected
-                    ? "border-emerald-500 bg-emerald-50"
-                    : "border-border bg-background hover:border-emerald-300"
+                    ? "border-[#7A9E9A] bg-[#E2EEEC]"
+                    : "border-border bg-background hover:border-[#B8D4D0]"
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -305,7 +306,7 @@ export function EnvelopeCreationStep({
                       </p>
                     </div>
                   </div>
-                  {isSelected && <CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+                  {isSelected && <CheckCircle2 className="h-5 w-5 text-[#7A9E9A]" />}
                 </div>
               </div>
             );
@@ -316,7 +317,7 @@ export function EnvelopeCreationStep({
         <Button
           onClick={handleProceedToConfigure}
           disabled={selectedEnvelopes.length === 0}
-          className="w-full bg-emerald-500 hover:bg-emerald-600 h-12 text-lg"
+          className="w-full bg-[#7A9E9A] hover:bg-[#5A7E7A] h-12 text-lg"
           size="lg"
         >
           Continue with {selectedEnvelopes.length} Envelope{selectedEnvelopes.length !== 1 ? 's' : ''}
@@ -343,7 +344,7 @@ export function EnvelopeCreationStep({
 
       {/* Budget Tracker */}
       {primaryIncome && envelopes.length > 0 && (
-        <Card className={`p-6 ${isOverspent ? 'bg-red-50 border-red-200' : remaining > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+        <Card className={`p-6 ${isOverspent ? 'bg-[#DDEAF5] border-[#6B9ECE]' : remaining > 0 ? 'bg-[#E2EEEC] border-[#B8D4D0]' : 'bg-[#DDEAF5] border-[#6B9ECE]'}`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -369,14 +370,14 @@ export function EnvelopeCreationStep({
               </div>
               <Progress
                 value={allocationPercentage}
-                className={`h-3 ${isOverspent ? '[&>div]:bg-red-500' : '[&>div]:bg-emerald-500'}`}
+                className={`h-3 ${isOverspent ? '[&>div]:bg-[#6B9ECE]' : '[&>div]:bg-[#7A9E9A]'}`}
               />
             </div>
 
             {isOverspent && (
-              <div className="flex items-start gap-2 p-3 bg-red-100 border border-red-300 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-900">
+              <div className="flex items-start gap-2 p-3 bg-[#DDEAF5] border border-[#6B9ECE] rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-[#6B9ECE] flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-text-dark">
                   You're allocating ${Math.abs(remaining).toFixed(2)} more than you earn per paycheck. Reduce your envelope amounts.
                 </p>
               </div>
@@ -394,7 +395,7 @@ export function EnvelopeCreationStep({
                   onClick={handleAddSurplus}
                   variant="outline"
                   size="sm"
-                  className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                  className="border-[#7A9E9A] text-[#5A7E7A] hover:bg-[#E2EEEC]"
                 >
                   Add Surplus Envelope
                 </Button>
@@ -582,7 +583,7 @@ export function EnvelopeCreationStep({
 
                 {/* Per Paycheck */}
                 <td className="px-1 py-1">
-                  <div className="h-7 flex items-center text-xs font-semibold text-blue-600 px-2">
+                  <div className="h-7 flex items-center text-xs font-semibold text-[#7A9E9A] px-2">
                     ${(envelope.payCycleAmount || 0).toFixed(2)}
                   </div>
                 </td>

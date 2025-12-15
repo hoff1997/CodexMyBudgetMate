@@ -5,10 +5,10 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { UnifiedEnvelopeTable } from "@/components/shared/unified-envelope-table";
-import type { UnifiedEnvelopeData, IncomeSource, GapAnalysisData, CategoryOption } from "@/lib/types/unified-envelope";
+import type { UnifiedEnvelopeData, IncomeSource, GapAnalysisData, CategoryOption, PaySchedule } from "@/lib/types/unified-envelope";
 import { cn } from "@/lib/cn";
 
-type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'currentAmount' | 'totalFunded' | null;
+type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'dueIn' | 'currentAmount' | 'totalFunded' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface BudgetCategoryGroupProps {
@@ -20,12 +20,16 @@ interface BudgetCategoryGroupProps {
   allCategories: CategoryOption[];
   incomeSources: IncomeSource[];
   payCycle: 'weekly' | 'fortnightly' | 'monthly';
+  paySchedule?: PaySchedule | null;
   gapAnalysisData?: GapAnalysisData[];
   collapsedAll?: boolean;
   sortColumn?: SortColumn;
   sortDirection?: SortDirection;
   enableDragAndDrop?: boolean;
   isDragDisabled?: boolean;
+  showOpeningBalance?: boolean;
+  showCurrentBalance?: boolean;
+  isOnboarding?: boolean;
   onEnvelopeUpdate: (id: string, updates: Partial<UnifiedEnvelopeData>) => void | Promise<void>;
   onEnvelopeDelete: (id: string) => void | Promise<void>;
   onAllocationUpdate?: (envelopeId: string, incomeSourceId: string, amount: number) => void | Promise<void>;
@@ -37,12 +41,16 @@ export function BudgetCategoryGroup({
   allCategories,
   incomeSources,
   payCycle,
+  paySchedule,
   gapAnalysisData,
   collapsedAll = false,
   sortColumn,
   sortDirection,
   enableDragAndDrop = false,
   isDragDisabled = false,
+  showOpeningBalance = true,
+  showCurrentBalance = true,
+  isOnboarding = false,
   onEnvelopeUpdate,
   onEnvelopeDelete,
   onAllocationUpdate,
@@ -166,13 +174,15 @@ export function BudgetCategoryGroup({
             <UnifiedEnvelopeTable
               envelopes={sortedEnvelopes}
               incomeSources={incomeSources}
-              mode="maintenance"
+              mode={isOnboarding ? 'onboarding' : 'maintenance'}
               payCycle={payCycle}
+              paySchedule={paySchedule}
               categories={allCategories}
               showCategories={false}
               showIncomeColumns={true}
-              showOpeningBalance={true}
-              showCurrentBalance={true}
+              showOpeningBalance={showOpeningBalance}
+              showCurrentBalance={showCurrentBalance}
+              showDueIn={!!paySchedule && !isOnboarding}
               showNotes={true}
               enableDragAndDrop={enableDragAndDrop}
               isDragDisabled={isDragDisabled}

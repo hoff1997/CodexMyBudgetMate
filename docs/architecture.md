@@ -59,6 +59,92 @@ function getStatusBucket(envelope: SummaryEnvelope): StatusFilter {
 - Summary card: `components/layout/envelopes/envelope-summary-card.tsx`
 - Type definition: `SummaryEnvelope` interface includes `is_tracking_only`
 
+## Page Architecture
+
+### Primary User-Facing Pages
+
+#### Allocation (`/allocation`)
+The **primary page** for budget management. Users:
+- View all envelopes grouped by category
+- Edit envelope details inline
+- Allocate income to envelopes
+- See "Pays Until Due" for bills
+- Drag-and-drop to reorder envelopes
+
+**Key Components:**
+- `app/(app)/allocation/allocation-client.tsx`
+- `components/allocation/income-progress-card.tsx`
+- `components/allocation/priority-group.tsx`
+
+#### Envelope Summary (`/envelope-summary`)
+Overview page for checking budget status. Users:
+- See summary cards (total target, current balance, funding gap)
+- Filter envelopes by status
+- View progress at a glance
+- Transfer funds between envelopes
+- See "Pays Until Due" for bills
+
+**Key Components:**
+- `components/layout/envelopes/envelope-summary-client.tsx`
+- `components/layout/envelopes/envelope-category-group.tsx`
+- `components/layout/envelopes/envelope-transfer-dialog.tsx`
+
+#### Dashboard (`/dashboard`)
+High-level financial overview. Users:
+- See reconciliation status
+- View upcoming bills
+- Access quick actions
+- Monitor credit card coverage
+
+**Key Components:**
+- `app/(app)/dashboard/page.tsx`
+- Various dashboard widgets
+
+### Deprecated Pages
+
+#### Budget Manager (`/budget-manager`) - ⛔ DEPRECATED
+Legacy page kept for reference only. **Do NOT add new features here.**
+All budget management features should go to the **Allocation page**.
+
+### Feature Ownership Matrix
+
+| Feature | Allocation | Envelope Summary | Dashboard |
+|---------|------------|------------------|-----------|
+| Envelope table with inline editing | ✅ | ❌ | ❌ |
+| Income cards / allocation controls | ✅ | ❌ | ❌ |
+| Priority column (traffic lights) | ✅ | ✅ | ❌ |
+| Category grouping | ✅ | ✅ | ❌ |
+| Drag-and-drop reordering | ✅ | ✅ | ❌ |
+| "Pays Until Due" column | ✅ | ✅ | ❌ |
+| Progress bars (sage gradient) | ✅ | ✅ | ✅ |
+| Transfer Funds dialog | ❌ | ✅ | ❌ |
+| Summary cards | ❌ | ✅ | ✅ |
+| Filter tabs | ❌ | ✅ | ❌ |
+| Quick Actions | ❌ | ❌ | ✅ |
+| Upcoming Bills | ❌ | ❌ | ✅ |
+
+### When Adding New Features
+
+1. Check the Feature Ownership Matrix above
+2. If feature applies to multiple pages, implement on ALL listed pages
+3. **NEVER add features to deprecated pages**
+4. If unsure, ask before implementing
+
+### Pays Until Due Feature
+
+The "Pays Until Due" feature helps users understand bill urgency in terms of paychecks.
+
+**Files:**
+- Core utilities: `lib/utils/pays-until-due.ts`
+- Badge component: `components/shared/pays-until-due-badge.tsx`
+- Used in: Allocation page, Envelope Summary page
+
+**Color Scheme (Style Guide Compliant):**
+Uses **blue colors only** (not red/amber) for urgency to avoid financial anxiety:
+- High urgency: `bg-[#DDEAF5]` / `text-[#6B9ECE]`
+- Medium urgency: `bg-[#F3F4F6]` / `text-[#6B6B6B]`
+- Low/none: transparent / `text-[#9CA3AF]`
+
 ## Authentication Flow
 
 ### Overview
@@ -408,7 +494,7 @@ Priority column uses compact traffic light dots for visual clarity:
 |----------|-------|-----------|
 | Essential | 🔴 Red | `bg-red-500` |
 | Important | 🟡 Yellow | `bg-yellow-400` |
-| Discretionary | 🟢 Green | `bg-green-500` |
+| Flexible | 🟢 Green | `bg-green-500` |
 
 **Display:** Small colored circle (2.5rem) that expands to dropdown on click.
 **Hidden for:** `savings`, `goal`, and `tracking` subtypes (shows "—").
@@ -1556,3 +1642,350 @@ INCOME ARRIVES
 - Predictive analytics (forecast envelope funding dates)
 - Smart adjustment suggestions based on spending patterns
 - Bill pay integration (auto-pay when envelope funded)
+
+---
+
+## Credit Card Onboarding & Dashboard System
+
+**Status**: ✅ **COMPLETE** (100% - All 11 phases implemented)
+**Implementation Date**: December 2025
+
+### Overview
+
+The Credit Card System provides comprehensive support for tracking credit card usage, billing cycles, payment reconciliation, and debt payoff projections. It integrates seamlessly into the onboarding flow and provides dashboard components for ongoing management.
+
+### Three Usage Types (A/B/C Paths)
+
+| Type | Description | Creates |
+|------|-------------|---------|
+| **pay_in_full** (A) | Pay off balance each month | CC Holding + Payment envelopes |
+| **paying_down** (B) | Actively paying down debt | CC Holding (if still using) + Debt + Payment envelopes |
+| **minimum_only** (C) | Just tracking minimum payments | CC Holding (if still using) + Debt + Payment envelopes |
+
+### Key Concepts
+
+#### CC Holding Envelope
+- Holds money set aside for credit card payments
+- For pay_in_full: pre-funded with current statement balance
+- For paying_down/minimum_only: tracks new spending (if still using card)
+- **Critical**: Affects reconciliation formula (see below)
+
+#### Billing Cycle Tracking
+- Statement close day (1-31)
+- Payment due day (1-31)
+- Cycle identifier format: `YYYY-MM`
+
+#### Hybrid Mode (Still Using Toggle)
+For users paying down debt but still using the card:
+- New spending tracked in CC Holding envelope (separate from legacy debt)
+- Legacy debt tracked in CC Debt envelope
+- Clear separation allows accurate payoff progress tracking
+
+### Database Schema
+
+**Migration**: `supabase/migrations/0029_credit_card_onboarding.sql`
+
+```sql
+-- Credit card configuration (per account)
+CREATE TABLE credit_card_configs (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users,
+  account_id UUID REFERENCES accounts,
+  usage_type TEXT CHECK (usage_type IN ('pay_in_full', 'paying_down', 'minimum_only')),
+  statement_close_day INTEGER CHECK (1 <= statement_close_day AND statement_close_day <= 31),
+  payment_due_day INTEGER CHECK (1 <= payment_due_day AND payment_due_day <= 31),
+  apr NUMERIC(5, 2),
+  minimum_payment NUMERIC(10, 2),
+  still_using BOOLEAN DEFAULT true,
+  starting_debt_amount NUMERIC(10, 2),
+  starting_debt_date TIMESTAMPTZ,
+  expected_monthly_spending NUMERIC(10, 2),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Billing cycle holding records
+CREATE TABLE credit_card_cycle_holdings (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users,
+  account_id UUID REFERENCES accounts,
+  billing_cycle TEXT,  -- YYYY-MM format
+  statement_close_date DATE,
+  payment_due_date DATE,
+  spending_amount NUMERIC(10, 2) DEFAULT 0,
+  covered_amount NUMERIC(10, 2) DEFAULT 0,
+  interest_amount NUMERIC(10, 2) DEFAULT 0,
+  is_current_cycle BOOLEAN DEFAULT false,
+  is_closed BOOLEAN DEFAULT false,
+  closed_at TIMESTAMPTZ
+);
+
+-- Payment reconciliation records
+CREATE TABLE payment_reconciliations (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users,
+  account_id UUID REFERENCES accounts,
+  transaction_id UUID REFERENCES transactions,
+  total_payment_amount NUMERIC(10, 2),
+  payment_date DATE,
+  amount_to_holding NUMERIC(10, 2) DEFAULT 0,
+  amount_to_debt NUMERIC(10, 2) DEFAULT 0,
+  amount_to_interest NUMERIC(10, 2) DEFAULT 0,
+  billing_cycle TEXT,
+  reconciliation_method TEXT
+);
+
+-- Payoff projections
+CREATE TABLE payoff_projections (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES auth.users,
+  account_id UUID REFERENCES accounts,
+  monthly_payment_amount NUMERIC(10, 2),
+  apr_used NUMERIC(5, 2),
+  starting_balance NUMERIC(10, 2),
+  projected_payoff_date DATE,
+  total_interest_projected NUMERIC(10, 2),
+  total_payments_projected NUMERIC(10, 2),
+  months_to_payoff INTEGER,
+  projection_type TEXT,
+  calculated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Type Definitions
+
+**File**: `lib/types/credit-card-onboarding.ts`
+
+```typescript
+// Core usage type
+type CreditCardUsageType = 'pay_in_full' | 'paying_down' | 'minimum_only';
+
+// Card network detection
+type CardNetwork = 'visa' | 'mastercard' | 'amex' | 'discover' | 'other';
+
+// Configuration collected during onboarding
+interface CreditCardConfig {
+  accountId: string;
+  accountName: string;
+  usageType: CreditCardUsageType;
+  billingCycle?: {
+    statementCloseDay: number;
+    paymentDueDay: number;
+  };
+  apr?: number;
+  currentOutstanding?: number;
+  expectedMonthlySpending?: number;
+  stillUsing?: boolean;
+  startingDebtAmount?: number;
+  startingDebtDate?: string;
+  minimumPayment?: number;
+}
+
+// Payoff projection
+interface PayoffProjection {
+  accountId: string;
+  monthlyPaymentAmount: number;
+  aprUsed: number;
+  startingBalance: number;
+  projectedPayoffDate: Date | null;
+  totalInterestProjected: number;
+  totalPaymentsProjected: number;
+  monthsToPayoff: number;
+  projectionType: 'minimum_only' | 'current_payment' | 'custom';
+}
+```
+
+### Utility Functions
+
+**File**: `lib/utils/credit-card-onboarding-utils.ts`
+
+| Function | Purpose |
+|----------|---------|
+| `validateCreditCardConfig()` | Validates config, returns errors/warnings |
+| `getEnvelopesForCreditCard()` | Generates envelope templates based on usage type |
+| `getCurrentBillingCycle()` | Calculates current cycle from statement close day |
+| `getNextPaymentDueDate()` | Calculates next due date |
+| `calculateDaysUntilDue()` | Days remaining until payment |
+
+**File**: `lib/utils/interest-calculator.ts`
+
+| Function | Purpose |
+|----------|---------|
+| `calculatePayoffProjection()` | Full payoff projection with interest |
+| `calculateInterestSavings()` | Savings from extra payments |
+| `calculateAvalanchePayments()` | Optimal payments (highest APR first) |
+| `calculateSnowballPayments()` | Optimal payments (smallest balance first) |
+| `comparePayoffStrategies()` | Compare avalanche vs snowball |
+
+**File**: `lib/utils/card-identifier-extractor.ts`
+
+| Function | Purpose |
+|----------|---------|
+| `extractCardIdentifier()` | Extract last 4 digits + network from transaction |
+| `parseCardIdentifierString()` | Parse "VISA-1234" format |
+| `getNetworkColor()` | Get brand color for network |
+
+### Onboarding Integration
+
+**Location**: After Bank Accounts step, before Income step
+
+**Flow**:
+```
+Bank Accounts → Credit Card Fork Step → Income
+              ↓
+    ┌─────────────────────────────────┐
+    │ For each credit card account:   │
+    │ 1. Select usage type (A/B/C)    │
+    │ 2. Enter billing cycle dates    │
+    │ 3. Configure based on type:     │
+    │    A: Current outstanding       │
+    │    B/C: APR, minimum payment    │
+    │ 4. Preview envelopes created    │
+    └─────────────────────────────────┘
+```
+
+**Components**:
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `CreditCardForkStep` | `components/onboarding/credit-card/credit-card-fork-step.tsx` | Main orchestrator |
+| `UsageTypeSelector` | `components/onboarding/credit-card/usage-type-selector.tsx` | A/B/C path selection |
+| `BillingCycleInputs` | `components/onboarding/credit-card/billing-cycle-inputs.tsx` | Day pickers |
+| `PayInFullConfig` | `components/onboarding/credit-card/pay-in-full-config.tsx` | Option A config |
+| `PayingDownConfig` | `components/onboarding/credit-card/paying-down-config.tsx` | Option B/C config |
+| `APRInput` | `components/onboarding/credit-card/apr-input.tsx` | APR with presets |
+| `StillUsingToggle` | `components/onboarding/credit-card/still-using-toggle.tsx` | Hybrid mode |
+| `EnvelopePreview` | `components/onboarding/credit-card/envelope-preview.tsx` | Shows what's created |
+| `PayoffPreview` | `components/onboarding/credit-card/payoff-preview.tsx` | Interactive projection |
+
+### Dashboard Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `CardIdentifierBadge` | `components/credit-cards/card-identifier-badge.tsx` | Visa/MC/Amex badge |
+| `InterestTrackerCard` | `components/credit-cards/interest-tracker-card.tsx` | Monthly interest |
+| `MultiCardOptimizer` | `components/credit-cards/multi-card-optimizer.tsx` | Strategy comparison |
+| `ReconciliationWidget` | `components/credit-cards/reconciliation-widget.tsx` | Balance verification |
+
+### Reconciliation Formula Update
+
+**Critical Change**: CC Holding affects available cash calculation.
+
+**Old Formula**:
+```
+Available Cash = Bank Balance
+Reconciled = Bank Balance == Envelope Total
+```
+
+**New Formula**:
+```
+Available Cash = Bank Balance - CC Holding Balance
+Reconciled = Available Cash == (Envelope Total - CC Holding)
+```
+
+**Why**: CC Holding represents money that's already "spent" via credit card but not yet paid. It's in the bank but not truly available.
+
+**File**: `lib/utils/reconciliation-calculator.ts`
+
+```typescript
+export function calculateAvailableCash(
+  bankBalance: number,
+  ccHoldingBalance: number
+): number {
+  return bankBalance - ccHoldingBalance;
+}
+
+export function validateReconciliation(
+  bankBalance: number,
+  envelopeTotal: number,
+  ccHoldingBalance: number,
+  tolerance: number = 0.01
+): ReconciliationResult {
+  const adjustedEnvelopeTotal = envelopeTotal - ccHoldingBalance;
+  const availableCash = calculateAvailableCash(bankBalance, ccHoldingBalance);
+  const discrepancy = availableCash - adjustedEnvelopeTotal;
+  const isBalanced = Math.abs(discrepancy) <= tolerance;
+  // ...
+}
+```
+
+### Multi-Card Optimization
+
+**Debt Payoff Strategies**:
+
+1. **Avalanche** (Mathematically Optimal)
+   - Pay minimums on all cards
+   - Put extra toward highest APR card
+   - Saves most money in interest
+
+2. **Snowball** (Psychologically Motivating)
+   - Pay minimums on all cards
+   - Put extra toward smallest balance
+   - Quick wins build momentum
+
+**Comparison Display**:
+```
+Strategy    | Months | Total Interest | Total Paid
+------------|--------|----------------|------------
+Avalanche   | 24     | $1,234         | $8,234
+Snowball    | 26     | $1,456         | $8,456
+Difference  | 2 mo   | $222 saved     |
+```
+
+### File Structure
+
+```
+app/api/
+├── credit-card-configs/
+│   └── route.ts                  # CRUD for CC configs
+├── credit-card-cycle-holdings/
+│   └── route.ts                  # Billing cycle tracking
+├── payment-reconciliations/
+│   └── route.ts                  # Record payment splits
+└── payoff-projections/
+    └── route.ts                  # Calculate/store projections
+
+components/
+├── onboarding/credit-card/
+│   ├── credit-card-fork-step.tsx     # Main step
+│   ├── usage-type-selector.tsx       # A/B/C picker
+│   ├── billing-cycle-inputs.tsx      # Day selectors
+│   ├── pay-in-full-config.tsx        # Option A
+│   ├── paying-down-config.tsx        # Option B/C
+│   ├── apr-input.tsx                 # APR with presets
+│   ├── still-using-toggle.tsx        # Hybrid mode
+│   ├── envelope-preview.tsx          # What gets created
+│   └── payoff-preview.tsx            # Interactive projection
+├── credit-cards/
+│   ├── card-identifier-badge.tsx     # Network badge
+│   ├── interest-tracker-card.tsx     # Interest tracking
+│   ├── multi-card-optimizer.tsx      # Strategy comparison
+│   └── reconciliation-widget.tsx     # Balance check
+
+lib/
+├── types/
+│   └── credit-card-onboarding.ts     # All CC types
+└── utils/
+    ├── credit-card-onboarding-utils.ts  # Config helpers
+    ├── interest-calculator.ts            # Payoff math
+    ├── card-identifier-extractor.ts      # Network detection
+    └── reconciliation-calculator.ts      # Balance formulas
+
+supabase/migrations/
+└── 0029_credit_card_onboarding.sql   # Database schema
+```
+
+### Testing Checklist - Credit Cards
+
+- [ ] **Onboarding**: Add credit card with pay_in_full type
+- [ ] **Onboarding**: Add credit card with paying_down type
+- [ ] **Onboarding**: Add credit card with minimum_only type
+- [ ] **Billing Cycle**: Verify statement/due dates calculate correctly
+- [ ] **Envelope Creation**: Verify correct envelopes created per type
+- [ ] **Hybrid Mode**: Test still_using toggle creates CC Holding
+- [ ] **Payoff Preview**: Verify projection calculates correctly
+- [ ] **APR Input**: Verify common APR presets work
+- [ ] **Reconciliation**: Verify CC Holding affects available cash
+- [ ] **Multi-Card**: Test avalanche vs snowball comparison
+- [ ] **Card Badge**: Test network detection from transaction
+- [ ] **Interest Tracker**: Verify monthly interest displays

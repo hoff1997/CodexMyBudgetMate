@@ -101,12 +101,14 @@ type PopoverContentProps = {
   children: ReactNode;
   className?: string;
   sideOffset?: number;
+  align?: "start" | "center" | "end";
 };
 
 export function PopoverContent({
   children,
   className,
   sideOffset = 8,
+  align = "center",
 }: PopoverContentProps) {
   const { open, setOpen, triggerRef } = usePopoverContext("PopoverContent");
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -132,14 +134,24 @@ export function PopoverContent({
     const updatePosition = () => {
       if (!contentRef.current || !triggerRef.current) return;
       const triggerRect = triggerRef.current.getBoundingClientRect();
+      const contentRect = contentRef.current.getBoundingClientRect();
       const top = triggerRect.bottom + sideOffset + window.scrollY;
-      const left = triggerRect.left + window.scrollX;
-      const width = triggerRect.width;
+
+      // Calculate left position based on alignment
+      let left: number;
+      if (align === "start") {
+        left = triggerRect.left + window.scrollX;
+      } else if (align === "end") {
+        left = triggerRect.right - contentRect.width + window.scrollX;
+      } else {
+        // center alignment
+        left = triggerRect.left + (triggerRect.width - contentRect.width) / 2 + window.scrollX;
+      }
 
       contentRef.current.style.position = "absolute";
       contentRef.current.style.top = `${top}px`;
       contentRef.current.style.left = `${left}px`;
-      contentRef.current.style.minWidth = `${Math.max(180, width)}px`;
+      contentRef.current.style.minWidth = `${Math.max(180, triggerRect.width)}px`;
       contentRef.current.style.zIndex = "9999";
     };
 
@@ -153,7 +165,7 @@ export function PopoverContent({
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleResize, true);
     };
-  }, [open, triggerRef, sideOffset]);
+  }, [open, triggerRef, sideOffset, align]);
 
   useLayoutEffect(() => {
     if (!open) return;

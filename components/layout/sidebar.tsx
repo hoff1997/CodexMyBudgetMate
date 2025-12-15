@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { QuickActionsSheet } from "@/components/quick-actions/quick-actions-sheet";
+// Quick Actions removed for V1 - will be re-added in future version once users are familiar with core app flow
+// import { QuickActionsSheet } from "@/components/quick-actions/quick-actions-sheet";
+import { GlobalSearch } from "@/components/search/global-search";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
@@ -25,7 +27,7 @@ import { GripVertical, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v14"; // Increment this when adding new menu items
+const NAV_VERSION = "v17"; // Increment this when adding new menu items - v17: merged Accounts into Net Worth
 const ADMIN_EMAIL = "hoff1997@gmail.com";
 
 type NavItem = {
@@ -37,23 +39,43 @@ type NavItem = {
   isAdvanced?: boolean;
   isFutureFeature?: boolean;
   isReportsSubmenu?: boolean;
+  isOnboardingSubmenu?: boolean;
+  isRetired?: boolean; // For items that still exist but are hidden from nav
 };
+
+// Onboarding step labels for the submenu
+const ONBOARDING_STEPS = [
+  { step: 1, label: "Welcome", icon: "👋" },
+  { step: 2, label: "About You", icon: "👤" },
+  { step: 3, label: "Bank Accounts", icon: "🏦" },
+  { step: 4, label: "Income", icon: "💵" },
+  { step: 5, label: "Approach", icon: "🎯" },
+  { step: 6, label: "Learn", icon: "📚" },
+  { step: 7, label: "Envelopes", icon: "📬" },
+  { step: 8, label: "Allocate", icon: "💰" },
+  { step: 9, label: "Opening Balance", icon: "🏁" },
+  { step: 10, label: "Review", icon: "✅" },
+  { step: 11, label: "Complete", icon: "🎉" },
+];
 
 const DEFAULT_NAV_ITEMS: NavItem[] = [
   // Core Features - New Order
   { id: "onboarding", label: "Getting Started", href: "/onboarding", icon: "🚀" },
-  { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄" },
-  { id: "budget-manager", label: "Budget Manager", href: "/budget-manager", icon: "🎯" },
+  { id: "onboarding-resume", label: "Resume Setup", href: "/onboarding", icon: "▶️", isOnboardingSubmenu: true },
+  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "allocation", label: "Allocation", href: "/allocation", icon: "💰" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
-  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
-  { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦" },
+  { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑" },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isReportsSubmenu: true },
-  { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
+
+  // Retired items (pages still exist but hidden from nav)
+  { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦", isRetired: true },
+  { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄", isRetired: true },
+  { id: "budget-manager", label: "Old Budget Manager", href: "/budget-manager", icon: "🎯", isRetired: true },
 
   // Future Features (admin only)
   { id: "separator-future", label: "", href: "", icon: "", separator: true },
@@ -62,6 +84,11 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isFutureFeature: true },
   { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isFutureFeature: true },
 ];
+
+interface OnboardingDraft {
+  currentStep: number;
+  lastSavedAt: string;
+}
 
 export default function Sidebar({
   children,
@@ -76,12 +103,40 @@ export default function Sidebar({
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
   const [showReportsSubmenu, setShowReportsSubmenu] = useState(false);
   const [showFutureFeatures, setShowFutureFeatures] = useState(false);
+  const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft | null>(null);
   const isAdmin = userEmail === ADMIN_EMAIL;
 
-  // Filter out onboarding if user has completed it
+  // Fetch onboarding draft status
+  useEffect(() => {
+    if (!showOnboardingMenu) return;
+
+    async function checkDraft() {
+      try {
+        const response = await fetch("/api/onboarding/autosave");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasDraft && data.draft) {
+            setOnboardingDraft({
+              currentStep: data.draft.currentStep,
+              lastSavedAt: data.draft.lastSavedAt,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check onboarding draft:", error);
+      }
+    }
+
+    checkDraft();
+  }, [showOnboardingMenu]);
+
+  // Filter out onboarding if user has completed it, and always filter out retired items
   const filteredNavItems = useMemo(() => {
-    if (showOnboardingMenu) return navItems;
-    return navItems.filter(item => item.id !== 'onboarding');
+    let items = navItems.filter(item => !item.isRetired); // Always hide retired items
+    if (!showOnboardingMenu) {
+      items = items.filter(item => item.id !== 'onboarding' && !item.isOnboardingSubmenu);
+    }
+    return items;
   }, [navItems, showOnboardingMenu]);
 
   useEffect(() => {
@@ -145,8 +200,9 @@ export default function Sidebar({
       <aside className="flex w-56 flex-col justify-between border-r border-silver-light bg-silver-very-light">
         <div>
           <div className="px-3 py-2 text-base font-bold text-text-dark">My Budget Mate</div>
-          <div className="px-2">
-            <QuickActionsSheet />
+          <div className="px-2 space-y-2">
+            <GlobalSearch />
+            {/* Quick Actions removed for V1 - see FUTURE_ENHANCEMENTS.md */}
           </div>
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <SortableContext items={ids} strategy={verticalListSortingStrategy}>
@@ -174,6 +230,47 @@ export default function Sidebar({
 
                   // Hide future features if section is collapsed or user is not admin
                   if (item.isFutureFeature && (!isAdmin || !showFutureFeatures)) {
+                    return null;
+                  }
+
+                  // Handle Getting Started (Onboarding) - clicking goes directly to onboarding
+                  if (item.id === "onboarding") {
+                    const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+                    const currentStepInfo = onboardingDraft
+                      ? ONBOARDING_STEPS.find(s => s.step === onboardingDraft.currentStep)
+                      : null;
+
+                    return (
+                      <div key={item.id}>
+                        <Link
+                          href="/onboarding"
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
+                            isActive
+                              ? "bg-white text-text-dark border-l-3 border-l-sage"
+                              : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                          )}
+                        >
+                          <span>{item.icon}</span>
+                          <span className="flex-1 text-left">{item.label}</span>
+                          {onboardingDraft && (
+                            <span className="px-1.5 py-0.5 text-[10px] bg-[#7A9E9A] text-white rounded-full">
+                              {onboardingDraft.currentStep}/11
+                            </span>
+                          )}
+                        </Link>
+                        {/* Show current step info if there's a draft */}
+                        {onboardingDraft && currentStepInfo && (
+                          <div className="pl-8 pr-3 py-1 text-[10px] text-text-light">
+                            Currently on: {currentStepInfo.icon} {currentStepInfo.label}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // Hide onboarding submenu items (they're rendered inline above)
+                  if (item.isOnboardingSubmenu) {
                     return null;
                   }
 

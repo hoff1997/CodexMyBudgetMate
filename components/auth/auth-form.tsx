@@ -90,7 +90,7 @@ export function AuthForm() {
           <p className="text-xs text-destructive">{passwordError}</p>
         )}
       </div>
-      <Button className="w-full" type="submit" disabled={isLoading}>
+      <Button className="w-full bg-[#7A9E9A] hover:bg-[#5A7E7A]" type="submit" disabled={isLoading}>
         {isLoading ? "Signing in…" : "Sign in"}
       </Button>
       <div className="text-center text-sm text-muted-foreground">

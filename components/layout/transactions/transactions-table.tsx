@@ -13,6 +13,10 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { useSwipeable } from "react-swipeable";
 import { cn } from "@/lib/cn";
 import { IncomeAllocationDialog } from "@/components/income/income-allocation-dialog";
+import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
+import { EnvelopeAssignDialog } from "@/components/transactions/envelope-assign-dialog";
+import { EnvelopeCombobox } from "@/components/shared/envelope-combobox";
+import { Pencil, Trash2 } from "lucide-react";
 
 type TransactionItem = TransactionRow & {
   labels?: string[];
@@ -433,6 +437,7 @@ function MobileTransactionDetail({
 export function TransactionsTable({ transactions, payPlan = null }: Props) {
   const router = useRouter();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+
   const [items, setItems] = useState<TransactionItem[]>(
     transactions
       .filter((transaction) => (transaction.duplicate_status ?? "pending") !== "merged")
@@ -453,6 +458,10 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
   const [isRefreshing, startTransition] = useTransition();
   const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
   const [allocationTransaction, setAllocationTransaction] = useState<TransactionItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTransaction, setEditTransaction] = useState<TransactionItem | null>(null);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignTransaction, setAssignTransaction] = useState<TransactionItem | null>(null);
   const today = new Date();
   const defaultFrom = new Date(today.getFullYear(), today.getMonth(), 1)
     .toISOString()
@@ -702,57 +711,27 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
     }
   }
 
-  async function assignEnvelope(transaction: TransactionItem) {
-    const value = prompt(
-      "Assign to which envelope? (case insensitive match)",
-      transaction.envelope_name ?? "",
-    );
-    if (value === null) return;
+  function openAssignDialog(transaction: TransactionItem) {
+    setAssignTransaction(transaction);
+    setAssignDialogOpen(true);
+  }
 
-    const trimmed = value.trim();
-    if (!trimmed) {
-      toast.error("Envelope name is required");
-      return;
-    }
-
-    markPending(transaction.id);
-    const previous = { ...transaction };
-    updateTransaction(transaction.id, (item) => ({
+  function handleEnvelopeAssigned(transactionId: string, envelopeId: string, envelopeName: string) {
+    updateTransaction(transactionId, (item) => ({
       ...item,
-      envelope_name: trimmed,
+      envelope_name: envelopeName,
+      envelope_id: envelopeId,
       status: item.status === "unmatched" ? "pending" : item.status,
     }));
 
-    try {
-      const response = await fetch(`/api/transactions/${transaction.id}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ envelopeName: trimmed }),
-      });
+    toast.success("Envelope assigned");
+    startTransition(() => router.refresh());
+  }
 
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({ error: "Unable to assign envelope" }));
-        throw new Error(payload.error ?? "Unable to assign envelope");
-      }
-
-      const payload = (await response.json()) as {
-        transaction: { status: string; envelope: { name: string | null } };
-      };
-
-      updateTransaction(transaction.id, (item) => ({
-        ...item,
-        envelope_name: payload.transaction.envelope.name ?? trimmed,
-        status: payload.transaction.status ?? item.status,
-      }));
-      toast.success("Envelope assigned");
-      startTransition(() => router.refresh());
-    } catch (error) {
-      console.error(error);
-      updateTransaction(transaction.id, () => previous);
-      toast.error(error instanceof Error ? error.message : "Unable to assign envelope");
-    } finally {
-      clearPending(transaction.id);
-    }
+  // For dialog-based assignment (mobile)
+  function handleDialogEnvelopeAssigned(envelopeId: string, envelopeName: string) {
+    if (!assignTransaction) return;
+    handleEnvelopeAssigned(assignTransaction.id, envelopeId, envelopeName);
   }
 
   async function updateLabels(transaction: TransactionItem) {
@@ -1030,7 +1009,7 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
           }}
           onAssign={(transaction) => {
             setActiveRowId(transaction.id);
-            void assignEnvelope(transaction);
+            openAssignDialog(transaction);
           }}
           onLabels={(transaction) => {
             setActiveRowId(transaction.id);
@@ -1058,197 +1037,189 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
       </div>
 
       <div className="hidden md:block">
-        <div className="overflow-hidden rounded-xl border">
-          <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-6 py-3">Merchant</th>
-                <th className="px-6 py-3">Envelope</th>
-                <th className="px-6 py-3">Account</th>
-                <th className="px-6 py-3">Amount</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Labels</th>
-                <th className="px-6 py-3">Bank ref</th>
-                <th className="px-6 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredItems.map((transaction) => {
-            const status = transaction.status?.toLowerCase() ?? "pending";
+        <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+          {/* Table Header */}
+          <div
+            className="grid items-center px-4 py-2 bg-[#F3F4F6] border-b border-[#E5E7EB] text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]"
+            style={{ gridTemplateColumns: "25% 12% 10% 10% 10% 12% 21%" }}
+          >
+            <div>Merchant</div>
+            <div>Envelope</div>
+            <div className="text-right">Amount</div>
+            <div className="text-center">Status</div>
+            <div className="text-center">Date</div>
+            <div className="text-center">Labels</div>
+            <div className="text-right pr-2">Actions</div>
+          </div>
+
+          {/* Table Rows */}
+          {filteredItems.map((transaction) => {
+            const status = transaction.status?.toLowerCase() ?? "approved";
             const disabled = pendingIds.has(transaction.id) || isRefreshing;
+            const amount = Number(transaction.amount ?? 0);
+            const isIncome = amount > 0;
 
             return (
-              <tr
-                key={transaction.id}
-                className={cn(
-                  "text-sm align-top transition",
-                  transaction.id === activeRowId && "bg-primary/5",
-                )}
-                tabIndex={0}
-                onClick={() => setActiveRowId(transaction.id)}
-                onFocus={() => setActiveRowId(transaction.id)}
-                aria-selected={transaction.id === activeRowId}
-              >
-                <td className="px-6 py-3 font-medium text-secondary">
-                  <div className="flex items-center gap-2">
-                    {transaction.merchant_name}
-                    {status === "unmatched" ? (
-                      <span className="rounded-full bg-blue-light px-2 py-0.5 text-xs text-blue">
-                        Needs review
-                      </span>
-                    ) : status === "approved" ? (
-                      <span className="rounded-full bg-sage-very-light px-2 py-0.5 text-xs text-sage-dark">
-                        ✓
-                      </span>
-                    ) : status === "pending" ? (
-                      <span className="rounded-full bg-gold-light px-2 py-0.5 text-xs text-gold">
-                        ⏳
-                      </span>
-                    ) : null}
-                  </div>
-                  {transaction.description ? (
-                    <p className="text-xs text-muted-foreground">{transaction.description}</p>
-                  ) : null}
-                </td>
-                <td className="px-6 py-3 text-muted-foreground">
-                  {transaction.envelope_name ?? "Unassigned"}
-                </td>
-                <td className="px-6 py-3 text-muted-foreground">
-                  {transaction.account_name ?? "—"}
-                </td>
-                <td className="px-6 py-3 font-medium">
-                  {formatCurrency(Number(transaction.amount ?? 0))}
-                </td>
-                <td className="px-6 py-3 capitalize text-muted-foreground">{status}</td>
-                <td className="px-6 py-3 text-muted-foreground">
-                  {new Intl.DateTimeFormat("en-NZ", {
-                    dateStyle: "medium",
-                  }).format(new Date(transaction.occurred_at))}
-                </td>
-                <td className="px-6 py-3 text-muted-foreground">
-                  <div className="flex flex-wrap gap-2">
-                    {transaction.labels?.length ? (
-                      transaction.labels.map((label) => (
-                        <span key={label} className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                          {label}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">No labels</span>
+              <div key={transaction.id}>
+                <div
+                  className={cn(
+                    "grid items-center px-4 py-2 transition-colors cursor-pointer hover:bg-[#F3F4F6]",
+                    transaction.id === activeRowId && "bg-[#E2EEEC]/30",
+                  )}
+                  style={{ gridTemplateColumns: "25% 12% 10% 10% 10% 12% 21%", minHeight: "44px" }}
+                  tabIndex={0}
+                  onClick={() => setActiveRowId(transaction.id)}
+                  onFocus={() => setActiveRowId(transaction.id)}
+                  aria-selected={transaction.id === activeRowId}
+                >
+                  {/* Merchant - single line with truncation */}
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <span className="font-medium text-[#3D3D3D] truncate">{transaction.merchant_name}</span>
+                    {transaction.description && (
+                      <span className="text-[11px] text-[#9CA3AF] truncate hidden xl:inline">{transaction.description}</span>
                     )}
                   </div>
-                </td>
-                <td className="px-6 py-3 text-muted-foreground">
-                  <div className="space-y-1">
-                    {transaction.bank_reference ? <p>Ref {transaction.bank_reference}</p> : null}
-                    {transaction.bank_memo ? (
-                      <p className="text-xs text-muted-foreground">{transaction.bank_memo}</p>
-                    ) : null}
-                    {transaction.receipt_url ? (
-                      <a
-                        className="text-xs text-primary underline"
-                        href={transaction.receipt_url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        View receipt
-                      </a>
-                    ) : null}
+
+                  {/* Envelope */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <EnvelopeCombobox
+                      value={transaction.envelope_id}
+                      envelopeName={transaction.envelope_name}
+                      transactionId={transaction.id}
+                      disabled={disabled}
+                      onAssigned={(envelopeId, envelopeName) =>
+                        handleEnvelopeAssigned(transaction.id, envelopeId, envelopeName)
+                      }
+                    />
                   </div>
-                </td>
-                <td className="px-6 py-3">
-                  <div className="flex flex-wrap gap-2">
-                    {Number(transaction.amount ?? 0) > 0 ? (
+
+                  {/* Amount */}
+                  <div className={cn(
+                    "text-right text-[13px] font-semibold pr-2",
+                    isIncome ? "text-[#7A9E9A]" : "text-[#6B9ECE]"
+                  )}>
+                    {formatCurrency(amount)}
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex justify-center">
+                    <span className="rounded-full bg-[#E2EEEC] px-2 py-0.5 text-[10px] font-medium text-[#5A7E7A] capitalize">
+                      {status}
+                    </span>
+                  </div>
+
+                  {/* Date */}
+                  <div className="text-center text-[13px] text-[#6B6B6B]">
+                    {new Intl.DateTimeFormat("en-NZ", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    }).format(new Date(transaction.occurred_at))}
+                  </div>
+
+                  {/* Labels - clickable */}
+                  <div
+                    className="flex justify-center gap-1 flex-wrap cursor-pointer hover:opacity-80"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveRowId(transaction.id);
+                      void updateLabels(transaction);
+                    }}
+                  >
+                    {transaction.labels?.length ? (
+                      <>
+                        {transaction.labels.slice(0, 2).map((label) => (
+                          <span key={label} className="rounded-full bg-[#E2EEEC] px-2 py-0.5 text-[10px] text-[#5A7E7A]">
+                            {label}
+                          </span>
+                        ))}
+                        {(transaction.labels.length ?? 0) > 2 && (
+                          <span className="text-[10px] text-[#9CA3AF]">+{(transaction.labels.length ?? 0) - 2}</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-[#5A7E7A] hover:underline">+ Add</span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-1.5 pr-2">
+                    {/* Edit button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      disabled={disabled}
+                      className="h-7 px-2 text-xs border-[#E5E7EB] text-[#6B6B6B] hover:bg-[#F3F4F6]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveRowId(transaction.id);
+                        setEditTransaction(transaction);
+                        setEditDialogOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    {/* Allocate button for income */}
+                    {isIncome && (
                       <Button
                         variant="default"
                         size="sm"
                         type="button"
                         disabled={disabled}
-                        onClick={() => {
+                        className="h-7 px-2 text-xs bg-[#7A9E9A] hover:bg-[#5A7E7A] text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setActiveRowId(transaction.id);
                           openAllocationDialog(transaction);
                         }}
                       >
-                        Auto-Allocate
+                        Allocate
                       </Button>
-                    ) : null}
+                    )}
+                    {/* Delete button - opens edit dialog for confirmation */}
                     <Button
                       variant="outline"
                       size="sm"
                       type="button"
                       disabled={disabled}
-                      onClick={() => {
+                      className="h-7 w-7 p-0 border-[#E5E7EB] text-[#6B9ECE] hover:bg-[#DDEAF5]"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setActiveRowId(transaction.id);
-                        setSplitTargetId((current) =>
-                          current === transaction.id ? null : transaction.id,
-                        );
+                        setEditTransaction(transaction);
+                        setEditDialogOpen(true);
                       }}
+                      title="Delete transaction"
                     >
-                      Split
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => {
-                        setActiveRowId(transaction.id);
-                        void updateLabels(transaction);
-                      }}
-                    >
-                      Labels
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => {
-                        setActiveRowId(transaction.id);
-                        void assignEnvelope(transaction);
-                      }}
-                    >
-                      Assign
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      type="button"
-                      disabled={disabled || status === "approved"}
-                      onClick={() => {
-                        setActiveRowId(transaction.id);
-                        void approveTransaction(transaction);
-                      }}
-                    >
-                      {status === "approved" ? "Approved" : "Approve"}
+                      <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
-                  {splitTargetId === transaction.id && splitTarget ? (
-                    <div className="mt-4 rounded-lg border border-dashed bg-muted/10 p-4">
-                      <SplitEditor
-                        transactionId={splitTarget.id}
-                        amount={Number(splitTarget.amount ?? 0)}
-                        onClose={() => setSplitTargetId(null)}
-                        onSaved={applySplitResult}
-                      />
-                    </div>
-                  ) : null}
-                </td>
-              </tr>
+                </div>
+
+                {/* Split Editor */}
+                {splitTargetId === transaction.id && splitTarget ? (
+                  <div className="mx-4 mb-3 rounded-lg border border-dashed border-[#E5E7EB] bg-[#F9FAFB] p-4">
+                    <SplitEditor
+                      transactionId={splitTarget.id}
+                      amount={Number(splitTarget.amount ?? 0)}
+                      onClose={() => setSplitTargetId(null)}
+                      onSaved={applySplitResult}
+                    />
+                  </div>
+                ) : null}
+              </div>
             );
           })}
+
+          {/* Empty State */}
           {filteredItems.length === 0 ? (
-            <tr>
-              <td className="px-6 py-10 text-center text-sm text-muted-foreground" colSpan={9}>
-                {items.length
-                  ? "No transactions match your filters. Adjust the filters above to see more results."
-                  : "No transactions yet. Import data from Akahu to get started."}
-              </td>
-            </tr>
+            <div className="px-6 py-10 text-center text-sm text-[#9CA3AF]">
+              {items.length
+                ? "No transactions match your filters. Adjust the filters above to see more results."
+                : "No approved transactions yet. Approve transactions in the Reconciliation Centre."}
+            </div>
           ) : null}
-            </tbody>
-          </table>
         </div>
       </div>
 
@@ -1274,7 +1245,7 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
             }}
             onAssign={() => {
               setActiveRowId(detailTransaction.id);
-              void assignEnvelope(detailTransaction);
+              openAssignDialog(detailTransaction);
             }}
             onLabels={() => {
               setActiveRowId(detailTransaction.id);
@@ -1313,6 +1284,28 @@ export function TransactionsTable({ transactions, payPlan = null }: Props) {
         transactionDescription={allocationTransaction?.description ?? allocationTransaction?.merchant_name ?? ""}
         transactionAmount={Number(allocationTransaction?.amount ?? 0)}
         onComplete={handleAllocationComplete}
+      />
+
+      <EditTransactionDialog
+        transaction={editTransaction}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSaved={() => {
+          startTransition(() => router.refresh());
+        }}
+        onDeleted={() => {
+          setItems((prev) => prev.filter((item) => item.id !== editTransaction?.id));
+          startTransition(() => router.refresh());
+        }}
+      />
+
+      <EnvelopeAssignDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        transactionId={assignTransaction?.id ?? ""}
+        currentEnvelopeName={assignTransaction?.envelope_name}
+        merchantName={assignTransaction?.merchant_name}
+        onAssigned={handleDialogEnvelopeAssigned}
       />
     </section>
   );

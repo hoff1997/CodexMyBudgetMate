@@ -55,6 +55,7 @@ export type TransactionRow = {
   amount: string | number | null;
   occurred_at: string;
   status?: string | null;
+  envelope_id?: string | null;
   envelope_name: string | null;
   account_name?: string | null;
   bank_reference?: string | null;

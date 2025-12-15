@@ -151,7 +151,7 @@ export function QuickActionsSheet() {
                       <label className="text-xs text-muted-foreground">
                         Duplicate detection runs on amount, date, and merchant normalisation before saving.
                       </label>
-                      <Button type="submit">Approve &amp; save</Button>
+                      <Button type="submit" className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">Approve &amp; save</Button>
                     </div>
                   </form>
                 </TabsContent>
@@ -163,7 +163,7 @@ export function QuickActionsSheet() {
                     <Button onClick={() => {
                       setCreateEnvelopeOpen(true);
                       setOpen(false);
-                    }}>
+                    }} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                       <span className="text-lg mr-2">+</span>
                       Open Envelope Creator
                     </Button>
@@ -199,7 +199,7 @@ export function QuickActionsSheet() {
                       type="date"
                       placeholder="Last statement date"
                     />
-                    <Button type="submit" className="md:col-span-2 justify-self-end">
+                    <Button type="submit" className="md:col-span-2 justify-self-end bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                       Save account
                     </Button>
                   </form>
@@ -228,7 +228,7 @@ export function QuickActionsSheet() {
                       className="md:col-span-2 w-full rounded-md border px-3 py-2 text-sm"
                       placeholder="Reason or note"
                     />
-                    <Button type="submit" className="md:col-span-2 justify-self-end">
+                    <Button type="submit" className="md:col-span-2 justify-self-end bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                       Transfer funds
                     </Button>
                   </form>
@@ -255,7 +255,7 @@ export function QuickActionsSheet() {
                       className="md:col-span-2 w-full rounded-md border px-3 py-2 text-sm"
                       placeholder="Notes, payoff plan, or milestone"
                     />
-                    <Button type="submit" className="md:col-span-2 justify-self-end">
+                    <Button type="submit" className="md:col-span-2 justify-self-end bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                       Save item
                     </Button>
                   </form>

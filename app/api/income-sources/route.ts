@@ -15,6 +15,8 @@ const createIncomeSourceSchema = z.object({
     envelope_id: z.string(),
     amount: z.number(),
   })).optional(),
+  // For replace flow - archive the old income and link to new one
+  replace_id: z.string().uuid().optional(),
 });
 
 export async function GET() {
@@ -139,8 +141,46 @@ export async function POST(request: Request) {
       start_date,
       end_date,
       is_active,
-      allocations
+      allocations,
+      replace_id,
     } = parsed.data;
+
+    // If replacing an income, archive the old one first
+    let archivedIncome = null;
+    if (replace_id) {
+      const { data: archived, error: archiveError } = await supabase
+        .from("income_sources")
+        .update({
+          is_active: false,
+          end_date: end_date || new Date().toISOString().split("T")[0],
+        })
+        .eq("id", replace_id)
+        .eq("user_id", user.id)
+        .select(`
+          id,
+          user_id,
+          name,
+          pay_cycle,
+          typical_amount,
+          is_active,
+          next_pay_date,
+          start_date,
+          end_date,
+          replaced_by_id,
+          created_at,
+          updated_at
+        `)
+        .single();
+
+      if (archiveError) {
+        console.error("Error archiving old income source:", archiveError);
+        return NextResponse.json(
+          { error: "Failed to archive old income source" },
+          { status: 500 }
+        );
+      }
+      archivedIncome = archived;
+    }
 
     // Create transaction rule if detection pattern provided
     let detectionRuleId = null;
@@ -227,7 +267,27 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json(incomeSource);
+    // If replacing, update the old income source to point to the new one
+    if (replace_id && archivedIncome) {
+      const { error: linkError } = await supabase
+        .from("income_sources")
+        .update({ replaced_by_id: incomeSource.id })
+        .eq("id", replace_id)
+        .eq("user_id", user.id);
+
+      if (linkError) {
+        console.error("Error linking replaced income:", linkError);
+        // Non-fatal - continue anyway
+      }
+
+      // Update the archived income in our response
+      archivedIncome.replaced_by_id = incomeSource.id;
+    }
+
+    return NextResponse.json({
+      income: incomeSource,
+      archived: archivedIncome,
+    });
   } catch (error) {
     console.error("Error creating income source:", error);
     return NextResponse.json(

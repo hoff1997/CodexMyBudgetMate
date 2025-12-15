@@ -6,4 +6,6 @@ export type AccountRow = {
   institution: string | null;
   reconciled?: boolean | null;
   updated_at?: string | null;
+  /** User-friendly nickname for display (e.g., "Bills Account" instead of "ANZ Everyday Account") */
+  nickname?: string | null;
 };

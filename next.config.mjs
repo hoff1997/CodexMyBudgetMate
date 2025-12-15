@@ -1,5 +1,6 @@
-// ...existing code...
+/** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: false,
   generateBuildId: async () => {
     // Force unique build ID to prevent cache issues
     return `build-${Date.now()}`;
@@ -20,4 +21,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-// ...existing code...

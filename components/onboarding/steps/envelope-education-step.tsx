@@ -21,9 +21,9 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
       </div>
 
       {/* What is Envelope Budgeting */}
-      <Card className="p-6 bg-gradient-to-br from-emerald-50 to-blue-50 border-emerald-200">
-        <h3 className="text-2xl font-semibold mb-4">Every Dollar Has a Job</h3>
-        <div className="space-y-3 text-gray-700">
+      <Card className="p-6 bg-gradient-to-br from-[#E2EEEC] to-[#DDEAF5] border-[#B8D4D0]">
+        <h3 className="text-2xl font-semibold mb-4">You Tell Your Money Where to Go - Instead of Wondering Where It Went</h3>
+        <div className="space-y-3 text-text-medium">
           <p className="text-lg">
             Envelope budgeting is a proven method where <strong>you decide where your money goes before you spend it</strong>.
           </p>
@@ -39,7 +39,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
       </Card>
 
       {/* Video Placeholder */}
-      <Card className="p-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+      <Card className="p-6 bg-gradient-to-r from-[#7A9E9A] to-[#6B9ECE] text-white">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
             <PlayCircle className="h-10 w-10" />
@@ -59,8 +59,8 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
 
         <div className="grid md:grid-cols-3 gap-6">
           {/* Bills */}
-          <Card className="p-6 border-2 border-amber-200 bg-amber-50/50">
-            <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center mb-4">
+          <Card className="p-6 border-2 border-[#5A7E7A] bg-[#5A7E7A]/10">
+            <div className="w-12 h-12 bg-[#5A7E7A] rounded-lg flex items-center justify-center mb-4">
               <Zap className="h-6 w-6 text-white" />
             </div>
             <h4 className="text-lg font-semibold mb-2">Bills</h4>
@@ -79,8 +79,8 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           </Card>
 
           {/* Spending */}
-          <Card className="p-6 border-2 border-blue-200 bg-blue-50/50">
-            <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mb-4">
+          <Card className="p-6 border-2 border-[#5A7E7A] bg-[#5A7E7A]/10">
+            <div className="w-12 h-12 bg-[#5A7E7A] rounded-lg flex items-center justify-center mb-4">
               <ShoppingBag className="h-6 w-6 text-white" />
             </div>
             <h4 className="text-lg font-semibold mb-2">Spending</h4>
@@ -99,8 +99,8 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           </Card>
 
           {/* Savings */}
-          <Card className="p-6 border-2 border-emerald-200 bg-emerald-50/50">
-            <div className="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center mb-4">
+          <Card className="p-6 border-2 border-[#5A7E7A] bg-[#5A7E7A]/10">
+            <div className="w-12 h-12 bg-[#5A7E7A] rounded-lg flex items-center justify-center mb-4">
               <PiggyBank className="h-6 w-6 text-white" />
             </div>
             <h4 className="text-lg font-semibold mb-2">Savings</h4>
@@ -125,19 +125,19 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
         <h3 className="text-xl font-semibold mb-4">How Your Budget Will Work</h3>
         <div className="space-y-4">
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 font-semibold">
+            <div className="w-8 h-8 rounded-full bg-[#7A9E9A] text-white flex items-center justify-center flex-shrink-0 font-semibold">
               1
             </div>
             <div>
               <p className="font-medium mb-1">Create envelopes for your expenses</p>
               <p className="text-sm text-muted-foreground">
-                You&apos;ll set up envelopes for bills, spending categories, and savings goals
+                You&apos;ll set up envelopes for bills, spending categories, and savings goals. You will determine if the envelope is Essential, Important or Flexible
               </p>
             </div>
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 font-semibold">
+            <div className="w-8 h-8 rounded-full bg-[#7A9E9A] text-white flex items-center justify-center flex-shrink-0 font-semibold">
               2
             </div>
             <div>
@@ -149,7 +149,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 font-semibold">
+            <div className="w-8 h-8 rounded-full bg-[#7A9E9A] text-white flex items-center justify-center flex-shrink-0 font-semibold">
               3
             </div>
             <div>
@@ -161,7 +161,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           </div>
 
           <div className="flex items-start gap-4">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center flex-shrink-0 font-semibold">
+            <div className="w-8 h-8 rounded-full bg-[#7A9E9A] text-white flex items-center justify-center flex-shrink-0 font-semibold">
               4
             </div>
             <div>
@@ -175,25 +175,25 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
       </Card>
 
       {/* Why This Takes Time */}
-      <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-6">
-        <h3 className="font-semibold text-amber-900 text-lg mb-3">
+      <div className="bg-[#F5E6C4] border-2 border-[#D4A853] rounded-lg p-6">
+        <h3 className="font-semibold text-text-dark text-lg mb-3">
           Why This Step Takes 10-15 Minutes
         </h3>
-        <div className="space-y-2 text-sm text-amber-800">
+        <div className="space-y-2 text-sm text-text-medium">
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
             <p>
               <strong>You&apos;re building a complete financial plan</strong> - not just a rough estimate
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
             <p>
               <strong>Accuracy now = better budgeting later</strong> - getting the details right saves time down the road
             </p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
             <p>
               <strong>This is THE measure of your success</strong> - envelope budgeting is how you take control
             </p>
@@ -206,7 +206,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
         <Button
           onClick={onContinue}
           size="lg"
-          className="bg-emerald-500 hover:bg-emerald-600 text-lg px-8"
+          className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-lg px-8"
         >
           I Understand - Let&apos;s Create My Envelopes
           <ArrowRight className="ml-2 h-5 w-5" />

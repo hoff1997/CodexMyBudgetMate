@@ -15,8 +15,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="h-full bg-background">
-      <body className="h-full font-sans">
+    <html lang="en" className="h-full bg-background" suppressHydrationWarning>
+      <body className="h-full font-sans" suppressHydrationWarning>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

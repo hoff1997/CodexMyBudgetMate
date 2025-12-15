@@ -14,7 +14,9 @@ import { SplitEditor, type SplitResult } from "@/components/layout/reconcile/spl
 import { AutoAllocatedTransactionRow } from "@/components/allocations/auto-allocated-transaction-row";
 import Link from "next/link";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import NewTransactionDialog from "@/components/transactions/new-transaction-dialog";
+import { EnvelopeCombobox } from "@/components/shared/envelope-combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/cn";
@@ -103,6 +105,7 @@ const demoTransactions: WorkbenchRow[] = [
     amount: -38.5,
     occurred_at: new Date().toISOString(),
     status: "pending",
+    envelope_id: null,
     envelope_name: "Dining out",
     account_name: "Everyday account",
     bank_reference: "UBER123",
@@ -117,6 +120,7 @@ const demoTransactions: WorkbenchRow[] = [
     amount: -89.9,
     occurred_at: new Date(Date.now() - 86400000).toISOString(),
     status: "unmatched",
+    envelope_id: null,
     envelope_name: null,
     account_name: "Everyday account",
     bank_reference: "MITRE987",
@@ -131,6 +135,7 @@ const demoTransactions: WorkbenchRow[] = [
     amount: -6,
     occurred_at: new Date(Date.now() - 86400000 * 2).toISOString(),
     status: "pending",
+    envelope_id: null,
     envelope_name: "Transport",
     account_name: "Everyday account",
     bank_reference: "WESTF11",
@@ -175,7 +180,18 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const [envelopeFilter, setEnvelopeFilter] = useState<string[]>([]);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false);
   const usingDemo = transactions.length === 0;
+
+  // Handle ?action=add query param from dashboard quick actions
+  useEffect(() => {
+    if (searchParams.get("action") === "add") {
+      setAddTransactionOpen(true);
+      // Clear the query param after opening
+      router.replace("/reconcile", { scroll: false });
+    }
+  }, [searchParams, router]);
   const initialRows = useMemo<WorkbenchRow[]>(
     () =>
       (transactions.length ? transactions : demoTransactions)
@@ -450,76 +466,27 @@ async function handleApprove(tx: TransactionRow) {
   }
 }
 
-async function handleAssign(tx: WorkbenchRow) {
-  const defaultValue = tx.envelope_name ?? "";
-  const value = prompt(
-    "Assign to which envelope? (case insensitive match)",
-    defaultValue,
-  );
-  if (value === null) return;
-  const trimmed = value.trim();
-  if (!trimmed) {
-    toast.error("Envelope name is required");
-    return;
-  }
-
-  const previousRows = rows.map((row) => ({ ...row, labels: [...(row.labels ?? [])] }));
+function handleEnvelopeAssigned(transactionId: string, envelopeId: string, envelopeName: string) {
   setRows((prev) =>
     prev.map((row) =>
-      row.id === tx.id
+      row.id === transactionId
         ? {
             ...row,
-            envelope_name: trimmed,
+            envelope_name: envelopeName,
+            envelope_id: envelopeId,
             status: row.status === "unmatched" ? "pending" : row.status,
           }
         : row,
     ),
   );
   setSheetTransaction((current) =>
-    current && current.id === tx.id
-      ? { ...current, envelope_name: trimmed, status: "pending" }
+    current && current.id === transactionId
+      ? { ...current, envelope_name: envelopeName, envelope_id: envelopeId, status: "pending" }
       : current,
   );
 
-  if (usingDemo) {
-    toast.success("Envelope assigned (demo)");
-    return;
-  }
-
-  try {
-    const response = await fetch(`/api/transactions/${tx.id}/assign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ envelopeName: trimmed }),
-    });
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({ error: "Unable to assign envelope" }));
-      throw new Error(payload.error ?? "Unable to assign envelope");
-    }
-
-    const payload = (await response.json()) as {
-      transaction: { status: string; envelope: { id: string; name: string | null } };
-    };
-
-    setRows((prev) =>
-      prev.map((row) =>
-        row.id === tx.id
-          ? {
-              ...row,
-              envelope_name: payload.transaction.envelope.name ?? trimmed,
-              status: payload.transaction.status ?? row.status,
-            }
-          : row,
-      ),
-    );
-    toast.success("Envelope assigned");
-    router.refresh();
-  } catch (error) {
-    console.error(error);
-    setRows(previousRows);
-    toast.error(error instanceof Error ? error.message : "Unable to assign envelope");
-  }
+  toast.success("Envelope assigned");
+  router.refresh();
 }
 
 async function handleLabels(tx: WorkbenchRow) {
@@ -749,29 +716,29 @@ async function submitDuplicateResolution(
           <button
             key={card.label}
             onClick={card.action}
-            className={`rounded-xl border px-4 py-5 text-left transition ${
-              card.active ? "border-primary bg-primary/10" : "border-border bg-card"
+            className={`rounded-xl border px-4 py-4 text-left transition ${
+              card.active ? "border-[#7A9E9A] bg-[#E2EEEC]/30" : "border-[#E5E7EB] bg-white"
             }`}
           >
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{card.label}</p>
-            <p className="text-3xl font-semibold text-secondary">{card.value}</p>
+            <p className="text-[10px] uppercase tracking-wide text-[#9CA3AF]">{card.label}</p>
+            <p className="text-2xl font-semibold text-[#3D3D3D]">{card.value}</p>
           </button>
         ))}
       </section>
 
-      <section className="grid gap-3 rounded-xl border bg-muted/10 p-4 md:grid-cols-6">
+      <section className="grid gap-3 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 md:grid-cols-6">
         <div className="md:col-span-3 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date range</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Date range</p>
+          <div className="flex flex-wrap gap-1.5">
             {datePresets.map((preset) => (
               <button
                 key={preset.key}
                 type="button"
                 onClick={() => setDatePreset(preset.key)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                   datePreset === preset.key
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                    ? "border-[#7A9E9A] bg-[#7A9E9A] text-white"
+                    : "border-[#E5E7EB] bg-white text-[#6B6B6B] hover:border-[#7A9E9A]/40"
                 }`}
               >
                 {preset.label}
@@ -780,16 +747,16 @@ async function submitDuplicateResolution(
           </div>
         </div>
         <div className="md:col-span-3 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Search</p>
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search merchant, memo, or label"
-            className="bg-background"
+            className="bg-white"
           />
         </div>
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">From</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">From</p>
           <Input
             type="date"
             value={dateFrom}
@@ -798,11 +765,11 @@ async function submitDuplicateResolution(
               setDatePreset("custom");
               setDateFrom(event.target.value);
             }}
-            className="bg-background"
+            className="bg-white"
           />
         </div>
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">To</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">To</p>
           <Input
             type="date"
             value={dateTo}
@@ -811,11 +778,11 @@ async function submitDuplicateResolution(
               setDatePreset("custom");
               setDateTo(event.target.value);
             }}
-            className="bg-background"
+            className="bg-white"
           />
         </div>
         <div className="md:col-span-2 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount range</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Amount range</p>
           <div className="flex gap-2">
             <Input
               type="number"
@@ -835,8 +802,8 @@ async function submitDuplicateResolution(
         </div>
         {labelOptions.length ? (
           <div className="md:col-span-3 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Labels</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Labels</p>
+            <div className="flex flex-wrap gap-1.5">
               {labelOptions.map((label) => {
                 const active = labelFilter.includes(label);
                 return (
@@ -844,10 +811,10 @@ async function submitDuplicateResolution(
                     key={label}
                     type="button"
                     onClick={() => toggleValue(label, labelFilter, setLabelFilter)}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                    className={`rounded-full border px-2.5 py-1 text-xs transition ${
                       active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                        ? "border-[#7A9E9A] bg-[#E2EEEC] text-[#5A7E7A]"
+                        : "border-[#E5E7EB] bg-white text-[#6B6B6B] hover:border-[#7A9E9A]/40"
                     }`}
                   >
                     {label}
@@ -859,8 +826,8 @@ async function submitDuplicateResolution(
         ) : null}
         {accountOptions.length ? (
           <div className="md:col-span-2 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Accounts</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Accounts</p>
+            <div className="flex flex-wrap gap-1.5">
               {accountOptions.map((account) => {
                 const active = accountFilter.includes(account);
                 return (
@@ -868,10 +835,10 @@ async function submitDuplicateResolution(
                     key={account}
                     type="button"
                     onClick={() => toggleValue(account, accountFilter, setAccountFilter)}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                    className={`rounded-full border px-2.5 py-1 text-xs transition ${
                       active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                        ? "border-[#7A9E9A] bg-[#E2EEEC] text-[#5A7E7A]"
+                        : "border-[#E5E7EB] bg-white text-[#6B6B6B] hover:border-[#7A9E9A]/40"
                     }`}
                   >
                     {account}
@@ -883,8 +850,8 @@ async function submitDuplicateResolution(
         ) : null}
         {envelopeOptions.length ? (
           <div className="md:col-span-2 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Envelopes</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Envelopes</p>
+            <div className="flex flex-wrap gap-1.5">
               {envelopeOptions.map((envelope) => {
                 const active = envelopeFilter.includes(envelope);
                 return (
@@ -892,10 +859,10 @@ async function submitDuplicateResolution(
                     key={envelope}
                     type="button"
                     onClick={() => toggleValue(envelope, envelopeFilter, setEnvelopeFilter)}
-                    className={`rounded-full border px-3 py-1 text-xs transition ${
+                    className={`rounded-full border px-2.5 py-1 text-xs transition ${
                       active
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                        ? "border-[#7A9E9A] bg-[#E2EEEC] text-[#5A7E7A]"
+                        : "border-[#E5E7EB] bg-white text-[#6B6B6B] hover:border-[#7A9E9A]/40"
                     }`}
                   >
                     {envelope}
@@ -927,23 +894,30 @@ async function submitDuplicateResolution(
               Reset filters
             </Button>
           </div>
+          <Button
+            variant="default"
+            className="bg-sage hover:bg-sage-dark text-white"
+            onClick={() => setAddTransactionOpen(true)}
+          >
+            Add Transaction
+          </Button>
           <Button variant="outline" onClick={() => setCsvOpen(true)}>
             Import CSV
           </Button>
         </div>
       </section>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="uppercase tracking-wide">Duplicate status</span>
+      <div className="flex flex-wrap items-center gap-2 text-xs text-[#9CA3AF]">
+        <span className="text-[10px] uppercase tracking-wide">Duplicate status</span>
         {duplicateFilters.map((filter) => (
           <button
             key={filter.key}
             type="button"
             onClick={() => setDuplicateFilter(filter.key)}
-            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition ${
+            className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
               duplicateFilter === filter.key
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-muted text-muted-foreground hover:border-primary/40"
+                ? "border-[#7A9E9A] bg-[#7A9E9A] text-white"
+                : "border-[#E5E7EB] bg-white text-[#6B6B6B] hover:border-[#7A9E9A]/40"
             }`}
           >
             {filter.label}
@@ -978,7 +952,7 @@ async function submitDuplicateResolution(
           transactions={filtered.filter((tx) => !tx.parent_transaction_id)} // Hide child transactions
           duplicates={duplicates}
           onOpenSheet={setSheetTransaction}
-          onAssign={handleAssign}
+          onEnvelopeAssigned={handleEnvelopeAssigned}
           onApprove={handleApprove}
           onLabels={handleLabels}
           onSplit={(tx) => {
@@ -992,194 +966,179 @@ async function submitDuplicateResolution(
           onResolveDuplicate={handleResolveDuplicate}
         />
       ) : (
-        <div className="overflow-hidden rounded-xl border">
-          <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Merchant</th>
-                <th className="px-4 py-3">Envelope</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Date</th>
-                <th className="px-4 py-3">Labels</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.filter((tx) => !tx.parent_transaction_id).map((tx) => { // Hide child transactions
-                const status = normaliseStatus(tx.status);
-                const duplicateCount = (() => {
-                  const keyValue = duplicateKey(tx);
-                  return keyValue ? duplicates.get(keyValue) ?? 0 : 0;
-                })();
-                const duplicateFlag = duplicateCount > 1;
-                return (
-                  <Fragment key={tx.id}>
-                    <tr
-                      className={cn(
-                        "text-sm transition",
-                        tx.id === activeRowId && "bg-primary/5",
-                      )}
-                      tabIndex={0}
-                      onClick={() => setActiveRowId(tx.id)}
-                      onFocus={() => setActiveRowId(tx.id)}
-                      aria-selected={tx.id === activeRowId}
-                    >
-                      <td className="px-4 py-3 align-top">
-                        <div className="font-medium text-secondary flex items-center gap-2">
-                          {tx.merchant_name}
-                          {renderDuplicateBadge(tx.duplicate_status, duplicateFlag)}
-                        </div>
-                        {tx.description ? (
-                          <p className="text-xs text-muted-foreground">{tx.description}</p>
-                        ) : null}
-                        <p className="text-xs text-muted-foreground">
-                          {tx.bank_reference ? `Ref ${tx.bank_reference} · ` : ""}
-                          {tx.bank_memo ?? ""}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 align-top text-muted-foreground">
-                        {tx.envelope_name ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 align-top font-medium">
-                        {formatCurrency(Number(tx.amount ?? 0))}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs ${
-                            status === "approved"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : status === "pending"
-                                ? "bg-amber-100 text-amber-700"
-                                : status === "unmatched"
-                                  ? "bg-rose-100 text-rose-700"
-                                  : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {status}
+        <div className="overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+          {/* Table Header */}
+          <div
+            className="grid items-center px-4 py-2 bg-[#F3F4F6] border-b border-[#E5E7EB] text-[10px] font-semibold uppercase tracking-wide text-[#9CA3AF]"
+            style={{ gridTemplateColumns: "25% 12% 10% 10% 10% 12% 21%" }}
+          >
+            <div>Merchant</div>
+            <div>Envelope</div>
+            <div className="text-right">Amount</div>
+            <div className="text-center">Status</div>
+            <div className="text-center">Date</div>
+            <div className="text-center">Labels</div>
+            <div className="text-right pr-2">Actions</div>
+          </div>
+
+          {/* Table Body */}
+          <div className="divide-y divide-[#E5E7EB]">
+            {filtered.filter((tx) => !tx.parent_transaction_id).map((tx) => {
+              const status = normaliseStatus(tx.status);
+              const duplicateCount = (() => {
+                const keyValue = duplicateKey(tx);
+                return keyValue ? duplicates.get(keyValue) ?? 0 : 0;
+              })();
+              const duplicateFlag = duplicateCount > 1;
+              return (
+                <Fragment key={tx.id}>
+                  <div
+                    className={cn(
+                      "grid items-center px-4 py-2 transition-colors cursor-pointer hover:bg-[#F3F4F6]",
+                      tx.id === activeRowId && "bg-[#E2EEEC]/30",
+                    )}
+                    style={{ gridTemplateColumns: "25% 12% 10% 10% 10% 12% 21%", minHeight: "44px" }}
+                    tabIndex={0}
+                    onClick={() => setActiveRowId(tx.id)}
+                    onFocus={() => setActiveRowId(tx.id)}
+                    aria-selected={tx.id === activeRowId}
+                  >
+                    {/* Merchant - single line with truncation */}
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <span className="font-medium text-[#3D3D3D] truncate">{tx.merchant_name}</span>
+                      {renderDuplicateBadge(tx.duplicate_status, duplicateFlag)}
+                      {tx.description && (
+                        <span className="text-xs text-[#9CA3AF] truncate hidden lg:inline">
+                          · {tx.description}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 align-top text-muted-foreground">
-                        {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(
-                          new Date(tx.occurred_at),
-                        )}
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="flex flex-wrap gap-2">
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                            {tx.envelope_name ? tx.envelope_name : "Needs tag"}
+                      )}
+                    </div>
+
+                    {/* Envelope */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <EnvelopeCombobox
+                        value={tx.envelope_id}
+                        envelopeName={tx.envelope_name}
+                        transactionId={tx.id}
+                        onAssigned={(envelopeId, envelopeName) =>
+                          handleEnvelopeAssigned(tx.id, envelopeId, envelopeName)
+                        }
+                      />
+                    </div>
+
+                    {/* Amount - always 2 decimals */}
+                    <div className="text-right font-medium text-[#3D3D3D]">
+                      {formatCurrency(Number(tx.amount ?? 0))}
+                    </div>
+
+                    {/* Status */}
+                    <div className="flex justify-center">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          status === "approved"
+                            ? "bg-[#E2EEEC] text-[#5A7E7A]"
+                            : status === "pending"
+                              ? "bg-[#DDEAF5] text-[#6B9ECE]"
+                              : status === "unmatched"
+                                ? "bg-[#DDEAF5] text-[#6B9ECE]"
+                                : "bg-[#F3F4F6] text-[#6B6B6B]"
+                        }`}
+                      >
+                        {status}
+                      </span>
+                    </div>
+
+                    {/* Date */}
+                    <div className="text-sm text-[#6B6B6B] text-center">
+                      {new Intl.DateTimeFormat("en-NZ", { day: "numeric", month: "short" }).format(
+                        new Date(tx.occurred_at),
+                      )}
+                    </div>
+
+                    {/* Labels - compact display */}
+                    <div className="flex justify-center">
+                      {tx.labels && tx.labels.length > 0 ? (
+                        <div className="flex items-center gap-1">
+                          <span className="bg-[#E2EEEC] text-[#5A7E7A] px-1.5 py-0.5 rounded text-xs truncate max-w-[70px]">
+                            {tx.labels[0]}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {tx.labels?.length ? (
-                            tx.labels.map((label) => (
-                              <span
-                                key={label}
-                                className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                              >
-                                {label}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">No labels</span>
+                          {tx.labels.length > 1 && (
+                            <span className="text-xs text-[#9CA3AF]">+{tx.labels.length - 1}</span>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setActiveRowId(tx.id);
-                              void handleLabels(tx);
-                            }}
-                          >
-                            Manage labels
-                          </Button>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 align-top">
-                        <div className="flex flex-wrap gap-2">
-                          {duplicateFlag ? (
-                            <Button variant="outline" size="sm" onClick={() => handleResolveDuplicate(tx)}>
-                              Resolve duplicate
-                            </Button>
-                          ) : null}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setActiveRowId(tx.id);
-                              void handleAssign(tx);
-                            }}
-                          >
-                            Assign
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setActiveRowId(tx.id);
-                              setSplitTransactionId((current) =>
-                                current === tx.id ? null : tx.id,
-                              );
-                            }}
-                          >
-                            Split
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setActiveRowId(tx.id);
-                              setReceiptTransactionId(tx.id);
-                            }}
-                          >
-                            Receipt
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => {
-                              setActiveRowId(tx.id);
-                              void handleApprove(tx);
-                            }}
-                            disabled={status === "approved"}
-                          >
-                            {status === "approved" ? "Approved" : "Approve"}
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                    {splitTransactionId === tx.id ? (
-                      <tr className="bg-muted/20">
-                        <td colSpan={7} className="px-6 py-4">
-                          <SplitEditor
-                            demo={usingDemo}
-                            transactionId={tx.id}
-                            amount={Number(tx.amount ?? 0)}
-                            onClose={() => setSplitTransactionId(null)}
-                            onSaved={applySplitResult}
-                          />
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                );
-              })}
-              {!filtered.length && (
-                <tr>
-                  <td className="px-6 py-10 text-center text-sm text-muted-foreground" colSpan={7}>
-                    Nothing to reconcile for this view. Adjust filters or import a bank feed.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveRowId(tx.id);
+                            void handleLabels(tx);
+                          }}
+                          className="text-xs text-[#5A7E7A] hover:underline"
+                        >
+                          + Add
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Actions - compact single row */}
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveRowId(tx.id);
+                          setSplitTransactionId((current) => current === tx.id ? null : tx.id);
+                        }}
+                        className="px-2 py-1 text-xs border border-[#E5E7EB] rounded hover:bg-[#F3F4F6] text-[#6B6B6B]"
+                      >
+                        Split
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveRowId(tx.id);
+                          void handleApprove(tx);
+                        }}
+                        disabled={status === "approved"}
+                        className={cn(
+                          "px-2.5 py-1 text-xs rounded font-medium",
+                          status === "approved"
+                            ? "bg-[#F3F4F6] text-[#9CA3AF] cursor-not-allowed"
+                            : "bg-[#7A9E9A] text-white hover:bg-[#5A7E7A]"
+                        )}
+                      >
+                        {status === "approved" ? "Done" : "Approve"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Split Editor Row */}
+                  {splitTransactionId === tx.id && (
+                    <div className="bg-[#F9FAFB] px-6 py-4 border-t border-[#E5E7EB]">
+                      <SplitEditor
+                        demo={usingDemo}
+                        transactionId={tx.id}
+                        amount={Number(tx.amount ?? 0)}
+                        onClose={() => setSplitTransactionId(null)}
+                        onSaved={applySplitResult}
+                      />
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })}
+
+            {/* Empty State */}
+            {!filtered.length && (
+              <div className="px-6 py-10 text-center text-sm text-[#9CA3AF]">
+                Nothing to reconcile for this view. Adjust filters or import a bank feed.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {isMobile && splitTarget ? (
-        <div className="rounded-xl border border-dashed bg-muted/10 p-4 md:hidden">
+        <div className="rounded-xl border border-dashed border-[#E5E7EB] bg-[#F9FAFB] p-4 md:hidden">
           <SplitEditor
             demo={usingDemo}
             transactionId={splitTarget.id}
@@ -1196,13 +1155,13 @@ async function submitDuplicateResolution(
             className="fixed inset-0 z-40 bg-black/30 md:hidden"
             onClick={() => setSheetTransaction(null)}
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 shadow-2xl backdrop-blur md:hidden">
+          <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#E5E7EB] bg-white/95 shadow-2xl backdrop-blur md:hidden">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-4">
               <header>
-                <p className="text-sm font-semibold text-secondary">
+                <p className="text-sm font-semibold text-[#3D3D3D]">
                   {sheetTransaction.merchant_name}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[#6B6B6B]">
                   {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(
                     new Date(sheetTransaction.occurred_at),
                   )}
@@ -1211,15 +1170,17 @@ async function submitDuplicateResolution(
                 </p>
               </header>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    void handleAssign(sheetTransaction);
-                    setSheetTransaction(null);
-                  }}
-                >
-                  Assign envelope
-                </Button>
+                <div className="col-span-2">
+                  <EnvelopeCombobox
+                    value={sheetTransaction.envelope_id}
+                    envelopeName={sheetTransaction.envelope_name}
+                    transactionId={sheetTransaction.id}
+                    onAssigned={(envelopeId, envelopeName) => {
+                      handleEnvelopeAssigned(sheetTransaction.id, envelopeId, envelopeName);
+                      setSheetTransaction(null);
+                    }}
+                  />
+                </div>
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1251,6 +1212,10 @@ async function submitDuplicateResolution(
       ) : null}
 
       <MobileNav />
+      <NewTransactionDialog
+        open={addTransactionOpen}
+        onOpenChange={setAddTransactionOpen}
+      />
       <CsvImportDialog open={csvOpen} onOpenChange={setCsvOpen} />
       <ReceiptUploadDialog
         open={Boolean(receiptTransactionId)}
@@ -1281,7 +1246,7 @@ function MobileTransactionList({
   transactions,
   duplicates,
   onOpenSheet,
-  onAssign,
+  onEnvelopeAssigned,
   onApprove,
   onLabels,
   onSplit,
@@ -1291,7 +1256,7 @@ function MobileTransactionList({
   transactions: WorkbenchRow[];
   duplicates: Map<string, number>;
   onOpenSheet: (transaction: WorkbenchRow) => void;
-  onAssign: (transaction: WorkbenchRow) => void;
+  onEnvelopeAssigned: (transactionId: string, envelopeId: string, envelopeName: string) => void;
   onApprove: (transaction: WorkbenchRow) => void;
   onLabels: (transaction: WorkbenchRow) => void;
   onSplit: (transaction: WorkbenchRow) => void;
@@ -1314,7 +1279,7 @@ function MobileTransactionList({
               status={status}
               duplicateFlag={duplicateCount > 1}
               onOpenSheet={onOpenSheet}
-              onAssign={onAssign}
+              onEnvelopeAssigned={onEnvelopeAssigned}
               onApprove={onApprove}
               onLabels={onLabels}
               onSplit={onSplit}
@@ -1324,7 +1289,7 @@ function MobileTransactionList({
           );
         })
       ) : (
-        <div className="rounded-lg border border-dashed bg-muted/10 p-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border border-dashed border-[#E5E7EB] bg-[#F9FAFB] p-6 text-center text-sm text-[#6B6B6B]">
           Nothing to reconcile for this view. Adjust filters or import a bank feed.
         </div>
       )}
@@ -1335,7 +1300,7 @@ function MobileTransactionList({
 function renderDuplicateBadge(status: string | null | undefined, needsReview: boolean) {
   if (needsReview) {
     return (
-      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+      <span className="rounded-full bg-[#DDEAF5] px-2 py-0.5 text-xs text-[#6B9ECE]">
         Needs review
       </span>
     );
@@ -1343,14 +1308,14 @@ function renderDuplicateBadge(status: string | null | undefined, needsReview: bo
   const normalised = (status ?? "").toLowerCase();
   if (normalised === "canonical") {
     return (
-      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">
+      <span className="rounded-full bg-[#E2EEEC] px-2 py-0.5 text-xs text-[#5A7E7A]">
         Primary record
       </span>
     );
   }
   if (normalised === "ignored") {
     return (
-      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-700">
+      <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-xs text-[#6B6B6B]">
         Ignored duplicate
       </span>
     );
@@ -1363,7 +1328,7 @@ function MobileTransactionCard({
   status,
   duplicateFlag,
   onOpenSheet,
-  onAssign,
+  onEnvelopeAssigned,
   onApprove,
   onLabels,
   onSplit,
@@ -1374,7 +1339,7 @@ function MobileTransactionCard({
   status: string;
   duplicateFlag: boolean;
   onOpenSheet: (transaction: WorkbenchRow) => void;
-  onAssign: (transaction: WorkbenchRow) => void;
+  onEnvelopeAssigned: (transactionId: string, envelopeId: string, envelopeName: string) => void;
   onApprove: (transaction: WorkbenchRow) => void;
   onLabels: (transaction: WorkbenchRow) => void;
   onSplit: (transaction: WorkbenchRow) => void;
@@ -1452,51 +1417,58 @@ function MobileTransactionCard({
         ) : null}
       </div>
       <div
-        className="relative rounded-xl border bg-card p-4 shadow-sm transition-transform"
+        className="relative rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm transition-transform"
         style={{ transform: `translateX(${offset}px)` }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-secondary">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#3D3D3D]">
             {transaction.merchant_name}
             {renderDuplicateBadge(transaction.duplicate_status, duplicateFlag)}
           </div>
           <span
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
               status === "approved"
-                ? "bg-emerald-100 text-emerald-700"
+                ? "bg-[#E2EEEC] text-[#5A7E7A]"
                 : status === "pending"
-                  ? "bg-amber-100 text-amber-700"
+                  ? "bg-[#DDEAF5] text-[#6B9ECE]"
                   : status === "unmatched"
-                    ? "bg-rose-100 text-rose-700"
-                    : "bg-muted text-muted-foreground"
+                    ? "bg-[#DDEAF5] text-[#6B9ECE]"
+                    : "bg-[#F3F4F6] text-[#6B6B6B]"
             }`}
           >
             {status}
           </span>
         </div>
         {transaction.description ? (
-          <p className="mt-1 text-xs text-muted-foreground">{transaction.description}</p>
+          <p className="mt-1 text-xs text-[#9CA3AF]">{transaction.description}</p>
         ) : null}
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[#6B6B6B]">
           <span>
             {new Intl.DateTimeFormat("en-NZ", { dateStyle: "medium" }).format(
               new Date(transaction.occurred_at),
             )}
           </span>
-          <span className="font-semibold text-secondary">
+          <span className="font-semibold text-[#3D3D3D]">
             {formatCurrency(Number(transaction.amount ?? 0))}
           </span>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-            {transaction.envelope_name ?? "Needs tag"}
-          </span>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#6B6B6B]">
+          <div onClick={(e) => e.stopPropagation()}>
+            <EnvelopeCombobox
+              value={transaction.envelope_id}
+              envelopeName={transaction.envelope_name}
+              transactionId={transaction.id}
+              onAssigned={(envelopeId, envelopeName) =>
+                onEnvelopeAssigned(transaction.id, envelopeId, envelopeName)
+              }
+            />
+          </div>
           <button
             type="button"
-            className="text-primary underline"
+            className="text-[#7A9E9A] underline"
             onClick={(event) => {
               event.stopPropagation();
               onLabels(transaction);
@@ -1504,27 +1476,17 @@ function MobileTransactionCard({
           >
             Labels
           </button>
-          <button
-            type="button"
-            className="text-primary underline"
-            onClick={(event) => {
-              event.stopPropagation();
-              onAssign(transaction);
-            }}
-          >
-            Assign
-          </button>
         </div>
         {transaction.labels?.length ? (
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[#6B6B6B]">
             {transaction.labels.map((label) => (
-              <span key={label} className="rounded-full bg-muted px-2 py-0.5">
+              <span key={label} className="rounded-full bg-[#F3F4F6] px-2 py-0.5">
                 {label}
               </span>
             ))}
           </div>
         ) : null}
-        <div className="mt-2 text-[11px] text-muted-foreground">
+        <div className="mt-2 text-[11px] text-[#9CA3AF]">
           {transaction.bank_reference ? `Ref ${transaction.bank_reference} · ` : ""}
           {transaction.bank_memo ?? ""}
         </div>
@@ -1594,17 +1556,17 @@ function DuplicateResolutionDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40" />
         <Dialog.Content className="fixed inset-0 flex items-center justify-center px-4 py-10">
-          <div className="w-full max-w-2xl space-y-5 rounded-3xl border bg-background p-6 shadow-xl">
-            <Dialog.Title className="text-lg font-semibold text-secondary">
+          <div className="w-full max-w-2xl space-y-5 rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-xl">
+            <Dialog.Title className="text-lg font-semibold text-[#3D3D3D]">
               Resolve duplicate
             </Dialog.Title>
-            <Dialog.Description className="text-sm text-muted-foreground">
+            <Dialog.Description className="text-sm text-[#6B6B6B]">
               Choose the matching transaction and decide whether to merge it or ignore future alerts.
             </Dialog.Description>
 
-            <div className="rounded-2xl border bg-muted/10 p-4 text-sm text-muted-foreground">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Primary transaction</p>
-              <div className="mt-1 flex flex-wrap items-center gap-3 text-secondary">
+            <div className="rounded-2xl border border-[#E5E7EB] bg-[#F9FAFB] p-4 text-sm text-[#6B6B6B]">
+              <p className="text-xs uppercase tracking-wide text-[#9CA3AF]">Primary transaction</p>
+              <div className="mt-1 flex flex-wrap items-center gap-3 text-[#3D3D3D]">
                 <span className="font-medium">{transaction.merchant_name}</span>
                 <span>{formatCurrency(Number(transaction.amount ?? 0))}</span>
                 <span>
@@ -1620,7 +1582,7 @@ function DuplicateResolutionDialog({
             </div>
 
             <div className="space-y-3">
-              <Label className="text-sm font-medium text-secondary">Possible matches</Label>
+              <Label className="text-sm font-medium text-[#3D3D3D]">Possible matches</Label>
               {candidates.length ? (
                 <div className="space-y-2">
                   {candidates.map((candidate) => {
@@ -1629,7 +1591,7 @@ function DuplicateResolutionDialog({
                       <label
                         key={candidate.id}
                         className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-3 transition ${
-                          isSelected ? "border-primary bg-primary/5" : "border-border bg-background hover:border-primary/40"
+                          isSelected ? "border-[#7A9E9A] bg-[#E2EEEC]/30" : "border-[#E5E7EB] bg-white hover:border-[#7A9E9A]/40"
                         }`}
                       >
                         <input
@@ -1640,7 +1602,7 @@ function DuplicateResolutionDialog({
                           onChange={() => setSelectedId(candidate.id)}
                           className="mt-1"
                         />
-                        <div className="text-sm text-secondary">
+                        <div className="text-sm text-[#3D3D3D]">
                           <div className="flex flex-wrap items-center gap-3">
                             <span className="font-medium">{candidate.merchant_name}</span>
                             <span>{formatCurrency(Number(candidate.amount ?? 0))}</span>
@@ -1650,7 +1612,7 @@ function DuplicateResolutionDialog({
                               })}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-[#9CA3AF]">
                             {candidate.bank_reference ? `Ref ${candidate.bank_reference} · ` : ""}
                             {candidate.bank_memo ?? ""}
                           </p>
@@ -1660,14 +1622,14 @@ function DuplicateResolutionDialog({
                   })}
                 </div>
               ) : (
-                <p className="rounded-2xl border border-dashed bg-muted/10 p-4 text-sm text-muted-foreground">
+                <p className="rounded-2xl border border-dashed border-[#E5E7EB] bg-[#F9FAFB] p-4 text-sm text-[#6B6B6B]">
                   No matching duplicates detected.
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="duplicate-note" className="text-sm font-medium text-secondary">
+              <Label htmlFor="duplicate-note" className="text-sm font-medium text-[#3D3D3D]">
                 Notes (optional)
               </Label>
               <Textarea
@@ -1679,7 +1641,7 @@ function DuplicateResolutionDialog({
               />
             </div>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? <p className="text-sm text-[#6B9ECE]">{error}</p> : null}
 
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
@@ -1710,18 +1672,18 @@ function DuplicateResolutionDialog({
 
 function MobileNav() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 border-t bg-background/95 shadow-lg backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 border-t border-[#E5E7EB] bg-white/95 shadow-lg backdrop-blur md:hidden">
       <div className="flex items-center justify-around px-4 py-3 text-xs">
-        <Link href="/dashboard" className="text-muted-foreground transition hover:text-primary">
+        <Link href="/dashboard" className="text-[#6B6B6B] transition hover:text-[#7A9E9A]">
           Dashboard
         </Link>
-        <Link href="/envelope-summary" className="text-muted-foreground transition hover:text-primary">
+        <Link href="/envelope-summary" className="text-[#6B6B6B] transition hover:text-[#7A9E9A]">
           Summary
         </Link>
-        <Link href="/reconcile" className="text-primary font-semibold">
+        <Link href="/reconcile" className="text-[#7A9E9A] font-semibold">
           Reconcile
         </Link>
-        <Link href="/envelope-planning" className="text-muted-foreground transition hover:text-primary">
+        <Link href="/envelope-planning" className="text-[#6B6B6B] transition hover:text-[#7A9E9A]">
           Planner
         </Link>
       </div>

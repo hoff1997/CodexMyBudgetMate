@@ -13,7 +13,7 @@ export async function createClient() {
         getAll() {
           const allCookies = cookieStore.getAll();
           console.log('🟣 [SERVER CLIENT] getAll() called');
-          console.log('🟣 [SERVER CLIENT] Cookies found:', allCookies.map(c => `${c.name}=${c.value.substring(0, 20)}...`).join(', ') || 'NONE');
+          console.log('🟣 [SERVER CLIENT] Cookies found:', allCookies.map(c => `${c.name}=${c.value?.substring(0, 20) ?? ''}...`).join(', ') || 'NONE');
           console.log('🟣 [SERVER CLIENT] Total cookies:', allCookies.length);
           return allCookies;
         },

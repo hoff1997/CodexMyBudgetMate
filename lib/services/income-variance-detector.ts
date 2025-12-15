@@ -188,7 +188,7 @@ export function groupEnvelopesByPriority<T extends {
 }> {
   const priorityOrder = ["discretionary", "important", "essential"] as const;
   const priorityLabels: Record<string, string> = {
-    discretionary: "Discretionary",
+    discretionary: "Flexible",
     important: "Important",
     essential: "Essential (last resort)",
   };

@@ -87,18 +87,17 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
         <div className="text-5xl mb-2">💵</div>
         <h2 className="text-3xl font-bold">Set Up Your Income</h2>
         <p className="text-muted-foreground">
-          Tell us about your pay cycle so we can calculate your budget
+          Tell us about the income/s you earn
         </p>
       </div>
 
       {/* Info Box */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
-        <Info className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-emerald-900">
+      <div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg p-4 flex items-start gap-3">
+        <Info className="h-5 w-5 text-[#7A9E9A] flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-text-dark">
           <p className="font-medium mb-1">Why this matters</p>
           <p>
-            We&apos;ll use your pay frequency to calculate how much to allocate to each envelope per paycheck.
-            This ensures your budget aligns with your actual pay cycle.
+            Got more than one income? Don&apos;t worry, My Budget Mate will take care of this for you.
           </p>
         </div>
       </div>
@@ -232,7 +231,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
           <Button
             onClick={handleAddIncome}
             disabled={!newIncome.name.trim() || newIncome.amount <= 0}
-            className="w-full"
+            className="w-full bg-[#7A9E9A] hover:bg-[#5A7E7A]"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Income Source

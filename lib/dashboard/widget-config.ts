@@ -45,6 +45,7 @@ export interface DashboardWidgetConfig {
   };
   dismissible: boolean; // Can user hide this widget?
   collapsible: boolean; // Can user collapse this widget?
+  disabled?: boolean; // If true, widget is hidden from dashboard (used for V1 feature gating)
 }
 
 /**
@@ -115,6 +116,8 @@ export const DASHBOARD_WIDGETS: DashboardWidgetConfig[] = [
   },
 
   // === QUICK ACTIONS ===
+  // Disabled for V1 - will be re-enabled once users are familiar with core app flow
+  // See docs/FUTURE_ENHANCEMENTS.md for re-integration plan
   {
     id: "quick-actions",
     title: "Quick Actions",
@@ -130,6 +133,7 @@ export const DASHBOARD_WIDGETS: DashboardWidgetConfig[] = [
     },
     dismissible: true,
     collapsible: true,
+    disabled: true, // V1: Hidden to let users learn core navigation first
   },
 
   // === STATS & OVERVIEW ===
@@ -290,6 +294,22 @@ export const DASHBOARD_WIDGETS: DashboardWidgetConfig[] = [
     collapsible: false,
   },
   {
+    id: "multi-account-reconciliation",
+    title: "Account Reconciliation",
+    description: "Track balance across all accounts",
+    category: "banking",
+    component: "components/transfers/reconciliation-widget",
+    size: "small",
+    priority: 14,
+    personaRelevance: {
+      beginner: 5,
+      optimiser: 9,
+      wealth_builder: 10,
+    },
+    dismissible: true,
+    collapsible: false,
+  },
+  {
     id: "akahu-connect",
     title: "Connect Your Bank",
     description: "Link your accounts with Akahu",
@@ -388,6 +408,9 @@ export function isWidgetVisible(
     showDemoCta: boolean;
   }
 ): boolean {
+  // V1 feature gating: disabled widgets are always hidden
+  if (widget.disabled) return false;
+
   const condition = widget.visibilityCondition;
   if (!condition) return true;
 

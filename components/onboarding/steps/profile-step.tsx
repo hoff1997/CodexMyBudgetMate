@@ -7,7 +7,7 @@ import type { PersonaType } from "@/lib/onboarding/personas";
 
 interface ProfileStepProps {
   fullName: string;
-  persona: PersonaType | undefined;
+  persona: PersonaType;
   onFullNameChange: (name: string) => void;
   onPersonaChange: (persona: PersonaType) => void;
 }
@@ -19,40 +19,37 @@ export function ProfileStep({
   onPersonaChange,
 }: ProfileStepProps) {
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-3xl mx-auto space-y-4">
       {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Tell Us About You</h2>
-        <p className="text-muted-foreground">
+      <div className="text-center">
+        <div className="text-4xl mb-1">👋</div>
+        <h2 className="text-2xl font-bold">Tell Us About You</h2>
+        <p className="text-sm text-muted-foreground">
           We&apos;ll personalise your experience based on your profile
         </p>
       </div>
 
-      {/* Full Name */}
-      <div className="space-y-3">
-        <Label htmlFor="fullName" className="text-base">What's your name?</Label>
+      {/* Full Name - Inline */}
+      <div className="flex items-center gap-3 bg-card border rounded-lg p-4">
+        <Label htmlFor="fullName" className="text-sm font-medium whitespace-nowrap">
+          Your name:
+        </Label>
         <Input
           id="fullName"
           type="text"
           placeholder="Enter your full name"
           value={fullName}
           onChange={(e) => onFullNameChange(e.target.value)}
-          className="text-lg py-6"
+          className="flex-1"
           autoFocus
         />
-        <p className="text-sm text-muted-foreground">
-          We&apos;ll use this to personalise your dashboard
-        </p>
       </div>
 
       {/* Persona Selection */}
-      <div className="space-y-3">
-        <Label className="text-base">Which best describes you?</Label>
-        <PersonaSelector
-          onSelect={onPersonaChange}
-          selectedPersona={persona}
-        />
-      </div>
+      <PersonaSelector
+        onSelect={onPersonaChange}
+        selectedPersona={persona}
+      />
     </div>
   );
 }

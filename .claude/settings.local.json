@@ -76,7 +76,16 @@
       "Bash(node scripts/apply-envelope-tracking-migration.mjs:*)",
       "Bash(node scripts/apply-ideal-allocation-migration.mjs:*)",
       "Bash(timeout 10 bash -c \"while ! netstat -ano | findstr :3001 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")",
-      "Bash(timeout 15 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")"
+      "Bash(timeout 15 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo ''Server is ready''\")",
+      "Bash(cd:*)",
+      "Bash(xargs ls:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(node scripts/apply-onboarding-autosave-migration.mjs:*)",
+      "Bash(node scripts/run-sql-migration.mjs:*)",
+      "Bash(timeout 20 bash -c \"while ! netstat -ano | findstr :3000 > /dev/null 2>&1; do sleep 1; done; echo 'Server ready on port 3000'\":*)",
+      "Bash(tasklist:*)",
+      "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host ''All node processes killed''\")",
+      "Bash(timeout 15 bash:*)"
     ],
     "deny": [],
     "ask": []

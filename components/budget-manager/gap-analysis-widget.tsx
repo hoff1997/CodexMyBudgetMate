@@ -211,9 +211,13 @@ export function GapAnalysisWidget({ userId, demoMode = false }: GapAnalysisWidge
                   </TableCell>
                   <TableCell className="text-center">
                     {gap.is_locked ? (
-                      <Lock className="h-4 w-4 text-blue-600 mx-auto" title="Allocation locked" />
+                      <span title="Allocation locked">
+                        <Lock className="h-4 w-4 text-blue-600 mx-auto" />
+                      </span>
                     ) : (
-                      <Unlock className="h-4 w-4 text-muted-foreground mx-auto" title="Not locked" />
+                      <span title="Not locked">
+                        <Unlock className="h-4 w-4 text-muted-foreground mx-auto" />
+                      </span>
                     )}
                   </TableCell>
                 </TableRow>

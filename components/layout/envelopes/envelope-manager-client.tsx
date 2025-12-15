@@ -47,7 +47,7 @@ function frequencyLabel(value: PlannerFrequency) {
 
 interface Props {
   envelopes: SummaryEnvelope[];
-  categories: { id: string; name: string }[];
+  categories: { id: string; name: string; sortOrder?: number }[];
   canEdit: boolean;
   transferHistory: TransferHistoryItem[];
   payPlan?: PayPlanSummary | null;
@@ -118,6 +118,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
       {
         id: string;
         name: string;
+        sortOrder: number;
         envelopes: SummaryEnvelope[];
       }
     >();
@@ -125,14 +126,23 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
     filteredEnvelopes.forEach((envelope) => {
       const categoryId = String(envelope.category_id ?? "uncategorised");
       const name = envelope.category_name ?? categoryNameLookup.get(categoryId) ?? "Uncategorised";
+      const category = categories.find(c => c.id === categoryId);
+      const sortOrder = category?.sortOrder ?? 999; // Uncategorised goes last
       if (!map.has(categoryId)) {
-        map.set(categoryId, { id: categoryId, name, envelopes: [] });
+        map.set(categoryId, { id: categoryId, name, sortOrder, envelopes: [] });
       }
       map.get(categoryId)!.envelopes.push(envelope);
     });
 
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [filteredEnvelopes, categoryNameLookup]);
+    return Array.from(map.values()).sort((a, b) => {
+      // Put "Uncategorised" at the end
+      if (a.id === "uncategorised") return 1;
+      if (b.id === "uncategorised") return -1;
+      // Sort by sortOrder first, then by name
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      return a.name.localeCompare(b.name);
+    });
+  }, [filteredEnvelopes, categoryNameLookup, categories]);
 
   const handleToggleCategory = (categoryId: string) => {
     setCollapsedCategories((prev) => {

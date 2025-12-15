@@ -78,6 +78,10 @@ export interface UnifiedEnvelopeData {
   is_spending?: boolean; // Spending envelope (doesn't need budget)
   is_tracking_only?: boolean; // Tracking-only envelope (e.g., reimbursements - doesn't need budget)
 
+  // Locked state (for onboarding - e.g., CC Holding handled in later step)
+  isLocked?: boolean;
+  lockedReason?: string;
+
   // Validation
   validationWarnings?: ValidationWarning[];
 
@@ -93,6 +97,16 @@ export interface UnifiedEnvelopeData {
 export interface CategoryOption {
   id: string;
   name: string;
+  icon?: string | null;
+  sortOrder?: number;
+}
+
+/**
+ * Pay schedule for calculating "pays until due"
+ */
+export interface PaySchedule {
+  nextPayDate: Date;
+  payFrequency: 'weekly' | 'fortnightly' | 'monthly';
 }
 
 /**
@@ -108,6 +122,9 @@ export interface UnifiedEnvelopeTableProps {
   // Pay cycle for the user (affects calculations)
   payCycle?: 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly';
 
+  // Pay schedule for "Due In" column (maintenance mode)
+  paySchedule?: PaySchedule | null;
+
   // Bank balance for opening balance validation (onboarding only)
   bankBalance?: number;
 
@@ -118,6 +135,7 @@ export interface UnifiedEnvelopeTableProps {
   showIncomeColumns?: boolean; // Default true
   showOpeningBalance?: boolean; // True for onboarding, false for maintenance
   showCurrentBalance?: boolean; // False for onboarding, true for maintenance
+  showDueIn?: boolean; // Show "Due In" column for bill urgency (maintenance mode)
   showNotes?: boolean; // Default true
   showCategories?: boolean; // Default true in maintenance mode
   enableDragAndDrop?: boolean; // True for maintenance mode

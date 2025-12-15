@@ -18,8 +18,9 @@ export async function GET(request: Request) {
 
   const { data: categories, error } = await supabase
     .from("envelope_categories")
-    .select("id, name")
+    .select("id, name, icon, sort_order")
     .eq("user_id", user.id)
+    .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (error) {
@@ -27,10 +28,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // Return simple id/name format for frontend
+  // Return categories with sort_order for frontend
   const transformedCategories = (categories || []).map((cat) => ({
     id: cat.id,
     name: cat.name,
+    icon: cat.icon || null,
+    sortOrder: cat.sort_order ?? 0,
   }));
 
   return NextResponse.json({ categories: transformedCategories });

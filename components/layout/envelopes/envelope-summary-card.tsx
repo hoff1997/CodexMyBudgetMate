@@ -1,8 +1,10 @@
 import { format } from "date-fns";
 import { cn } from "@/lib/cn";
-import { Progress } from "@/components/ui/progress";
 import { getEnvelopeStatus } from "@/lib/finance";
+import { getProgressColor } from "@/lib/utils/progress-colors";
 import type { EnvelopeRow } from "@/lib/auth/types";
+
+export type PriorityLevel = 'essential' | 'important' | 'discretionary';
 
 export interface SummaryEnvelope extends EnvelopeRow {
   category_name?: string | null;
@@ -10,7 +12,35 @@ export interface SummaryEnvelope extends EnvelopeRow {
   sort_order?: number | null;
   is_spending?: boolean | null;
   is_tracking_only?: boolean | null;
+  priority?: PriorityLevel | null;
 }
+
+// Priority configuration for consistent styling across components
+export const PRIORITY_CONFIG: Record<PriorityLevel, {
+  label: string;
+  dotColor: string;
+  bgColor: string;
+  borderColor: string;
+}> = {
+  essential: {
+    label: "ESSENTIAL",
+    dotColor: "bg-sage-dark",
+    bgColor: "bg-sage-very-light",
+    borderColor: "border-sage-light",
+  },
+  important: {
+    label: "IMPORTANT",
+    dotColor: "bg-silver",
+    bgColor: "bg-silver-very-light",
+    borderColor: "border-silver-light",
+  },
+  discretionary: {
+    label: "FLEXIBLE",
+    dotColor: "bg-blue",
+    bgColor: "bg-blue-light",
+    borderColor: "border-blue",
+  },
+};
 
 interface Props {
   envelope: SummaryEnvelope;
@@ -32,15 +62,6 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
     amount: Math.abs(difference),
     type: difference >= 0 ? 'surplus' : 'shortfall' as const,
   };
-
-  let indicatorClass = "bg-emerald-500";
-  if (!target) {
-    indicatorClass = "bg-primary";
-  } else if (status.label.toLowerCase().includes("needs")) {
-    indicatorClass = "bg-rose-500";
-  } else if (status.label.toLowerCase().includes("surplus") || status.label.toLowerCase().includes("over")) {
-    indicatorClass = "bg-sky-500";
-  }
 
   return (
     <button
@@ -71,15 +92,20 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
           </div>
         </div>
 
-        {/* CENTER SECTION: Progress Bar (non-spending only) */}
+        {/* CENTER SECTION: Sage Gradient Progress Bar (non-spending only) */}
         {!isSpending && target > 0 ? (
           <div className="flex items-center flex-1 min-w-0 md:min-w-[120px] md:max-w-[200px]">
             <div className="w-full">
-              <Progress
-                value={percentage}
-                indicatorClassName={indicatorClass}
-                className="h-2 w-full"
-              />
+              {/* Custom sage gradient progress bar per style guide */}
+              <div className="h-2 bg-sage-very-light rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(percentage, 100)}%`,
+                    backgroundColor: getProgressColor(percentage),
+                  }}
+                />
+              </div>
               <div className="flex items-center justify-center mt-1">
                 <span className="text-[10px] text-muted-foreground">
                   {percentage}%
@@ -107,13 +133,13 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
             </div>
           )}
 
-          {/* Surplus/Shortfall */}
+          {/* Surplus/Shortfall - sage for surplus, blue for shortfall (never red) */}
           {!isSpending && target > 0 && (
             <span className={cn(
               "text-xs font-medium whitespace-nowrap",
               surplusShortfall.type === 'surplus'
-                ? "text-emerald-600"
-                : "text-rose-600"
+                ? "text-sage-dark"
+                : "text-blue"
             )}>
               {surplusShortfall.type === 'surplus' ? 'Surplus:' : 'Shortfall:'} ${surplusShortfall.amount.toFixed(0)}
             </span>
@@ -124,22 +150,32 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
   );
 }
 
-// Status indicator component (dot + text instead of badge)
+// Status indicator component (dot + text) - Using style guide colors
 function StatusIndicator({ status }: { status: string }) {
   const tone = status.toLowerCase();
-  const colour =
-    tone.includes("over") || tone.includes("surplus")
-      ? "bg-purple-500"
-      : tone.includes("needs") || tone.includes("under")
-      ? "bg-rose-500"
-      : tone.includes("spending")
-      ? "bg-sky-500"
-      : "bg-emerald-500";
+
+  // Style guide: sage for positive, blue for negative (never red)
+  let dotColor = "bg-sage"; // Default: on track
+  let textColor = "text-sage-dark";
+
+  if (tone.includes("over") || tone.includes("surplus")) {
+    dotColor = "bg-sage-dark";
+    textColor = "text-sage-dark";
+  } else if (tone.includes("needs") || tone.includes("under") || tone.includes("attention")) {
+    dotColor = "bg-blue"; // Blue for "needs attention" - informational, not punishing
+    textColor = "text-blue";
+  } else if (tone.includes("spending") || tone.includes("tracking")) {
+    dotColor = "bg-silver";
+    textColor = "text-text-medium";
+  } else if (tone.includes("no target")) {
+    dotColor = "bg-silver";
+    textColor = "text-text-medium";
+  }
 
   return (
     <div className="flex items-center gap-1.5">
-      <div className={cn("h-2 w-2 rounded-full", colour)} />
-      <span className="text-xs font-medium text-muted-foreground">
+      <div className={cn("h-2 w-2 rounded-full", dotColor)} />
+      <span className={cn("text-xs font-medium", textColor)}>
         {status}
       </span>
     </div>

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardShell from "@/components/layout/dashboard-shell";
+import { addDays, startOfMonth, endOfMonth } from "date-fns";
 
 type PageProps = {
   searchParams?: {
@@ -36,6 +37,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     redirect("/login");
   }
 
+  // Demo mode - return empty dashboard data
   if (!user && demoMode) {
     return (
       <DashboardShell
@@ -50,26 +52,96 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           hasBankConnected: false,
           onboardingCompleted: false,
         }}
+        dashboardData={{
+          userName: "Demo User",
+          accounts: [],
+          envelopes: [],
+          creditCards: [],
+          incomeThisMonth: 0,
+          nextPayday: null,
+          allocationData: {
+            creditCardHolding: 0,
+            priorityEnvelopes: 0,
+            flexibleEnvelopes: 0,
+          },
+          onboardingCompleted: false,
+        }}
       />
     );
   }
 
   const userId = user!.id;
+  const now = new Date();
+  const monthStart = startOfMonth(now).toISOString();
+  const monthEnd = endOfMonth(now).toISOString();
 
-  // Fetch all context data needed for widget visibility and next steps
+  // Fetch all data needed for the new dashboard
   const [
     { data: profile },
+    { data: accounts },
+    { data: envelopes },
+    { data: creditCards },
+    { data: recurringIncome },
+    { data: incomeTransactions },
+    { data: incomeSources },
     { count: envelopeCount },
     { count: transactionCount },
     { count: goalCount },
-    { count: recurringIncomeCount },
     { count: bankConnectionCount },
   ] = await Promise.all([
+    // Profile
     supabase
       .from("profiles")
       .select("id, full_name, avatar_url, user_persona, onboarding_completed")
       .eq("id", userId)
       .maybeSingle(),
+
+    // All accounts (checking, savings, credit)
+    supabase
+      .from("accounts")
+      .select("id, name, type, balance")
+      .eq("user_id", userId),
+
+    // All envelopes with full details + frequency for bill display
+    supabase
+      .from("envelopes")
+      .select("id, name, icon, current_amount, target_amount, due_date, priority, is_tracking_only, category_id, frequency")
+      .eq("user_id", userId)
+      .or("is_goal.is.null,is_goal.eq.false"),
+
+    // Credit card accounts with cc_* fields
+    supabase
+      .from("accounts")
+      .select("id, name, balance, cc_usage_type, cc_still_using, cc_starting_debt_amount, cc_payment_due_day")
+      .eq("user_id", userId)
+      .eq("type", "credit"),
+
+    // Recurring income for next payday calculation
+    supabase
+      .from("recurring_income")
+      .select("id, amount, frequency, next_payment_date")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .order("next_payment_date", { ascending: true })
+      .limit(1),
+
+    // Income transactions this month
+    supabase
+      .from("transactions")
+      .select("amount")
+      .eq("user_id", userId)
+      .gte("occurred_at", monthStart)
+      .lte("occurred_at", monthEnd)
+      .gt("amount", 0),
+
+    // Income sources for pay schedule calculation
+    supabase
+      .from("income_sources")
+      .select("id, name, next_pay_date, pay_cycle, is_active")
+      .eq("user_id", userId)
+      .eq("is_active", true),
+
+    // Counts for context
     supabase
       .from("envelopes")
       .select("id", { count: "exact", head: true })
@@ -83,14 +155,63 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
     supabase
-      .from("recurring_income")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    supabase
       .from("bank_connections")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
   ]);
+
+  // Calculate income this month
+  const incomeThisMonth = (incomeTransactions ?? []).reduce(
+    (sum, t) => sum + (t.amount || 0),
+    0
+  );
+
+  // Get next payday from recurring income
+  const nextPayday = recurringIncome?.[0]?.next_payment_date
+    ? new Date(recurringIncome[0].next_payment_date)
+    : null;
+
+  // Get credit card holding envelopes
+  const holdingEnvelopes = (envelopes ?? []).filter(
+    (e) => e.name?.toLowerCase().includes("holding") || e.name?.toLowerCase().includes("credit card")
+  );
+
+  // Calculate allocation breakdown
+  const priorityEnvelopes = (envelopes ?? [])
+    .filter((e) => e.priority === "essential" || e.priority === "important")
+    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+
+  const flexibleEnvelopes = (envelopes ?? [])
+    .filter((e) => e.priority === "flexible" || !e.priority)
+    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+
+  const creditCardHoldingAmount = holdingEnvelopes.reduce(
+    (sum, e) => sum + (e.current_amount || 0),
+    0
+  );
+
+  // Transform credit cards data
+  const creditCardsData = (creditCards ?? []).map((card) => {
+    // Find matching holding envelope
+    const holdingEnvelope = holdingEnvelopes.find(
+      (e) => e.name?.toLowerCase().includes(card.name?.toLowerCase() || "")
+    );
+
+    return {
+      id: card.id,
+      name: card.name,
+      current_balance: card.balance || 0,
+      cc_usage_type: (card.cc_usage_type || "pay_in_full") as "pay_in_full" | "paying_down" | "minimum_only",
+      cc_still_using: card.cc_still_using ?? true,
+      cc_starting_debt_amount: card.cc_starting_debt_amount || 0,
+      payment_due_day: card.cc_payment_due_day || null,
+      holding_envelope: holdingEnvelope ? {
+        id: holdingEnvelope.id,
+        name: holdingEnvelope.name,
+        current_amount: holdingEnvelope.current_amount || 0,
+      } : null,
+    };
+  });
 
   const showDemoCta = (envelopeCount ?? 0) === 0;
 
@@ -104,9 +225,46 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         envelopeCount: envelopeCount ?? 0,
         transactionCount: transactionCount ?? 0,
         goalCount: goalCount ?? 0,
-        hasRecurringIncome: (recurringIncomeCount ?? 0) > 0,
+        hasRecurringIncome: (recurringIncome?.length ?? 0) > 0,
         hasBankConnected: (bankConnectionCount ?? 0) > 0,
         onboardingCompleted: profile?.onboarding_completed ?? false,
+      }}
+      dashboardData={{
+        userName: profile?.full_name?.split(" ")[0] || undefined,
+        accounts: (accounts ?? []).map((a) => ({
+          id: a.id,
+          name: a.name,
+          type: a.type,
+          balance: a.balance || 0,
+        })),
+        envelopes: (envelopes ?? []).map((e) => ({
+          id: e.id,
+          name: e.name,
+          icon: e.icon || undefined,
+          current_amount: e.current_amount || 0,
+          target_amount: e.target_amount || 0,
+          due_date: e.due_date || null,
+          priority: e.priority || undefined,
+          is_tracking_only: e.is_tracking_only || false,
+          category_id: e.category_id || undefined,
+          frequency: (e as any).frequency || undefined,
+        })),
+        creditCards: creditCardsData,
+        incomeThisMonth,
+        nextPayday,
+        allocationData: {
+          creditCardHolding: creditCardHoldingAmount,
+          priorityEnvelopes,
+          flexibleEnvelopes,
+        },
+        onboardingCompleted: profile?.onboarding_completed ?? false,
+        incomeSources: (incomeSources ?? []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          nextPayDate: s.next_pay_date,
+          frequency: s.pay_cycle,
+          isActive: s.is_active,
+        })),
       }}
     />
   );

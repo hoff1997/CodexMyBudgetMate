@@ -132,12 +132,12 @@ export function EnvelopeAllocationStep({
           </p>
         </div>
 
-        <Card className="p-6 bg-green-50 border-green-200">
+        <Card className="p-6 bg-[#E2EEEC] border-[#B8D4D0]">
           <div className="flex items-center gap-3 mb-4">
-            <Check className="h-6 w-6 text-green-600" />
+            <Check className="h-6 w-6 text-[#7A9E9A]" />
             <div>
-              <h3 className="font-semibold text-green-900">All Set!</h3>
-              <p className="text-sm text-green-700">
+              <h3 className="font-semibold text-text-dark">All Set!</h3>
+              <p className="text-sm text-text-medium">
                 Every envelope is funded from your {incomeSources[0].name}
               </p>
             </div>
@@ -191,19 +191,19 @@ export function EnvelopeAllocationStep({
               key={income.id}
               className={`p-4 ${
                 totals.isBalanced
-                  ? "border-green-200 bg-green-50"
+                  ? "border-[#B8D4D0] bg-[#E2EEEC]"
                   : totals.remaining > 0
-                  ? "border-yellow-200 bg-yellow-50"
-                  : "border-red-200 bg-red-50"
+                  ? "border-[#D4A853] bg-[#F5E6C4]"
+                  : "border-[#6B9ECE] bg-[#DDEAF5]"
               }`}
             >
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-secondary">{income.name}</h3>
                 {totals.isBalanced ? (
-                  <Check className="h-5 w-5 text-green-600" />
+                  <Check className="h-5 w-5 text-[#7A9E9A]" />
                 ) : (
                   <AlertCircle
-                    className={`h-5 w-5 ${totals.remaining > 0 ? "text-yellow-600" : "text-red-600"}`}
+                    className={`h-5 w-5 ${totals.remaining > 0 ? "text-[#D4A853]" : "text-[#6B9ECE]"}`}
                   />
                 )}
               </div>
@@ -221,10 +221,10 @@ export function EnvelopeAllocationStep({
                   <span
                     className={`font-bold ${
                       totals.isBalanced
-                        ? "text-green-700"
+                        ? "text-[#5A7E7A]"
                         : totals.remaining > 0
-                        ? "text-yellow-700"
-                        : "text-red-700"
+                        ? "text-[#8B7035]"
+                        : "text-[#6B9ECE]"
                     }`}
                   >
                     {formatCurrency(totals.remaining)}
@@ -313,10 +313,10 @@ export function EnvelopeAllocationStep({
                       <span
                         className={`font-medium ${
                           isBalanced
-                            ? "text-green-600"
+                            ? "text-[#7A9E9A]"
                             : total > target
-                            ? "text-red-600"
-                            : "text-yellow-600"
+                            ? "text-[#6B9ECE]"
+                            : "text-[#D4A853]"
                         }`}
                       >
                         {formatCurrency(total)}
@@ -326,9 +326,9 @@ export function EnvelopeAllocationStep({
                     {/* Status Icon */}
                     <td className="p-3 text-center">
                       {isBalanced ? (
-                        <Check className="h-5 w-5 text-green-600 mx-auto" />
+                        <Check className="h-5 w-5 text-[#7A9E9A] mx-auto" />
                       ) : (
-                        <X className="h-5 w-5 text-red-600 mx-auto" />
+                        <X className="h-5 w-5 text-[#6B9ECE] mx-auto" />
                       )}
                     </td>
                   </tr>
@@ -342,9 +342,9 @@ export function EnvelopeAllocationStep({
       {/* Continue hint */}
       {allBalanced && (
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-2">
-            <Check className="h-5 w-5 text-green-600" />
-            <span className="text-sm font-medium text-green-900">
+          <div className="inline-flex items-center gap-2 bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg px-4 py-2">
+            <Check className="h-5 w-5 text-[#7A9E9A]" />
+            <span className="text-sm font-medium text-text-dark">
               Perfect! All income is allocated. Click Continue to review.
             </span>
           </div>

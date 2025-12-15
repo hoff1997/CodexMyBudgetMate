@@ -263,7 +263,7 @@ export function IncomeSourceDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "edit" ? "Save Changes" : "Add Income"}
             </Button>

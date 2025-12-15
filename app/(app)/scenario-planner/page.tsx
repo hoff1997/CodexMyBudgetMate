@@ -105,7 +105,7 @@ export default function ScenarioPlannerPage() {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">{PRIORITY_DEFINITIONS.discretionary.icon}</span>
                 <div>
-                  <p className="text-sm font-medium">Discretionary</p>
+                  <p className="text-sm font-medium">Flexible</p>
                   <p className="text-xs text-muted-foreground">{discretionary.length} envelopes</p>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export default function ScenarioPlannerPage() {
             <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <span>{PRIORITY_DEFINITIONS.discretionary.icon}</span>
-                Discretionary Envelopes
+                Flexible Envelopes
               </h3>
               <div className="space-y-3">
                 {discretionary.map((env) => (

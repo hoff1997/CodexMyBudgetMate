@@ -130,7 +130,7 @@ export function ReceiptUploadDialog({ open, onOpenChange, transactionId }: Props
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                 {loading ? "Uploading…" : "Upload receipt"}
               </Button>
             </div>

@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Budget Mate - Allocation Table</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --sage: #7A9E9A;
+      --sage-dark: #5A7E7A;
+      --sage-light: #B8D4D0;
+      --sage-very-light: #E2EEEC;
+      --blue: #6B9ECE;
+      --blue-light: #DDEAF5;
+      --silver: #9CA3AF;
+      --silver-light: #E5E7EB;
+      --silver-very-light: #F3F4F6;
+      --gold: #D4A853;
+      --gold-light: #F5E6C4;
+      --text-dark: #3D3D3D;
+      --text-medium: #6B6B6B;
+      --text-light: #9CA3AF;
+      
+      --essential: #5A7E7A;
+      --essential-light: #E2EEEC;
+      --important: #6B9ECE;
+      --important-light: #DDEAF5;
+      --discretionary: #B8D4D0;
+      --discretionary-light: #E2EEEC;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #F9FAFB;
+      color: var(--text-dark);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .page-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 32px;
+    }
+
+    /* Header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .back-btn {
+      color: var(--text-medium);
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .last-saved {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid var(--silver-light);
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: white;
+      color: var(--text-medium);
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      border-color: var(--sage);
+      color: var(--sage);
+    }
+
+    .btn-primary {
+      background: var(--sage);
+      color: white;
+      border-color: var(--sage);
+    }
+
+    .btn-primary:hover {
+      background: var(--sage-dark);
+      border-color: var(--sage-dark);
+    }
+
+    /* Income Buckets */
+    .income-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .income-bucket {
+      background: white;
+      border: 1px solid var(--silver-light);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .income-bucket.primary {
+      border-left: 4px solid var(--sage);
+    }
+
+    .income-bucket.secondary {
+      border-left: 4px solid var(--gold);
+    }
+
+    .bucket-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bucket-icon {
+      font-size: 20px;
+    }
+
+    .bucket-label {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .bucket-frequency {
+      font-size: 12px;
+      color: var(--text-medium);
+    }
+
+    .bucket-stats {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .bucket-stat {
+      text-align: right;
+    }
+
+    .bucket-stat-label {
+      font-size: 11px;
+      color: var(--text-medium);
+    }
+
+    .bucket-stat-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .bucket-stat-value.positive { color: var(--sage); }
+    .bucket-stat-value.warning { color: var(--gold); }
+
+    .bucket-progress {
+      width: 120px;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--silver-light);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .progress-fill.primary { background: var(--sage); }
+    .progress-fill.secondary { background: var(--gold); }
+
+    .progress-label {
+      font-size: 11px;
+      color: var(--text-medium);
+      margin-top: 4px;
+    }
+
+    /* Income Tabs */
+    .income-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--silver-light);
+    }
+
+    .income-tab {
+      padding: 10px 20px;
+      font-size: 13px;
+      color: var(--text-medium);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .income-tab:hover {
+      color: var(--text-dark);
+    }
+
+    .income-tab.active {
+      color: var(--sage-dark);
+      border-bottom-color: var(--sage);
+      font-weight: 500;
+    }
+
+    .income-tab.warning {
+      color: var(--blue);
+    }
+
+    .tab-amount {
+      font-weight: 600;
+    }
+
+    /* Priority Group */
+    .priority-group {
+      margin-bottom: 20px;
+    }
+
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+    }
+
+    .group-header.essential {
+      background: var(--sage-very-light);
+      border: 1px solid var(--sage-light);
+      border-bottom: none;
+    }
+
+    .group-header.important {
+      background: var(--blue-light);
+      border: 1px solid var(--blue);
+      border-bottom: none;
+    }
+
+    .group-header.discretionary {
+      background: var(--silver-very-light);
+      border: 1px solid var(--silver-light);
+      border-bottom: none;
+    }
+
+    .group-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .group-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .group-dot.essential { background: var(--sage-dark); }
+    .group-dot.important { background: var(--blue); }
+    .group-dot.discretionary { background: var(--silver); }
+
+    .group-count {
+      font-weight: 400;
+      color: var(--text-medium);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .group-subtotal {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-medium);
+    }
+
+    /* Table */
+    .envelope-table {
+      width: 100%;
+      background: white;
+      border: 1px solid var(--silver-light);
+      border-radius: 0 0 6px 6px;
+      border-collapse: collapse;
+    }
+
+    .envelope-table th {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--silver-very-light);
+      border-bottom: 1px solid var(--silver-light);
+    }
+
+    .envelope-table th.right {
+      text-align: right;
+    }
+
+    .envelope-table th.center {
+      text-align: center;
+    }
+
+    .envelope-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--silver-very-light);
+      vertical-align: middle;
+    }
+
+    .envelope-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .envelope-table tr:hover {
+      background: var(--silver-very-light);
+    }
+
+    /* Cell content */
+    .envelope-name-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .envelope-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .envelope-icon.essential { background: var(--sage-very-light); }
+    .envelope-icon.important { background: var(--blue-light); }
+    .envelope-icon.discretionary { background: var(--silver-very-light); }
+
+    .envelope-name-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .envelope-title {
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    .envelope-note {
+      font-size: 11px;
+      color: var(--text-light);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 200px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Inline inputs */
+    .inline-input {
+      padding: 6px 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      background: transparent;
+      width: 100%;
+      transition: all 0.2s;
+    }
+
+    .inline-input:hover {
+      background: var(--silver-very-light);
+    }
+
+    .inline-input:focus {
+      outline: none;
+      border-color: var(--sage);
+      background: white;
+      box-shadow: 0 0 0 2px var(--sage-very-light);
+    }
+
+    .inline-input.currency {
+      text-align: right;
+      width: 90px;
+    }
+
+    .inline-input.date {
+      width: 130px;
+    }
+
+    .inline-input[type="date"] {
+      cursor: pointer;
+    }
+
+    .inline-input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+    }
+
+    .inline-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+
+    /* For "Ongoing" option - use a wrapper */
+    .date-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ongoing-toggle {
+      font-size: 11px;
+      color: var(--sage-dark);
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--sage-very-light);
+    }
+
+    .ongoing-toggle:hover {
+      background: var(--sage-light);
+    }
+
+    .date-wrapper.ongoing .inline-input[type="date"] {
+      display: none;
+    }
+
+    .ongoing-label {
+      display: none;
+      font-size: 13px;
+      color: var(--text-medium);
+      padding: 6px 8px;
+    }
+
+    .date-wrapper.ongoing .ongoing-label {
+      display: block;
+    }
+
+    .inline-select {
+      padding: 6px 24px 6px 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236B6B6B' d='M5 7L1 3h8z'/%3E%3C/svg%3E") no-repeat right 8px center;
+      appearance: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .inline-select:hover {
+      background-color: var(--silver-very-light);
+    }
+
+    .inline-select:focus {
+      outline: none;
+      border-color: var(--sage);
+      background-color: white;
+    }
+
+    /* Funded By Selector */
+    .funded-by {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .funded-by.primary {
+      background: var(--sage-very-light);
+      color: var(--sage-dark);
+    }
+
+    .funded-by.secondary {
+      background: var(--gold-light);
+      color: #8B7035;
+    }
+
+    .funded-by.split {
+      background: var(--blue-light);
+      color: #4A7BA8;
+    }
+
+    /* Per Pay Display */
+    .per-pay {
+      text-align: right;
+    }
+
+    .per-pay-value {
+      font-weight: 600;
+      color: var(--sage);
+    }
+
+    .per-pay-freq {
+      font-size: 11px;
+      color: var(--text-light);
+    }
+
+    /* Annual Calc */
+    .annual-calc {
+      text-align: right;
+      font-size: 12px;
+      color: var(--text-medium);
+    }
+
+    .annual-value {
+      font-weight: 500;
+      color: var(--text-dark);
+    }
+
+    /* Status */
+    .status-cell {
+      text-align: center;
+    }
+
+    .status-icon {
+      font-size: 16px;
+    }
+
+    .status-icon.on-track { color: var(--sage); }
+    .status-icon.warning { color: var(--gold); }
+    .status-icon.over { color: var(--blue); }
+
+    /* Notes icon */
+    .notes-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: var(--text-light);
+      font-size: 14px;
+      border-radius: 4px;
+    }
+
+    .notes-btn:hover {
+      background: var(--silver-very-light);
+      color: var(--text-medium);
+    }
+
+    .notes-btn.has-note {
+      color: var(--sage);
+    }
+
+    /* Action buttons */
+    .row-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .envelope-table tr:hover .row-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      color: var(--text-light);
+      font-size: 12px;
+      border-radius: 4px;
+    }
+
+    .action-btn:hover {
+      background: var(--silver-very-light);
+      color: var(--text-medium);
+    }
+
+    .action-btn.delete:hover {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    /* Add row */
+    .add-row {
+      padding: 12px;
+      text-align: center;
+    }
+
+    .add-row-btn {
+      color: var(--sage-dark);
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      border: 1px dashed var(--sage-light);
+      background: none;
+      font-family: inherit;
+    }
+
+    .add-row-btn:hover {
+      background: var(--sage-very-light);
+      border-style: solid;
+    }
+
+    /* Footer */
+    .page-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--silver-light);
+    }
+
+    .footer-info {
+      font-size: 13px;
+      color: var(--text-medium);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auto-save {
+      color: var(--sage);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Tooltip for notes */
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip-content {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text-dark);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      max-width: 250px;
+      white-space: normal;
+      z-index: 100;
+      margin-bottom: 8px;
+    }
+
+    .tooltip:hover .tooltip-content {
+      display: block;
+    }
+
+    .tooltip-content::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: var(--text-dark);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-container">
+    
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <a href="#" class="back-btn">← Back</a>
+        <div>
+          <h1 class="page-title">Budget Allocation</h1>
+          <span class="last-saved">Last saved: 12/5/2025 03:32 PM</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn">✨ Suggest</button>
+        <button class="btn">↺ Reset</button>
+        <button class="btn">🖨</button>
+        <button class="btn">↻</button>
+        <button class="btn btn-primary">💾 Save</button>
+      </div>
+    </div>
+
+    <!-- Income Buckets -->
+    <div class="income-section">
+      <div class="income-bucket primary">
+        <div class="bucket-info">
+          <span class="bucket-icon">💵</span>
+          <div>
+            <div class="bucket-label">PRIMARY: Salary</div>
+            <div class="bucket-frequency">Weekly · 52 pays/yr</div>
+          </div>
+        </div>
+        <div class="bucket-stats">
+          <div class="bucket-stat">
+            <div class="bucket-stat-label">Per Pay</div>
+            <div class="bucket-stat-value">$800.00</div>
+          </div>
+          <div class="bucket-stat">
+            <div class="bucket-stat-label">Allocated</div>
+            <div class="bucket-stat-value positive">$457.62</div>
+          </div>
+          <div class="bucket-progress">
+            <div class="progress-bar">
+              <div class="progress-fill primary" style="width: 57%"></div>
+            </div>
+            <div class="progress-label">$342.38 remaining</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="income-bucket secondary">
+        <div class="bucket-info">
+          <span class="bucket-icon">💰</span>
+          <div>
+            <div class="bucket-label">SECONDARY: Side Income</div>
+            <div class="bucket-frequency">Fortnightly · 26 pays/yr</div>
+          </div>
+        </div>
+        <div class="bucket-stats">
+          <div class="bucket-stat">
+            <div class="bucket-stat-label">Per Pay</div>
+            <div class="bucket-stat-value">$500.00</div>
+          </div>
+          <div class="bucket-stat">
+            <div class="bucket-stat-label">Allocated</div>
+            <div class="bucket-stat-value warning">$288.46</div>
+          </div>
+          <div class="bucket-progress">
+            <div class="progress-bar">
+              <div class="progress-fill secondary" style="width: 58%"></div>
+            </div>
+            <div class="progress-label">$211.54 remaining</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Income Tabs (filter view) -->
+    <div class="income-tabs">
+      <div class="income-tab">
+        Primary: <span class="tab-amount">$457.62 / $800</span>
+      </div>
+      <div class="income-tab active">
+        Secondary: <span class="tab-amount">$288.46 / $500</span>
+      </div>
+      <div class="income-tab warning">
+        ⚠ Unfunded: <span class="tab-amount">0 items ($0)</span>
+      </div>
+    </div>
+
+    <!-- ESSENTIAL Group -->
+    <div class="priority-group">
+      <div class="group-header essential">
+        <div class="group-title">
+          <span class="group-dot essential"></span>
+          ESSENTIAL
+          <span class="group-count">(3 envelopes)</span>
+        </div>
+      </div>
+
+      <table class="envelope-table">
+        <thead>
+          <tr>
+            <th style="width: 22%">Envelope</th>
+            <th style="width: 8%">Type</th>
+            <th style="width: 10%" class="right">Amount</th>
+            <th style="width: 10%">Frequency</th>
+            <th style="width: 10%">Due Date</th>
+            <th style="width: 8%" class="right">Annual</th>
+            <th style="width: 10%">Funded By</th>
+            <th style="width: 10%" class="right">Per Pay</th>
+            <th style="width: 5%" class="center">✓</th>
+            <th style="width: 7%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon essential">🏠</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Rent" style="width: 140px; font-weight: 500;">
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option selected>Bill</option>
+                <option>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$550.00">
+            </td>
+            <td>
+              <select class="inline-select" onchange="recalculate(this)">
+                <option value="52" selected>Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12">Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </td>
+            <td>
+              <div class="date-wrapper ongoing">
+                <span class="ongoing-label">Every Monday</span>
+                <input type="date" class="inline-input date" value="">
+                <span class="ongoing-toggle" onclick="toggleOngoing(this)" title="Set specific date">📅</span>
+              </div>
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$28,600</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by primary" onchange="updateFundedBy(this)">
+                <option value="primary" selected>Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$550.00</div>
+              <div class="per-pay-freq">/week</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn tooltip" title="Add note">
+                  📝
+                  <span class="tooltip-content">Click to add a note</span>
+                </button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon essential">🛒</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Groceries" style="width: 140px; font-weight: 500;">
+                  <span class="envelope-note">📌 Try keep under $130</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option>Bill</option>
+                <option selected>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$150.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52" selected>Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12">Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </td>
+            <td>
+              <div class="date-wrapper ongoing">
+                <span class="ongoing-label">Ongoing</span>
+                <input type="date" class="inline-input date" value="">
+                <span class="ongoing-toggle" onclick="toggleOngoing(this)" title="Set specific date">📅</span>
+              </div>
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$7,800</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by primary">
+                <option value="primary" selected>Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$150.00</div>
+              <div class="per-pay-freq">/week</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn has-note tooltip">
+                  📝
+                  <span class="tooltip-content">Try keep under $130</span>
+                </button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon essential">⚡</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Power" style="width: 140px; font-weight: 500;">
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option selected>Bill</option>
+                <option>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$180.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12" selected>Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </td>
+            <td>
+              <input type="date" class="inline-input date" value="2025-12-15">
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$2,160</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by primary">
+                <option value="primary" selected>Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$41.54</div>
+              <div class="per-pay-freq">/week</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn tooltip">
+                  📝
+                  <span class="tooltip-content">Click to add a note</span>
+                </button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr class="add-row">
+            <td colspan="10">
+              <button class="add-row-btn">+ Add Essential Envelope</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- IMPORTANT Group -->
+    <div class="priority-group">
+      <div class="group-header important">
+        <div class="group-title">
+          <span class="group-dot important"></span>
+          IMPORTANT
+          <span class="group-count">(4 envelopes)</span>
+        </div>
+      </div>
+
+      <table class="envelope-table">
+        <thead>
+          <tr>
+            <th style="width: 22%">Envelope</th>
+            <th style="width: 8%">Type</th>
+            <th style="width: 10%" class="right">Amount</th>
+            <th style="width: 10%">Frequency</th>
+            <th style="width: 10%">Due Date</th>
+            <th style="width: 8%" class="right">Annual</th>
+            <th style="width: 10%">Funded By</th>
+            <th style="width: 10%" class="right">Per Pay</th>
+            <th style="width: 5%" class="center">✓</th>
+            <th style="width: 7%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon important">🎯</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Emergency Fund" style="width: 140px; font-weight: 500;">
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option>Bill</option>
+                <option>Spend</option>
+                <option selected>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$200.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12" selected>Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </td>
+            <td>
+              <div class="date-wrapper ongoing">
+                <span class="ongoing-label">Ongoing</span>
+                <input type="date" class="inline-input date" value="">
+                <span class="ongoing-toggle" onclick="toggleOngoing(this)" title="Set specific date">📅</span>
+              </div>
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$2,400</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by secondary">
+                <option value="primary">Primary</option>
+                <option value="secondary" selected>Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$92.31</div>
+              <div class="per-pay-freq">/fortnight</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn tooltip">📝</button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon important">🚗</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Car Insurance" style="width: 140px; font-weight: 500;">
+                  <span class="envelope-note">📌 Review policy Feb 2025</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option selected>Bill</option>
+                <option>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$720.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12">Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1" selected>Annually</option>
+              </select>
+            </td>
+            <td>
+              <input type="date" class="inline-input date" value="2025-03-15">
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$720</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by secondary">
+                <option value="primary">Primary</option>
+                <option value="secondary" selected>Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$27.69</div>
+              <div class="per-pay-freq">/fortnight</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn has-note tooltip">
+                  📝
+                  <span class="tooltip-content">Review policy Feb 2025</span>
+                </button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon important">🔧</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Car WOF & Rego" style="width: 140px; font-weight: 500;">
+                  <span class="envelope-note">📌 WOF Jun, Rego Jul</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option selected>Bill</option>
+                <option>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$350.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12">Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1" selected>Annually</option>
+              </select>
+            </td>
+            <td>
+              <input type="date" class="inline-input date" value="2025-06-28">
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$350</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by secondary">
+                <option value="primary">Primary</option>
+                <option value="secondary" selected>Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$13.46</div>
+              <div class="per-pay-freq">/fortnight</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn has-note tooltip">
+                  📝
+                  <span class="tooltip-content">WOF Jun, Rego Jul</span>
+                </button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon important">🏠</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Home Insurance" style="width: 140px; font-weight: 500;">
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option selected>Bill</option>
+                <option>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$1,200.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12">Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1" selected>Annually</option>
+              </select>
+            </td>
+            <td>
+              <input type="date" class="inline-input date" value="2025-07-01">
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$1,200</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by secondary">
+                <option value="primary">Primary</option>
+                <option value="secondary" selected>Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$46.15</div>
+              <div class="per-pay-freq">/fortnight</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn tooltip">📝</button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr class="add-row">
+            <td colspan="10">
+              <button class="add-row-btn">+ Add Important Envelope</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DISCRETIONARY Group -->
+    <div class="priority-group">
+      <div class="group-header discretionary">
+        <div class="group-title">
+          <span class="group-dot discretionary"></span>
+          DISCRETIONARY
+          <span class="group-count">(2 envelopes)</span>
+        </div>
+      </div>
+
+      <table class="envelope-table">
+        <thead>
+          <tr>
+            <th style="width: 22%">Envelope</th>
+            <th style="width: 8%">Type</th>
+            <th style="width: 10%" class="right">Amount</th>
+            <th style="width: 10%">Frequency</th>
+            <th style="width: 10%">Due Date</th>
+            <th style="width: 8%" class="right">Annual</th>
+            <th style="width: 10%">Funded By</th>
+            <th style="width: 10%" class="right">Per Pay</th>
+            <th style="width: 5%" class="center">✓</th>
+            <th style="width: 7%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon discretionary">🎉</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Fun Money" style="width: 140px; font-weight: 500;">
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option>Bill</option>
+                <option selected>Spend</option>
+                <option>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$50.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26" selected>Fortnightly</option>
+                <option value="12">Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </td>
+            <td>
+              <div class="date-wrapper ongoing">
+                <span class="ongoing-label">Ongoing</span>
+                <input type="date" class="inline-input date" value="">
+                <span class="ongoing-toggle" onclick="toggleOngoing(this)" title="Set specific date">📅</span>
+              </div>
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$1,300</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by secondary">
+                <option value="primary">Primary</option>
+                <option value="secondary" selected>Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$50.00</div>
+              <div class="per-pay-freq">/fortnight</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn tooltip">📝</button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="envelope-name-cell">
+                <div class="envelope-icon discretionary">✈️</div>
+                <div class="envelope-name-text">
+                  <input type="text" class="inline-input" value="Holiday Fund" style="width: 140px; font-weight: 500;">
+                  <span class="envelope-note">📌 Fiji Dec 2025</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <select class="inline-select">
+                <option>Bill</option>
+                <option>Spend</option>
+                <option selected>Save</option>
+              </select>
+            </td>
+            <td>
+              <input type="text" class="inline-input currency" value="$100.00">
+            </td>
+            <td>
+              <select class="inline-select">
+                <option value="52">Weekly</option>
+                <option value="26">Fortnightly</option>
+                <option value="12" selected>Monthly</option>
+                <option value="4">Quarterly</option>
+                <option value="1">Annually</option>
+              </select>
+            </td>
+            <td>
+              <input type="date" class="inline-input date" value="2025-12-01">
+            </td>
+            <td class="annual-calc">
+              <span class="annual-value">$1,200</span>
+            </td>
+            <td>
+              <select class="inline-select funded-by secondary">
+                <option value="primary">Primary</option>
+                <option value="secondary" selected>Secondary</option>
+                <option value="split">Split...</option>
+              </select>
+            </td>
+            <td class="per-pay">
+              <div class="per-pay-value">$50.00</div>
+              <div class="per-pay-freq">/fortnight</div>
+            </td>
+            <td class="status-cell">
+              <span class="status-icon on-track">✓</span>
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="notes-btn has-note tooltip">
+                  📝
+                  <span class="tooltip-content">Fiji Dec 2025</span>
+                </button>
+                <button class="action-btn delete">🗑</button>
+              </div>
+            </td>
+          </tr>
+
+          <tr class="add-row">
+            <td colspan="10">
+              <button class="add-row-btn">+ Add Discretionary Envelope</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <div class="footer-info">
+        <span class="auto-save">● Auto-saved</span>
+        <span>Last saved: Just now</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn">← Back</button>
+        <button class="btn btn-primary">Continue to Reconcile →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function updateFundedBy(select) {
+      select.classList.remove('primary', 'secondary', 'split');
+      select.classList.add(select.value);
+      
+      // Update per-pay frequency label
+      const row = select.closest('tr');
+      const perPayFreq = row.querySelector('.per-pay-freq');
+      if (select.value === 'primary') {
+        perPayFreq.textContent = '/week';
+      } else {
+        perPayFreq.textContent = '/fortnight';
+      }
+      
+      // In real app: recalculate per-pay amount based on income frequency
+    }
+
+    function recalculate(select) {
+      // In real app: recalculate annual and per-pay amounts
+      console.log('Recalculating with frequency:', select.value);
+    }
+
+    function toggleOngoing(element) {
+      const wrapper = element.closest('.date-wrapper');
+      const dateInput = wrapper.querySelector('input[type="date"]');
+      const ongoingLabel = wrapper.querySelector('.ongoing-label');
+      
+      if (wrapper.classList.contains('ongoing')) {
+        // Switch to date picker mode
+        wrapper.classList.remove('ongoing');
+        dateInput.focus();
+        element.textContent = '∞';
+        element.title = 'Set as ongoing';
+      } else {
+        // Switch to ongoing mode
+        wrapper.classList.add('ongoing');
+        dateInput.value = '';
+        element.textContent = '📅';
+        element.title = 'Set specific date';
+      }
+    }
+  </script>
+
+</body>
+</html>

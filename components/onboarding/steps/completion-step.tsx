@@ -22,7 +22,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
       </div>
 
       {/* Achievement Badge */}
-      <Card className="p-8 bg-gradient-to-r from-emerald-500 to-blue-500 text-white">
+      <Card className="p-8 bg-gradient-to-r from-[#D4A853] to-[#7A9E9A] text-white">
         <div className="flex flex-col items-center text-center gap-4">
           <Trophy className="h-16 w-16" />
           <div>
@@ -45,7 +45,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
         <div className="grid md:grid-cols-3 gap-4">
           <Card className="p-4">
             <div className="text-center space-y-3">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full mx-auto flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#E2EEEC] rounded-full mx-auto flex items-center justify-center">
                 <span className="text-2xl">📊</span>
               </div>
               <div>
@@ -59,7 +59,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
 
           <Card className="p-4">
             <div className="text-center space-y-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-full mx-auto flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#DDEAF5] rounded-full mx-auto flex items-center justify-center">
                 <span className="text-2xl">💳</span>
               </div>
               <div>
@@ -73,7 +73,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
 
           <Card className="p-4">
             <div className="text-center space-y-3">
-              <div className="w-12 h-12 bg-purple-100 rounded-full mx-auto flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#F5E6C4] rounded-full mx-auto flex items-center justify-center">
                 <span className="text-2xl">🎯</span>
               </div>
               <div>
@@ -90,35 +90,35 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
       {/* Deferred Features */}
       <Card className="p-6 bg-muted/50">
         <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+          <CheckCircle2 className="h-5 w-5 text-[#7A9E9A]" />
           Available in Your Dashboard
         </h3>
         <div className="space-y-2 text-sm">
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-[#7A9E9A] mt-0.5 flex-shrink-0" />
             <p><strong>Set up debt payoff plans</strong> - Track and eliminate debt strategically</p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-[#7A9E9A] mt-0.5 flex-shrink-0" />
             <p><strong>Create savings goals</strong> - Save toward specific targets with milestones</p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-[#7A9E9A] mt-0.5 flex-shrink-0" />
             <p><strong>Connect your bank</strong> - Import transactions automatically</p>
           </div>
           <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+            <CheckCircle2 className="h-4 w-4 text-[#7A9E9A] mt-0.5 flex-shrink-0" />
             <p><strong>Set up bill reminders</strong> - Never miss a payment</p>
           </div>
         </div>
       </Card>
 
       {/* Motivational Message */}
-      <div className="bg-gradient-to-br from-emerald-50 to-blue-50 border-2 border-emerald-200 rounded-lg p-6 text-center">
-        <p className="text-lg font-medium text-gray-800 mb-2">
+      <div className="bg-gradient-to-br from-[#E2EEEC] to-[#DDEAF5] border-2 border-[#B8D4D0] rounded-lg p-6 text-center">
+        <p className="text-lg font-medium text-text-dark mb-2">
           You've just taken the most important step toward financial control 💪
         </p>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-text-medium">
           Remember: budgeting isn&apos;t about restriction - it&apos;s about <strong>giving yourself permission</strong> to spend
           within your plan. You've got this!
         </p>
@@ -127,7 +127,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
       {/* CTA */}
       <div className="flex flex-col items-center gap-4 pt-4">
         {isLoading ? (
-          <Button size="lg" disabled className="bg-emerald-500 text-lg px-8">
+          <Button size="lg" disabled className="bg-[#7A9E9A] text-lg px-8">
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             Setting up your dashboard...
           </Button>
@@ -135,7 +135,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
           <Button
             onClick={onComplete}
             size="lg"
-            className="bg-emerald-500 hover:bg-emerald-600 text-lg px-8"
+            className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-lg px-8"
           >
             Go to Dashboard
             <ArrowRight className="ml-2 h-5 w-5" />

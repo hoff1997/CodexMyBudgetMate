@@ -103,13 +103,10 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
       }
 
       // Redirect based on data choice
-      if (dataChoice === 'demo') {
-        router.push('/dashboard?demo=1');
-      } else if (dataChoice === 'akahu') {
+      if (dataChoice === 'akahu') {
         router.push('/akahu/callback');
-      } else if (dataChoice === 'csv') {
-        router.push('/dashboard?import=csv');
       } else {
+        // 'manual' goes to envelope planning
         router.push('/envelope-planning');
       }
     } catch (error) {
@@ -180,7 +177,6 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
                 setCurrentStep(4);
               }, 500);
             }}
-            isMobile={isMobile}
           />
         );
 
@@ -213,9 +209,7 @@ export function OnboardingClient({ isMobile }: OnboardingClientProps) {
               <div className="bg-card border rounded-lg p-6 space-y-4">
                 <h3 className="font-semibold">Getting Started With</h3>
                 <p className="text-sm text-muted-foreground">
-                  {dataChoice === 'demo' && '📊 Demo data - explore features risk-free'}
                   {dataChoice === 'akahu' && '🔗 Bank sync - automatic transaction import'}
-                  {dataChoice === 'csv' && '📄 CSV import - bring your spreadsheet data'}
                   {dataChoice === 'manual' && '✏️ Manual entry - full control from scratch'}
                 </p>
               </div>

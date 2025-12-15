@@ -173,6 +173,52 @@ function calculateNextPayDate(
 
 ---
 
+## UI/UX Features (Temporarily Removed for V1)
+
+### Quick Actions Sheet
+
+**Status:** Removed from V1 sidebar - code preserved for future re-integration
+
+**Reason for Removal:**
+Quick Actions provides shortcuts for common tasks (add transaction, create envelope, add account, transfer funds), but for V1 we want users to:
+1. Learn the core navigation flow first
+2. Understand where features live in the app
+3. Build familiarity with the standard workflows
+
+**Files Preserved (do not delete):**
+- `components/quick-actions/quick-actions-sheet.tsx` - Main Quick Actions component
+- `components/layout/dashboard/quick-actions-panel.tsx` - Dashboard widget wrapper
+- All related tab components within the sheet
+
+**Re-integration Plan (V1.1+):**
+1. After users have completed onboarding and used the app for a few sessions
+2. Consider adding Quick Actions as a feature that unlocks after certain milestones
+3. Or add as an optional power-user feature in Settings
+4. Re-enable in sidebar: uncomment import in `components/layout/sidebar.tsx`
+5. Re-enable on dashboard: set `disabled: false` in `lib/dashboard/widget-config.ts`
+
+**Sidebar Location:**
+```tsx
+// In components/layout/sidebar.tsx
+<div className="px-2 space-y-2">
+  <GlobalSearch />
+  {/* Quick Actions removed for V1 - see FUTURE_ENHANCEMENTS.md */}
+  {/* <QuickActionsSheet /> */}
+</div>
+```
+
+**Dashboard Widget Config:**
+```tsx
+// In lib/dashboard/widget-config.ts
+{
+  id: "quick-actions",
+  // ...
+  disabled: true, // V1: Hidden to let users learn core navigation first
+}
+```
+
+---
+
 ## Technical Debt
 
 ### Performance Optimizations
@@ -201,4 +247,4 @@ function calculateNextPayDate(
 
 ---
 
-*Last Updated: December 2024*
+*Last Updated: December 2025*

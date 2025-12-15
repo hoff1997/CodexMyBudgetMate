@@ -1,7 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { EnvelopeData, BankAccount, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
+import type { CreditCardConfig } from "@/lib/types/credit-card-onboarding";
 import { createOpeningBalanceTransactions } from "@/lib/server/create-opening-balance-transactions";
+import { getCurrentBillingCycle } from "@/lib/utils/credit-card-onboarding-utils";
+
+// Interface for custom categories from onboarding
+interface CustomCategoryInput {
+  id: string; // e.g., 'custom-cat-1234567890'
+  label: string;
+  icon: string;
+}
 
 export async function POST(request: Request) {
   try {
@@ -24,19 +33,25 @@ export async function POST(request: Request) {
       fullName,
       persona,
       bankAccounts,
+      creditCardConfigs,
       incomeSources,
       envelopes,
       envelopeAllocations,
       openingBalances,
+      customCategories,
+      categoryOrder,
       completedAt,
     }: {
       fullName: string;
       persona: string;
       bankAccounts: BankAccount[];
+      creditCardConfigs?: CreditCardConfig[];
       incomeSources: IncomeSource[];
       envelopes: EnvelopeData[];
       envelopeAllocations?: { [envelopeId: string]: { [incomeId: string]: number } };
       openingBalances?: { [envelopeId: string]: number };
+      customCategories?: CustomCategoryInput[];
+      categoryOrder?: string[];
       completedAt: string;
     } = body;
 
@@ -66,6 +81,7 @@ export async function POST(request: Request) {
       envelopesCount: envelopes.length,
       incomeSourcesCount: incomeSources.length,
       bankAccountsCount: bankAccounts.length,
+      creditCardConfigsCount: creditCardConfigs?.length || 0,
     });
 
     // Start transaction-like operations
@@ -84,30 +100,242 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
     }
 
-    // 2. Create bank accounts
+    // 2. Create bank accounts and map temp IDs to real IDs
+    const accountIdMap = new Map<string, string>(); // Map from temp ID to real ID
+
     if (bankAccounts.length > 0) {
-      const accountsToInsert = bankAccounts.map((account) => ({
-        user_id: userId,
-        name: account.name,
-        type: account.type,
-        balance: account.balance,
-      }));
+      for (const account of bankAccounts) {
+        // For credit cards, use negative balance (debt)
+        const balanceValue = account.type === 'credit_card'
+          ? -Math.abs(account.balance)
+          : account.balance;
 
-      const { error: accountsError } = await supabase
-        .from("bank_accounts")
-        .insert(accountsToInsert);
+        const { data: createdAccount, error: accountError } = await supabase
+          .from("accounts")
+          .insert({
+            user_id: userId,
+            name: account.name,
+            type: account.type === 'credit_card' ? 'debt' : account.type,
+            current_balance: balanceValue,
+          })
+          .select("id")
+          .single();
 
-      if (accountsError) {
-        console.error("Bank accounts error:", accountsError);
-        // Continue anyway - accounts can be added later
+        if (accountError) {
+          console.error("Account creation error:", accountError);
+          // Continue anyway - accounts can be added later
+        } else if (createdAccount) {
+          accountIdMap.set(account.id, createdAccount.id);
+        }
       }
     }
 
-    // 3. Create envelopes first (we need their IDs for allocations)
+    // 2.5. Process credit card configurations
+    const ccHoldingEnvelopeIds: string[] = [];
+
+    if (creditCardConfigs && creditCardConfigs.length > 0) {
+      for (const ccConfig of creditCardConfigs) {
+        const realAccountId = accountIdMap.get(ccConfig.accountId);
+        if (!realAccountId) {
+          console.error("Could not find real account ID for:", ccConfig.accountId);
+          continue;
+        }
+
+        // Update the account with CC-specific fields
+        const { error: ccAccountError } = await supabase
+          .from("accounts")
+          .update({
+            cc_usage_type: ccConfig.usageType,
+            cc_still_using: ccConfig.stillUsing ?? true,
+            cc_starting_debt_amount: ccConfig.startingDebtAmount || 0,
+            cc_starting_debt_date: ccConfig.startingDebtDate || new Date().toISOString(),
+            cc_expected_monthly_spending: ccConfig.expectedMonthlySpending || null,
+            cc_current_outstanding: ccConfig.currentOutstanding || 0,
+            apr: ccConfig.apr || null,
+            statement_close_day: ccConfig.billingCycle?.statementCloseDay || null,
+            payment_due_day: ccConfig.billingCycle?.paymentDueDay || null,
+          })
+          .eq("id", realAccountId);
+
+        if (ccAccountError) {
+          console.error("CC account update error:", ccAccountError);
+        }
+
+        // Create CC Holding envelope for this card
+        const holdingEnvelopeName = `${ccConfig.accountName} Holding`;
+        const initialHoldingAmount = ccConfig.usageType === 'pay_in_full'
+          ? (ccConfig.currentOutstanding || 0)
+          : 0;
+
+        const { data: holdingEnvelope, error: holdingError } = await supabase
+          .from("envelopes")
+          .insert({
+            user_id: userId,
+            name: holdingEnvelopeName,
+            icon: "💳",
+            current_amount: initialHoldingAmount,
+            opening_balance: initialHoldingAmount,
+            is_cc_holding: true,
+            cc_account_id: realAccountId,
+            envelope_type: "expense",
+            is_spending: false,
+            is_goal: false,
+            priority: "essential",
+          })
+          .select("id")
+          .single();
+
+        if (holdingError) {
+          console.error("CC Holding envelope error:", holdingError);
+        } else if (holdingEnvelope) {
+          ccHoldingEnvelopeIds.push(holdingEnvelope.id);
+        }
+
+        // Create initial billing cycle record if we have billing cycle info
+        if (ccConfig.billingCycle?.statementCloseDay && ccConfig.billingCycle?.paymentDueDay) {
+          const currentCycle = getCurrentBillingCycle(
+            ccConfig.billingCycle.statementCloseDay
+          );
+
+          const { error: cycleError } = await supabase
+            .from("credit_card_cycle_holdings")
+            .insert({
+              user_id: userId,
+              account_id: realAccountId,
+              cycle_identifier: currentCycle,
+              opening_holding_amount: initialHoldingAmount,
+              current_holding_amount: initialHoldingAmount,
+              new_spending_total: 0,
+              is_current_cycle: true,
+            });
+
+          if (cycleError) {
+            console.error("CC cycle record error:", cycleError);
+          }
+        }
+
+        // For paying_down types, create payoff projection
+        if ((ccConfig.usageType === 'paying_down' || ccConfig.usageType === 'minimum_only') &&
+            ccConfig.apr && ccConfig.minimumPayment && ccConfig.startingDebtAmount) {
+
+          const { error: projectionError } = await supabase
+            .from("credit_card_payoff_projections")
+            .insert({
+              user_id: userId,
+              account_id: realAccountId,
+              starting_balance: ccConfig.startingDebtAmount,
+              current_balance: ccConfig.startingDebtAmount,
+              apr: ccConfig.apr,
+              minimum_payment: ccConfig.minimumPayment,
+              extra_payment: 0,
+              is_active: true,
+            });
+
+          if (projectionError) {
+            console.error("CC payoff projection error:", projectionError);
+          }
+        }
+      }
+    }
+
+    // 3. Create custom categories first (we need their IDs for envelopes)
+    const categoryIdMap = new Map<string, string>(); // Map from temp custom category ID to real ID
+
+    if (customCategories && customCategories.length > 0) {
+      for (let index = 0; index < customCategories.length; index++) {
+        const category = customCategories[index];
+        // Find the category's position in categoryOrder, or use index as fallback
+        const sortOrder = categoryOrder?.indexOf(category.id) ?? index;
+
+        const { data: createdCategory, error: categoryError } = await supabase
+          .from("envelope_categories")
+          .insert({
+            user_id: userId,
+            name: category.label,
+            icon: category.icon,
+            sort_order: sortOrder,
+          })
+          .select("id")
+          .single();
+
+        if (categoryError) {
+          console.error("Custom category creation error:", categoryError);
+          // Continue anyway - categories are not critical
+        } else if (createdCategory) {
+          categoryIdMap.set(category.id, createdCategory.id);
+        }
+      }
+    }
+
+    // Also create categories for built-in categories if they have envelopes
+    // This ensures we have proper category_id references
+    const builtInCategoriesUsed = new Set<string>();
+    for (const envelope of envelopes) {
+      if (envelope.category && !envelope.category.startsWith('custom-')) {
+        builtInCategoriesUsed.add(envelope.category);
+      }
+    }
+
+    // Map built-in category names to labels
+    const builtInCategoryLabels: Record<string, string> = {
+      housing: 'Housing',
+      utilities: 'Utilities',
+      transport: 'Transport',
+      insurance: 'Insurance',
+      food: 'Food & Dining',
+      health: 'Health',
+      children: 'Children',
+      pets: 'Pets',
+      personal: 'Personal Care',
+      entertainment: 'Entertainment',
+      subscriptions: 'Subscriptions',
+      debt: 'Debt',
+      savings: 'Savings & Goals',
+      giving: 'Giving',
+      other: 'Other',
+    };
+
+    for (const categoryKey of builtInCategoriesUsed) {
+      const categoryLabel = builtInCategoryLabels[categoryKey] || categoryKey;
+      const sortOrder = categoryOrder?.indexOf(categoryKey) ?? 999;
+
+      // Check if category already exists for this user
+      const { data: existingCategory } = await supabase
+        .from("envelope_categories")
+        .select("id")
+        .eq("user_id", userId)
+        .ilike("name", categoryLabel)
+        .maybeSingle();
+
+      if (existingCategory) {
+        categoryIdMap.set(categoryKey, existingCategory.id);
+      } else {
+        const { data: createdCategory, error: categoryError } = await supabase
+          .from("envelope_categories")
+          .insert({
+            user_id: userId,
+            name: categoryLabel,
+            sort_order: sortOrder,
+          })
+          .select("id")
+          .single();
+
+        if (categoryError) {
+          console.error("Built-in category creation error:", categoryError);
+        } else if (createdCategory) {
+          categoryIdMap.set(categoryKey, createdCategory.id);
+        }
+      }
+    }
+
+    // 4. Create envelopes (we need their IDs for allocations)
     const envelopeIdMap = new Map<string, string>(); // Map from temp ID to real ID
 
     if (envelopes.length > 0) {
       for (const envelope of envelopes) {
+        // Resolve category ID
+        const categoryId = envelope.category ? categoryIdMap.get(envelope.category) : null;
+
         // Base envelope data
         const baseData: any = {
           user_id: userId,
@@ -119,6 +347,8 @@ export async function POST(request: Request) {
           is_spending: envelope.type === "spending",
           is_goal: envelope.type === "savings",
           envelope_type: "expense",
+          sort_order: envelope.sortOrder ?? 0, // Include sort order
+          category_id: categoryId, // Include category reference
         };
 
         // Add type-specific fields

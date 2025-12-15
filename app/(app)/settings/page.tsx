@@ -1,17 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { SettingsClient, type SettingsData } from "@/components/layout/settings/settings-client";
-import type { PlannerFrequency } from "@/lib/planner/calculations";
 
-type EnvelopeRecord = {
+type IncomeSourceRecord = {
   id: string;
   name: string;
-  category_id: string | null;
-  target_amount: number | string | null;
-  annual_amount: number | string | null;
-  pay_cycle_amount: number | string | null;
-  frequency: PlannerFrequency | null;
-  next_payment_due: string | null;
-  notes: string | null;
+  pay_cycle: "weekly" | "fortnightly" | "monthly";
+  typical_amount: number | string | null;
+  next_pay_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+  replaced_by_id: string | null;
+  created_at: string;
 };
 
 type LabelRecord = {
@@ -41,20 +41,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     data: { user },
   } = await supabase.auth.getUser();
 
-  let envelopes: EnvelopeRecord[] = [];
+  let incomeSources: IncomeSourceRecord[] = [];
   let labels: LabelRecord[] = [];
   let bankConnections: BankConnectionRecord[] = [];
-  let profile: { full_name: string | null; avatar_url: string | null; pay_cycle: string | null; default_page: string | null } | null = null;
+  let profile: { full_name: string | null; preferred_name: string | null; avatar_url: string | null; pay_cycle: string | null; default_page: string | null; date_of_birth: string | null } | null = null;
 
   if (user) {
-    const [envelopeRes, labelRes, bankRes, profileRes] = await Promise.all([
+    const [incomeRes, labelRes, bankRes, profileRes] = await Promise.all([
       supabase
-        .from("envelopes")
-        .select(
-          "id, name, category_id, target_amount, annual_amount, pay_cycle_amount, frequency, next_payment_due, notes",
-        )
+        .from("income_sources")
+        .select("id, name, pay_cycle, typical_amount, next_pay_date, start_date, end_date, is_active, replaced_by_id, created_at")
         .eq("user_id", user.id)
-        .order("name"),
+        .order("is_active", { ascending: false })
+        .order("created_at", { ascending: false }),
       supabase
         .from("labels")
         .select("id, name, colour, description, usage_count")
@@ -65,10 +64,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         .select("id, provider, status, last_synced_at, sync_frequency, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("full_name, avatar_url, pay_cycle, default_page").eq("id", user.id).maybeSingle(),
+      supabase.from("profiles").select("full_name, preferred_name, avatar_url, pay_cycle, default_page, date_of_birth").eq("id", user.id).maybeSingle(),
     ]);
 
-    envelopes = (envelopeRes.data ?? []) as EnvelopeRecord[];
+    incomeSources = (incomeRes.data ?? []) as IncomeSourceRecord[];
     labels = (labelRes.data ?? []) as LabelRecord[];
     bankConnections = (bankRes.data ?? []) as BankConnectionRecord[];
     profile = profileRes.data ?? null;
@@ -78,19 +77,24 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     ? {
         profile: {
           fullName: profile?.full_name ?? user.user_metadata?.full_name ?? "",
+          preferredName: profile?.preferred_name ?? null,
           avatarUrl: profile?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
           email: user.email ?? null,
           payCycle: profile?.pay_cycle ?? "fortnightly",
           defaultPage: profile?.default_page ?? "/reconcile",
+          dateOfBirth: profile?.date_of_birth ?? null,
         },
-        envelopes: envelopes.map((row) => ({
+        incomeSources: incomeSources.map((row) => ({
           id: row.id,
           name: row.name,
-          annualAmount: toNumber(row.annual_amount),
-          payCycleAmount: toNumber(row.pay_cycle_amount),
-          frequency: row.frequency ?? null,
-          nextPaymentDue: row.next_payment_due,
-          notes: row.notes,
+          pay_cycle: row.pay_cycle,
+          typical_amount: toNumber(row.typical_amount),
+          next_pay_date: row.next_pay_date,
+          start_date: row.start_date,
+          end_date: row.end_date,
+          is_active: row.is_active,
+          replaced_by_id: row.replaced_by_id,
+          created_at: row.created_at,
         })),
         labels: labels.map((label) => ({
           id: label.id,
@@ -107,14 +111,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           syncFrequency: connection.sync_frequency,
           createdAt: connection.created_at ?? null,
         })),
-        security: {
-          twoFactorEnabled: false,
-          backupCodesRemaining: 0,
-        },
-        webhooks: {
-          akahuEvents: false,
-          envelopePush: false,
-        },
         demoMode: false,
         userId: user.id,
         username: user.email ?? "User",
@@ -143,29 +139,37 @@ function getDemoSettingsData(): SettingsData {
   return {
     profile: {
       fullName: "Demo Budget Mate",
+      preferredName: "Demo",
       avatarUrl: null,
       email: "demo@example.com",
       payCycle: "fortnightly",
       defaultPage: "/reconcile",
+      dateOfBirth: null,
     },
-    envelopes: [
+    incomeSources: [
       {
-        id: "demo-mortgage",
-        name: "Mortgage",
-        annualAmount: 42000,
-        payCycleAmount: 3500,
-        frequency: "monthly",
-        nextPaymentDue: new Date(now.getFullYear(), now.getMonth(), 28).toISOString().slice(0, 10),
-        notes: "15 year fixed at 5.85%",
+        id: "demo-salary",
+        name: "My Salary",
+        pay_cycle: "fortnightly",
+        typical_amount: 3000,
+        next_pay_date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7).toISOString().slice(0, 10),
+        start_date: new Date(now.getFullYear() - 1, 0, 1).toISOString().slice(0, 10),
+        end_date: null,
+        is_active: true,
+        replaced_by_id: null,
+        created_at: new Date(now.getFullYear() - 1, 0, 1).toISOString(),
       },
       {
-        id: "demo-groceries",
-        name: "Groceries",
-        annualAmount: 9600,
-        payCycleAmount: 800,
-        frequency: "fortnightly",
-        nextPaymentDue: new Date(now.getFullYear(), now.getMonth(), 12).toISOString().slice(0, 10),
-        notes: "Family of four",
+        id: "demo-freelance",
+        name: "Freelance Work",
+        pay_cycle: "monthly",
+        typical_amount: 500,
+        next_pay_date: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10),
+        start_date: new Date(now.getFullYear(), 6, 1).toISOString().slice(0, 10),
+        end_date: null,
+        is_active: true,
+        replaced_by_id: null,
+        created_at: new Date(now.getFullYear(), 6, 1).toISOString(),
       },
     ],
     labels: [
@@ -209,14 +213,6 @@ function getDemoSettingsData(): SettingsData {
         createdAt: new Date(now.getFullYear(), now.getMonth() - 1, 18).toISOString(),
       },
     ],
-    security: {
-      twoFactorEnabled: true,
-      backupCodesRemaining: 6,
-    },
-    webhooks: {
-      akahuEvents: true,
-      envelopePush: false,
-    },
     demoMode: true,
   };
 }

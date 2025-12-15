@@ -160,7 +160,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json(incomeSource);
+    return NextResponse.json({ income: incomeSource });
   } catch (error) {
     console.error("Error in income source update:", error);
     return NextResponse.json(

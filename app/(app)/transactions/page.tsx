@@ -13,13 +13,18 @@ export default async function TransactionsPage() {
   const { data: transactions, error } = await supabase
     .from("transactions")
     .select(
-      `id, merchant_name, description, amount, occurred_at, status, bank_reference, bank_memo, receipt_url, duplicate_of, duplicate_status, duplicate_reviewed_at,
-        account:accounts(name),
+      `id, merchant_name, description, amount, occurred_at, status, bank_reference, bank_memo, receipt_url, duplicate_of, duplicate_status, duplicate_reviewed_at, envelope_id,
+        account:accounts!transactions_account_id_fkey(name),
         envelope:envelopes(name),
         transaction_labels:transaction_labels(label:labels(name))`
     )
+    .eq("status", "approved")
     .order("occurred_at", { ascending: false })
     .limit(100);
+
+  if (error) {
+    console.error("[TransactionsPage] Query error:", error.message, error.details, error.hint);
+  }
 
   const list: TransactionRow[] = error
     ? []
@@ -30,6 +35,7 @@ export default async function TransactionsPage() {
         amount: transaction.amount,
         occurred_at: transaction.occurred_at,
         status: transaction.status,
+        envelope_id: transaction.envelope_id ?? null,
         envelope_name: transaction.envelope?.name ?? null,
         account_name: transaction.account?.name ?? null,
         bank_reference: transaction.bank_reference,
@@ -49,11 +55,11 @@ export default async function TransactionsPage() {
   const payPlan = await getPayPlanSummary(supabase, user?.id);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12 md:px-10">
+    <div className="w-full flex flex-col gap-6 px-6 lg:px-8 py-6">
       <TransactionsHeader />
       {error && (
-        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-6 py-3 text-sm text-destructive">
-          Transactions are unavailable until the view is created in Supabase.
+        <div className="rounded-xl border border-[#6B9ECE]/40 bg-[#DDEAF5] px-6 py-3 text-sm text-[#4A7A9E]">
+          Unable to load transactions. Please check your connection and try again.
         </div>
       )}
       <TransactionsTable transactions={hydrated} payPlan={payPlan} />

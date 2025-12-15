@@ -367,7 +367,7 @@ export function GoalCreateDialog({
                   Cancel
                 </Button>
               </Dialog.Close>
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                 {submitting ? "Creating..." : "Create Goal"}
               </Button>
             </div>

@@ -234,7 +234,7 @@ export default function CreateRuleDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createRuleMutation.isPending}>
+            <Button type="submit" disabled={createRuleMutation.isPending} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
               {createRuleMutation.isPending ? (
                 "Creating..."
               ) : (

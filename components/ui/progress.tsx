@@ -1,13 +1,18 @@
 import * as React from "react";
 
 import { cn } from "@/lib/cn";
+import { getProgressColor } from "@/lib/utils/progress-colors";
 
 interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value: number;
   indicatorClassName?: string;
+  /** Use sage gradient that intensifies with percentage */
+  useGradient?: boolean;
 }
 
-export function Progress({ value, className, indicatorClassName, ...props }: ProgressProps) {
+export function Progress({ value, className, indicatorClassName, useGradient = true, ...props }: ProgressProps) {
+  const percentage = Math.min(Math.max(value, 0), 100);
+
   return (
     <div
       role="progressbar"
@@ -18,8 +23,11 @@ export function Progress({ value, className, indicatorClassName, ...props }: Pro
       {...props}
     >
       <div
-        className={cn("h-full rounded-full bg-sage transition-all", indicatorClassName)}
-        style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
+        className={cn("h-full rounded-full transition-all", !useGradient && "bg-sage", indicatorClassName)}
+        style={{
+          width: `${percentage}%`,
+          ...(useGradient && !indicatorClassName ? { backgroundColor: getProgressColor(percentage) } : {}),
+        }}
       />
     </div>
   );

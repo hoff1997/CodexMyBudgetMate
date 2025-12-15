@@ -23,14 +23,17 @@ import {
 import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-card-holding-widget";
 import { BudgetCategoryGroup } from "@/components/budget-manager/budget-category-group";
 import { BudgetTableStickyHeader } from "@/components/budget-manager/budget-table-sticky-header";
+import { UnifiedEnvelopeTable } from "@/components/shared/unified-envelope-table";
 import { AllocateSurplusDialog } from "@/components/dialogs/allocate-surplus-dialog";
 import { PayCycleChangeDialog } from "@/components/dialogs/pay-cycle-change-dialog";
 import { IncomeSourceDialog } from "@/components/dialogs/income-source-dialog";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { useBudgetValidation, calculateUnallocatedBySource } from "@/lib/hooks/use-budget-validation";
 import { trackSurplusAllocation, trackPayCycleChange } from "@/lib/analytics/events";
 import { normalizeToUserPayCycle, getFrequencyShortLabel } from "@/lib/utils/ideal-allocation-calculator";
 import { cn } from "@/lib/cn";
-import type { UnifiedEnvelopeData, IncomeSource, GapAnalysisData, CategoryOption } from "@/lib/types/unified-envelope";
+import type { UnifiedEnvelopeData, IncomeSource, GapAnalysisData, CategoryOption, PaySchedule } from "@/lib/types/unified-envelope";
+import { getPrimaryPaySchedule } from "@/lib/utils/pays-until-due";
 
 // Filter button definitions - same as envelope summary
 const FILTERS = [
@@ -80,11 +83,20 @@ interface BudgetManagerClientProps {
   userId?: string;
   initialPayCycle?: string;
   demoMode?: boolean;
+  // Onboarding mode props
+  isOnboarding?: boolean;
+  initialEnvelopes?: UnifiedEnvelopeData[];
+  initialIncomeSources?: IncomeSource[];
+  onEnvelopesChange?: (envelopes: UnifiedEnvelopeData[]) => void;
 }
 
 export function BudgetManagerClient({
   initialPayCycle = "monthly",
   demoMode = false,
+  isOnboarding = false,
+  initialEnvelopes,
+  initialIncomeSources,
+  onEnvelopesChange,
 }: BudgetManagerClientProps) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -94,6 +106,7 @@ export function BudgetManagerClient({
   const [payCycle, setPayCycle] = useState<'weekly' | 'fortnightly' | 'monthly'>(initialPayCycle as 'weekly' | 'fortnightly' | 'monthly');
   const [showSurplusDialog, setShowSurplusDialog] = useState(false);
   const [showPayCycleDialog, setShowPayCycleDialog] = useState(false);
+  const [showCreateEnvelopeDialog, setShowCreateEnvelopeDialog] = useState(false);
   const [pendingPayCycle, setPendingPayCycle] = useState<'weekly' | 'fortnightly' | 'monthly' | null>(null);
   const [collapseAll, setCollapseAll] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -104,7 +117,7 @@ export function BudgetManagerClient({
   const [selectedIncomeSource, setSelectedIncomeSource] = useState<IncomeSource | undefined>(undefined);
 
   // Sort state for the shared sticky header
-  type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'currentAmount' | 'totalFunded' | null;
+  type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'dueIn' | 'currentAmount' | 'totalFunded' | null;
   type SortDirection = 'asc' | 'desc';
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -135,7 +148,19 @@ export function BudgetManagerClient({
     })
   );
 
-  // Fetch envelopes
+  // Onboarding mode: local state for envelopes
+  const [onboardingEnvelopes, setOnboardingEnvelopes] = useState<UnifiedEnvelopeData[]>(
+    initialEnvelopes || []
+  );
+
+  // Update local state when initial envelopes change (from parent)
+  useEffect(() => {
+    if (isOnboarding && initialEnvelopes) {
+      setOnboardingEnvelopes(initialEnvelopes);
+    }
+  }, [isOnboarding, initialEnvelopes]);
+
+  // Fetch envelopes (disabled in onboarding mode)
   const { data: rawEnvelopes, isLoading } = useQuery<any[]>({
     queryKey: ["/api/envelopes"],
     queryFn: async () => {
@@ -146,10 +171,10 @@ export function BudgetManagerClient({
       const data = await response.json();
       return Array.isArray(data) ? data : data.envelopes || [];
     },
-    enabled: !demoMode,
+    enabled: !demoMode && !isOnboarding,
   });
 
-  // Fetch income sources
+  // Fetch income sources (disabled in onboarding mode)
   const { data: rawIncome } = useQuery<any[]>({
     queryKey: ["/api/income-sources"],
     queryFn: async () => {
@@ -160,10 +185,10 @@ export function BudgetManagerClient({
       const data = await response.json();
       return Array.isArray(data) ? data : [];
     },
-    enabled: !demoMode,
+    enabled: !demoMode && !isOnboarding,
   });
 
-  // Fetch envelope income allocations
+  // Fetch envelope income allocations (disabled in onboarding mode)
   const { data: allocationsData } = useQuery<Record<string, Record<string, number>>>({
     queryKey: ["/api/envelope-income-allocations"],
     queryFn: async () => {
@@ -174,10 +199,10 @@ export function BudgetManagerClient({
       const data = await response.json();
       return data || EMPTY_ALLOCATIONS;
     },
-    enabled: !demoMode,
+    enabled: !demoMode && !isOnboarding,
   });
 
-  // Fetch gap analysis data
+  // Fetch gap analysis data (disabled in onboarding mode)
   const { data: gapAnalysisData } = useQuery<{
     user_pay_cycle: string;
     current_date: string;
@@ -191,11 +216,11 @@ export function BudgetManagerClient({
       if (!response.ok) return { user_pay_cycle: payCycle, current_date: '', gaps: [] };
       return response.json();
     },
-    enabled: !demoMode,
+    enabled: !demoMode && !isOnboarding,
     staleTime: 60000, // 1 minute
   });
 
-  // Fetch envelope categories
+  // Fetch envelope categories (disabled in onboarding mode)
   const { data: rawCategories } = useQuery<CategoryOption[]>({
     queryKey: ["/api/envelope-categories"],
     queryFn: async () => {
@@ -208,7 +233,7 @@ export function BudgetManagerClient({
       const categories = data.categories || data;
       return Array.isArray(categories) ? categories : [];
     },
-    enabled: !demoMode,
+    enabled: !demoMode && !isOnboarding,
   });
 
   // Use stable references - NEVER create new objects/arrays inline
@@ -219,7 +244,13 @@ export function BudgetManagerClient({
   const safeCategories = rawCategories ?? EMPTY_ARRAY as CategoryOption[];
 
   // Convert raw data to unified format using useMemo (NOT useEffect + setState)
+  // In onboarding mode, use onboardingEnvelopes directly
   const unifiedEnvelopes = useMemo<UnifiedEnvelopeData[]>(() => {
+    // In onboarding mode, use the local state directly
+    if (isOnboarding) {
+      return onboardingEnvelopes;
+    }
+
     if (safeRawEnvelopes.length === 0) return EMPTY_ARRAY as UnifiedEnvelopeData[];
 
     return safeRawEnvelopes.map(env => ({
@@ -238,7 +269,7 @@ export function BudgetManagerClient({
       currentAmount: Number(env.current_amount || 0),
       categoryId: env.category_id,
     }));
-  }, [safeRawEnvelopes, safeAllocationsData]);
+  }, [isOnboarding, onboardingEnvelopes, safeRawEnvelopes, safeAllocationsData]);
 
   // Drag enabled only when no filter and no sort active
   const isDragEnabled = statusFilter === "all" && sortColumn === null && !demoMode;
@@ -383,7 +414,13 @@ export function BudgetManagerClient({
 
   // Convert income data using useMemo with pay cycle normalization
   // NOTE: The 'amount' field is normalized to user's pay cycle for accurate totals
+  // In onboarding mode, use initialIncomeSources directly
   const incomeSources = useMemo<IncomeSource[]>(() => {
+    // In onboarding mode, use the provided income sources
+    if (isOnboarding && initialIncomeSources) {
+      return initialIncomeSources;
+    }
+
     if (safeRawIncome.length === 0) return EMPTY_ARRAY as IncomeSource[];
 
     return safeRawIncome.map(inc => {
@@ -405,18 +442,29 @@ export function BudgetManagerClient({
         isActive: inc.is_active !== false,
       };
     });
-  }, [safeRawIncome, payCycle]); // Added payCycle as dependency for re-normalization
+  }, [isOnboarding, initialIncomeSources, safeRawIncome, payCycle]); // Added payCycle as dependency for re-normalization
+
+  // Compute primary pay schedule for "Due In" column
+  // Uses the earliest next pay date from active income sources
+  const paySchedule = useMemo<PaySchedule | null>(() => {
+    if (isOnboarding) {
+      // In onboarding mode, use initial income sources if available
+      return getPrimaryPaySchedule(initialIncomeSources || [], payCycle as 'weekly' | 'fortnightly' | 'monthly');
+    }
+    return getPrimaryPaySchedule(incomeSources, payCycle as 'weekly' | 'fortnightly' | 'monthly');
+  }, [isOnboarding, initialIncomeSources, incomeSources, payCycle]);
 
   // Group envelopes by category for collapsible sections (uses filtered envelopes)
   const groupedCategories = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; envelopes: UnifiedEnvelopeData[] }>();
+    const map = new Map<string, { id: string; name: string; sortOrder: number; envelopes: UnifiedEnvelopeData[] }>();
 
     filteredEnvelopes.forEach((envelope) => {
       const id = envelope.categoryId || "uncategorised";
       const category = safeCategories.find(c => c.id === id);
       const name = category?.name ?? "Uncategorised";
+      const sortOrder = category?.sortOrder ?? 999; // Uncategorised goes last
       if (!map.has(id)) {
-        map.set(id, { id, name, envelopes: [] });
+        map.set(id, { id, name, sortOrder, envelopes: [] });
       }
       map.get(id)!.envelopes.push(envelope);
     });
@@ -425,6 +473,8 @@ export function BudgetManagerClient({
       // Put "Uncategorised" at the end
       if (a.id === "uncategorised") return 1;
       if (b.id === "uncategorised") return -1;
+      // Sort by sortOrder first, then by name
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
       return a.name.localeCompare(b.name);
     });
   }, [filteredEnvelopes, safeCategories]);
@@ -502,6 +552,21 @@ export function BudgetManagerClient({
 
   // Handle envelope update
   const handleEnvelopeUpdate = async (id: string, updates: Partial<UnifiedEnvelopeData>) => {
+    // In onboarding mode, update local state and call callback
+    if (isOnboarding) {
+      setOnboardingEnvelopes(prev => {
+        const updated = prev.map(env =>
+          env.id === id ? { ...env, ...updates } : env
+        );
+        // Notify parent of changes
+        if (onEnvelopesChange) {
+          onEnvelopesChange(updated);
+        }
+        return updated;
+      });
+      return;
+    }
+
     try {
       // Convert unified format to API format
       const apiData: any = {};
@@ -545,6 +610,19 @@ export function BudgetManagerClient({
 
   // Handle envelope delete
   const handleEnvelopeDelete = async (id: string) => {
+    // In onboarding mode, update local state
+    if (isOnboarding) {
+      setOnboardingEnvelopes(prev => {
+        const updated = prev.filter(env => env.id !== id);
+        // Notify parent of changes
+        if (onEnvelopesChange) {
+          onEnvelopesChange(updated);
+        }
+        return updated;
+      });
+      return;
+    }
+
     try {
       await deleteEnvelopeMutation.mutateAsync(id);
     } catch (error) {
@@ -555,6 +633,28 @@ export function BudgetManagerClient({
 
   // Handle allocation update
   const handleAllocationUpdate = async (envelopeId: string, incomeSourceId: string, amount: number) => {
+    // In onboarding mode, update local state
+    if (isOnboarding) {
+      setOnboardingEnvelopes(prev => {
+        const updated = prev.map(env => {
+          if (env.id !== envelopeId) return env;
+          return {
+            ...env,
+            incomeAllocations: {
+              ...env.incomeAllocations,
+              [incomeSourceId]: amount,
+            },
+          };
+        });
+        // Notify parent of changes
+        if (onEnvelopesChange) {
+          onEnvelopesChange(updated);
+        }
+        return updated;
+      });
+      return;
+    }
+
     try {
       const response = await fetch(`/api/envelopes/${envelopeId}/allocations`, {
         method: "PATCH",
@@ -715,31 +815,44 @@ export function BudgetManagerClient({
   };
 
   return (
-    <div className="flex w-full flex-col gap-3 px-3 pb-8 pt-4 md:px-4 md:pb-6 md:gap-4">
-      {/* Header */}
-      <header className="space-y-1">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold text-secondary">Zero-Based Budget Manager</h1>
-              <HelpTooltip
-                title="Zero-Based Budget Manager"
-                content={[
-                  "Configure your budget allocations and manage income distribution across envelopes. Adjust target amounts, set frequencies, and allocate funding from each income source."
-                ]}
-              />
+    <div className={`flex w-full flex-col gap-3 ${isOnboarding ? 'px-0 pb-4 pt-0' : 'px-3 pb-8 pt-4 md:px-4 md:pb-6'} md:gap-4`}>
+      {/* Header - hidden in onboarding mode (parent provides header) */}
+      {!isOnboarding && (
+        <header className="space-y-1">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-semibold text-secondary">Old Budget Manager</h1>
+                <Badge variant="secondary" className="text-xs">Legacy</Badge>
+                <HelpTooltip
+                  title="Old Budget Manager"
+                  content={[
+                    "This is the legacy budget manager. Configure your budget allocations and manage income distribution across envelopes. Adjust target amounts, set frequencies, and allocate funding from each income source."
+                  ]}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Legacy budget manager - Manage your budget with real-time balance tracking
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Manage your budget with real-time balance tracking
-            </p>
+            <div className="flex gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/envelope-summary">View Envelope Summary</Link>
+              </Button>
+              {!demoMode && (
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateEnvelopeDialog(true)}
+                  className="bg-[#7A9E9A] hover:bg-[#5A7E7A]"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Envelope
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/envelope-summary">View Envelope Summary</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Consolidated Budget Summary */}
       <Card>
@@ -756,7 +869,7 @@ export function BudgetManagerClient({
                   </Badge>
                 </div>
               )}
-              {budgetValidation.hasSurplus && (
+              {budgetValidation.hasSurplus && !isOnboarding && (
                 <div className="flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-blue-500" />
                   <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs py-0">
@@ -779,15 +892,19 @@ export function BudgetManagerClient({
               {/* Quick Stats */}
               <span className="text-xs text-muted-foreground">{unifiedEnvelopes.length} envelopes</span>
               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Link href="/settings" className="text-primary hover:underline inline-flex items-center gap-0.5">
-                  {payCycle}
-                  <Settings className="h-3 w-3" />
-                </Link>
+                {isOnboarding ? (
+                  <span>{payCycle}</span>
+                ) : (
+                  <Link href="/settings" className="text-primary hover:underline inline-flex items-center gap-0.5">
+                    {payCycle}
+                    <Settings className="h-3 w-3" />
+                  </Link>
+                )}
               </span>
             </div>
 
-            {/* Right: Allocate Surplus Button */}
-            {budgetValidation.hasSurplus && !demoMode && (
+            {/* Right: Allocate Surplus Button - hide in onboarding */}
+            {budgetValidation.hasSurplus && !demoMode && !isOnboarding && (
               <Button
                 size="sm"
                 onClick={() => setShowSurplusDialog(true)}
@@ -831,8 +948,8 @@ export function BudgetManagerClient({
                         <span className="text-muted-foreground">Next: {nextPayFormatted}</span>
                       </>
                     )}
-                    {/* Inline edit/delete icons - visible on hover */}
-                    {!demoMode && (
+                    {/* Inline edit/delete icons - visible on hover (hidden in onboarding mode) */}
+                    {!demoMode && !isOnboarding && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
@@ -859,8 +976,8 @@ export function BudgetManagerClient({
                   </div>
                 );
               })}
-              {/* Add Income Source button */}
-              {!demoMode && (
+              {/* Add Income Source button (hidden in onboarding mode) */}
+              {!demoMode && !isOnboarding && (
                 <button
                   type="button"
                   onClick={() => {
@@ -880,13 +997,13 @@ export function BudgetManagerClient({
       </Card>
 
       {/* Full-width Credit Card Widget */}
-      {!demoMode && <CreditCardHoldingWidget horizontal />}
+      {!demoMode && !isOnboarding && <CreditCardHoldingWidget horizontal />}
 
       {/* Ideal Allocation Suggestions Banner - Temporarily disabled for debugging */}
       {/* <IdealAllocationBanner userId={userId} demoMode={demoMode} /> */}
 
-      {/* Filter Buttons + Category Controls */}
-      {!demoMode && !isLoading && unifiedEnvelopes.length > 0 && (
+      {/* Filter Buttons + Category Controls - hidden in onboarding mode */}
+      {!demoMode && !isOnboarding && !isLoading && unifiedEnvelopes.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
           <div className="flex flex-wrap gap-2">
             {FILTERS.map((filter) => (
@@ -943,6 +1060,32 @@ export function BudgetManagerClient({
             Try widening your filter or select "All".
           </CardContent>
         </Card>
+      ) : isOnboarding ? (
+        // Onboarding mode: flat table without category grouping
+        <div className="space-y-3">
+          <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+            <UnifiedEnvelopeTable
+              envelopes={filteredEnvelopes}
+              incomeSources={incomeSources}
+              mode="onboarding"
+              payCycle={payCycle}
+              paySchedule={paySchedule}
+              categories={[]}
+              showCategories={false}
+              showIncomeColumns={true}
+              showOpeningBalance={false}
+              showCurrentBalance={false}
+              showDueIn={false}
+              showNotes={true}
+              enableDragAndDrop={false}
+              isDragDisabled={true}
+              hideHeader={false}
+              onEnvelopeUpdate={handleEnvelopeUpdate}
+              onEnvelopeDelete={handleEnvelopeDelete}
+              onAllocationUpdate={handleAllocationUpdate}
+            />
+          </div>
+        </div>
       ) : (
         <DndContext
           sensors={sensors}
@@ -957,7 +1100,9 @@ export function BudgetManagerClient({
               showIncomeColumns={true}
               showOpeningBalance={true}
               showCurrentBalance={true}
+              showDueIn={!!paySchedule}
               showNotes={true}
+              showGapAnalysis={true}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               onSort={handleSort}
@@ -970,12 +1115,16 @@ export function BudgetManagerClient({
                 allCategories={safeCategories}
                 incomeSources={incomeSources}
                 payCycle={payCycle}
+                paySchedule={paySchedule}
                 gapAnalysisData={safeGapData}
                 collapsedAll={collapseAll}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
                 enableDragAndDrop={isDragEnabled}
                 isDragDisabled={!isDragEnabled}
+                showOpeningBalance={true}
+                showCurrentBalance={true}
+                isOnboarding={false}
                 onEnvelopeUpdate={handleEnvelopeUpdate}
                 onEnvelopeDelete={handleEnvelopeDelete}
                 onAllocationUpdate={handleAllocationUpdate}
@@ -1053,6 +1202,16 @@ export function BudgetManagerClient({
         mode={incomeDialogMode}
         incomeSource={selectedIncomeSource}
         onSuccess={handleIncomeSourceSuccess}
+      />
+
+      {/* Create Envelope Dialog */}
+      <EnvelopeCreateDialog
+        open={showCreateEnvelopeDialog}
+        onOpenChange={setShowCreateEnvelopeDialog}
+        categories={safeCategories}
+        onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/envelopes"] });
+        }}
       />
     </div>
   );

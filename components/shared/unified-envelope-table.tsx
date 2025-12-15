@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,22 +10,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, Check } from "lucide-react";
+import { Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, Check, Info } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { calculateOpeningBalance } from "@/lib/hooks/use-opening-balance-calculator";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import type {
   UnifiedEnvelopeTableProps,
   UnifiedEnvelopeData,
   ValidationWarning,
   CategoryOption,
+  PaySchedule,
 } from "@/lib/types/unified-envelope";
+import {
+  calculatePaysUntilDue,
+  getNextDueDate,
+} from "@/lib/utils/pays-until-due";
+import { PaysUntilDueBadge, PaysUntilDuePlaceholder } from "@/components/shared/pays-until-due-badge";
 import { MessageSquare } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -86,11 +86,13 @@ export function UnifiedEnvelopeTable({
   incomeSources,
   mode,
   payCycle = 'monthly',
+  paySchedule,
   bankBalance,
   categories = [],
   showIncomeColumns = true,
   showOpeningBalance,
   showCurrentBalance,
+  showDueIn,
   showNotes = true,
   showCategories,
   enableDragAndDrop = false,
@@ -106,6 +108,8 @@ export function UnifiedEnvelopeTable({
   const effectiveShowOpeningBalance = showOpeningBalance ?? (mode === 'onboarding');
   const effectiveShowCurrentBalance = showCurrentBalance ?? (mode === 'maintenance');
   const effectiveShowCategories = showCategories ?? (mode === 'maintenance' && categories.length > 0);
+  // Show "Due In" column in maintenance mode when pay schedule is available
+  const effectiveShowDueIn = showDueIn ?? (mode === 'maintenance' && paySchedule !== null && paySchedule !== undefined);
   const effectiveGapData = gapAnalysisData ?? EMPTY_GAP_ARRAY;
   // State for inline editing (calculator mode)
   const [focusedCell, setFocusedCell] = useState<{
@@ -121,7 +125,7 @@ export function UnifiedEnvelopeTable({
   const [incomeColumnsExpanded, setIncomeColumnsExpanded] = useState(true);
 
   // Sort state
-  type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'currentAmount' | 'totalFunded' | null;
+  type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'dueIn' | 'currentAmount' | 'totalFunded' | null;
   type SortDirection = 'asc' | 'desc';
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -270,6 +274,18 @@ export function UnifiedEnvelopeTable({
           const dateB = b.dueDate ? new Date(b.dueDate).getTime() : 0;
           comparison = dateA - dateB;
           break;
+        case 'dueIn':
+          // Sort by "pays until due" - bills without due dates go to the end
+          const getPaysUntilDue = (env: UnifiedEnvelopeData): number => {
+            if (env.subtype !== 'bill' || !env.dueDate || !paySchedule) return 999;
+            const nextDue = getNextDueDate(env.dueDate);
+            if (!nextDue) return 999;
+            const isFunded = (env.currentAmount ?? 0) >= (env.targetAmount ?? 0);
+            const result = calculatePaysUntilDue(nextDue, paySchedule, isFunded);
+            return result.pays;
+          };
+          comparison = getPaysUntilDue(a) - getPaysUntilDue(b);
+          break;
         case 'currentAmount':
           comparison = (a.currentAmount || 0) - (b.currentAmount || 0);
           break;
@@ -394,91 +410,143 @@ export function UnifiedEnvelopeTable({
 
       {/* Spreadsheet Table */}
       <div className={`overflow-x-auto overflow-y-visible ${hideHeader ? '' : 'border rounded-lg'}`}>
-        <table className="w-full table-fixed">
+        <table className={`w-full ${mode === 'onboarding' ? 'onboarding-envelope-table' : ''}`}>
           {!hideHeader && (
-          <thead className="bg-muted">
+          <thead className={mode === 'onboarding' ? 'bg-silver-very-light border-b border-silver-light' : 'bg-muted'}>
             <tr className="h-10">
               {/* Drag Handle Column */}
               {enableDragAndDrop && (
-                <th className="w-5 min-w-[20px] max-w-[20px] px-0 py-0"></th>
+                <th className="px-0 py-0" style={{ width: mode === 'onboarding' ? '2%' : '20px' }}></th>
               )}
-              {/* Priority - moved before Icon/Name */}
-              <th className="py-0.5 text-[10px] font-semibold w-5 min-w-[20px] max-w-[20px]" title="Priority">
-                <button type="button" onClick={() => handleSort('priority')} className="w-full flex items-center justify-center hover:text-primary">
-                  <SortIcon column="priority" />
-                </button>
-              </th>
-              <th className="w-6 min-w-[24px] max-w-[24px] px-0 py-0"></th>
-              <th className="px-0.5 py-0.5 text-[10px] font-semibold w-24 min-w-[96px] max-w-[96px] text-left">
-                <button type="button" onClick={() => handleSort('name')} className="inline-flex items-center hover:text-primary pl-1">
-                  Name<SortIcon column="name" />
-                </button>
-              </th>
+              {/* Priority - show only in maintenance mode as separate column */}
+              {mode !== 'onboarding' && (
+                <th className="py-0.5 text-[10px] font-semibold" style={{ width: '20px' }} title="Priority">
+                  <button type="button" onClick={() => handleSort('priority')} className="w-full flex items-center justify-center hover:text-primary">
+                    <SortIcon column="priority" />
+                  </button>
+                </th>
+              )}
+              {/* Envelope column (Icon + Name combined for onboarding) */}
+              {mode === 'onboarding' ? (
+                <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-text-medium uppercase tracking-wide" style={{ width: '14%' }}>
+                  <button type="button" onClick={() => handleSort('name')} className="inline-flex items-center hover:text-primary">
+                    Envelope<SortIcon column="name" />
+                  </button>
+                </th>
+              ) : (
+                <>
+                  <th className="px-0 py-0" style={{ width: '24px' }}></th>
+                  <th className="px-2 py-0.5 text-[10px] font-semibold text-left" style={{ width: '96px' }}>
+                    <button type="button" onClick={() => handleSort('name')} className="inline-flex items-center hover:text-primary">
+                      Name<SortIcon column="name" />
+                    </button>
+                  </th>
+                </>
+              )}
               {/* Category Column */}
               {effectiveShowCategories && (
-                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-20 min-w-[80px] max-w-[80px]">
+                <th className="px-2 py-0.5 text-[10px] font-semibold" style={{ width: mode === 'onboarding' ? '8%' : '80px' }}>
                   <button type="button" onClick={() => handleSort('category')} className="w-full flex items-center justify-center hover:text-primary">
                     Cat<SortIcon column="category" />
                   </button>
                 </th>
               )}
-              <th className="px-0.5 py-0.5 text-[10px] font-semibold w-11 min-w-[44px] max-w-[44px]">
-                <button type="button" onClick={() => handleSort('subtype')} className="w-full flex items-center justify-center hover:text-primary">
+              {/* Type */}
+              <th className={mode === 'onboarding'
+                ? "px-3 py-2.5 text-left text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                : "px-2 py-0.5 text-[10px] font-semibold"
+              } style={{ width: mode === 'onboarding' ? '7%' : '44px' }}>
+                <button type="button" onClick={() => handleSort('subtype')} className={mode === 'onboarding' ? "inline-flex items-center hover:text-primary" : "w-full flex items-center justify-center hover:text-primary"}>
                   Type<SortIcon column="subtype" />
                 </button>
               </th>
-              {/* Opening Balance - moved before Target */}
+              {/* Opening Balance - only show in maintenance or when explicitly enabled */}
               {effectiveShowOpeningBalance && (
-                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-right pr-1 leading-tight">
+                <th className="px-2 py-0.5 text-[10px] font-semibold text-right pr-2 leading-tight" style={{ width: mode === 'onboarding' ? '8%' : '48px' }}>
                   <span className="block">Opening</span>
                   <span className="block">Balance</span>
                 </th>
               )}
-              <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px]">
-                <button type="button" onClick={() => handleSort('targetAmount')} className="w-full flex items-center justify-end hover:text-primary pr-1">
-                  Target<SortIcon column="targetAmount" />
+              {/* Amount */}
+              <th className={mode === 'onboarding'
+                ? "px-3 py-2.5 text-right text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                : "px-2 py-0.5 text-[10px] font-semibold text-center leading-tight"
+              } style={{ width: mode === 'onboarding' ? '8%' : '56px' }}>
+                <button type="button" onClick={() => handleSort('targetAmount')} className={mode === 'onboarding' ? "inline-flex items-center justify-end w-full hover:text-primary" : "w-full h-full flex items-center justify-center hover:text-primary"}>
+                  <span className={mode === 'onboarding' ? "" : "flex flex-col items-center mr-0.5"}>
+                    <span>Amount</span>
+                  </span>
+                  <SortIcon column="targetAmount" />
                 </button>
               </th>
-              <th className="px-0.5 py-0.5 text-[10px] font-semibold w-20 min-w-[80px] max-w-[80px]">
-                <button type="button" onClick={() => handleSort('frequency')} className="w-full flex items-center justify-center hover:text-primary">
+              {/* Frequency */}
+              <th className={mode === 'onboarding'
+                ? "px-3 py-2.5 text-left text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                : "px-2 py-0.5 text-[10px] font-semibold"
+              } style={{ width: mode === 'onboarding' ? '13%' : '80px' }}>
+                <button type="button" onClick={() => handleSort('frequency')} className={mode === 'onboarding' ? "inline-flex items-center hover:text-primary" : "w-full flex items-center justify-center hover:text-primary"}>
                   Frequency<SortIcon column="frequency" />
                 </button>
               </th>
-              <th className="px-0.5 py-0.5 text-[10px] font-semibold w-20 min-w-[80px] max-w-[80px]">
-                <button type="button" onClick={() => handleSort('dueDate')} className="w-full flex items-center justify-center hover:text-primary">
-                  Due<SortIcon column="dueDate" />
+              {/* Due Date */}
+              <th className={mode === 'onboarding'
+                ? "px-3 py-2.5 text-left text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                : "px-2 py-0.5 text-[10px] font-semibold"
+              } style={{ width: mode === 'onboarding' ? '10%' : '80px' }}>
+                <button type="button" onClick={() => handleSort('dueDate')} className={mode === 'onboarding' ? "inline-flex items-center hover:text-primary" : "w-full flex items-center justify-center hover:text-primary"}>
+                  Due Date<SortIcon column="dueDate" />
                 </button>
               </th>
 
+              {/* Funded By / Fund From */}
+              {showIncomeColumns && (
+                <th className={mode === 'onboarding'
+                  ? "px-3 py-2.5 text-left text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                  : "px-2 py-0.5 text-[10px] font-semibold text-center leading-tight"
+                } style={{ width: mode === 'onboarding' ? '17%' : '96px' }}>
+                  <span className="block">{mode === 'onboarding' ? 'Funded By' : 'Fund From'}</span>
+                  {mode !== 'onboarding' && <span className="block text-[9px] text-muted-foreground font-normal">(click to edit)</span>}
+                </th>
+              )}
+
               {/* Per Pay - Calculated amount needed each pay cycle */}
               {showIncomeColumns && (
-                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px] text-right pr-1 leading-tight">
-                  <span className="block">Per</span>
-                  <span className="block">Pay</span>
+                <th className={mode === 'onboarding'
+                  ? "px-3 py-2.5 text-right text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                  : "px-2 py-0.5 text-[10px] font-semibold text-right pr-2 leading-tight"
+                } style={{ width: mode === 'onboarding' ? '8%' : '56px' }}>
+                  <span className="block">Per Pay</span>
                 </th>
               )}
 
-              {/* Fund From - Compact selector showing which income sources fund this */}
+              {/* On Track Status - checkmark column */}
               {showIncomeColumns && (
-                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-24 min-w-[96px] max-w-[96px] text-center leading-tight">
-                  <span className="block">Fund From</span>
-                  <span className="block text-[9px] text-muted-foreground font-normal">(click to edit)</span>
-                </th>
-              )}
-
-              {/* On Track Status */}
-              {showIncomeColumns && (
-                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-center leading-tight">
-                  <span className="block">On</span>
-                  <span className="block">Track</span>
+                <th className={mode === 'onboarding'
+                  ? "px-2 py-2.5 text-center text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                  : "px-2 py-0.5 text-[10px] font-semibold text-center leading-tight"
+                } style={{ width: mode === 'onboarding' ? '3%' : '48px' }}>
+                  {mode === 'onboarding' ? '✓' : <><span className="block">On</span><span className="block">Track</span></>}
                 </th>
               )}
 
               {/* Current Balance (Maintenance) */}
               {effectiveShowCurrentBalance && (
-                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px]">
+                <th className="px-2 py-0.5 text-[10px] font-semibold" style={{ width: '48px' }}>
                   <button type="button" onClick={() => handleSort('currentAmount')} className="w-full flex items-center justify-end hover:text-primary pr-1">
                     Curr<SortIcon column="currentAmount" />
+                  </button>
+                </th>
+              )}
+
+              {/* Due In - Pays until due (Maintenance mode with pay schedule) */}
+              {effectiveShowDueIn && (
+                <th className="px-2 py-0.5 text-[10px] font-semibold text-center leading-tight" style={{ width: '56px' }}>
+                  <button type="button" onClick={() => handleSort('dueIn')} className="w-full flex items-center justify-center hover:text-primary">
+                    <span className="flex flex-col items-center mr-0.5">
+                      <span>Due</span>
+                      <span>In</span>
+                    </span>
+                    <SortIcon column="dueIn" />
                   </button>
                 </th>
               )}
@@ -486,26 +554,33 @@ export function UnifiedEnvelopeTable({
               {/* Balance Tracking Columns - Show in maintenance mode */}
               {mode === 'maintenance' && (
                 <>
-                  <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-right pr-1 leading-tight">
+                  <th className="px-2 py-0.5 text-[10px] font-semibold text-right pr-2 leading-tight" style={{ width: '48px' }}>
                     <span className="block">Should</span>
                     <span className="block">Have</span>
                   </th>
-                  <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px] text-right pr-1 leading-tight">
+                  <th className="px-2 py-0.5 text-[10px] font-semibold text-right pr-2 leading-tight" style={{ width: '56px' }}>
                     <span className="block">Balance</span>
                     <span className="block">Gap</span>
                   </th>
-                  <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-center">Track</th>
+                  <th className="px-2 py-0.5 text-[10px] font-semibold text-center" style={{ width: '48px' }}>Track</th>
                 </>
               )}
 
-              {/* Notes - Fixed width with icon */}
+              {/* Notes - show in both modes */}
               {showNotes && (
-                <th className="py-0.5 text-[10px] font-semibold w-6 min-w-[24px] max-w-[24px] text-center" title="Notes">
-                  <MessageSquare className="h-3 w-3 mx-auto text-muted-foreground" />
+                <th className={mode === 'onboarding'
+                  ? "px-2 py-2.5 text-center text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                  : "py-0.5 text-[10px] font-semibold text-center"
+                } style={{ width: mode === 'onboarding' ? '4%' : '24px' }} title="Notes">
+                  <MessageSquare className={mode === 'onboarding' ? "h-4 w-4 mx-auto text-text-medium" : "h-3 w-3 mx-auto text-muted-foreground"} />
                 </th>
               )}
 
-              <th className="py-0.5 text-[10px] font-semibold w-8 min-w-[32px] max-w-[32px]"></th>
+              {/* Actions column */}
+              <th className={mode === 'onboarding'
+                ? "px-2 py-2.5 text-[11px] font-semibold text-text-medium uppercase tracking-wide"
+                : "py-0.5 text-[10px] font-semibold"
+              } style={{ width: mode === 'onboarding' ? '4%' : '32px' }}></th>
             </tr>
           </thead>
           )}
@@ -520,6 +595,8 @@ export function UnifiedEnvelopeTable({
                 effectiveShowCategories={effectiveShowCategories}
                 effectiveShowOpeningBalance={effectiveShowOpeningBalance}
                 effectiveShowCurrentBalance={effectiveShowCurrentBalance}
+                effectiveShowDueIn={effectiveShowDueIn}
+                paySchedule={paySchedule}
                 showIncomeColumns={showIncomeColumns}
                 incomeColumnsExpanded={incomeColumnsExpanded}
                 activeIncomeSources={activeIncomeSources}
@@ -556,6 +633,8 @@ function SortableTableRow({
   effectiveShowCategories,
   effectiveShowOpeningBalance,
   effectiveShowCurrentBalance,
+  effectiveShowDueIn,
+  paySchedule,
   showIncomeColumns,
   incomeColumnsExpanded,
   activeIncomeSources,
@@ -582,6 +661,8 @@ function SortableTableRow({
   effectiveShowCategories: boolean;
   effectiveShowOpeningBalance: boolean;
   effectiveShowCurrentBalance: boolean;
+  effectiveShowDueIn: boolean;
+  paySchedule?: PaySchedule | null;
   showIncomeColumns: boolean;
   incomeColumnsExpanded: boolean;
   activeIncomeSources: any[];
@@ -630,12 +711,15 @@ function SortableTableRow({
       })
     : null;
 
+  // Check if envelope is locked (e.g., CC Holding during onboarding)
+  const isLocked = envelope.isLocked === true;
+
   return (
     <tr
       ref={setNodeRef}
       style={style}
       data-envelope-id={envelope.id}
-      className={`border-t hover:bg-muted/50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${isDragging ? 'opacity-50' : ''}`}
+      className={`border-t hover:bg-muted/50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${isDragging ? 'opacity-50' : ''} ${isLocked ? 'opacity-70' : ''}`}
     >
       {/* Drag Handle */}
       {enableDragAndDrop && (
@@ -656,57 +740,93 @@ function SortableTableRow({
         </td>
       )}
 
-      {/* Priority - Traffic Light Dots (moved before Icon/Name) */}
-      <td className="w-5 min-w-[20px] max-w-[20px] py-0.5 text-center">
-        {envelope.subtype !== 'savings' && envelope.subtype !== 'tracking' ? (
-          <Select
-            value={envelope.priority || 'important'}
-            onValueChange={(value) => onEnvelopeUpdate(envelope.id, { priority: value as any })}
-          >
-            <SelectTrigger className="h-4 w-4 border-0 focus:ring-0 p-0 justify-center [&>svg]:hidden" title={
-              envelope.priority === 'essential' ? 'Essential' :
-              envelope.priority === 'discretionary' ? 'Discretionary' : 'Important'
-            }>
-              <span className={`inline-block h-2 w-2 rounded-full ${
-                envelope.priority === 'essential' ? 'bg-red-500' :
-                envelope.priority === 'discretionary' ? 'bg-green-500' : 'bg-yellow-400'
-              }`} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="essential"><span className="inline-block h-2 w-2 rounded-full bg-red-500 mr-2" />Essential</SelectItem>
-              <SelectItem value="important"><span className="inline-block h-2 w-2 rounded-full bg-yellow-400 mr-2" />Important</SelectItem>
-              <SelectItem value="discretionary"><span className="inline-block h-2 w-2 rounded-full bg-green-500 mr-2" />Discretionary</SelectItem>
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="h-4 flex items-center justify-center text-[8px] text-muted-foreground">—</div>
-        )}
-      </td>
+      {/* Priority - Traffic Light Dots (only show in maintenance mode) */}
+      {mode !== 'onboarding' && (
+        <td className="w-5 min-w-[20px] max-w-[20px] py-0.5 text-center">
+          {envelope.subtype !== 'savings' && envelope.subtype !== 'tracking' ? (
+            <Select
+              value={envelope.priority || 'important'}
+              onValueChange={(value) => onEnvelopeUpdate(envelope.id, { priority: value as any })}
+              disabled={isLocked}
+            >
+              <SelectTrigger className="h-4 w-4 border-0 focus:ring-0 p-0 justify-center [&>svg]:hidden" title={
+                envelope.priority === 'essential' ? 'Essential' :
+                envelope.priority === 'discretionary' ? 'Flexible' : 'Important'
+              }>
+                <span className={`inline-block h-2 w-2 rounded-full ${
+                  envelope.priority === 'essential' ? 'bg-sage-dark' :
+                  envelope.priority === 'discretionary' ? 'bg-blue' : 'bg-silver'
+                }`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="essential"><span className="inline-block h-2 w-2 rounded-full bg-sage-dark mr-2" />Essential</SelectItem>
+                <SelectItem value="important"><span className="inline-block h-2 w-2 rounded-full bg-silver mr-2" />Important</SelectItem>
+                <SelectItem value="discretionary"><span className="inline-block h-2 w-2 rounded-full bg-blue mr-2" />Flexible</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="h-4 flex items-center justify-center text-[8px] text-muted-foreground">—</div>
+          )}
+        </td>
+      )}
 
-      {/* Icon */}
-      <td className="w-6 min-w-[24px] max-w-[24px] px-0 py-0">
-        <button
-          type="button"
-          className="text-sm hover:bg-muted rounded leading-none"
-          onClick={() => {
-            const newIcon = prompt('Enter emoji icon:', envelope.icon);
-            if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
-          }}
-        >
-          {envelope.icon}
-        </button>
-      </td>
+      {/* Envelope (Icon + Name) for onboarding, or separate columns for maintenance */}
+      {mode === 'onboarding' ? (
+        <td className="px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={`text-base hover:bg-muted rounded leading-none flex-shrink-0 ${isLocked ? 'pointer-events-none' : ''}`}
+              onClick={() => {
+                if (isLocked) return;
+                const newIcon = prompt('Enter emoji icon:', envelope.icon);
+                if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
+              }}
+              disabled={isLocked}
+            >
+              {envelope.icon}
+            </button>
+            <Input
+              value={getDisplayValue(envelope.id, 'name', envelope.name)}
+              onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
+              onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
+              onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
+              className="h-7 text-sm font-medium border-0 focus-visible:ring-0 focus:outline-none px-1 flex-1"
+              disabled={isLocked}
+            />
+          </div>
+        </td>
+      ) : (
+        <>
+          {/* Icon */}
+          <td className="w-6 min-w-[24px] max-w-[24px] px-0 py-0">
+            <button
+              type="button"
+              className={`text-sm hover:bg-muted rounded leading-none ${isLocked ? 'pointer-events-none' : ''}`}
+              onClick={() => {
+                if (isLocked) return;
+                const newIcon = prompt('Enter emoji icon:', envelope.icon);
+                if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
+              }}
+              disabled={isLocked}
+            >
+              {envelope.icon}
+            </button>
+          </td>
 
-      {/* Name */}
-      <td className="w-24 min-w-[96px] max-w-[96px] pl-1 pr-0 py-0.5">
-        <Input
-          value={getDisplayValue(envelope.id, 'name', envelope.name)}
-          onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
-          onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
-          onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
-          className="h-6 text-[11px] font-medium border-0 focus-visible:ring-0 focus:outline-none px-0.5"
-        />
-      </td>
+          {/* Name */}
+          <td className="w-24 min-w-[96px] max-w-[96px] pl-1 pr-0 py-0.5">
+            <Input
+              value={getDisplayValue(envelope.id, 'name', envelope.name)}
+              onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
+              onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
+              onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
+              className="h-6 text-[11px] font-medium border-0 focus-visible:ring-0 focus:outline-none px-0.5"
+              disabled={isLocked}
+            />
+          </td>
+        </>
+      )}
 
       {/* Category */}
       {effectiveShowCategories && (
@@ -714,6 +834,7 @@ function SortableTableRow({
           <Select
             value={envelope.categoryId || '__none__'}
             onValueChange={(value) => onEnvelopeUpdate(envelope.id, { categoryId: value === '__none__' ? undefined : value })}
+            disabled={isLocked}
           >
             <SelectTrigger className="h-6 text-[11px] border-0 focus:ring-0 focus:outline-none px-0.5">
               <SelectValue placeholder="None">
@@ -731,12 +852,16 @@ function SortableTableRow({
       )}
 
       {/* Type */}
-      <td className="w-11 min-w-[44px] max-w-[44px] px-0 py-0.5">
+      <td className={mode === 'onboarding' ? "px-3 py-2.5" : "w-11 min-w-[44px] max-w-[44px] px-0 py-0.5"}>
         <Select
           value={envelope.subtype}
           onValueChange={(value) => onEnvelopeUpdate(envelope.id, { subtype: value as any })}
+          disabled={isLocked}
         >
-          <SelectTrigger className="h-6 w-auto text-[11px] border-0 focus:ring-0 focus:outline-none px-0.5 justify-start gap-0 [&>svg]:hidden [&>span]:flex-none">
+          <SelectTrigger className={mode === 'onboarding'
+            ? "h-7 text-sm border border-border rounded px-2 focus:ring-1"
+            : "h-6 w-auto text-[11px] border-0 focus:ring-0 focus:outline-none px-0.5 justify-start gap-0 [&>svg]:hidden [&>span]:flex-none"
+          }>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -748,7 +873,7 @@ function SortableTableRow({
         </Select>
       </td>
 
-      {/* Opening Balance Needed - moved before Target */}
+      {/* Opening Balance Needed - only in maintenance or when explicitly enabled */}
       {effectiveShowOpeningBalance && (
         <td className="w-12 min-w-[48px] max-w-[48px] px-0.5 py-0.5">
           <div className="h-6 flex items-center justify-end text-[11px] text-muted-foreground pr-1">
@@ -763,8 +888,8 @@ function SortableTableRow({
         </td>
       )}
 
-      {/* Target Amount */}
-      <td className="w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5">
+      {/* Payment Amount */}
+      <td className={mode === 'onboarding' ? "px-3 py-2.5 text-right" : "w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5 text-center"}>
         <Input
           type="text"
           inputMode="decimal"
@@ -772,19 +897,27 @@ function SortableTableRow({
           onFocus={() => handleCellFocus(envelope.id, 'targetAmount', envelope.targetAmount || 0)}
           onChange={(e) => handleCellChange(envelope.id, 'targetAmount', e.target.value)}
           onBlur={(e) => handleCellBlur(envelope.id, 'targetAmount', e.target.value)}
-          className="h-6 text-[11px] text-right border-0 focus-visible:ring-0 focus:outline-none px-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className={mode === 'onboarding'
+            ? "h-7 text-sm text-right border border-border rounded px-2 focus:ring-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            : "h-6 text-[11px] text-center border-0 focus-visible:ring-0 focus:outline-none px-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          }
           placeholder="0.00"
+          disabled={isLocked}
         />
       </td>
 
-      {/* Frequency */}
-      <td className="w-20 min-w-[80px] max-w-[80px] px-0.5 py-0.5 text-center">
-        {envelope.subtype === 'bill' ? (
+      {/* Frequency - Available for bills, spending, and savings */}
+      <td className={mode === 'onboarding' ? "px-3 py-2.5" : "w-20 min-w-[80px] max-w-[80px] px-0.5 py-0.5 text-center"}>
+        {envelope.subtype === 'bill' || envelope.subtype === 'spending' || envelope.subtype === 'savings' ? (
           <Select
             value={envelope.frequency || 'monthly'}
             onValueChange={(value) => onEnvelopeUpdate(envelope.id, { frequency: value as any })}
+            disabled={isLocked}
           >
-            <SelectTrigger className="h-6 w-full text-[11px] border-0 focus:ring-0 focus:outline-none px-0.5 justify-center gap-0 [&>svg]:hidden">
+            <SelectTrigger className={mode === 'onboarding'
+              ? "h-7 text-sm border border-border rounded px-2 focus:ring-1"
+              : "h-6 w-full text-[11px] border-0 focus:ring-0 focus:outline-none px-0.5 justify-center gap-0 [&>svg]:hidden"
+            }>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -796,13 +929,13 @@ function SortableTableRow({
             </SelectContent>
           </Select>
         ) : (
-          <div className="h-6 flex items-center justify-center text-[11px] text-muted-foreground">—</div>
+          <div className={mode === 'onboarding' ? "h-7 flex items-center text-sm text-muted-foreground" : "h-6 flex items-center justify-center text-[11px] text-muted-foreground"}>—</div>
         )}
       </td>
 
-      {/* Due Date */}
-      <td className="w-20 min-w-[80px] max-w-[80px] px-0.5 py-0.5">
-        {envelope.subtype === 'bill' || envelope.subtype === 'savings' ? (
+      {/* Due Date - Available for bills, spending, savings, and goals */}
+      <td className={mode === 'onboarding' ? "px-3 py-2.5" : "w-20 min-w-[80px] max-w-[80px] px-0.5 py-0.5"}>
+        {envelope.subtype === 'bill' || envelope.subtype === 'spending' || envelope.subtype === 'savings' || envelope.subtype === 'goal' ? (
           <input
             type="date"
             value={
@@ -822,12 +955,31 @@ function SortableTableRow({
                 onEnvelopeUpdate(envelope.id, { dueDate: dateStr as any });
               }
             }}
-            className="h-6 w-full text-[11px] px-0.5 border border-border rounded bg-background hover:bg-muted focus:outline-none focus:ring-0"
+            className={mode === 'onboarding'
+              ? "h-7 w-full text-sm px-2 border border-border rounded bg-background hover:bg-muted focus:outline-none focus:ring-1"
+              : "h-6 w-full text-[11px] px-0.5 border border-border rounded bg-background hover:bg-muted focus:outline-none focus:ring-0"
+            }
+            disabled={isLocked}
           />
         ) : (
-          <div className="h-6 flex items-center justify-center text-[11px] text-muted-foreground">—</div>
+          <div className={mode === 'onboarding' ? "h-7 flex items-center text-sm text-muted-foreground" : "h-6 flex items-center justify-center text-[11px] text-muted-foreground"}>—</div>
         )}
       </td>
+
+      {/* Fund From / Funded By - Simple dropdown matching allocation page (Primary/Secondary/Split) */}
+      {showIncomeColumns && (
+        <td className={mode === 'onboarding' ? "px-3 py-2.5" : "w-24 min-w-[96px] max-w-[96px] px-0.5 py-0.5"}>
+          <FundFromSelector
+            envelope={envelope}
+            incomeSources={activeIncomeSources}
+            onAllocationChange={(incomeId, amount) => {
+              handleCellBlur(envelope.id, `allocation_${incomeId}`, String(amount));
+            }}
+            isOnboarding={mode === 'onboarding'}
+            payCycle={payCycle}
+          />
+        </td>
+      )}
 
       {/* Per Pay - Calculated amount needed each pay cycle */}
       {showIncomeColumns && (() => {
@@ -837,26 +989,16 @@ function SortableTableRow({
           payCycle
         );
         return (
-          <td className="w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5">
-            <div className="h-6 flex items-center justify-end text-[11px] font-semibold pr-1 text-muted-foreground">
+          <td className={mode === 'onboarding' ? "px-3 py-2.5 text-right" : "w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5"}>
+            <div className={mode === 'onboarding'
+              ? "h-7 flex items-center justify-end text-sm font-semibold text-muted-foreground"
+              : "h-6 flex items-center justify-end text-[11px] font-semibold pr-1 text-muted-foreground"
+            }>
               {perPayAmount > 0 ? `$${perPayAmount.toFixed(2)}` : '—'}
             </div>
           </td>
         );
       })()}
-
-      {/* Fund From - Compact dropdown showing income sources with checkboxes */}
-      {showIncomeColumns && (
-        <td className="w-24 min-w-[96px] max-w-[96px] px-0.5 py-0.5">
-          <FundFromSelector
-            envelope={envelope}
-            incomeSources={activeIncomeSources}
-            onAllocationChange={(incomeId, amount) => {
-              handleCellBlur(envelope.id, `allocation_${incomeId}`, String(amount));
-            }}
-          />
-        </td>
-      )}
 
       {/* On Track Status - Simple indicator if fully allocated */}
       {showIncomeColumns && (() => {
@@ -866,14 +1008,14 @@ function SortableTableRow({
         const isOverAllocated = totalAllocation > perPayNeeded + 0.01;
 
         return (
-          <td className="w-12 min-w-[48px] max-w-[48px] px-0.5 py-0.5">
-            <div className="h-6 flex items-center justify-center">
+          <td className={mode === 'onboarding' ? "px-3 py-2.5 text-center" : "w-12 min-w-[48px] max-w-[48px] px-0.5 py-0.5"}>
+            <div className={mode === 'onboarding' ? "h-7 flex items-center justify-center" : "h-6 flex items-center justify-center"}>
               {target === 0 || perPayNeeded === 0 ? (
                 <span className="text-muted-foreground text-[10px]">—</span>
               ) : isFullyAllocated ? (
                 <span className="text-sage font-bold text-sm" title={isOverAllocated ? `Over by $${(totalAllocation - perPayNeeded).toFixed(2)}` : 'Fully funded'}>✓</span>
               ) : (
-                <span className="text-blue font-semibold text-[10px]" title={`Need $${(perPayNeeded - totalAllocation).toFixed(2)} more`}>
+                <span className={mode === 'onboarding' ? "text-blue font-semibold text-xs" : "text-blue font-semibold text-[10px]"} title={`Need $${(perPayNeeded - totalAllocation).toFixed(2)} more`}>
                   -${(perPayNeeded - totalAllocation).toFixed(2)}
                 </span>
               )}
@@ -890,6 +1032,46 @@ function SortableTableRow({
           </div>
         </td>
       )}
+
+      {/* Due In - Pays until due (Maintenance mode with pay schedule) */}
+      {effectiveShowDueIn && (() => {
+        // Only show for bills with due dates
+        if (envelope.subtype !== 'bill' || !envelope.dueDate || !paySchedule) {
+          return (
+            <td className="w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5">
+              <div className="h-6 flex items-center justify-center">
+                <PaysUntilDuePlaceholder />
+              </div>
+            </td>
+          );
+        }
+
+        const nextDue = getNextDueDate(envelope.dueDate);
+        if (!nextDue) {
+          return (
+            <td className="w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5">
+              <div className="h-6 flex items-center justify-center">
+                <PaysUntilDuePlaceholder />
+              </div>
+            </td>
+          );
+        }
+
+        const isFunded = (envelope.currentAmount ?? 0) >= (envelope.targetAmount ?? 0);
+        const paysResult = calculatePaysUntilDue(nextDue, paySchedule, isFunded);
+
+        return (
+          <td className="w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5">
+            <div className="h-6 flex items-center justify-center">
+              <PaysUntilDueBadge
+                urgency={paysResult.urgency}
+                displayText={paysResult.displayText}
+                isFunded={isFunded}
+              />
+            </div>
+          </td>
+        );
+      })()}
 
       {/* Gap Analysis Columns - Show in maintenance mode */}
       {mode === 'maintenance' && (() => {
@@ -959,15 +1141,20 @@ function SortableTableRow({
         );
       })()}
 
-      {/* Notes - Icon with hover tooltip */}
+      {/* Notes - Icon with hover tooltip (show in both modes) */}
       {showNotes && (
-        <td className="w-6 min-w-[24px] max-w-[24px] py-0.5 text-center">
+        <td className={mode === 'onboarding' ? "px-3 py-2.5 text-center" : "w-6 min-w-[24px] max-w-[24px] py-0.5 text-center"}>
           <div className="relative group flex items-center justify-center">
             <button
               type="button"
-              className={`h-4 w-4 flex items-center justify-center rounded hover:bg-muted ${
-                envelope.notes ? 'text-primary' : 'text-muted-foreground/40'
-              }`}
+              className={mode === 'onboarding'
+                ? `h-7 w-7 flex items-center justify-center rounded hover:bg-muted ${
+                    envelope.notes ? 'text-sage-dark' : 'text-muted-foreground/40'
+                  }`
+                : `h-4 w-4 flex items-center justify-center rounded hover:bg-muted ${
+                    envelope.notes ? 'text-primary' : 'text-muted-foreground/40'
+                  }`
+              }
               onClick={() => {
                 const newNote = prompt('Enter note:', envelope.notes || '');
                 if (newNote !== null) {
@@ -976,7 +1163,7 @@ function SortableTableRow({
               }}
               title={envelope.notes || 'Add note'}
             >
-              <MessageSquare className="h-3 w-3" />
+              <MessageSquare className={mode === 'onboarding' ? "h-4 w-4" : "h-3 w-3"} />
             </button>
             {/* Hover tooltip for full note */}
             {envelope.notes && (
@@ -991,24 +1178,35 @@ function SortableTableRow({
         </td>
       )}
 
-      {/* Actions: Warning + Delete */}
-      <td className="w-8 min-w-[32px] max-w-[32px] py-0.5 text-center">
-        <div className="flex items-center justify-center gap-0">
-          {/* Warning Icon with Hover Tooltip */}
-          {warnings.length > 0 && (
+      {/* Actions: Warning/Info + Delete */}
+      <td className={mode === 'onboarding' ? "px-3 py-2.5" : "w-8 min-w-[32px] max-w-[32px] py-0.5 text-center"}>
+        <div className="flex items-center justify-center gap-1">
+          {/* Locked Info Icon with Hover Tooltip */}
+          {isLocked && envelope.lockedReason && (
+            <div className="relative group">
+              <Info className="h-4 w-4 cursor-help text-blue" />
+              <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 opacity-100">
+                <div className="bg-white border border-gray-300 rounded-md shadow-xl p-2 min-w-[200px] max-w-[280px]" style={{ backgroundColor: '#ffffff' }}>
+                  <p className="text-xs text-gray-800">{envelope.lockedReason}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Warning Icon with Hover Tooltip (only show if not locked) */}
+          {!isLocked && warnings.length > 0 && (
             <div className="relative group">
               <AlertTriangle className={`h-3 w-3 cursor-help ${
                 warnings.some((w: any) => w.type === 'error') ? 'text-blue' :
                 warnings.some((w: any) => w.type === 'warning') ? 'text-gold' : 'text-blue'
               }`} />
-              <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50">
-                <div className="bg-popover border border-border rounded-md shadow-lg p-2 min-w-[180px] max-w-[250px]">
-                  <p className="text-xs font-semibold text-foreground mb-1">Warnings:</p>
-                  <ul className="text-xs text-muted-foreground space-y-0.5">
+              <div className="absolute right-0 bottom-full mb-1 hidden group-hover:block z-50 opacity-100">
+                <div className="bg-white border border-gray-300 rounded-md shadow-xl p-2 min-w-[180px] max-w-[250px]" style={{ backgroundColor: '#ffffff' }}>
+                  <p className="text-xs font-semibold text-gray-900 mb-1">Warnings:</p>
+                  <ul className="text-xs space-y-0.5">
                     {warnings.map((warning: any, wIndex: number) => (
                       <li key={wIndex} className={`flex items-start gap-1 ${
-                        warning.type === 'error' ? 'text-blue' :
-                        warning.type === 'warning' ? 'text-gold' : 'text-blue'
+                        warning.type === 'error' ? 'text-red-600' :
+                        warning.type === 'warning' ? 'text-amber-600' : 'text-blue-600'
                       }`}>
                         <span className="mt-0.5">•</span>
                         <span>{warning.message}</span>
@@ -1019,19 +1217,21 @@ function SortableTableRow({
               </div>
             </div>
           )}
-          {/* Delete Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-4 w-4 p-0 text-silver hover:text-blue hover:bg-blue-light"
-            onClick={() => {
-              if (confirm(`Delete "${envelope.name}"?`)) {
-                onEnvelopeDelete(envelope.id);
-              }
-            }}
-          >
-            <Trash2 className="h-2.5 w-2.5" />
-          </Button>
+          {/* Delete Button (hidden when locked) */}
+          {!isLocked && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-4 w-4 p-0 text-silver hover:text-blue hover:bg-blue-light"
+              onClick={() => {
+                if (confirm(`Delete "${envelope.name}"?`)) {
+                  onEnvelopeDelete(envelope.id);
+                }
+              }}
+            >
+              <Trash2 className="h-2.5 w-2.5" />
+            </Button>
+          )}
         </div>
       </td>
     </tr>
@@ -1039,168 +1239,128 @@ function SortableTableRow({
 }
 
 /**
- * FundFromSelector - Compact dropdown for selecting which income sources fund an envelope
- * Uses a simple dropdown approach instead of complex Popover
+ * FundFromSelector - Simple dropdown for selecting which income source funds an envelope
+ * Matches the allocation page design: Primary / Secondary / Split options
+ * Auto-fills with calculated per-pay amount when selecting an option
  */
 function FundFromSelector({
   envelope,
   incomeSources,
   onAllocationChange,
+  isOnboarding = false,
+  payCycle = 'fortnightly',
 }: {
   envelope: UnifiedEnvelopeData;
   incomeSources: Array<{ id: string; name: string; amount: number }>;
   onAllocationChange: (incomeId: string, amount: number) => void;
+  isOnboarding?: boolean;
+  payCycle?: string;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingIncome, setEditingIncome] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
-
   // Get current allocations
   const allocations = envelope.incomeAllocations || {};
   const activeAllocations = Object.entries(allocations).filter(([_, amount]) => amount > 0);
-  const totalAllocated = Object.values(allocations).reduce((sum, amt) => sum + amt, 0);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!isOpen) return;
+  // Calculate per-pay amount for this envelope
+  const perPayAmount = calculatePerPayAmount(
+    envelope.targetAmount || 0,
+    envelope.frequency,
+    payCycle
+  );
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setEditingIncome(null);
+  // Determine current "funded by" state (like allocation page)
+  const getFundedBy = (): 'primary' | 'secondary' | 'split' | '' => {
+    if (activeAllocations.length === 0) return '';
+    if (activeAllocations.length > 1) return 'split';
+
+    const sourceId = activeAllocations[0][0];
+    const sourceIndex = incomeSources.findIndex(s => s.id === sourceId);
+    return sourceIndex === 0 ? 'primary' : 'secondary';
+  };
+
+  const fundedBy = getFundedBy();
+
+  // Handle dropdown change - set allocations based on selection
+  const handleFundedByChange = (value: string) => {
+    // Clear existing allocations first
+    incomeSources.forEach(source => {
+      if (allocations[source.id] && allocations[source.id] > 0) {
+        onAllocationChange(source.id, 0);
       }
-    };
+    });
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  // Summary text for the button
-  const getSummaryText = () => {
-    if (activeAllocations.length === 0) {
-      return <span className="text-muted-foreground">Not funded</span>;
+    // Set new allocation based on selection
+    if (value === 'primary' && incomeSources[0]) {
+      onAllocationChange(incomeSources[0].id, perPayAmount);
+    } else if (value === 'secondary' && incomeSources[1]) {
+      onAllocationChange(incomeSources[1].id, perPayAmount);
+    } else if (value === 'split' && incomeSources.length >= 2) {
+      // Split evenly between first two sources
+      const half = perPayAmount / 2;
+      onAllocationChange(incomeSources[0].id, half);
+      // Small delay to avoid race condition with state updates
+      setTimeout(() => {
+        onAllocationChange(incomeSources[1].id, half);
+      }, 10);
     }
-
-    if (activeAllocations.length === 1) {
-      const [incomeId, amount] = activeAllocations[0];
-      const source = incomeSources.find(s => s.id === incomeId);
-      return (
-        <span className="text-foreground">
-          {source?.name.substring(0, 6) || '?'}: ${amount.toFixed(0)}
-        </span>
-      );
-    }
-
-    // Multiple sources
-    return (
-      <span className="text-foreground">
-        {activeAllocations.length} sources: ${totalAllocated.toFixed(0)}
-      </span>
-    );
+    // If value is empty string, all allocations are cleared (unfunded)
   };
 
-  const handleCheckboxChange = (incomeId: string, checked: boolean) => {
-    if (checked) {
-      // When checking, set to a default amount or open edit
-      setEditingIncome(incomeId);
-      setEditValue("");
-    } else {
-      // When unchecking, set allocation to 0
-      onAllocationChange(incomeId, 0);
+  // Style classes based on funded state (matching allocation page)
+  const getSelectClass = () => {
+    const baseClass = isOnboarding
+      ? "h-7 w-full px-2 text-xs border rounded cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+      : "h-6 w-full px-1 text-[10px] border rounded cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary";
+
+    if (fundedBy === 'primary') {
+      return `${baseClass} bg-sage-very-light text-sage-dark border-sage-light font-medium`;
+    } else if (fundedBy === 'secondary') {
+      return `${baseClass} bg-sage-light text-sage-dark border-sage font-medium`;
+    } else if (fundedBy === 'split') {
+      return `${baseClass} bg-blue-light text-[#4A7BA8] border-blue font-medium`;
     }
+    return `${baseClass} bg-background text-muted-foreground border-border`;
   };
 
-  const handleAmountSave = (incomeId: string) => {
-    const amount = parseFloat(editValue) || 0;
-    onAllocationChange(incomeId, amount);
-    setEditingIncome(null);
-    setEditValue("");
+  // Get display label for select
+  const getDisplayValue = () => {
+    if (fundedBy === 'primary') return 'primary';
+    if (fundedBy === 'secondary') return 'secondary';
+    if (fundedBy === 'split') return 'split';
+    return '';
+  };
+
+  // Generate option label with income source name (full name, no truncation)
+  const getPrimaryLabel = () => {
+    if (incomeSources[0]) {
+      return incomeSources[0].name;
+    }
+    return 'Primary';
+  };
+
+  const getSecondaryLabel = () => {
+    if (incomeSources[1]) {
+      return incomeSources[1].name;
+    }
+    return 'Secondary';
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="h-6 w-full px-1 text-[10px] text-left border border-border rounded bg-background hover:bg-muted focus:outline-none focus:ring-1 focus:ring-primary truncate"
-      >
-        {getSummaryText()}
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-64 p-2 bg-background border border-border rounded-lg shadow-lg z-50">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">Fund from:</p>
-            {incomeSources.map((income) => {
-              const currentAmount = allocations[income.id] || 0;
-              const isChecked = currentAmount > 0;
-              const isEditing = editingIncome === income.id;
-
-              return (
-                <div key={income.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`fund-${envelope.id}-${income.id}`}
-                    checked={isChecked}
-                    onCheckedChange={(checked) => handleCheckboxChange(income.id, !!checked)}
-                    className="h-4 w-4"
-                  />
-                  <label
-                    htmlFor={`fund-${envelope.id}-${income.id}`}
-                    className="flex-1 text-xs cursor-pointer"
-                  >
-                    {income.name}
-                  </label>
-                  {isEditing ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">$</span>
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAmountSave(income.id);
-                          } else if (e.key === 'Escape') {
-                            setEditingIncome(null);
-                          }
-                        }}
-                        onBlur={() => handleAmountSave(income.id)}
-                        autoFocus
-                        className="h-5 w-16 text-xs px-1"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  ) : isChecked ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingIncome(income.id);
-                        setEditValue(currentAmount.toFixed(2));
-                      }}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      ${currentAmount.toFixed(2)}
-                    </button>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  )}
-                </div>
-              );
-            })}
-            {incomeSources.length === 0 && (
-              <p className="text-xs text-muted-foreground">No income sources configured</p>
-            )}
-            <div className="pt-2 border-t">
-              <div className="flex justify-between text-xs">
-                <span className="font-medium">Total:</span>
-                <span className="font-semibold">${totalAllocated.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+    <select
+      value={getDisplayValue()}
+      onChange={(e) => handleFundedByChange(e.target.value)}
+      className={getSelectClass()}
+      disabled={incomeSources.length === 0}
+    >
+      <option value="">Select...</option>
+      {incomeSources.length >= 1 && (
+        <option value="primary">{getPrimaryLabel()}</option>
       )}
-    </div>
+      {incomeSources.length >= 2 && (
+        <option value="secondary">{getSecondaryLabel()}</option>
+      )}
+      {incomeSources.length >= 2 && (
+        <option value="split">Split 50/50</option>
+      )}
+    </select>
   );
 }

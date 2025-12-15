@@ -1,28 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, AlertTriangle, Wallet, CreditCard, DollarSign } from "lucide-react";
-import { calculateSuggestedOpeningBalance } from "@/lib/utils/ideal-allocation-calculator";
+import { Info, AlertTriangle, Wallet, CreditCard, DollarSign, Sparkles, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { AllocationStrategySelector } from "@/components/onboarding/allocation-strategy-selector";
+import { CreditCardHoldingSection } from "@/components/onboarding/credit-card-holding-section";
+import { WaterfallProgressCard } from "@/components/onboarding/waterfall-progress-card";
+import {
+  calculateWaterfallAllocation,
+  calculateAvailableFunds,
+  getRecommendedStrategy,
+  type AllocationStrategy,
+  type EnvelopeForAllocation,
+} from "@/lib/utils/waterfall-allocator";
 import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface OpeningBalanceStepProps {
   envelopes: EnvelopeData[];
   incomeSources: IncomeSource[];
   bankAccounts: BankAccount[];
+  envelopeAllocations: { [envelopeId: string]: { [incomeId: string]: number } };
   onOpeningBalancesChange: (balances: { [envelopeId: string]: number }) => void;
+  onCreditCardAllocationChange?: (amount: number) => void;
 }
 
 export function OpeningBalanceStep({
   envelopes,
   incomeSources,
   bankAccounts,
+  envelopeAllocations,
   onOpeningBalancesChange,
+  onCreditCardAllocationChange,
 }: OpeningBalanceStepProps) {
   const [openingBalances, setOpeningBalances] = useState<{ [envelopeId: string]: number }>({});
+  const [strategy, setStrategy] = useState<AllocationStrategy>("envelopes_only");
+  const [hybridAmount, setHybridAmount] = useState(0);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    essential: true,
+    important: true,
+    flexible: true,
+  });
 
   // Calculate available funds
   const totalBankBalance = bankAccounts
@@ -33,59 +53,106 @@ export function OpeningBalanceStep({
     .filter(acc => acc.type === 'credit_card')
     .reduce((sum, acc) => sum + Math.abs(acc.balance), 0);
 
-  const availableFunds = totalBankBalance - totalCreditCardDebt;
-
-  // Calculate total allocated
-  const totalAllocated = Object.values(openingBalances).reduce((sum, val) => sum + (val || 0), 0);
-  const remaining = availableFunds - totalAllocated;
-
   // Get primary income for frequency calculations
   const primaryIncome = incomeSources[0];
-  const userPayCycle = primaryIncome?.frequency || 'fortnightly';
+  const userPayCycle = (primaryIncome?.frequency || 'fortnightly') as 'weekly' | 'fortnightly' | 'monthly';
 
-  // Calculate suggested opening balances
-  const suggestedBalances: { [envelopeId: string]: number } = {};
+  // Get recommended strategy
+  const recommendation = useMemo(() => {
+    return getRecommendedStrategy(totalBankBalance, totalCreditCardDebt);
+  }, [totalBankBalance, totalCreditCardDebt]);
 
-  envelopes
-    .filter(env => env.type === 'bill' && env.dueDate)
-    .forEach(envelope => {
-      // For onboarding, we need to calculate suggested opening balance
-      // based on ideal per-pay allocation and pay cycles until due date
+  // Initialize strategy and hybrid amount
+  useEffect(() => {
+    setStrategy(recommendation.strategy);
+    if (recommendation.suggestedHybridAmount) {
+      setHybridAmount(recommendation.suggestedHybridAmount);
+    }
+  }, [recommendation]);
 
-      // Calculate ideal per-pay for this envelope
-      const idealPerPay = envelope.payCycleAmount || 0;
+  // Calculate available funds based on strategy
+  const { availableForEnvelopes, creditCardAllocation } = useMemo(() => {
+    return calculateAvailableFunds(
+      totalBankBalance,
+      totalCreditCardDebt,
+      strategy,
+      hybridAmount
+    );
+  }, [totalBankBalance, totalCreditCardDebt, strategy, hybridAmount]);
 
-      // Estimate due date (day of month to actual date)
-      const today = new Date();
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
-      const dueDay = envelope.dueDate || 1;
+  // Notify parent of CC allocation changes
+  useEffect(() => {
+    onCreditCardAllocationChange?.(creditCardAllocation);
+  }, [creditCardAllocation, onCreditCardAllocationChange]);
 
-      let dueDate = new Date(currentYear, currentMonth, dueDay);
-      if (dueDate < today) {
-        dueDate = new Date(currentYear, currentMonth + 1, dueDay);
+  // Convert envelopes to allocation format with per-pay amounts
+  const envelopesForAllocation: EnvelopeForAllocation[] = useMemo(() => {
+    return envelopes.map(env => {
+      // Calculate total per-pay allocation from all income sources
+      const envAllocations = envelopeAllocations[env.id] || {};
+      const totalPerPay = Object.values(envAllocations).reduce((sum, amt) => sum + (amt || 0), 0);
+
+      return {
+        id: env.id,
+        name: env.name,
+        icon: env.icon,
+        priority: env.priority as 'essential' | 'important' | 'discretionary',
+        subtype: env.type as 'bill' | 'spending' | 'savings' | 'goal' | 'tracking',
+        targetAmount: env.billAmount || env.savingsAmount || 0,
+        frequency: env.frequency,
+        dueDate: env.dueDate,
+        perPayAllocation: totalPerPay, // Pass the user's actual per-pay budget
+      };
+    });
+  }, [envelopes, envelopeAllocations]);
+
+  // Calculate waterfall allocation
+  const waterfallResult = useMemo(() => {
+    return calculateWaterfallAllocation(
+      availableForEnvelopes,
+      envelopesForAllocation,
+      userPayCycle
+    );
+  }, [availableForEnvelopes, envelopesForAllocation, userPayCycle]);
+
+  // Calculate totals
+  const totalAllocated = Object.values(openingBalances).reduce((sum, val) => sum + (val || 0), 0);
+  const remaining = availableForEnvelopes - totalAllocated;
+  const hasInsufficientFunds = remaining < 0;
+
+  // Group envelopes by priority
+  const groupedEnvelopes = useMemo(() => {
+    const groups: Record<string, EnvelopeData[]> = {
+      essential: [],
+      important: [],
+      flexible: [],
+    };
+
+    envelopes.forEach(env => {
+      const priority = env.priority || 'discretionary';
+      if (priority === 'essential') {
+        groups.essential.push(env);
+      } else if (priority === 'important') {
+        groups.important.push(env);
+      } else {
+        groups.flexible.push(env);
       }
-
-      const suggested = calculateSuggestedOpeningBalance(
-        {
-          target_amount: envelope.billAmount || 0,
-          due_date: dueDate,
-        },
-        idealPerPay,
-        today,
-        userPayCycle
-      );
-
-      suggestedBalances[envelope.id] = Math.max(0, suggested);
     });
 
-  // Initialize with suggested balances on mount
-  useEffect(() => {
-    setOpeningBalances(suggestedBalances);
-    onOpeningBalancesChange(suggestedBalances);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+    // Sort within each group by due date, then name
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => {
+        const dueDateA = a.dueDate || 32;
+        const dueDateB = b.dueDate || 32;
+        if (dueDateA !== dueDateB) return dueDateA - dueDateB;
+        return a.name.localeCompare(b.name);
+      });
+    });
 
+    return groups;
+  }, [envelopes]);
+
+  // Handle balance change
   const handleBalanceChange = (envelopeId: string, value: string) => {
     const numValue = parseFloat(value) || 0;
     const updated = {
@@ -96,173 +163,352 @@ export function OpeningBalanceStep({
     onOpeningBalancesChange(updated);
   };
 
-  const hasInsufficientFunds = remaining < 0;
-  const billEnvelopes = envelopes.filter(env => env.type === 'bill');
+  // Auto-fill using waterfall algorithm
+  const handleAutoFill = () => {
+    const newBalances: Record<string, number> = {};
+    waterfallResult.results.forEach(result => {
+      newBalances[result.envelopeId] = result.allocated;
+    });
+    setOpeningBalances(newBalances);
+    onOpeningBalancesChange(newBalances);
+  };
+
+  // Reset all allocations
+  const handleReset = () => {
+    setOpeningBalances({});
+    onOpeningBalancesChange({});
+  };
+
+  // Toggle group expansion
+  const toggleGroup = (group: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [group]: !prev[group],
+    }));
+  };
+
+  // Get suggested amount for an envelope from waterfall result
+  const getSuggestedAmount = (envelopeId: string): number => {
+    const result = waterfallResult.results.find(r => r.envelopeId === envelopeId);
+    return result?.suggested || 0;
+  };
+
+  // Render envelope group
+  const renderEnvelopeGroup = (
+    groupKey: string,
+    groupTitle: string,
+    groupEnvelopes: EnvelopeData[],
+    dotColor: string,
+    bgColor: string
+  ) => {
+    if (groupEnvelopes.length === 0) return null;
+
+    const isExpanded = expandedGroups[groupKey];
+    const groupTotal = groupEnvelopes.reduce(
+      (sum, env) => sum + (openingBalances[env.id] || 0),
+      0
+    );
+
+    return (
+      <div key={groupKey} className={`rounded-lg border ${bgColor}`}>
+        {/* Group Header */}
+        <button
+          type="button"
+          onClick={() => toggleGroup(groupKey)}
+          className="w-full flex items-center justify-between p-3 hover:bg-black/5 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${dotColor}`} />
+            <span className="font-semibold text-sm text-text-dark">{groupTitle}</span>
+            <span className="text-xs text-text-medium">({groupEnvelopes.length})</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-text-dark">
+              ${groupTotal.toLocaleString()}
+            </span>
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 text-text-medium" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-text-medium" />
+            )}
+          </div>
+        </button>
+
+        {/* Group Envelopes */}
+        {isExpanded && (
+          <div className="border-t border-silver-light">
+            <table className="w-full">
+              <thead>
+                <tr className="text-[10px] font-semibold text-text-medium border-b border-silver-light">
+                  <th className="w-8 px-2 py-2"></th>
+                  <th className="text-left px-2 py-2">Envelope</th>
+                  <th className="text-center px-2 py-2 w-16">Type</th>
+                  <th className="text-right px-2 py-2 w-20">Target</th>
+                  <th className="text-center px-2 py-2 w-16">Freq</th>
+                  <th className="text-center px-2 py-2 w-16">Due</th>
+                  <th className="text-right px-2 py-2 w-20">Suggested</th>
+                  <th className="text-right px-2 py-2 w-24">Opening</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groupEnvelopes.map((envelope) => {
+                  const suggested = getSuggestedAmount(envelope.id);
+                  const current = openingBalances[envelope.id] || 0;
+                  const isFullyFunded = current >= suggested;
+
+                  return (
+                    <tr
+                      key={envelope.id}
+                      className="border-b border-silver-very-light hover:bg-white/50"
+                    >
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-lg">{envelope.icon}</span>
+                      </td>
+                      <td className="px-2 py-2">
+                        <span className="font-medium text-sm text-text-dark">
+                          {envelope.name}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-xs text-text-medium capitalize">
+                          {envelope.type}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <span className="text-sm text-text-dark">
+                          {envelope.billAmount || envelope.savingsAmount
+                            ? `$${(envelope.billAmount || envelope.savingsAmount || 0).toLocaleString()}`
+                            : '—'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-xs text-text-medium capitalize">
+                          {envelope.frequency?.substring(0, 3) || '—'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-xs text-text-medium">
+                          {envelope.dueDate ? `${envelope.dueDate}${getDaySuffix(envelope.dueDate)}` : '—'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        <span className="text-sm text-text-medium">
+                          ${suggested.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2">
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-medium">
+                            $
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={current || ''}
+                            onChange={(e) => handleBalanceChange(envelope.id, e.target.value)}
+                            placeholder="0"
+                            className={`h-8 text-right text-sm pl-5 pr-2 ${
+                              isFullyFunded
+                                ? 'border-sage focus:ring-sage'
+                                : current > 0
+                                ? 'border-gold focus:ring-gold'
+                                : ''
+                            }`}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="text-5xl mb-2">💰</div>
-        <h2 className="text-3xl font-bold">Opening Balances</h2>
-        <p className="text-muted-foreground">
-          Allocate your current funds to envelopes to start on track
+        <h2 className="text-3xl font-bold text-text-dark">Opening Balances</h2>
+        <p className="text-text-medium">
+          Allocate your current funds to get your envelopes started on track
         </p>
       </div>
 
-      {/* Available Funds Card */}
-      <Card className="p-6 bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
-        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-          <Wallet className="h-5 w-5" />
-          Available Funds
-        </h3>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Total Bank Balance
-            </span>
-            <span className="font-semibold text-green-600">
-              ${totalBankBalance.toFixed(2)}
-            </span>
-          </div>
-
-          {totalCreditCardDebt > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Credit Card Debt
-              </span>
-              <span className="font-semibold text-red-600">
-                -${totalCreditCardDebt.toFixed(2)}
-              </span>
-            </div>
-          )}
-
-          <div className="border-t pt-3 flex items-center justify-between">
-            <span className="font-semibold">Available to Allocate:</span>
-            <span className="text-2xl font-bold text-blue-600">
-              ${availableFunds.toFixed(2)}
-            </span>
-          </div>
-        </div>
-      </Card>
-
       {/* Info Alert */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <Info className="h-5 w-5 text-blue-600" />
+      <Alert className="border-blue bg-blue-light">
+        <Info className="h-5 w-5 text-blue" />
         <AlertTitle>How Opening Balances Work</AlertTitle>
         <AlertDescription className="text-sm space-y-2">
           <p>
-            Opening balances help your envelopes start on track. We&apos;ve suggested amounts
-            based on your bills and upcoming due dates.
+            Opening balances help your envelopes start on track. The <strong>Auto-Fill</strong> button
+            allocates funds by priority: Essential items first, then Important, then Flexible.
           </p>
           <p>
-            <strong>You can adjust these amounts</strong> - the system will warn you if you&apos;re
-            allocating more than available, but you can still proceed if needed.
+            You can adjust any amounts manually. The system will show a warning if you exceed
+            available funds, but you can still proceed.
           </p>
         </AlertDescription>
       </Alert>
 
-      {/* Bill Envelopes - Opening Balance Allocations */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-lg">Allocate Opening Balances</h3>
+      {/* Available Funds Summary */}
+      <Card className="p-4 bg-gradient-to-br from-sage-very-light to-blue-light border-sage-light">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-sage" />
+              <div>
+                <div className="text-xs text-text-medium">Bank Balance</div>
+                <div className="text-lg font-bold text-sage">
+                  ${totalBankBalance.toLocaleString()}
+                </div>
+              </div>
+            </div>
 
-        {billEnvelopes.length === 0 ? (
-          <Card className="p-6 text-center text-muted-foreground">
-            <p>No bill envelopes to allocate opening balances.</p>
-            <p className="text-sm mt-2">Opening balances are typically used for bills.</p>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {billEnvelopes.map((envelope) => (
-              <Card key={envelope.id} className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className="text-2xl mt-1">{envelope.icon}</div>
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <p className="font-semibold">{envelope.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {envelope.billAmount && `$${envelope.billAmount.toFixed(2)} ${envelope.frequency}`}
-                        {envelope.dueDate && ` • Due: ${envelope.dueDate}${getDaySuffix(envelope.dueDate)} of month`}
-                      </p>
-                    </div>
-
-                    <div className="flex items-end gap-3">
-                      <div className="flex-1">
-                        <Label htmlFor={`opening-${envelope.id}`} className="text-xs text-muted-foreground">
-                          Opening Balance
-                        </Label>
-                        <Input
-                          id={`opening-${envelope.id}`}
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={openingBalances[envelope.id] || ''}
-                          onChange={(e) => handleBalanceChange(envelope.id, e.target.value)}
-                          placeholder="0.00"
-                          className="mt-1"
-                        />
-                      </div>
-
-                      {suggestedBalances[envelope.id] !== undefined && (
-                        <div className="text-sm text-muted-foreground pb-2">
-                          Suggested: ${suggestedBalances[envelope.id].toFixed(2)}
-                        </div>
-                      )}
-                    </div>
+            {totalCreditCardDebt > 0 && (
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-blue" />
+                <div>
+                  <div className="text-xs text-text-medium">Credit Card Debt</div>
+                  <div className="text-lg font-bold text-blue">
+                    ${totalCreditCardDebt.toLocaleString()}
                   </div>
                 </div>
-              </Card>
-            ))}
+              </div>
+            )}
           </div>
+
+          <div className="text-right">
+            <div className="text-xs text-text-medium">Available for Envelopes</div>
+            <div className="text-2xl font-bold text-text-dark">
+              ${availableForEnvelopes.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Allocation Strategy Selector (only if CC debt exists) */}
+      {totalCreditCardDebt > 0 && (
+        <AllocationStrategySelector
+          strategy={strategy}
+          onChange={setStrategy}
+          bankBalance={totalBankBalance}
+          creditCardDebt={totalCreditCardDebt}
+          hybridAmount={hybridAmount}
+          onHybridAmountChange={setHybridAmount}
+          recommendation={recommendation.strategy}
+        />
+      )}
+
+      {/* Credit Card Holding Section (only if CC debt exists) */}
+      {totalCreditCardDebt > 0 && (
+        <CreditCardHoldingSection
+          totalDebt={totalCreditCardDebt}
+          allocatedAmount={creditCardAllocation}
+          strategy={strategy}
+          bankBalance={totalBankBalance}
+        />
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleAutoFill}
+            className="bg-sage hover:bg-sage-dark text-white gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Auto-Fill by Priority
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleReset}
+            className="gap-2"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Reset
+          </Button>
+        </div>
+
+        <div className="text-right">
+          <div className="text-xs text-text-medium">Remaining to Allocate</div>
+          <div className={`text-xl font-bold ${
+            remaining < 0
+              ? 'text-red-500'
+              : remaining > 0
+              ? 'text-sage'
+              : 'text-text-medium'
+          }`}>
+            ${remaining.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      {/* Envelope Groups */}
+      <div className="space-y-3">
+        {renderEnvelopeGroup(
+          'essential',
+          'Essential',
+          groupedEnvelopes.essential,
+          'bg-sage-dark',
+          'bg-sage-very-light border-sage-light'
+        )}
+        {renderEnvelopeGroup(
+          'important',
+          'Important',
+          groupedEnvelopes.important,
+          'bg-silver',
+          'bg-silver-very-light border-silver-light'
+        )}
+        {renderEnvelopeGroup(
+          'flexible',
+          'Flexible',
+          groupedEnvelopes.flexible,
+          'bg-blue',
+          'bg-blue-light border-blue'
         )}
       </div>
 
-      {/* Summary Card */}
-      <Card className={`p-6 ${hasInsufficientFunds ? 'border-2 border-amber-500 bg-amber-50' : 'border-2 border-green-500 bg-green-50'}`}>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-lg">
-            <span className="font-semibold">Total Allocated:</span>
-            <span className="font-bold">${totalAllocated.toFixed(2)}</span>
-          </div>
-
-          <div className="flex items-center justify-between text-lg">
-            <span className="font-semibold">Available Funds:</span>
-            <span className="font-bold">${availableFunds.toFixed(2)}</span>
-          </div>
-
-          <div className={`flex items-center justify-between text-xl border-t pt-3 ${hasInsufficientFunds ? 'text-amber-600' : 'text-green-600'}`}>
-            <span className="font-bold">Remaining:</span>
-            <span className="font-bold text-2xl">${remaining.toFixed(2)}</span>
-          </div>
-        </div>
-
-        {/* Warning for insufficient funds */}
-        {hasInsufficientFunds && (
-          <Alert className="mt-4 border-amber-300 bg-amber-100">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
-            <AlertTitle className="text-amber-900">Insufficient Funds</AlertTitle>
-            <AlertDescription className="text-sm text-amber-900">
-              You&apos;re allocating <strong>${Math.abs(remaining).toFixed(2)} more</strong> than
-              you have available. You can still continue, but you&apos;ll need to add funds or
-              adjust allocations when your next income arrives.
-            </AlertDescription>
-          </Alert>
+      {/* Waterfall Progress Card */}
+      <WaterfallProgressCard
+        totalAvailable={availableForEnvelopes}
+        creditCardAllocated={creditCardAllocation}
+        essentialAllocated={groupedEnvelopes.essential.reduce(
+          (sum, env) => sum + (openingBalances[env.id] || 0),
+          0
         )}
-
-        {remaining > 0 && (
-          <div className="mt-4 text-sm text-green-700">
-            💡 You have ${remaining.toFixed(2)} remaining. You can allocate this to other
-            envelopes or keep it as buffer.
-          </div>
+        importantAllocated={groupedEnvelopes.important.reduce(
+          (sum, env) => sum + (openingBalances[env.id] || 0),
+          0
         )}
-      </Card>
+        flexibleAllocated={groupedEnvelopes.flexible.reduce(
+          (sum, env) => sum + (openingBalances[env.id] || 0),
+          0
+        )}
+        remaining={Math.max(0, remaining)}
+      />
+
+      {/* Warning for insufficient funds */}
+      {hasInsufficientFunds && (
+        <Alert className="border-gold bg-gold-light">
+          <AlertTriangle className="h-5 w-5 text-gold" />
+          <AlertTitle className="text-text-dark">Over Budget</AlertTitle>
+          <AlertDescription className="text-sm text-text-dark">
+            You&apos;re allocating <strong>${Math.abs(remaining).toLocaleString()}</strong> more
+            than available. You can still continue, but you&apos;ll need to add funds or
+            adjust allocations when your next income arrives.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Continue hint */}
-      <div className="text-center text-sm text-muted-foreground">
-        Click "Continue" to proceed to budget review
+      <div className="text-center text-sm text-text-medium">
+        Click &quot;Continue&quot; to proceed to budget review
       </div>
     </div>
   );

@@ -1,12 +1,27 @@
 "use client";
 
+/**
+ * Envelope Transfer Dialog
+ *
+ * Compact two-tab interface for transferring funds between envelopes:
+ * - Smart Fill: Auto-distribute surplus to shortfalls by priority (batch)
+ * - Manual Transfer: Single source dropdown with per-row Transfer buttons
+ *
+ * Redesigned for space efficiency:
+ * - Each envelope = ONE row (~40px height)
+ * - 10-15 envelopes visible without scrolling
+ * - Priority grouping within tables
+ */
+
 import * as Dialog from "@radix-ui/react-dialog";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useEffect, useState } from "react";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import type { TransferHistoryItem } from "@/lib/types/envelopes";
-import { formatCurrency } from "@/lib/finance";
+import { CompactSmartFill } from "@/components/transfers/compact-smart-fill";
+import { CompactManualTransfer } from "@/components/transfers/compact-manual-transfer";
+import { cn } from "@/lib/cn";
+import { toast } from "sonner";
+import { X, Sparkles, ArrowRightLeft } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -19,6 +34,8 @@ interface Props {
   onTransferComplete?: () => void;
 }
 
+type TabType = "smart-fill" | "manual";
+
 export function EnvelopeTransferDialog({
   open,
   onOpenChange,
@@ -29,234 +46,177 @@ export function EnvelopeTransferDialog({
   history,
   onTransferComplete,
 }: Props) {
-  const [fromId, setFromId] = useState(defaultFromId ?? "");
-  const [toId, setToId] = useState(defaultToId ?? "");
-  const [amount, setAmount] = useState(defaultAmount ? String(defaultAmount) : "");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const fromEnvelope = useMemo(
-    () => envelopes.find((env) => env.id === fromId),
-    [envelopes, fromId],
-  );
-  const toEnvelope = useMemo(
-    () => envelopes.find((env) => env.id === toId),
-    [envelopes, toId],
-  );
-  const availableBalance = Number(fromEnvelope?.current_amount ?? 0);
+  const [activeTab, setActiveTab] = useState<TabType>("smart-fill");
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setFromId(defaultFromId ?? "");
-    setToId(defaultToId ?? "");
-    setAmount(defaultAmount ? String(defaultAmount) : "");
-    setError(null);
-    setSuccessMessage(null);
-  }, [open, defaultFromId, defaultToId, defaultAmount]);
+    // Reset to smart-fill tab when dialog opens
+    setActiveTab("smart-fill");
+  }, [open]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    setSuccessMessage(null);
-
-    const parsedAmount = Number(amount);
-    if (!fromId || !toId) {
-      setError("Select both sender and recipient envelopes.");
-      setSaving(false);
-      return;
-    }
-    if (fromId === toId) {
-      setError("Choose different envelopes.");
-      setSaving(false);
-      return;
-    }
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setError("Enter a valid transfer amount.");
-      setSaving(false);
-      return;
-    }
-    if (parsedAmount > availableBalance + 0.005) {
-      setError("Transfer amount exceeds available balance.");
-      setSaving(false);
-      return;
-    }
-
+  // Handle Smart Fill batch transfers
+  async function handleSmartFillApply(
+    transfers: Array<{ fromId: string; toId: string; amount: number }>
+  ) {
+    setIsApplying(true);
     try {
-      const response = await fetch("/api/envelopes/transfer", {
+      const response = await fetch("/api/envelopes/transfer/batch", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fromId,
-          toId,
-          amount: Number(parsedAmount.toFixed(2)),
+          transfers,
+          note: "Smart Fill transfer",
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({ error: "Transfer failed" }));
-        setError(data.error ?? "Transfer failed");
+        toast.error(data.error ?? "Transfer failed");
         return;
       }
 
-      setSuccessMessage("Transfer completed.");
+      if (data.summary.failed > 0) {
+        toast.warning(
+          `${data.summary.successful} transfers completed, ${data.summary.failed} failed`
+        );
+      } else {
+        toast.success(`Successfully transferred funds to ${data.summary.successful} envelopes`);
+      }
+
       onTransferComplete?.();
       onOpenChange(false);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Transfer failed");
+      toast.error("Failed to apply transfers");
     } finally {
-      setSaving(false);
+      setIsApplying(false);
     }
   }
+
+  // Handle single Manual transfer
+  async function handleManualTransfer(fromId: string, toId: string, amount: number) {
+    const response = await fetch("/api/envelopes/transfer", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fromId,
+        toId,
+        amount: Number(amount.toFixed(2)),
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({ error: "Transfer failed" }));
+      throw new Error(data.error ?? "Transfer failed");
+    }
+
+    onTransferComplete?.();
+  }
+
+  const handleClose = () => {
+    onOpenChange(false);
+  };
 
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(value) => {
         onOpenChange(value);
-        if (!value) {
-          setError(null);
-          setSuccessMessage(null);
-        }
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/40" />
-        <Dialog.Content className="fixed inset-0 flex items-center justify-center px-4 py-10">
-          <form className="w-full max-w-2xl space-y-5 rounded-3xl border bg-background p-6 shadow-xl" onSubmit={handleSubmit}>
-            <Dialog.Title className="text-lg font-semibold text-secondary">Transfer between envelopes</Dialog.Title>
-            <Dialog.Description className="text-sm text-muted-foreground">
-              Move funds between envelopes while keeping totals balanced.
-            </Dialog.Description>
-            <div className="grid gap-4 lg:grid-cols-[1fr,1fr]">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-secondary" htmlFor="transfer-from">
-                  From envelope
-                </label>
-                <select
-                  id="transfer-from"
-                  className="h-10 w-full rounded-md border px-3 text-sm"
-                  value={fromId}
-                  onChange={(event) => setFromId(event.target.value)}
-                  required
+        <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+        <Dialog.Content className="fixed inset-0 z-50 flex items-start justify-center px-4 py-6 overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-2xl border border-silver-light bg-background shadow-xl my-4">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-3 border-b border-silver-light">
+              <Dialog.Title className="text-lg font-semibold text-text-dark">
+                Transfer Funds
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button
+                  className="rounded-full p-1.5 text-text-medium hover:bg-silver-very-light transition"
+                  aria-label="Close"
                 >
-                  <option value="" disabled>
-                    Select envelope
-                  </option>
-                  {envelopes.map((env) => (
-                    <option key={env.id} value={env.id}>
-                      {env.name}
-                    </option>
-                  ))}
-                </select>
-                {fromEnvelope ? (
-                  <p className="text-xs text-muted-foreground">
-                    Balance {formatCurrency(Number(fromEnvelope.current_amount ?? 0))} · Target{" "}
-                    {formatCurrency(Number(fromEnvelope.target_amount ?? 0))}
-                  </p>
-                ) : null}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-secondary" htmlFor="transfer-to">
-                  To envelope
-                </label>
-                <select
-                  id="transfer-to"
-                  className="h-10 w-full rounded-md border px-3 text-sm"
-                  value={toId}
-                  onChange={(event) => setToId(event.target.value)}
-                  required
+                  <X className="h-5 w-5" />
+                </button>
+              </Dialog.Close>
+            </div>
+
+            {/* Tab Bar */}
+            <div className="px-6 pt-3">
+              <div className="flex gap-1 border-b border-silver-light">
+                <TabButton
+                  active={activeTab === "smart-fill"}
+                  onClick={() => setActiveTab("smart-fill")}
+                  icon={<Sparkles className="h-4 w-4" />}
                 >
-                  <option value="" disabled>
-                    Select envelope
-                  </option>
-                  {envelopes
-                    .filter((env) => env.id !== fromId)
-                    .map((env) => (
-                      <option key={env.id} value={env.id}>
-                        {env.name}
-                      </option>
-                    ))}
-                </select>
-                {toEnvelope ? (
-                  <p className="text-xs text-muted-foreground">
-                    Balance {formatCurrency(Number(toEnvelope.current_amount ?? 0))} · Target{" "}
-                    {formatCurrency(Number(toEnvelope.target_amount ?? 0))}
-                  </p>
-                ) : null}
+                  Smart Fill
+                </TabButton>
+                <TabButton
+                  active={activeTab === "manual"}
+                  onClick={() => setActiveTab("manual")}
+                  icon={<ArrowRightLeft className="h-4 w-4" />}
+                >
+                  Manual Transfer
+                </TabButton>
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-secondary" htmlFor="transfer-amount">
-                Amount
-              </label>
-              <Input
-                id="transfer-amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                placeholder="0.00"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-              {fromEnvelope ? (
-                <p className="text-xs text-muted-foreground">
-                  Available to move: {formatCurrency(Math.max(0, availableBalance))}
-                </p>
-              ) : null}
+
+            {/* Content */}
+            <div className="px-6 py-4">
+              {activeTab === "smart-fill" ? (
+                <CompactSmartFill
+                  envelopes={envelopes}
+                  onApplyTransfers={handleSmartFillApply}
+                  onSwitchToManual={() => setActiveTab("manual")}
+                  isApplying={isApplying}
+                  onClose={handleClose}
+                />
+              ) : (
+                <CompactManualTransfer
+                  envelopes={envelopes}
+                  onTransfer={handleManualTransfer}
+                  onSwitchToSmartFill={() => setActiveTab("smart-fill")}
+                  onClose={handleClose}
+                />
+              )}
             </div>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            {successMessage ? <p className="text-sm text-emerald-600">{successMessage}</p> : null}
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? "Transferring…" : "Transfer"}
-              </Button>
-            </div>
-            <HistoryList history={history} />
-          </form>
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
 }
 
-function HistoryList({ history }: { history?: TransferHistoryItem[] }) {
-  if (!history || history.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-xs text-muted-foreground">
-        Transfers you make will appear here for quick reference.
-      </div>
-    );
-  }
+function TabButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium text-secondary">Recent transfers</h3>
-      <ul className="space-y-2 text-xs text-muted-foreground">
-        {history.slice(0, 6).map((item) => (
-          <li key={item.id} className="rounded-lg border bg-background px-3 py-2">
-            <div className="flex items-center justify-between gap-3">
-              <span>
-                {item.from.name ?? "Unknown"} → {item.to.name ?? "Unknown"}
-              </span>
-              <span className="font-medium text-secondary">{formatCurrency(item.amount)}</span>
-            </div>
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground/80">
-              {new Date(item.createdAt).toLocaleString("en-NZ", {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            </p>
-            {item.note ? <p className="mt-1 text-muted-foreground">{item.note}</p> : null}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 px-4 py-2 text-sm font-medium transition border-b-2 -mb-px",
+        active
+          ? "border-sage text-sage-dark"
+          : "border-transparent text-text-medium hover:text-text-dark hover:border-silver"
+      )}
+    >
+      {icon}
+      {children}
+    </button>
   );
 }

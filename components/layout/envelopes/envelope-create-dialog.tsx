@@ -423,7 +423,7 @@ export function EnvelopeCreateDialog({
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
                 Cancel
               </Button>
-              <Button type="submit" className="gap-2" disabled={submitting}>
+              <Button type="submit" className="gap-2 bg-[#7A9E9A] hover:bg-[#5A7E7A]" disabled={submitting}>
                 {submitting && <span className="h-2 w-2 animate-ping rounded-full bg-primary-foreground" />}
                 Create Envelope
               </Button>

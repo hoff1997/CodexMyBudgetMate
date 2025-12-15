@@ -434,7 +434,7 @@ export function EnvelopeEditSheet({
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" className="gap-2">
+              <Button type="submit" className="gap-2 bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                 {submitLabel}
               </Button>
             </div>

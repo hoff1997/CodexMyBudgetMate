@@ -2,7 +2,7 @@
 
 import { ArrowUp, ArrowDown, ArrowUpDown, MessageSquare } from "lucide-react";
 
-type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'currentAmount' | 'totalFunded' | null;
+type SortColumn = 'name' | 'category' | 'priority' | 'subtype' | 'targetAmount' | 'frequency' | 'dueDate' | 'dueIn' | 'currentAmount' | 'totalFunded' | null;
 type SortDirection = 'asc' | 'desc';
 
 interface BudgetTableStickyHeaderProps {
@@ -10,7 +10,9 @@ interface BudgetTableStickyHeaderProps {
   showIncomeColumns?: boolean;
   showOpeningBalance?: boolean;
   showCurrentBalance?: boolean;
+  showDueIn?: boolean;
   showNotes?: boolean;
+  showGapAnalysis?: boolean;
   sortColumn: SortColumn;
   sortDirection: SortDirection;
   onSort: (column: SortColumn) => void;
@@ -22,7 +24,9 @@ export function BudgetTableStickyHeader({
   showIncomeColumns = true,
   showOpeningBalance = true,
   showCurrentBalance = true,
+  showDueIn = false,
   showNotes = true,
+  showGapAnalysis = true,
   sortColumn,
   sortDirection,
   onSort,
@@ -78,9 +82,13 @@ export function BudgetTableStickyHeader({
                 <span className="block">Balance</span>
               </th>
             )}
-            <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px]">
-              <button type="button" onClick={() => onSort('targetAmount')} className="w-full flex items-center justify-end hover:text-primary pr-1">
-                Target<SortIcon column="targetAmount" />
+            <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px] text-center leading-tight">
+              <button type="button" onClick={() => onSort('targetAmount')} className="w-full h-full flex items-center justify-center hover:text-primary">
+                <span className="flex flex-col items-end mr-0.5">
+                  <span>Payment</span>
+                  <span>Amount</span>
+                </span>
+                <SortIcon column="targetAmount" />
               </button>
             </th>
             <th className="px-0.5 py-0.5 text-[10px] font-semibold w-20 min-w-[80px] max-w-[80px]">
@@ -110,8 +118,8 @@ export function BudgetTableStickyHeader({
               </th>
             )}
 
-            {/* On Track Status */}
-            {showIncomeColumns && (
+            {/* On Track Status - Hide in onboarding */}
+            {showIncomeColumns && showGapAnalysis && (
               <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-center leading-tight">
                 <span className="block">On</span>
                 <span className="block">Track</span>
@@ -127,16 +135,33 @@ export function BudgetTableStickyHeader({
               </th>
             )}
 
-            {/* Balance Tracking Columns */}
-            <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-right pr-1 leading-tight">
-              <span className="block">Should</span>
-              <span className="block">Have</span>
-            </th>
-            <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px] text-right pr-1 leading-tight">
-              <span className="block">Balance</span>
-              <span className="block">Gap</span>
-            </th>
-            <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-center">Track</th>
+            {/* Due In - Pays until due */}
+            {showDueIn && (
+              <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px] text-center leading-tight">
+                <button type="button" onClick={() => onSort('dueIn')} className="w-full flex items-center justify-center hover:text-primary">
+                  <span className="flex flex-col items-center mr-0.5">
+                    <span>Due</span>
+                    <span>In</span>
+                  </span>
+                  <SortIcon column="dueIn" />
+                </button>
+              </th>
+            )}
+
+            {/* Balance Tracking Columns - Hide in onboarding */}
+            {showGapAnalysis && (
+              <>
+                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-right pr-1 leading-tight">
+                  <span className="block">Should</span>
+                  <span className="block">Have</span>
+                </th>
+                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-14 min-w-[56px] max-w-[56px] text-right pr-1 leading-tight">
+                  <span className="block">Balance</span>
+                  <span className="block">Gap</span>
+                </th>
+                <th className="px-0.5 py-0.5 text-[10px] font-semibold w-12 min-w-[48px] max-w-[48px] text-center">Track</th>
+              </>
+            )}
 
             {/* Notes - Fixed width with icon */}
             {showNotes && (

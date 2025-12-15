@@ -126,7 +126,7 @@ export const PRIORITY_DEFINITIONS = {
     ],
   },
   discretionary: {
-    label: "Discretionary",
+    label: "Flexible",
     description: "Nice to have, can pause or reduce without immediate impact",
     color: "blue",
     bgColor: "bg-blue-50",

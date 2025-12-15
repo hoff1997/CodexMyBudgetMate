@@ -17,7 +17,7 @@ export default async function EnvelopesPage() {
         "id, name, target_amount, current_amount, pay_cycle_amount, frequency, category_id, icon, next_payment_due, due_date, notes",
       )
       .order("name"),
-    supabase.from("envelope_categories").select("id, name").order("name"),
+    supabase.from("envelope_categories").select("id, name, sort_order").order("sort_order", { ascending: true }).order("name"),
     supabase
       .from("envelope_transfers")
       .select(
@@ -48,7 +48,7 @@ export default async function EnvelopesPage() {
   return (
     <EnvelopeManagerClient
       envelopes={envelopes}
-      categories={(categoriesResponse.data ?? []).map((category) => ({ id: category.id, name: category.name }))}
+      categories={(categoriesResponse.data ?? []).map((category) => ({ id: category.id, name: category.name, sortOrder: category.sort_order ?? 0 }))}
       canEdit={Boolean(user)}
       transferHistory={mapTransferHistory(transferRows)}
       payPlan={payPlan}

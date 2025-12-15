@@ -127,7 +127,7 @@ All major columns in the Budget Manager table are sortable:
 Priority column uses compact traffic light dots:
 - 🔴 **Essential** - Must-have expenses
 - 🟡 **Important** - Should-have expenses
-- 🟢 **Discretionary** - Nice-to-have expenses
+- 🟢 **Flexible** - Nice-to-have expenses
 
 Displayed as small colored circles that expand to dropdown on click.
 
@@ -164,3 +164,67 @@ if ("subtype" in payload) {
 ```
 
 This ensures database consistency with the `is_tracking_only` boolean column.
+
+## 📄 Page Architecture
+
+### Active Pages
+
+| Page | Route | Purpose |
+|------|-------|---------|
+| **Allocation** | `/allocation` | Primary budget management - editing, allocating income, all envelope features |
+| **Envelope Summary** | `/envelope-summary` | Overview, progress checking, quick transfers |
+| **Dashboard** | `/dashboard` | High-level financial overview, upcoming bills, quick actions |
+
+### Deprecated Pages (DO NOT ADD FEATURES)
+
+| Page | Route | Status |
+|------|-------|--------|
+| **Budget Manager** | `/budget-manager` | ⛔ DEPRECATED - Legacy reference only |
+
+### Feature Ownership
+
+| Feature | Allocation | Envelope Summary | Dashboard |
+|---------|------------|------------------|-----------|
+| Envelope table with inline editing | ✅ | ❌ | ❌ |
+| Income cards / allocation controls | ✅ | ❌ | ❌ |
+| Priority column (traffic lights) | ✅ | ✅ | ❌ |
+| Category grouping | ✅ | ✅ | ❌ |
+| Drag-and-drop reordering | ✅ | ✅ | ❌ |
+| "Pays Until Due" column | ✅ | ✅ | ❌ |
+| Progress bars (sage gradient) | ✅ | ✅ | ✅ |
+| Transfer Funds dialog | ❌ | ✅ | ❌ |
+| Summary cards | ❌ | ✅ | ✅ |
+| Filter tabs | ❌ | ✅ | ❌ |
+| Quick Actions | ❌ | ❌ | ✅ |
+| Upcoming Bills | ❌ | ❌ | ✅ |
+| Credit Card Cards | ❌ | ❌ | ✅ |
+
+### When Adding New Features
+
+1. Check the Feature Ownership table above
+2. If feature applies to multiple pages, implement on ALL listed pages
+3. NEVER add features to deprecated pages
+4. If unsure, ask before implementing
+
+## 📅 Pays Until Due Feature
+
+The "Pays Until Due" feature helps users understand bill urgency in terms of paychecks.
+
+### How It Works
+
+- Calculates how many pay cycles until a bill is due
+- Uses the income source with the earliest `next_pay_date` as the primary pay schedule
+- Shows urgency badges: "Due now!", "1 pay!", "2 pays", etc.
+
+### Files
+
+- **Core utilities**: `lib/utils/pays-until-due.ts`
+- **Badge component**: `components/shared/pays-until-due-badge.tsx`
+- **Used in**: Allocation page, Envelope Summary page, Budget Manager table
+
+### Color Scheme (Style Guide Compliant)
+
+Uses **blue colors only** (not red/amber) for urgency to avoid financial anxiety:
+- High urgency: `bg-[#DDEAF5]` / `text-[#6B9ECE]`
+- Medium urgency: `bg-[#F3F4F6]` / `text-[#6B6B6B]`
+- Low/none: transparent / `text-[#9CA3AF]`

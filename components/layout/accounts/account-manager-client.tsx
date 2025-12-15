@@ -333,7 +333,7 @@ function AccountDrawer({
                 <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Save changes</Button>
+                <Button type="submit" className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">Save changes</Button>
               </div>
             </form>
           ) : (
@@ -366,7 +366,7 @@ function AccountDrawer({
                 <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={creating}>
+                <Button type="submit" disabled={creating} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                   {creating ? "Creating…" : "Add account"}
                 </Button>
               </div>

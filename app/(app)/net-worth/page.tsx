@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { NetWorthClient } from "@/components/layout/net-worth/net-worth-client";
 import type { AssetRow, LiabilityRow, NetWorthSnapshotRow } from "@/lib/types/net-worth";
+import type { AccountRow } from "@/lib/types/accounts";
 
 export default async function NetWorthPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [assetsRes, liabilitiesRes, snapshotsRes, monthlyRes] = await Promise.all([
+  const [assetsRes, liabilitiesRes, snapshotsRes, monthlyRes, accountsRes] = await Promise.all([
     supabase
       .from("assets")
       .select("id, name, asset_type, current_value, notes, updated_at")
@@ -28,6 +29,10 @@ export default async function NetWorthPage() {
       .select("month_date, source_snapshot_date, total_assets, total_liabilities, net_worth")
       .eq("user_id", user?.id ?? "")
       .order("month_date", { ascending: true }),
+    supabase
+      .from("accounts")
+      .select("id, name, type, current_balance, institution, reconciled, updated_at")
+      .order("type"),
   ]);
 
   let assets = (assetsRes.data ?? []) as AssetRow[];
@@ -40,6 +45,7 @@ export default async function NetWorthPage() {
     total_liabilities: number;
     net_worth: number;
   }>;
+  let accounts = (accountsRes.data ?? []) as AccountRow[];
 
   if (!user) {
     assets = [
@@ -91,6 +97,32 @@ export default async function NetWorthPage() {
       total_liabilities: Number(snapshot.total_liabilities ?? 0),
       net_worth: Number(snapshot.net_worth ?? 0),
     }));
+    accounts = [
+      {
+        id: crypto.randomUUID(),
+        name: "ANZ Everyday",
+        type: "transaction",
+        current_balance: 1250.50,
+        institution: "ANZ",
+        reconciled: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Savings Account",
+        type: "savings",
+        current_balance: 5000,
+        institution: "ANZ",
+        reconciled: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        name: "Credit Card",
+        type: "debt",
+        current_balance: -1200,
+        institution: "ASB",
+        reconciled: false,
+      },
+    ];
   }
 
   return (
@@ -99,6 +131,7 @@ export default async function NetWorthPage() {
       liabilities={liabilities}
       snapshots={snapshots}
       monthlySnapshots={monthly}
+      accounts={accounts}
       canEdit={Boolean(user)}
     />
   );

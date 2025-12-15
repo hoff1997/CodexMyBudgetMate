@@ -20,6 +20,7 @@ interface PriorityGroupProps {
 const PRIORITY_CONFIG: Record<PriorityLevel, {
   label: string;
   icon: string;
+  dotColor: string;
   color: string;
   bgColor: string;
   borderColor: string;
@@ -27,30 +28,34 @@ const PRIORITY_CONFIG: Record<PriorityLevel, {
   essential: {
     label: "ESSENTIAL",
     icon: "🔴",
+    dotColor: "bg-[#5A7E7A]", // sage-dark
     color: "text-text-dark",
-    bgColor: "bg-silver-very-light",
-    borderColor: "border-silver-light",
+    bgColor: "bg-[#E2EEEC]", // sage-very-light
+    borderColor: "border-[#B8D4D0]", // sage-light
   },
   important: {
     label: "IMPORTANT",
     icon: "🟡",
+    dotColor: "bg-[#6B9ECE]", // blue
     color: "text-text-dark",
-    bgColor: "bg-silver-very-light",
-    borderColor: "border-silver-light",
+    bgColor: "bg-[#DDEAF5]", // blue-light
+    borderColor: "border-[#6B9ECE]", // blue
   },
   discretionary: {
-    label: "DISCRETIONARY",
+    label: "FLEXIBLE",
     icon: "🟢",
+    dotColor: "bg-[#9CA3AF]", // silver
     color: "text-text-dark",
-    bgColor: "bg-silver-very-light",
-    borderColor: "border-silver-light",
+    bgColor: "bg-[#F3F4F6]", // silver-very-light
+    borderColor: "border-[#E5E7EB]", // silver-light
   },
   unfunded: {
     label: "UNFUNDED",
     icon: "⚠️",
-    color: "text-blue",
-    bgColor: "bg-blue-light",
-    borderColor: "border-blue",
+    dotColor: "bg-[#D4A853]", // gold
+    color: "text-[#8B7035]",
+    bgColor: "bg-[#F5E6C4]", // gold-light
+    borderColor: "border-[#D4A853]", // gold
   },
 };
 
@@ -79,21 +84,21 @@ export function PriorityGroup({
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "w-full flex items-center justify-between px-3 py-2 rounded-t-lg",
+          "w-full flex items-center justify-between px-4 py-2.5 rounded-t-lg",
           config.bgColor
         )}
       >
         <div className="flex items-center gap-2">
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4" />
+            <ChevronDown className="h-4 w-4 text-text-medium" />
           ) : (
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4 text-text-medium" />
           )}
-          <span className="text-base">{config.icon}</span>
-          <span className={cn("font-semibold text-sm", config.color)}>
+          <span className={cn("w-2 h-2 rounded-full", config.dotColor)} />
+          <span className={cn("font-semibold text-xs uppercase tracking-wide", config.color)}>
             {config.label}
           </span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-text-medium font-normal">
             ({envelopes.length} {envelopes.length === 1 ? 'envelope' : 'envelopes'})
           </span>
         </div>
@@ -106,21 +111,21 @@ export function PriorityGroup({
       {isExpanded && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b">
+            <thead className="bg-silver-very-light border-b border-silver-light">
               <tr>
                 <th className="px-3 py-2 text-left font-medium w-8"></th>
-                <th className="px-3 py-2 text-left font-medium min-w-[140px]">Envelope</th>
-                <th className="px-3 py-2 text-right font-medium w-24">Per Pay</th>
+                <th className="px-3 py-2 text-left font-medium text-[11px] uppercase tracking-wide text-text-medium min-w-[140px]">Envelope</th>
+                <th className="px-3 py-2 text-right font-medium text-[11px] uppercase tracking-wide text-text-medium w-24">Per Pay</th>
                 {incomeSources.map((income, index) => (
-                  <th key={income.id} className="px-3 py-2 text-center font-medium w-28">
+                  <th key={income.id} className="px-3 py-2 text-center font-medium text-[11px] uppercase tracking-wide text-text-medium w-28">
                     {index === 0 ? 'Primary' : 'Secondary'}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right font-medium w-24">Total</th>
-                <th className="px-3 py-2 text-center font-medium w-20">Status</th>
+                <th className="px-3 py-2 text-right font-medium text-[11px] uppercase tracking-wide text-text-medium w-24">Total</th>
+                <th className="px-3 py-2 text-center font-medium text-[11px] uppercase tracking-wide text-text-medium w-20">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-silver-very-light bg-white">
               {envelopes.map((envelope) => {
                 const perPay = calculatePerPay(envelope);
                 const allocations = envelope.incomeAllocations || {};
@@ -129,7 +134,7 @@ export function PriorityGroup({
                 const shortfall = perPay - total;
 
                 return (
-                  <tr key={envelope.id} className="hover:bg-muted/30">
+                  <tr key={envelope.id} className="hover:bg-[#E2EEEC] transition-colors">
                     {/* Icon */}
                     <td className="px-3 py-2 text-center">
                       <span className="text-base">{envelope.icon}</span>
@@ -137,12 +142,12 @@ export function PriorityGroup({
 
                     {/* Name */}
                     <td className="px-3 py-2">
-                      <span className="font-medium">{envelope.name}</span>
+                      <span className="font-medium text-text-dark">{envelope.name}</span>
                     </td>
 
                     {/* Per Pay */}
                     <td className="px-3 py-2 text-right">
-                      <span className="font-semibold text-muted-foreground">
+                      <span className="font-semibold" style={{ color: '#7A9E9A', fontWeight: 600 }}>
                         ${perPay.toFixed(2)}
                       </span>
                     </td>
@@ -163,7 +168,7 @@ export function PriorityGroup({
                     <td className="px-3 py-2 text-right">
                       <span className={cn(
                         "font-semibold",
-                        isFullyFunded ? "text-foreground" : "text-blue"
+                        isFullyFunded ? "text-text-dark" : "text-blue"
                       )}>
                         ${total.toFixed(2)}
                       </span>
@@ -172,9 +177,9 @@ export function PriorityGroup({
                     {/* Status */}
                     <td className="px-3 py-2 text-center">
                       {perPay === 0 ? (
-                        <span className="text-muted-foreground text-xs">—</span>
+                        <span className="text-text-light text-xs">—</span>
                       ) : isFullyFunded ? (
-                        <span className="text-sage font-bold" title="Fully funded">✓</span>
+                        <span className="font-bold" style={{ color: '#7A9E9A' }} title="Fully funded">✓</span>
                       ) : (
                         <span className="text-blue font-semibold text-xs" title={`Need $${shortfall.toFixed(2)} more`}>
                           -${shortfall.toFixed(2)}
@@ -229,7 +234,7 @@ function AllocationInput({
 
   return (
     <div className="relative">
-      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-light">$</span>
       <input
         type="text"
         inputMode="decimal"
@@ -245,8 +250,8 @@ function AllocationInput({
         placeholder="0.00"
         className={cn(
           "w-full h-8 pl-5 pr-2 text-xs text-right rounded border",
-          "bg-background hover:bg-muted focus:outline-none focus:ring-1 focus:ring-primary",
-          isFocused ? "border-primary" : "border-border"
+          "bg-white hover:bg-silver-very-light focus:outline-none focus:ring-1 focus:ring-sage",
+          isFocused ? "border-sage" : "border-silver-light"
         )}
       />
     </div>

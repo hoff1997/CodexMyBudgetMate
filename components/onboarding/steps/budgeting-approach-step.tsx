@@ -35,45 +35,47 @@ export function BudgetingApproachStep({
       <div className="grid md:grid-cols-2 gap-6">
         {/* Template Option */}
         <Card
-          className={`p-6 cursor-pointer transition-all ${
+          className={`relative p-6 cursor-pointer transition-all ${
             useTemplate === true
-              ? "border-emerald-500 border-2 bg-emerald-50/50"
-              : "border-border hover:border-emerald-300"
+              ? "border-[#7A9E9A] border-2 bg-[#E2EEEC]/50"
+              : "border-border hover:border-[#B8D4D0]"
           }`}
           onClick={() => onUseTemplateChange(true)}
         >
+          <div className="absolute -top-3 left-4 bg-[#7A9E9A] text-white text-xs font-medium px-3 py-1 rounded-full">
+            Recommended
+          </div>
           <div className="space-y-4">
             <div className="flex items-start justify-between">
-              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-emerald-600" />
+              <div className="w-12 h-12 bg-[#E2EEEC] rounded-lg flex items-center justify-center">
+                <Sparkles className="h-6 w-6 text-[#7A9E9A]" />
               </div>
               {useTemplate === true && (
-                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                <CheckCircle2 className="h-6 w-6 text-[#7A9E9A]" />
               )}
             </div>
 
             <div>
               <h3 className="text-xl font-semibold mb-2">
                 Start with a Template
-                <span className="ml-2 text-sm font-normal text-emerald-600">(Recommended)</span>
               </h3>
               <p className="text-sm text-muted-foreground">
-                We&apos;ll suggest {envelopeCount} envelopes based on your {personaData?.label || "profile"}.
+                We&apos;ll suggest envelopes based on your {personaData?.label || "profile"}.
                 You can customize them all to match your needs.
               </p>
             </div>
 
             <div className="space-y-2 pt-2">
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />
                 <span>Faster setup (~10 min)</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />
                 <span>Proven budget structure</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />
                 <span>Easy to customize</span>
               </div>
             </div>
@@ -85,7 +87,7 @@ export function BudgetingApproachStep({
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {personaData?.envelopeTemplates?.slice(0, 6).map((template, idx) => (
-                    <span key={idx} className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
+                    <span key={idx} className="text-xs bg-[#E2EEEC] text-[#5A7E7A] px-2 py-1 rounded">
                       {template.icon} {template.name}
                     </span>
                   ))}
@@ -104,18 +106,18 @@ export function BudgetingApproachStep({
         <Card
           className={`p-6 cursor-pointer transition-all ${
             useTemplate === false
-              ? "border-blue-500 border-2 bg-blue-50/50"
-              : "border-border hover:border-blue-300"
+              ? "border-[#6B9ECE] border-2 bg-[#DDEAF5]/50"
+              : "border-border hover:border-[#6B9ECE]/50"
           }`}
           onClick={() => onUseTemplateChange(false)}
         >
           <div className="space-y-4">
             <div className="flex items-start justify-between">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Pencil className="h-6 w-6 text-blue-600" />
+              <div className="w-12 h-12 bg-[#DDEAF5] rounded-lg flex items-center justify-center">
+                <Pencil className="h-6 w-6 text-[#6B9ECE]" />
               </div>
               {useTemplate === false && (
-                <CheckCircle2 className="h-6 w-6 text-blue-600" />
+                <CheckCircle2 className="h-6 w-6 text-[#6B9ECE]" />
               )}
             </div>
 
@@ -129,15 +131,15 @@ export function BudgetingApproachStep({
 
             <div className="space-y-2 pt-2">
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <CheckCircle2 className="h-4 w-4 text-[#6B9ECE]" />
                 <span>Complete control</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <CheckCircle2 className="h-4 w-4 text-[#6B9ECE]" />
                 <span>No pre-filled categories</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <CheckCircle2 className="h-4 w-4 text-[#6B9ECE]" />
                 <span>For experienced budgeters</span>
               </div>
             </div>

@@ -343,13 +343,13 @@ function EnvelopeRow({
 
   const paysTillDue = calculatePaysTillDue();
 
-  // Get priority dot color (matches Budget Manager)
+  // Get priority dot color (matches Budget Manager and Style Guide)
   const getPriorityDot = () => {
     const priority = envelope.priority || 'important';
-    const dotColor = priority === 'essential' ? 'bg-red-500' :
-                     priority === 'discretionary' ? 'bg-green-500' : 'bg-yellow-400';
+    const dotColor = priority === 'essential' ? 'bg-sage-dark' :
+                     priority === 'discretionary' ? 'bg-blue' : 'bg-silver';
     const label = priority === 'essential' ? 'Essential' :
-                  priority === 'discretionary' ? 'Discretionary' : 'Important';
+                  priority === 'discretionary' ? 'Flexible' : 'Important';
     return <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} title={label} />;
   };
 

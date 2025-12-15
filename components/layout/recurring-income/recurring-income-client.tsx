@@ -1008,7 +1008,7 @@ function IncomeDrawer({
                   Delete
                 </Button>
               ) : null}
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
                 {saving ? "Saving…" : "Save stream"}
               </Button>
             </div>

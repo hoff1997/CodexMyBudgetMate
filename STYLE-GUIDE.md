@@ -351,6 +351,62 @@ The progress bar uses a light-to-dark sage gradient. Always positive — just sh
 
 ---
 
+## Priority Colors
+
+Used for categorising envelopes by importance level.
+
+| Priority | Name | Dot Color | Background | Border | Use Case |
+|----------|------|-----------|------------|--------|----------|
+| 1 | **Essential** | `sage-dark` (#5A7E7A) | `sage-very-light` (#E2EEEC) | `sage-light` (#B8D4D0) | Must-pay items: rent, groceries, utilities |
+| 2 | **Important** | `silver` (#9CA3AF) | `silver-very-light` (#F3F4F6) | `silver-light` (#E5E7EB) | Should-pay items: insurance, savings, debt |
+| 3 | **Flexible** | `blue` (#6B9ECE) | `blue-light` (#DDEAF5) | `blue` (#6B9ECE) | Nice-to-have: fun money, hobbies, treats |
+
+### Priority Color Psychology
+
+- **Sage (Essential)** — Positive, secure. Communicates "these are covered, you're safe."
+- **Silver (Important)** — Neutral, stable. Communicates "steady progress, keep going."
+- **Blue (Flexible)** — Informational, flexible. Communicates "adjust freely, no guilt."
+
+### Usage Examples
+
+**Group Headers:**
+```jsx
+{/* Essential */}
+<div className="bg-sage-very-light border border-sage-light">...</div>
+
+{/* Important */}
+<div className="bg-silver-very-light border border-silver-light">...</div>
+
+{/* Flexible */}
+<div className="bg-blue-light border border-blue">...</div>
+```
+
+**Priority Dots:**
+```jsx
+{/* Essential */}
+<span className="w-3 h-3 rounded-full bg-sage-dark" />
+
+{/* Important */}
+<span className="w-3 h-3 rounded-full bg-silver" />
+
+{/* Flexible */}
+<span className="w-3 h-3 rounded-full bg-blue" />
+```
+
+**Row Icons:**
+```jsx
+{/* Essential */}
+<div className="bg-sage-very-light rounded-lg p-2">...</div>
+
+{/* Important */}
+<div className="bg-silver-very-light rounded-lg p-2">...</div>
+
+{/* Flexible */}
+<div className="bg-blue-light rounded-lg p-2">...</div>
+```
+
+---
+
 ## Usage with Claude Code
 
 When asking Claude Code to update components, reference this guide:

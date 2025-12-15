@@ -23,22 +23,17 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, ChevronDown, ChevronRight, X, Menu } from "lucide-react";
+import { GripVertical, X, Menu } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v17"; // Increment this when adding new menu items - v17: merged Accounts into Net Worth
-const ADMIN_EMAIL = "hoff1997@gmail.com";
+const NAV_VERSION = "v18"; // Increment this when adding new menu items - v18: removed Reports and Future Features
 
 type NavItem = {
   id: string;
   label: string;
   href: string;
   icon: string;
-  separator?: boolean;
-  isAdvanced?: boolean;
-  isFutureFeature?: boolean;
-  isReportsSubmenu?: boolean;
   isOnboardingSubmenu?: boolean;
   isRetired?: boolean; // For items that still exist but are hidden from nav
 };
@@ -68,21 +63,18 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
   { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
-  { id: "reports", label: "Reports", href: "/reports", icon: "📑" },
-  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isReportsSubmenu: true },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
 
   // Retired items (pages still exist but hidden from nav)
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦", isRetired: true },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄", isRetired: true },
   { id: "budget-manager", label: "Old Budget Manager", href: "/budget-manager", icon: "🎯", isRetired: true },
-
-  // Future Features (admin only)
-  { id: "separator-future", label: "", href: "", icon: "", separator: true },
-  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isFutureFeature: true },
-  { id: "goals", label: "Goals", href: "/goals", icon: "🎯", isFutureFeature: true },
-  { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isFutureFeature: true },
-  { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isFutureFeature: true },
+  { id: "reports", label: "Reports", href: "/reports", icon: "📑", isRetired: true },
+  { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isRetired: true },
+  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isRetired: true },
+  { id: "goals", label: "Goals", href: "/goals", icon: "🎯", isRetired: true },
+  { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isRetired: true },
+  { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isRetired: true },
 ];
 
 interface OnboardingDraft {
@@ -101,11 +93,8 @@ export default function Sidebar({
 }) {
   const pathname = usePathname();
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
-  const [showReportsSubmenu, setShowReportsSubmenu] = useState(false);
-  const [showFutureFeatures, setShowFutureFeatures] = useState(false);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const isAdmin = userEmail === ADMIN_EMAIL;
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -229,31 +218,6 @@ export default function Sidebar({
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
           <nav className="px-1 py-2 space-y-0.5">
             {filteredNavItems.map((item) => {
-              // Handle separator for future features section (admin only)
-              if (item.id === "separator-future") {
-                if (!isAdmin) return null;
-                return (
-                  <div key={item.id} className="my-1">
-                    <button
-                      onClick={() => setShowFutureFeatures(!showFutureFeatures)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-light hover:text-text-dark w-full"
-                    >
-                      {showFutureFeatures ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                      <span>Future Features</span>
-                    </button>
-                  </div>
-                );
-              }
-
-              // Hide future features if section is collapsed or user is not admin
-              if (item.isFutureFeature && (!isAdmin || !showFutureFeatures)) {
-                return null;
-              }
-
               // Handle Getting Started (Onboarding) - clicking goes directly to onboarding
               if (item.id === "onboarding") {
                 const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
@@ -293,57 +257,6 @@ export default function Sidebar({
               // Hide onboarding submenu items (they're rendered inline above)
               if (item.isOnboardingSubmenu) {
                 return null;
-              }
-
-              // Handle Reports submenu
-              if (item.id === "reports") {
-                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                return (
-                  <div key={item.id}>
-                    <button
-                      onClick={() => setShowReportsSubmenu(!showReportsSubmenu)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition w-full rounded-md",
-                        isActive
-                          ? "bg-white text-text-dark border-l-3 border-l-sage"
-                          : "text-text-medium hover:bg-silver-light hover:text-text-dark"
-                      )}
-                    >
-                      <span>{item.icon}</span>
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {showReportsSubmenu ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                );
-              }
-
-              // Hide reports submenu items if collapsed
-              if (item.isReportsSubmenu && !showReportsSubmenu) {
-                return null;
-              }
-
-              // Render submenu items with indentation
-              if (item.isReportsSubmenu) {
-                const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-1.5 pl-8 pr-3 py-1.5 text-xs font-medium transition rounded-md",
-                      isActive
-                        ? "bg-white text-text-dark border-l-3 border-l-sage"
-                        : "text-text-medium hover:bg-silver-light hover:text-text-dark"
-                    )}
-                  >
-                    <span>{item.icon}</span>
-                    <span>{item.label}</span>
-                  </Link>
-                );
               }
 
               return <SortableNavItem key={item.id} item={item} activePath={pathname} />;
@@ -443,15 +356,6 @@ function SortableNavItem({ item, activePath }: { item: NavItem; activePath: stri
   const isActive =
     typeof activePath === "string" &&
     (activePath === item.href || activePath.startsWith(`${item.href}/`));
-
-  // Render separator
-  if (item.separator) {
-    return (
-      <div ref={setNodeRef} style={style} className="my-1.5 px-3">
-        <div className="border-t border-border" />
-      </div>
-    );
-  }
 
   return (
     <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-60")}>

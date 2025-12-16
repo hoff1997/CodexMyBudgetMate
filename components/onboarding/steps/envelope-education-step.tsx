@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Zap, ShoppingBag, PiggyBank, PlayCircle } from "lucide-react";
+import { ArrowRight, Zap, ShoppingBag, Target, PlayCircle } from "lucide-react";
 import { RemyAvatar, RemyTip } from "@/components/onboarding/remy-tip";
 
 interface EnvelopeEducationStepProps {
@@ -116,7 +116,7 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
           {/* Savings */}
           <Card className="p-6 border-2 border-[#5A7E7A] bg-[#5A7E7A]/10">
             <div className="w-12 h-12 bg-[#5A7E7A] rounded-lg flex items-center justify-center mb-4">
-              <PiggyBank className="h-6 w-6 text-white" />
+              <Target className="h-6 w-6 text-white" />
             </div>
             <h4 className="text-lg font-semibold mb-2">Savings</h4>
             <p className="text-sm text-muted-foreground mb-3">

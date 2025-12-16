@@ -15,7 +15,7 @@
 import { useMemo } from "react";
 import {
   Wallet,
-  PiggyBank,
+  Inbox,
   CreditCard,
   Shield,
   HelpCircle,
@@ -101,7 +101,7 @@ export function FinancialHealthSection({
           title="Envelope Balance"
           value={formatCurrency(data.envelopeBalance)}
           subtitle={`${data.totalCurrent > 0 ? "Allocated funds" : "No allocations yet"}`}
-          icon={PiggyBank}
+          icon={Inbox}
           variant={data.envelopeBalance > 0 ? "positive" : "neutral"}
           onClick={() => onCardClick?.("envelope-balance")}
         />

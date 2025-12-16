@@ -13,7 +13,7 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Search, DollarSign, Wallet, Receipt, PiggyBank, Settings, FileText, Home } from "lucide-react";
+import { Search, DollarSign, Wallet, Receipt, Layers, Settings, FileText, Home } from "lucide-react";
 import { formatCurrency } from "@/lib/finance";
 
 interface SearchResult {
@@ -30,7 +30,7 @@ const QUICK_PAGES = [
   { id: "reconcile", title: "Reconciliation Centre", href: "/reconcile", icon: Receipt },
   { id: "transactions", title: "Transactions", href: "/transactions", icon: DollarSign },
   { id: "envelope-summary", title: "Envelope Summary", href: "/envelope-summary", icon: Wallet },
-  { id: "allocation", title: "Allocation", href: "/allocation", icon: PiggyBank },
+  { id: "allocation", title: "Allocation", href: "/allocation", icon: Layers },
   { id: "accounts", title: "Accounts", href: "/accounts", icon: FileText },
   { id: "settings", title: "Settings", href: "/settings", icon: Settings },
 ];

@@ -12,7 +12,7 @@ import {
   Plus,
   ArrowLeftRight,
   Receipt,
-  PiggyBank,
+  Inbox,
   CreditCard,
   FileText,
   Settings,
@@ -57,7 +57,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   {
     id: "envelopes",
     label: "Envelopes",
-    icon: PiggyBank,
+    icon: Inbox,
     href: "/envelope-summary",
     colorClass: "text-text-medium",
     bgClass: "hover:bg-silver-light/50",

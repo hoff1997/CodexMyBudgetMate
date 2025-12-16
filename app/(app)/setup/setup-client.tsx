@@ -30,7 +30,7 @@ import {
 import {
   Calculator,
   DollarSign,
-  PiggyBank,
+  Landmark,
   CreditCard,
   CheckCircle,
   ArrowRight,
@@ -214,7 +214,7 @@ export function SetupClient({ userId }: SetupClientProps) {
       case "transaction":
         return <DollarSign className="h-5 w-5 text-blue-600" />;
       case "savings":
-        return <PiggyBank className="h-5 w-5 text-green-600" />;
+        return <Landmark className="h-5 w-5 text-green-600" />;
       case "debt":
       case "credit":
         return <CreditCard className="h-5 w-5 text-red-600" />;
@@ -283,7 +283,7 @@ export function SetupClient({ userId }: SetupClientProps) {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div className="text-center mb-6">
-                  <PiggyBank className="h-12 w-12 text-primary mx-auto mb-4" />
+                  <Landmark className="h-12 w-12 text-primary mx-auto mb-4" />
                   <h3 className="text-lg font-medium mb-2">
                     Add Your Bank Accounts
                   </h3>

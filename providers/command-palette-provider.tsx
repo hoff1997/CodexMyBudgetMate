@@ -8,7 +8,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useDebounce } from "@/lib/hooks/use-debounce";
 import { useQuery } from "@tanstack/react-query";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import { Search, Home, PiggyBank, Repeat2, Wallet, BarChart3, ListChecks, Settings, Wallet2, AlignLeft } from "lucide-react";
+import { Search, Home, Banknote, Repeat2, Wallet, BarChart3, ListChecks, Settings, Wallet2, AlignLeft } from "lucide-react";
 import type { CommandAction } from "@/types/command";
 
 type CommandPaletteContextValue = {
@@ -116,7 +116,7 @@ function CommandPalette({
       { label: "Envelope planning", href: "/envelope-planning", description: "Adjust targets and contributions", icon: <ListChecks className="h-4 w-4" /> },
       { label: "Recurring income", href: "/recurring-income", description: "Manage automated pay splits", icon: <Repeat2 className="h-4 w-4" /> },
       { label: "Reports", href: "/reports", description: "Spending, income, debt", icon: <BarChart3 className="h-4 w-4" /> },
-      { label: "Debt management", href: "/debt-management", description: "Payoff strategies", icon: <PiggyBank className="h-4 w-4" /> },
+      { label: "Debt management", href: "/debt-management", description: "Payoff strategies", icon: <Banknote className="h-4 w-4" /> },
       { label: "Settings", href: "/settings", description: "Preferences and configuration", icon: <Settings className="h-4 w-4" /> },
     ],
     [],

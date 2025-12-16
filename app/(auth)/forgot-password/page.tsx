@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { PiggyBank, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -38,9 +38,8 @@ export default function ForgotPasswordPage() {
       <div className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
         <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-            <Link href="/" className="flex items-center gap-2">
-              <PiggyBank className="h-7 w-7 text-[#7A9E9A]" />
-              <span className="text-lg font-semibold text-[#3D3D3D]">My Budget Mate</span>
+            <Link href="/" className="flex items-center">
+              <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
             </Link>
           </div>
         </header>
@@ -76,9 +75,8 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
       <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <PiggyBank className="h-7 w-7 text-[#7A9E9A]" />
-            <span className="text-lg font-semibold text-[#3D3D3D]">My Budget Mate</span>
+          <Link href="/" className="flex items-center">
+            <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
           </Link>
           <Button asChild variant="ghost" size="sm" className="text-[#6B6B6B]">
             <Link href="/">Back to home</Link>

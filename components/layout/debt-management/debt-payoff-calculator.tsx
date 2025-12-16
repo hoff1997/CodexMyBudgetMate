@@ -5,7 +5,7 @@ import { addMonths, format } from "date-fns";
 import {
   CalendarDays,
   Flag,
-  PiggyBank,
+  Coins,
   TrendingDown,
   TrendingUp,
   Zap,
@@ -165,7 +165,7 @@ export function DebtPayoffCalculator({ debts, strategy, suggestedExtra }: DebtPa
               }
             />
             <MetricTile
-              icon={PiggyBank}
+              icon={Coins}
               label="Gains from extra"
               value={interestSaved ? formatCurrency(interestSaved) : "—"}
               accent="text-primary"

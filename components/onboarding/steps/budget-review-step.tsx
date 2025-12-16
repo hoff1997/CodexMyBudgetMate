@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Edit, AlertTriangle, CheckCircle2, Zap, ShoppingBag, PiggyBank, Plus, TrendingUp } from "lucide-react";
+import { Edit, AlertTriangle, CheckCircle2, Zap, ShoppingBag, Target, Plus, TrendingUp } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
 import { useBudgetValidation } from "@/lib/hooks/use-budget-validation";
 import { AllocateSurplusDialog } from "@/components/dialogs/allocate-surplus-dialog";
@@ -169,7 +169,7 @@ export function BudgetReviewStep({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-[#7A9E9A] rounded-lg flex items-center justify-center">
-                  <PiggyBank className="h-4 w-4 text-white" />
+                  <Target className="h-4 w-4 text-white" />
                 </div>
                 <div>
                   <p className="font-semibold">Savings</p>

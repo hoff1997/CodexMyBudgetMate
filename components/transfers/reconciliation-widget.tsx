@@ -18,7 +18,7 @@ import {
   ChevronDown,
   ChevronUp,
   Wallet,
-  PiggyBank,
+  Inbox,
   CreditCard,
   ArrowRightLeft,
 } from "lucide-react";
@@ -189,7 +189,7 @@ export function ReconciliationWidget({
             {/* Envelopes */}
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-muted-foreground flex items-center gap-1">
-                <PiggyBank className="h-3 w-3" />
+                <Inbox className="h-3 w-3" />
                 Envelopes
               </span>
               <span className="font-medium">{formatCurrency(data.totalEnvelopeBalance)}</span>

@@ -8,3 +8,4 @@ export { CreditCardSection } from "./credit-card-section";
 export { UpcomingNeedsSection, type UpcomingBill } from "./upcoming-needs-section";
 export { WaterfallPreview, type WaterfallData } from "./waterfall-preview";
 export { QuickActionsV2 } from "./quick-actions-v2";
+export { QuickGlanceWidget } from "./quick-glance-widget";

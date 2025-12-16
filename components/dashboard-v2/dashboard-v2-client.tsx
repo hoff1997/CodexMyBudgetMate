@@ -7,7 +7,7 @@
  * Receives server-fetched data and renders all sections.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardSummaryHeader } from "./dashboard-summary-header";
 import { FinancialHealthSection, type FinancialHealthData } from "./financial-health-section";
@@ -16,6 +16,7 @@ import { CreditCardSection } from "./credit-card-section";
 import { UpcomingNeedsSection, type UpcomingBill } from "./upcoming-needs-section";
 import { WaterfallPreview, type WaterfallData } from "./waterfall-preview";
 import { QuickActionsV2 } from "./quick-actions-v2";
+import { QuickGlanceWidget } from "./quick-glance-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, ArrowRight } from "lucide-react";
@@ -44,6 +45,7 @@ export interface DashboardV2Data {
     due_date?: string | null;
     priority?: string;
     is_tracking_only?: boolean;
+    is_monitored?: boolean;
     category_id?: string;
     frequency?: string;
   }>;
@@ -98,6 +100,55 @@ export function DashboardV2Client({
   demoMode = false,
 }: DashboardV2ClientProps) {
   const router = useRouter();
+
+  // Local envelope state for optimistic updates
+  const [envelopeMonitorStates, setEnvelopeMonitorStates] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    data.envelopes.forEach((env) => {
+      initial[env.id] = env.is_monitored ?? false;
+    });
+    return initial;
+  });
+
+  // Handle toggling monitored status
+  const handleToggleMonitored = useCallback(async (envelopeId: string, isMonitored: boolean) => {
+    // Optimistic update
+    setEnvelopeMonitorStates((prev) => ({
+      ...prev,
+      [envelopeId]: isMonitored,
+    }));
+
+    // Persist to database
+    try {
+      const response = await fetch(`/api/envelopes/${envelopeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_monitored: isMonitored }),
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setEnvelopeMonitorStates((prev) => ({
+          ...prev,
+          [envelopeId]: !isMonitored,
+        }));
+      }
+    } catch {
+      // Revert on error
+      setEnvelopeMonitorStates((prev) => ({
+        ...prev,
+        [envelopeId]: !isMonitored,
+      }));
+    }
+  }, []);
+
+  // Envelopes with current monitored state
+  const envelopesWithMonitorState = useMemo(() => {
+    return data.envelopes.map((env) => ({
+      ...env,
+      is_monitored: envelopeMonitorStates[env.id] ?? env.is_monitored ?? false,
+    }));
+  }, [data.envelopes, envelopeMonitorStates]);
 
   // Calculate derived values
   const calculations = useMemo(() => {
@@ -272,21 +323,27 @@ export function DashboardV2Client({
       )}
 
       {/* Section 1: Summary Header with Remy Help */}
-      <div className="relative">
-        <div className="absolute top-2 right-2 z-10">
-          <RemyHelpPanel pageId="dashboard" />
-        </div>
-        <DashboardSummaryHeader
-          userName={data.userName}
-          availableBalance={calculations.bankBalance}
-          incomeThisMonth={data.incomeThisMonth}
-          nextPayday={data.nextPayday}
-          budgetHealthStatus={calculations.budgetHealthStatus}
-        />
-      </div>
+      <DashboardSummaryHeader
+        userName={data.userName}
+        availableBalance={calculations.bankBalance}
+        incomeThisMonth={data.incomeThisMonth}
+        nextPayday={data.nextPayday}
+        budgetHealthStatus={calculations.budgetHealthStatus}
+        remyHelp={<RemyHelpPanel pageId="dashboard" />}
+      />
 
-      {/* Section 2: Quick Actions */}
-      <QuickActionsV2 />
+      {/* Section 2: Quick Actions and Quick Glance side-by-side on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <QuickActionsV2 />
+        </div>
+        <div className="lg:col-span-1">
+          <QuickGlanceWidget
+            envelopes={envelopesWithMonitorState}
+            onToggleMonitored={handleToggleMonitored}
+          />
+        </div>
+      </div>
 
       {/* Section 3: Financial Health Cards (6-card grid) */}
       <FinancialHealthSection

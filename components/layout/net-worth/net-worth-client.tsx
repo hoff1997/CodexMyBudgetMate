@@ -183,13 +183,13 @@ export function NetWorthClient({ assets, liabilities, snapshots, monthlySnapshot
           <p className="text-sm text-[#6B6B6B]">Track your financial momentum</p>
         </div>
         <div className="flex items-center gap-2">
-          <RemyHelpPanel pageId="net-worth" />
           <Button variant="outline" size="sm" asChild>
             <Link href="/allocation">Planner</Link>
           </Button>
           <Button size="sm" onClick={createSnapshot} disabled={!canEdit || snapshotLoading} className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-white">
             {snapshotLoading ? "Saving…" : "Take snapshot"}
           </Button>
+          <RemyHelpPanel pageId="net-worth" />
         </div>
       </header>
 

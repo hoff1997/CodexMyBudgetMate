@@ -10,18 +10,18 @@
  * - Days until next payday
  */
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { Calendar, TrendingUp, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/finance";
-import { differenceInDays, format } from "date-fns";
-import { cn } from "@/lib/cn";
+import { differenceInDays } from "date-fns";
 
 interface DashboardSummaryHeaderProps {
   userName?: string;
   availableBalance: number;
   incomeThisMonth: number;
   nextPayday?: Date | null;
-  budgetHealthStatus: "healthy" | "attention" | "critical";
+  budgetHealthStatus?: "healthy" | "attention" | "critical";
+  remyHelp?: ReactNode;
 }
 
 export function DashboardSummaryHeader({
@@ -29,7 +29,7 @@ export function DashboardSummaryHeader({
   availableBalance,
   incomeThisMonth,
   nextPayday,
-  budgetHealthStatus,
+  remyHelp,
 }: DashboardSummaryHeaderProps) {
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -44,18 +44,6 @@ export function DashboardSummaryHeader({
     return days >= 0 ? days : null;
   }, [nextPayday]);
 
-  const statusStyles = {
-    healthy: "bg-sage-light/30 border-sage/40 text-sage",
-    attention: "bg-blue-light/30 border-blue/40 text-blue",
-    critical: "bg-blue-light/30 border-blue/40 text-blue",
-  };
-
-  const statusMessages = {
-    healthy: "Budget on track",
-    attention: "Needs attention",
-    critical: "Review recommended",
-  };
-
   return (
     <header className="rounded-xl bg-gradient-to-br from-silver-light/50 to-white border border-silver/30 p-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -67,16 +55,6 @@ export function DashboardSummaryHeader({
           <p className="text-sm text-text-medium">
             Here&apos;s your financial snapshot
           </p>
-
-          {/* Status Badge */}
-          <div className="pt-2">
-            <span className={cn(
-              "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border",
-              statusStyles[budgetHealthStatus]
-            )}>
-              {statusMessages[budgetHealthStatus]}
-            </span>
-          </div>
         </div>
 
         {/* Right: Key metrics */}
@@ -125,6 +103,13 @@ export function DashboardSummaryHeader({
                   )}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Remy Help */}
+          {remyHelp && (
+            <div className="flex items-center">
+              {remyHelp}
             </div>
           )}
         </div>

@@ -105,7 +105,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     // All envelopes with full details + frequency for bill display
     supabase
       .from("envelopes")
-      .select("id, name, icon, current_amount, target_amount, due_date, priority, is_tracking_only, category_id, frequency")
+      .select("id, name, icon, current_amount, target_amount, due_date, priority, is_tracking_only, is_monitored, category_id, frequency")
       .eq("user_id", userId)
       .or("is_goal.is.null,is_goal.eq.false"),
 
@@ -246,6 +246,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           due_date: e.due_date || null,
           priority: e.priority || undefined,
           is_tracking_only: e.is_tracking_only || false,
+          is_monitored: (e as any).is_monitored || false,
           category_id: e.category_id || undefined,
           frequency: (e as any).frequency || undefined,
         })),

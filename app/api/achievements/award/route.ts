@@ -44,22 +44,33 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Award achievement using database function
-    const { data, error } = await supabase.rpc('award_achievement', {
-      p_user_id: user.id,
-      p_achievement_key: achievementKey,
-      p_category: achievement.category,
-      p_points: achievement.points,
-      p_metadata: metadata || {},
-    });
+    // Insert achievement directly into the table
+    // Uses upsert to handle duplicates gracefully (unique constraint on user_id, achievement_type)
+    const { data, error } = await supabase
+      .from('achievements')
+      .upsert(
+        {
+          user_id: user.id,
+          achievement_type: achievementKey,
+          metadata: metadata || {},
+          unlocked_at: new Date().toISOString(),
+        },
+        {
+          onConflict: 'user_id,achievement_type',
+          ignoreDuplicates: true,
+        }
+      )
+      .select()
+      .single();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned (duplicate was ignored)
       console.error('Award achievement error:', error);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // data is a boolean: true if newly earned, false if already earned
-    const newlyEarned = data === true;
+    // If data exists, it was newly earned; if null/error, it was a duplicate
+    const newlyEarned = !!data;
 
     if (newlyEarned) {
       // Update last activity
@@ -72,7 +83,7 @@ export async function POST(request: Request) {
             achievementKey,
           },
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
     }
 
     return NextResponse.json({

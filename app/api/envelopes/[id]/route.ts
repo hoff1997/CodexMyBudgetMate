@@ -33,6 +33,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "is_spending",
     "is_goal",
     "is_tracking_only",
+    "is_monitored",
     "icon",
     "opening_balance",
   ];

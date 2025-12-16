@@ -177,7 +177,7 @@ export function EnvelopeCreationStep({
         }),
         ...(type === "savings" && {
           savingsAmount: masterEnv.targetAmount || 0,
-          goalType: (masterEnv.name.toLowerCase().includes("emergency") ? "emergency_fund" : "savings") as const,
+          goalType: masterEnv.name.toLowerCase().includes("emergency") ? "emergency_fund" as const : "savings" as const,
         }),
       };
     });

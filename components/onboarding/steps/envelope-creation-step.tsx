@@ -143,6 +143,22 @@ export function EnvelopeCreationStep({
         }
       }
 
+      // Map template frequency to EnvelopeData frequency
+      const mapFrequency = (freq?: string): "monthly" | "quarterly" | "annual" | "custom" => {
+        switch (freq) {
+          case "weekly":
+          case "fortnightly":
+            return "custom"; // Weekly/fortnightly mapped to custom
+          case "quarterly":
+            return "quarterly";
+          case "annually":
+            return "annual";
+          case "monthly":
+          default:
+            return "monthly";
+        }
+      };
+
       return {
         id: `envelope-${Date.now()}-${Math.random()}`,
         name: masterEnv.name,
@@ -152,7 +168,7 @@ export function EnvelopeCreationStep({
         // Type-specific fields - use template values if available
         ...(type === "bill" && {
           billAmount: masterEnv.targetAmount || 0,
-          frequency: (masterEnv.frequency || "monthly") as const,
+          frequency: mapFrequency(masterEnv.frequency),
           priority: masterEnv.priority,
         }),
         ...(type === "spending" && {

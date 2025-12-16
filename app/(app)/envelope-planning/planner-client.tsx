@@ -32,6 +32,7 @@ import { EnvelopeEditSheet } from "@/components/layout/envelopes/envelope-edit-s
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
 import HelpTooltip from "@/components/ui/help-tooltip";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import {
   DndContext,
   KeyboardSensor,
@@ -489,6 +490,10 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
                 Back
               </Link>
             </Button>
+
+            <RemyTip pose="encouraging">
+              This is where you can configure your envelopes and set up your financial plan. Take your time getting things set up properly.
+            </RemyTip>
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, RefreshCw, Save, Wand2, RotateCcw, Clock, ChevronDown, ChevronRight, Trash2, StickyNote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import { IncomeProgressCard } from "@/components/allocation/income-progress-card";
 import { calculateIdealAllocation, type PayCycle } from "@/lib/utils/ideal-allocation-calculator";
 import type { UnifiedEnvelopeData, IncomeSource, PaySchedule } from "@/lib/types/unified-envelope";
@@ -550,6 +551,11 @@ export function AllocationClient() {
           </Button>
         </div>
       </div>
+
+      {/* Remy Welcome */}
+      <RemyTip pose="welcome" className="mb-6">
+        Welcome to your budget! This is where the magic happens.
+      </RemyTip>
 
       {/* Income Buckets */}
       <div className="grid grid-cols-2 gap-4 mb-6">

@@ -228,3 +228,247 @@ Uses **blue colors only** (not red/amber) for urgency to avoid financial anxiety
 - High urgency: `bg-[#DDEAF5]` / `text-[#6B9ECE]`
 - Medium urgency: `bg-[#F3F4F6]` / `text-[#6B6B6B]`
 - Low/none: transparent / `text-[#9CA3AF]`
+
+## 🚣 Remy - The Mascot & Guide (Updated Dec 2025)
+
+### Overview
+
+Remy is the friendly Kiwi mascot who guides users through the app. He appears throughout onboarding and provides encouraging, warm guidance in a distinctly New Zealand voice.
+
+### Remy's Personality
+
+- **Warm & Encouraging** - Never judgmental about financial situations
+- **Kiwi Voice** - Uses NZ English: "sorted", "no worries", "stoked", "cuppa", "mate"
+- **Direct & Practical** - Gets to the point without corporate jargon
+- **Calm & Reassuring** - Reduces financial anxiety, never creates urgency
+
+### Banned Phrases (NEVER USE)
+
+- "Every dollar has a job" (YNAB trademark)
+- "Baby steps" (Dave Ramsey trademark)
+- "Zero-based budgeting" (too technical)
+- Generic corporate phrases
+
+### Remy Components
+
+**Location**: `components/onboarding/remy-tip.tsx`
+
+#### RemyTip Component
+Used for guidance messages with Remy's avatar:
+
+```tsx
+import { RemyTip } from "@/components/onboarding/remy-tip";
+
+<RemyTip pose="encouraging">
+  Grab a cuppa and get comfy. We're going to set up your budget properly.
+</RemyTip>
+```
+
+**Props:**
+- `pose`: "welcome" | "encouraging" | "thinking" | "celebrating" | "small"
+- `children`: Message content (React nodes)
+- `className`: Additional CSS classes
+
+#### RemyAvatar Component
+Standalone avatar for headers:
+
+```tsx
+import { RemyAvatar } from "@/components/onboarding/remy-tip";
+
+<RemyAvatar pose="thinking" size="md" />
+```
+
+**Props:**
+- `pose`: "welcome" | "encouraging" | "thinking" | "celebrating" | "small"
+- `size`: "sm" (40px) | "md" (64px) | "lg" (96px) | "xl" (112px)
+- `className`: Additional CSS classes
+
+### Remy Image Assets
+
+**Location**: `/public/Images/` (note capital I)
+
+| File | Pose | Usage |
+|------|------|-------|
+| `remy-welcome.png` | Welcoming | Welcome step, introductions |
+| `remy-encouraging.png` | Supportive | Tips, guidance, motivation |
+| `remy-thinking.png` | Contemplative | Explanations, education |
+| `remy-celebrating.png` | Excited | Completion, achievements |
+| `remy-small.png` | Compact | Headers, inline usage |
+
+### Onboarding Steps with Remy
+
+All 11 onboarding steps now feature Remy:
+
+| Step | File | Remy Presence |
+|------|------|---------------|
+| Welcome | `welcome-step.tsx` | Large avatar + speech bubble intro |
+| Profile | `profile-step.tsx` | RemyTip with friendly guidance |
+| Income | `income-step.tsx` | RemyTip explaining income setup |
+| Bank Accounts | `bank-accounts-step.tsx` | RemyTip about Akahu security |
+| Budgeting Approach | `budgeting-approach-step.tsx` | RemyTip about templates vs scratch |
+| Envelope Education | `envelope-education-step.tsx` | Header avatar + two RemyTips |
+| Envelope Creation | `envelope-creation-step.tsx` | RemyTip encouragement |
+| Envelope Allocation | `envelope-allocation-step.tsx` | Context-aware RemyTips |
+| Budget Review | `budget-review-step.tsx` | RemyTip review guidance |
+| Opening Balance | `opening-balance-step.tsx` | RemyTip about balances |
+| Completion | `completion-step.tsx` | Celebrating avatar + confetti |
+
+### Completion Step Features
+
+The completion step (`completion-step.tsx`) includes:
+- Remy celebrating avatar with gold border
+- Confetti animation using `canvas-confetti` library
+- "You legend!" celebration message
+- First goal hint (Emergency Fund achievement)
+- Deferred features list
+- Motivational closing message
+
+### Style Guidelines for Remy Messages
+
+**DO:**
+```
+"Grab a cuppa and get comfy."
+"Sweet as! With one income, this part's easy."
+"Have a look and make sure it feels right."
+"Future you will be stoked."
+```
+
+**DON'T:**
+```
+"Welcome to the budgeting journey!"
+"Let's optimize your financial future!"
+"Every dollar has a job to do!"
+"Great job! You're doing amazing!"
+```
+
+## 🎨 Style Guide Colors (Updated Dec 2025)
+
+### Primary Palette (Calm & Trustworthy)
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Sage | `#7A9E9A` | `sage` | Primary buttons, success states |
+| Sage Dark | `#5A7E7A` | `sage-dark` | Hover states, text |
+| Sage Light | `#B8D4D0` | `sage-light` | Borders, subtle backgrounds |
+| Sage Very Light | `#E2EEEC` | `sage-very-light` | Card backgrounds, RemyTip bg |
+
+### Accent Colors
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Blue | `#6B9ECE` | `blue` | Links, info states |
+| Blue Light | `#DDEAF5` | `blue-light` | Info backgrounds |
+| Gold | `#D4A853` | `gold` | Warnings, achievements |
+| Gold Light | `#F5E6C4` | `gold-light` | Warning backgrounds |
+
+### Text Colors
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Text Dark | `#1A2E2A` | `text-dark` | Primary headings |
+| Text Medium | `#4A5E5A` | `text-medium` | Body text |
+| Muted | `#6B7B7A` | `muted-foreground` | Secondary text |
+
+### Using Semantic Classes
+
+```tsx
+// Primary button
+<Button className="bg-sage hover:bg-sage-dark">Save</Button>
+
+// RemyTip background
+<div className="bg-sage-very-light border-sage-light">...</div>
+
+// Info card
+<Card className="bg-blue-light border-blue">...</Card>
+
+// Warning card
+<Card className="bg-gold-light border-gold">...</Card>
+```
+
+## 🏆 Achievement System (Updated Dec 2025)
+
+### Overview
+
+The Achievement System gamifies financial progress with badges and milestones. Achievements are tracked in the database and displayed in the UI.
+
+### Database Table
+
+**Location**: `supabase/migrations/0027_achievements.sql`
+
+```sql
+CREATE TABLE achievements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  achievement_key TEXT NOT NULL,
+  achieved_at TIMESTAMPTZ DEFAULT NOW(),
+  metadata JSONB DEFAULT '{}',
+  UNIQUE(user_id, achievement_key)
+);
+```
+
+### Achievement Definitions
+
+**Location**: `lib/achievements/definitions.ts`
+
+```typescript
+export type AchievementKey =
+  | 'first_envelope'
+  | 'emergency_fund_started'
+  | 'emergency_fund_1000'
+  | 'emergency_fund_complete'
+  | 'first_budget_month'
+  | 'debt_free'
+  | 'onboarding_complete';
+
+export interface AchievementDefinition {
+  key: AchievementKey;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'onboarding' | 'savings' | 'budgeting' | 'debt';
+}
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/achievements/definitions.ts` | Achievement metadata |
+| `lib/hooks/use-achievements.ts` | React Query hook |
+| `app/api/achievements/route.ts` | CRUD API |
+| `components/achievements/achievement-badge.tsx` | Badge display |
+| `components/achievements/achievement-toast.tsx` | Celebration popup |
+
+### Usage
+
+```tsx
+import { useAchievements } from "@/lib/hooks/use-achievements";
+
+function MyComponent() {
+  const { achievements, unlockAchievement } = useAchievements();
+
+  // Check if achieved
+  const hasEmergencyFund = achievements.some(
+    a => a.achievement_key === 'emergency_fund_1000'
+  );
+
+  // Unlock achievement
+  await unlockAchievement('first_envelope');
+}
+```
+
+## 🔧 Form Hydration Warning Fix
+
+### Issue
+Browser extensions (password managers, autofill) inject attributes into form elements before React hydrates, causing hydration mismatch warnings.
+
+### Solution
+Add `suppressHydrationWarning` to form elements:
+
+```tsx
+<form onSubmit={handleSubmit} suppressHydrationWarning>
+  ...
+</form>
+```
+
+**Applied to**: `components/auth/auth-form.tsx`

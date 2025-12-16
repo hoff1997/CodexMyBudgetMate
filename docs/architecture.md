@@ -1989,3 +1989,394 @@ supabase/migrations/
 - [ ] **Multi-Card**: Test avalanche vs snowball comparison
 - [ ] **Card Badge**: Test network detection from transaction
 - [ ] **Interest Tracker**: Verify monthly interest displays
+
+---
+
+## Remy - The Mascot & Guide System
+
+**Status**: ✅ **COMPLETE** (100% - All onboarding steps implemented)
+**Implementation Date**: December 2025
+
+### Overview
+
+Remy is the friendly Kiwi mascot who guides users through the app with warm, encouraging messages. He appears throughout onboarding and provides contextual guidance in a distinctly New Zealand voice.
+
+### Personality Guidelines
+
+**Voice Characteristics:**
+- Warm & Encouraging - Never judgmental
+- Kiwi English - Uses "sorted", "no worries", "stoked", "cuppa", "mate"
+- Direct & Practical - Gets to the point
+- Calm & Reassuring - Reduces financial anxiety
+
+**Banned Phrases:**
+- "Every dollar has a job" (YNAB trademark)
+- "Baby steps" (Dave Ramsey trademark)
+- "Zero-based budgeting" (too technical)
+- Generic corporate speak
+
+### Component Architecture
+
+#### RemyTip Component
+
+**File**: `components/onboarding/remy-tip.tsx`
+
+```tsx
+interface RemyTipProps {
+  children: React.ReactNode;
+  pose?: "welcome" | "encouraging" | "thinking" | "celebrating" | "small";
+  className?: string;
+}
+
+export function RemyTip({ children, pose = "encouraging", className = "" }: RemyTipProps)
+```
+
+**Usage:**
+```tsx
+<RemyTip pose="encouraging">
+  Grab a cuppa and get comfy. We're going to set up your budget properly.
+</RemyTip>
+```
+
+**Styling:**
+- Background: `bg-sage-very-light` (#E2EEEC)
+- Border: `border-sage-light` (#B8D4D0)
+- Text: `text-sage-dark` (#5A7E7A)
+- Signature: `text-sage` (#7A9E9A)
+
+#### RemyAvatar Component
+
+**File**: `components/onboarding/remy-tip.tsx`
+
+```tsx
+interface RemyAvatarProps {
+  pose?: "welcome" | "encouraging" | "thinking" | "celebrating" | "small";
+  size?: "sm" | "md" | "lg" | "xl";
+  className?: string;
+}
+
+export function RemyAvatar({ pose = "welcome", size = "md", className = "" }: RemyAvatarProps)
+```
+
+**Size Classes:**
+- `sm`: 40x40px
+- `md`: 64x64px
+- `lg`: 96x96px
+- `xl`: 112x112px
+
+### Image Assets
+
+**Location**: `/public/Images/` (capital I)
+
+| File | Pose | Usage Context |
+|------|------|---------------|
+| `remy-welcome.png` | Greeting | Welcome step, introductions |
+| `remy-encouraging.png` | Supportive | Tips, guidance, motivation |
+| `remy-thinking.png` | Contemplative | Explanations, education content |
+| `remy-celebrating.png` | Excited | Completion, achievements |
+| `remy-small.png` | Compact | Headers, inline references |
+
+### Onboarding Integration
+
+All 11 onboarding steps feature Remy:
+
+| Step | Component | Remy Implementation |
+|------|-----------|---------------------|
+| 1. Welcome | `welcome-step.tsx` | Large avatar with speech bubble |
+| 2. Profile | `profile-step.tsx` | RemyTip guidance |
+| 3. Income | `income-step.tsx` | RemyTip explaining setup |
+| 4. Bank Accounts | `bank-accounts-step.tsx` | RemyTip about Akahu |
+| 5. Budgeting Approach | `budgeting-approach-step.tsx` | RemyTip on templates |
+| 6. Envelope Education | `envelope-education-step.tsx` | Header avatar + 2 RemyTips |
+| 7. Envelope Creation | `envelope-creation-step.tsx` | RemyTip encouragement |
+| 8. Envelope Allocation | `envelope-allocation-step.tsx` | Context-aware tips |
+| 9. Opening Balance | `opening-balance-step.tsx` | RemyTip on balances |
+| 10. Budget Review | `budget-review-step.tsx` | RemyTip review guidance |
+| 11. Completion | `completion-step.tsx` | Celebrating avatar + confetti |
+
+### Completion Step Special Features
+
+**File**: `components/onboarding/steps/completion-step.tsx`
+
+Special elements:
+- Celebrating Remy avatar with gold border
+- Confetti animation (`canvas-confetti` library)
+- "You legend!" celebration headline
+- First goal hint (Emergency Fund achievement)
+- Deferred features checklist
+- Motivational closing message
+
+**Confetti Implementation:**
+```tsx
+useEffect(() => {
+  const duration = 3000;
+  const end = Date.now() + duration;
+  const frame = () => {
+    confetti({
+      particleCount: 3,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.7 },
+      colors: ["#7A9E9A", "#D4A853", "#6B9ECE"],
+    });
+    // ... mirror effect from right side
+    if (Date.now() < end) requestAnimationFrame(frame);
+  };
+  frame();
+}, []);
+```
+
+### Style Guide Compliance
+
+All Remy messages follow the calm color palette:
+
+| Element | Color | Hex |
+|---------|-------|-----|
+| Background | Sage Very Light | `#E2EEEC` |
+| Border | Sage Light | `#B8D4D0` |
+| Text | Sage Dark | `#5A7E7A` |
+| Signature | Sage | `#7A9E9A` |
+| Avatar Border | White/Sage | `#FFFFFF` / `#E2EEEC` |
+
+### Testing Checklist - Remy
+
+- [ ] **Welcome Step**: Remy avatar displays with speech bubble
+- [ ] **All Steps**: RemyTip components display correctly
+- [ ] **Image Loading**: All 5 Remy poses load from /Images/
+- [ ] **Responsive**: Remy components work on mobile
+- [ ] **Completion**: Confetti animation fires on mount
+- [ ] **Voice**: All messages use Kiwi English tone
+- [ ] **No Banned Phrases**: Content audit passes
+
+---
+
+## Achievement System
+
+**Status**: ✅ **COMPLETE** (Database + API + UI)
+**Implementation Date**: December 2025
+
+### Overview
+
+The Achievement System gamifies financial progress with badges and milestones, encouraging users to reach financial goals.
+
+### Database Schema
+
+**Migration**: `supabase/migrations/0027_achievements.sql`
+
+```sql
+CREATE TABLE achievements (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  achievement_key TEXT NOT NULL,
+  achieved_at TIMESTAMPTZ DEFAULT NOW(),
+  metadata JSONB DEFAULT '{}',
+  UNIQUE(user_id, achievement_key)
+);
+
+CREATE INDEX idx_achievements_user_id ON achievements(user_id);
+CREATE INDEX idx_achievements_key ON achievements(achievement_key);
+```
+
+### Achievement Definitions
+
+**File**: `lib/achievements/definitions.ts`
+
+```typescript
+export type AchievementKey =
+  | 'first_envelope'
+  | 'emergency_fund_started'
+  | 'emergency_fund_1000'
+  | 'emergency_fund_complete'
+  | 'first_budget_month'
+  | 'debt_free'
+  | 'onboarding_complete';
+
+export interface AchievementDefinition {
+  key: AchievementKey;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'onboarding' | 'savings' | 'budgeting' | 'debt';
+}
+
+export const ACHIEVEMENTS: Record<AchievementKey, AchievementDefinition> = {
+  first_envelope: {
+    key: 'first_envelope',
+    name: 'First Envelope',
+    description: 'Created your first budget envelope',
+    icon: '📁',
+    category: 'onboarding'
+  },
+  emergency_fund_started: {
+    key: 'emergency_fund_started',
+    name: 'Rainy Day Starter',
+    description: 'Started building your emergency fund',
+    icon: '🌧️',
+    category: 'savings'
+  },
+  emergency_fund_1000: {
+    key: 'emergency_fund_1000',
+    name: 'Starter Emergency Fund',
+    description: 'Saved $1,000 in your emergency fund',
+    icon: '🛡️',
+    category: 'savings'
+  },
+  // ... more achievements
+};
+```
+
+### API Endpoints
+
+**File**: `app/api/achievements/route.ts`
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/achievements` | Fetch user's achievements |
+| POST | `/api/achievements` | Unlock new achievement |
+
+**POST Body:**
+```typescript
+{
+  achievement_key: AchievementKey;
+  metadata?: Record<string, unknown>;
+}
+```
+
+### React Hook
+
+**File**: `lib/hooks/use-achievements.ts`
+
+```typescript
+export function useAchievements() {
+  const queryClient = useQueryClient();
+
+  const { data: achievements = [], isLoading } = useQuery({
+    queryKey: ['achievements'],
+    queryFn: async () => {
+      const res = await fetch('/api/achievements');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      return data.achievements;
+    }
+  });
+
+  const unlockAchievement = async (key: AchievementKey, metadata?: object) => {
+    const res = await fetch('/api/achievements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ achievement_key: key, metadata })
+    });
+    if (res.ok) {
+      queryClient.invalidateQueries({ queryKey: ['achievements'] });
+    }
+    return res.ok;
+  };
+
+  const hasAchievement = (key: AchievementKey) =>
+    achievements.some(a => a.achievement_key === key);
+
+  return { achievements, isLoading, unlockAchievement, hasAchievement };
+}
+```
+
+### UI Components
+
+**File**: `components/achievements/achievement-badge.tsx`
+
+Displays an achievement badge with icon, name, and date achieved.
+
+**File**: `components/achievements/achievement-toast.tsx`
+
+Celebratory toast notification when achievement unlocked.
+
+### Trigger Points
+
+| Achievement | Trigger Location |
+|-------------|------------------|
+| `first_envelope` | Envelope creation API |
+| `emergency_fund_started` | Emergency fund envelope gets first allocation |
+| `emergency_fund_1000` | Emergency fund balance reaches $1,000 |
+| `onboarding_complete` | Onboarding completion step |
+| `first_budget_month` | First month with zero-based budget achieved |
+| `debt_free` | All debt envelopes reach $0 |
+
+### Testing Checklist - Achievements
+
+- [ ] **Fetch**: GET /api/achievements returns user's achievements
+- [ ] **Unlock**: POST /api/achievements creates new record
+- [ ] **Duplicate Prevention**: Cannot unlock same achievement twice
+- [ ] **Hook**: useAchievements hook works correctly
+- [ ] **Badge**: Achievement badges display properly
+- [ ] **Toast**: Unlock celebration shows
+- [ ] **Metadata**: Custom metadata stores correctly
+
+---
+
+## Style Guide - Color System
+
+**Status**: ✅ **IMPLEMENTED** (Updated Dec 2025)
+
+### Primary Palette (Calm & Trustworthy)
+
+| Name | Hex | Tailwind | Usage |
+|------|-----|----------|-------|
+| Sage | `#7A9E9A` | `bg-sage` | Primary buttons, success |
+| Sage Dark | `#5A7E7A` | `bg-sage-dark` | Hover states |
+| Sage Light | `#B8D4D0` | `border-sage-light` | Borders |
+| Sage Very Light | `#E2EEEC` | `bg-sage-very-light` | Backgrounds |
+
+### Accent Colors
+
+| Name | Hex | Tailwind | Usage |
+|------|-----|----------|-------|
+| Blue | `#6B9ECE` | `text-blue` | Links, info |
+| Blue Light | `#DDEAF5` | `bg-blue-light` | Info cards |
+| Gold | `#D4A853` | `text-gold` | Warnings, achievements |
+| Gold Light | `#F5E6C4` | `bg-gold-light` | Warning cards |
+
+### Text Colors
+
+| Name | Hex | Tailwind | Usage |
+|------|-----|----------|-------|
+| Text Dark | `#1A2E2A` | `text-text-dark` | Headings |
+| Text Medium | `#4A5E5A` | `text-text-medium` | Body |
+| Muted | `#6B7B7A` | `text-muted-foreground` | Secondary |
+
+### Key Principle: No Red/Amber for Warnings
+
+To reduce financial anxiety, the app uses **blue** for urgency indicators instead of traditional red/amber:
+
+```tsx
+// Good - uses blue for urgency
+<Badge className="bg-blue-light text-blue">Due Soon</Badge>
+
+// Bad - creates anxiety
+<Badge className="bg-red-100 text-red-600">Due Soon</Badge>
+```
+
+### Tailwind Configuration
+
+**File**: `tailwind.config.ts`
+
+```typescript
+colors: {
+  sage: {
+    DEFAULT: '#7A9E9A',
+    dark: '#5A7E7A',
+    light: '#B8D4D0',
+    'very-light': '#E2EEEC',
+  },
+  blue: {
+    DEFAULT: '#6B9ECE',
+    light: '#DDEAF5',
+  },
+  gold: {
+    DEFAULT: '#D4A853',
+    light: '#F5E6C4',
+    dark: '#8B7035',
+  },
+  text: {
+    dark: '#1A2E2A',
+    medium: '#4A5E5A',
+  }
+}

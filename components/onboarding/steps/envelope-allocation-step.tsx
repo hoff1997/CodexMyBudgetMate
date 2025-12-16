@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatCurrency } from "@/lib/finance";
-import { Check, X, AlertCircle, Info, Calculator } from "lucide-react";
+import { Check, X, AlertCircle, Calculator } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface EnvelopeAllocationStepProps {
@@ -124,15 +125,19 @@ export function EnvelopeAllocationStep({
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="text-5xl mb-2">✅</div>
-          <h2 className="text-3xl font-bold">Allocation Complete!</h2>
+          <h2 className="text-3xl font-bold text-text-dark">Allocation Complete!</h2>
           <p className="text-muted-foreground">
             Since you have one income source, all envelopes are automatically funded from{" "}
             <span className="font-semibold">{incomeSources[0].name}</span>
           </p>
         </div>
 
-        <Card className="p-6 bg-[#E2EEEC] border-[#B8D4D0]">
+        {/* Remy's Tip */}
+        <RemyTip pose="encouraging">
+          Sweet as! With one income, this part's easy. Everything flows from your main pay.
+        </RemyTip>
+
+        <Card className="p-6 bg-sage-very-light border-sage-light">
           <div className="flex items-center gap-3 mb-4">
             <Check className="h-6 w-6 text-[#7A9E9A]" />
             <div>
@@ -163,24 +168,18 @@ export function EnvelopeAllocationStep({
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-2">💰</div>
-        <h2 className="text-3xl font-bold">Allocate Your Income</h2>
+        <h2 className="text-3xl font-bold text-text-dark">Allocate Your Income</h2>
         <p className="text-muted-foreground">
           Decide which income sources fund each envelope
         </p>
       </div>
 
-      {/* Info Box */}
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          <p className="font-medium mb-1">Zero-Based Budget</p>
-          <p className="text-sm">
-            Every dollar must have a job. Each income source must be fully allocated (remaining = $0.00).
-            You can split envelope funding across multiple incomes.
-          </p>
-        </AlertDescription>
-      </Alert>
+      {/* Remy's Tip */}
+      <RemyTip>
+        With multiple incomes, you get to decide which pay covers which expenses.
+        The goal is to allocate all your income, so every dollar has a purpose.
+        You can split envelope funding across multiple incomes if that works better for you.
+      </RemyTip>
 
       {/* Income Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

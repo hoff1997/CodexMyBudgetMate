@@ -26,6 +26,11 @@ export interface EnvelopeTemplate {
   suggestedPercentage?: number;
   priority: 'essential' | 'important' | 'discretionary';
   notes?: string;
+  // Extended fields for specific envelope types
+  subtype?: 'bill' | 'spending' | 'savings';
+  targetAmount?: number; // Fixed target amount (e.g., $1000 for emergency fund)
+  frequency?: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annually';
+  isDefault?: boolean; // Should be pre-selected for all users
 }
 
 /**
@@ -77,6 +82,26 @@ export const PERSONAS: Record<PersonaType, Persona> = {
         suggestedPercentage: 20,
         priority: 'important',
         notes: 'Emergency fund and goals',
+      },
+      {
+        name: 'Emergency Fund',
+        icon: '🛡️',
+        suggestedPercentage: 0,
+        priority: 'essential',
+        notes: 'Your safety net - start small, even $20 a pay adds up',
+        subtype: 'savings',
+        targetAmount: 1000,
+        isDefault: true,
+      },
+      {
+        name: 'My Budget Mate',
+        icon: '🐦',
+        suggestedPercentage: 0,
+        priority: 'important',
+        notes: 'Budget for your subscription',
+        subtype: 'bill',
+        frequency: 'monthly',
+        isDefault: true,
       },
       {
         name: 'Fun Money',
@@ -167,6 +192,26 @@ export const PERSONAS: Record<PersonaType, Persona> = {
         priority: 'discretionary',
       },
       {
+        name: 'Emergency Fund',
+        icon: '🛡️',
+        suggestedPercentage: 0,
+        priority: 'essential',
+        notes: 'Your safety net - start small, even $20 a pay adds up',
+        subtype: 'savings',
+        targetAmount: 1000,
+        isDefault: true,
+      },
+      {
+        name: 'My Budget Mate',
+        icon: '🐦',
+        suggestedPercentage: 0,
+        priority: 'important',
+        notes: 'Budget for your subscription',
+        subtype: 'bill',
+        frequency: 'monthly',
+        isDefault: true,
+      },
+      {
         name: 'Surplus',
         icon: '💵',
         suggestedPercentage: 0,
@@ -226,7 +271,21 @@ export const PERSONAS: Record<PersonaType, Persona> = {
         name: 'Emergency Fund',
         icon: '🛡️',
         suggestedPercentage: 10,
+        priority: 'essential',
+        notes: 'Your safety net - start small, even $20 a pay adds up',
+        subtype: 'savings',
+        targetAmount: 1000,
+        isDefault: true,
+      },
+      {
+        name: 'My Budget Mate',
+        icon: '🐦',
+        suggestedPercentage: 0,
         priority: 'important',
+        notes: 'Budget for your subscription',
+        subtype: 'bill',
+        frequency: 'monthly',
+        isDefault: true,
       },
       {
         name: 'Investments',

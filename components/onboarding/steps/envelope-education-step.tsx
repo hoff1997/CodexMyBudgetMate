@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Zap, ShoppingBag, PiggyBank, CheckCircle2, PlayCircle } from "lucide-react";
+import { ArrowRight, Zap, ShoppingBag, PiggyBank, PlayCircle } from "lucide-react";
+import { RemyAvatar, RemyTip } from "@/components/onboarding/remy-tip";
 
 interface EnvelopeEducationStepProps {
   onContinue: () => void;
@@ -11,29 +12,43 @@ interface EnvelopeEducationStepProps {
 export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-3">
-        <div className="text-6xl mb-2">📬</div>
-        <h2 className="text-4xl font-bold">Understanding Envelope Budgeting</h2>
-        <p className="text-xl text-muted-foreground">
-          This is THE key to taking control of your money
-        </p>
+      {/* Header with Remy */}
+      <div className="flex items-center gap-4 mb-6">
+        <RemyAvatar pose="small" size="md" />
+        <div>
+          <h2 className="text-2xl font-bold text-text-dark">Here's how envelopes work</h2>
+          <p className="text-muted-foreground">
+            This is the key to getting sorted
+          </p>
+        </div>
       </div>
 
+      {/* Remy's explanation */}
+      <RemyTip pose="thinking">
+        <p className="mb-3">
+          Imagine you've got a pile of envelopes on your kitchen table.
+          One says "Rent", one says "Groceries", one says "Power".
+        </p>
+        <p className="mb-3">
+          When your pay comes in, you put money into each envelope.
+          Then you only spend what's in that envelope for that thing.
+        </p>
+        <p>
+          Simple, right? That's envelope budgeting. We're just doing it digitally.
+        </p>
+      </RemyTip>
+
       {/* What is Envelope Budgeting */}
-      <Card className="p-6 bg-gradient-to-br from-[#E2EEEC] to-[#DDEAF5] border-[#B8D4D0]">
-        <h3 className="text-2xl font-semibold mb-4">You Tell Your Money Where to Go - Instead of Wondering Where It Went</h3>
+      <Card className="p-6 bg-gradient-to-br from-sage-very-light to-blue-light border-sage-light">
+        <h3 className="text-xl font-semibold mb-4 text-text-dark">You Tell Your Money Where to Go</h3>
         <div className="space-y-3 text-text-medium">
-          <p className="text-lg">
+          <p>
             Envelope budgeting is a proven method where <strong>you decide where your money goes before you spend it</strong>.
           </p>
           <p>
-            Think of it like the old-school method: putting cash into labeled envelopes for different expenses.
             When the envelope is empty, you stop spending in that category until the next pay cycle.
-          </p>
-          <p>
-            <strong>We use digital &ldquo;envelopes&rdquo;</strong> instead of cash, but the principle is the same:
-            your money is organized, intentional, and always accounted for.
+            <strong> We use digital "envelopes"</strong> instead of cash, but the principle is the same:
+            your money is organised, intentional, and always accounted for.
           </p>
         </div>
       </Card>
@@ -174,32 +189,18 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
         </div>
       </Card>
 
-      {/* Why This Takes Time */}
-      <div className="bg-[#F5E6C4] border-2 border-[#D4A853] rounded-lg p-6">
-        <h3 className="font-semibold text-text-dark text-lg mb-3">
-          Why This Step Takes 10-15 Minutes
-        </h3>
-        <div className="space-y-2 text-sm text-text-medium">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
-            <p>
-              <strong>You&apos;re building a complete financial plan</strong> - not just a rough estimate
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
-            <p>
-              <strong>Accuracy now = better budgeting later</strong> - getting the details right saves time down the road
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-5 w-5 text-[#D4A853] flex-shrink-0 mt-0.5" />
-            <p>
-              <strong>This is THE measure of your success</strong> - envelope budgeting is how you take control
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* Remy's encouragement */}
+      <RemyTip pose="encouraging">
+        <p className="mb-2">
+          Grab a cuppa and get comfy. We&apos;re going to set up your budget properly.
+          It takes a bit of time upfront, but you only do it once. After this,
+          it&apos;s just quick check-ins.
+        </p>
+        <p>
+          If you need to step away, your progress is saved. But stick with it
+          if you can - future you will be stoked.
+        </p>
+      </RemyTip>
 
       {/* CTA */}
       <div className="flex flex-col items-center gap-4 pt-4">

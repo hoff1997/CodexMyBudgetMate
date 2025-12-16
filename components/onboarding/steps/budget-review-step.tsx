@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Edit, AlertTriangle, CheckCircle2, Zap, ShoppingBag, PiggyBank, Plus, TrendingUp } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import { useBudgetValidation } from "@/lib/hooks/use-budget-validation";
 import { AllocateSurplusDialog } from "@/components/dialogs/allocate-surplus-dialog";
 import { trackSurplusAllocation } from "@/lib/analytics/events";
@@ -69,12 +70,17 @@ export function BudgetReviewStep({
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-2">📊</div>
-        <h2 className="text-3xl font-bold">Review Your Budget</h2>
+        <h2 className="text-3xl font-bold text-text-dark">Let's review your setup</h2>
         <p className="text-muted-foreground">
-          Let&apos;s make sure everything adds up correctly
+          Here's what we've got so far
         </p>
       </div>
+
+      {/* Remy's Tip */}
+      <RemyTip>
+        Have a look and make sure it feels right. You can change any of this later,
+        so don't overthink it. The key is getting started.
+      </RemyTip>
 
       {/* Income Summary */}
       <Card className="p-6 bg-gradient-to-br from-[#E2EEEC] to-[#DDEAF5] border-[#B8D4D0]">

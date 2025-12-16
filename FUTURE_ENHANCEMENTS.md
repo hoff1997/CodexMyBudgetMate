@@ -462,6 +462,82 @@ Drag money amounts between envelopes visually.
 
 ---
 
+## 💳 Stripe Subscription Activation
+
+### Stripe Dashboard Configuration
+**Status:** ⏳ Pending (Code Complete)
+**Priority:** High
+**Estimated Effort:** 1-2 hours
+
+**Description:**
+The Stripe subscription system code is fully implemented. This section tracks the manual Stripe Dashboard setup required to activate paid subscriptions.
+
+**Steps to Complete:**
+
+1. **Create Stripe Account**
+   - Sign up at stripe.com
+   - Complete business verification
+   - Note: Use test mode during development
+
+2. **Create Product & Prices**
+   - Create product: "My Budget Mate Pro"
+   - Monthly price: $9.99 NZD (recurring)
+   - Yearly price: $99 NZD (recurring)
+   - Copy the Price IDs (e.g., `price_xxx`)
+
+3. **Update Database with Price IDs**
+   ```sql
+   UPDATE subscription_plans SET
+     stripe_product_id = 'prod_xxx',
+     stripe_price_id_monthly = 'price_xxx',
+     stripe_price_id_yearly = 'price_xxx'
+   WHERE slug = 'pro';
+   ```
+
+4. **Configure Webhook Endpoint**
+   - URL: `https://your-domain.com/api/webhooks/stripe`
+   - Events to listen for:
+     - `checkout.session.completed`
+     - `customer.subscription.created`
+     - `customer.subscription.updated`
+     - `customer.subscription.deleted`
+     - `invoice.payment_succeeded`
+     - `invoice.payment_failed`
+   - Copy the webhook secret (`whsec_xxx`)
+
+5. **Add Environment Variables**
+   ```bash
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+   STRIPE_SECRET_KEY=sk_test_xxx
+   STRIPE_WEBHOOK_SECRET=whsec_xxx
+   ```
+
+6. **Test with Stripe Test Cards**
+   - Success: `4242 4242 4242 4242`
+   - Decline: `4000 0000 0000 0002`
+   - Requires auth: `4000 0025 0000 3155`
+
+7. **Local Testing (Optional)**
+   ```bash
+   # Install Stripe CLI
+   stripe login
+   stripe listen --forward-to localhost:3000/api/webhooks/stripe
+   ```
+
+8. **Go Live**
+   - Switch from test to live API keys
+   - Set `BETA_MODE=false` in production
+   - Monitor Stripe Dashboard for payments
+
+**Code Location:**
+- API Routes: `app/api/stripe/`, `app/api/webhooks/stripe/`
+- Components: `components/subscription/`
+- Hook: `hooks/useSubscription.ts`
+- Types: `lib/types/subscription.ts`
+- Migration: `supabase/migrations/0035_subscriptions.sql`
+
+---
+
 ## 📝 Notes
 
 ### Adding New Enhancements

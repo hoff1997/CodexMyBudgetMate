@@ -3,6 +3,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonaSelector } from "@/components/onboarding/persona-selector";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { PersonaType } from "@/lib/onboarding/personas";
 
 interface ProfileStepProps {
@@ -22,22 +23,27 @@ export function ProfileStep({
     <div className="max-w-3xl mx-auto space-y-4">
       {/* Header */}
       <div className="text-center">
-        <div className="text-4xl mb-1">👋</div>
-        <h2 className="text-2xl font-bold">Tell Us About You</h2>
+        <h2 className="text-2xl font-bold text-text-dark">Let's get to know each other</h2>
         <p className="text-sm text-muted-foreground">
-          We&apos;ll personalise your experience based on your profile
+          Just the basics so I can personalise your experience
         </p>
       </div>
+
+      {/* Remy's tip */}
+      <RemyTip pose="encouraging">
+        No stress here. Just your name so I know what to call you, and where you're at
+        with budgeting so I can tailor things for you.
+      </RemyTip>
 
       {/* Full Name - Inline */}
       <div className="flex items-center gap-3 bg-card border rounded-lg p-4">
         <Label htmlFor="fullName" className="text-sm font-medium whitespace-nowrap">
-          Your name:
+          What should I call you?
         </Label>
         <Input
           id="fullName"
           type="text"
-          placeholder="Enter your full name"
+          placeholder="Your name"
           value={fullName}
           onChange={(e) => onFullNameChange(e.target.value)}
           className="flex-1"

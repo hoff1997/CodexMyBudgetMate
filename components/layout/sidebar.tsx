@@ -25,6 +25,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, X, Menu } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { SidebarBadges } from "@/components/achievements/SidebarBadges";
 
 const STORAGE_KEY = "mbm-nav-order";
 const NAV_VERSION = "v18"; // Increment this when adding new menu items - v18: removed Reports and Future Features
@@ -323,6 +324,9 @@ export default function Sidebar({
         <div className="flex-1 overflow-y-auto">
           {navigationContent}
         </div>
+
+        {/* Achievement Badges */}
+        <SidebarBadges />
 
         {/* Footer */}
         <div className="px-3 py-2 border-t border-silver-light">

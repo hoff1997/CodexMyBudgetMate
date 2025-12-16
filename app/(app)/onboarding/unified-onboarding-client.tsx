@@ -372,7 +372,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            achievementKey: "budget_builder",
+            achievementKey: "onboarding_complete",
           }),
         });
       } catch (error) {

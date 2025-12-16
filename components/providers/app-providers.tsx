@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { Toaster } from "sonner";
 import { CommandPaletteProvider } from "@/providers/command-palette-provider";
+import { CelebrationProvider } from "@/components/achievements/CelebrationProvider";
 
 // Set up global fetch wrapper ONCE at module load (not in component render)
 // This ensures all fetch calls include credentials before any components mount
@@ -45,8 +46,10 @@ export default function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <CommandPaletteProvider>
-        {children}
-        <Toaster position="top-center" richColors expand />
+        <CelebrationProvider>
+          {children}
+          <Toaster position="top-center" richColors expand />
+        </CelebrationProvider>
       </CommandPaletteProvider>
     </QueryClientProvider>
   );

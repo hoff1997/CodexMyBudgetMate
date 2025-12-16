@@ -86,7 +86,10 @@
       "Bash(tasklist:*)",
       "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host ''All node processes killed''\")",
       "Bash(timeout 15 bash:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(node scripts/apply-achievements-migration.mjs:*)",
+      "Bash(node scripts/award-onboarding-achievement.mjs:*)",
+      "Bash(node scripts/fix-onboarding-menu.mjs:*)"
     ],
     "deny": [],
     "ask": []

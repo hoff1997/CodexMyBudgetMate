@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CheckCircle2, AlertTriangle, Trash2, Plus } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 import type { PersonaType } from "@/lib/onboarding/personas";
 import { PERSONAS } from "@/lib/onboarding/personas";
@@ -39,6 +40,12 @@ interface MasterEnvelope {
   icon: string;
   priority: 'essential' | 'important' | 'discretionary';
   category: 'beginner' | 'optimiser' | 'wealth_builder';
+  // Extended fields from template
+  subtype?: 'bill' | 'spending' | 'savings';
+  targetAmount?: number;
+  frequency?: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annually';
+  isDefault?: boolean;
+  notes?: string;
 }
 
 export function EnvelopeCreationStep({
@@ -69,6 +76,12 @@ export function EnvelopeCreationStep({
             icon: template.icon,
             priority: template.priority,
             category: personaData.key,
+            // Include extended fields
+            subtype: template.subtype,
+            targetAmount: template.targetAmount,
+            frequency: template.frequency,
+            isDefault: template.isDefault,
+            notes: template.notes,
           });
         }
       });
@@ -77,12 +90,12 @@ export function EnvelopeCreationStep({
     return allEnvelopes.sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
-  // Pre-select Surplus, Emergency Fund, and Credit Card Holding on mount
+  // Pre-select envelopes marked as isDefault, plus Surplus and Credit Card Holding
   useEffect(() => {
     const defaultSelections = masterEnvelopes
       .filter(env =>
+        env.isDefault ||
         env.name.toLowerCase().includes('surplus') ||
-        env.name.toLowerCase().includes('emergency') ||
         env.name.toLowerCase().includes('credit card')
       )
       .map(env => env.name);
@@ -109,23 +122,25 @@ export function EnvelopeCreationStep({
   };
 
   const handleProceedToConfigure = () => {
-    // Create envelope data objects with empty amounts
+    // Create envelope data objects with template values where available
     const newEnvelopes: EnvelopeData[] = selectedEnvelopes.map(name => {
       const masterEnv = masterEnvelopes.find(e => e.name === name)!;
 
-      // Determine type based on name keywords
-      let type: EnvelopeType = "bill";
-      const nameLower = name.toLowerCase();
+      // Use subtype from template if available, otherwise determine from name
+      let type: EnvelopeType = masterEnv.subtype || "bill";
 
-      if (nameLower.includes("groceries") || nameLower.includes("takeaway") ||
-          nameLower.includes("entertainment") || nameLower.includes("fun") ||
-          nameLower.includes("dining") || nameLower.includes("miscellaneous") ||
-          nameLower.includes("lifestyle")) {
-        type = "spending";
-      } else if (nameLower.includes("savings") || nameLower.includes("surplus") ||
-                 nameLower.includes("emergency") || nameLower.includes("investment") ||
-                 nameLower.includes("property") || nameLower.includes("giving")) {
-        type = "savings";
+      if (!masterEnv.subtype) {
+        const nameLower = name.toLowerCase();
+        if (nameLower.includes("groceries") || nameLower.includes("takeaway") ||
+            nameLower.includes("entertainment") || nameLower.includes("fun") ||
+            nameLower.includes("dining") || nameLower.includes("miscellaneous") ||
+            nameLower.includes("lifestyle")) {
+          type = "spending";
+        } else if (nameLower.includes("savings") || nameLower.includes("surplus") ||
+                   nameLower.includes("emergency") || nameLower.includes("investment") ||
+                   nameLower.includes("property") || nameLower.includes("giving")) {
+          type = "savings";
+        }
       }
 
       return {
@@ -134,19 +149,19 @@ export function EnvelopeCreationStep({
         icon: masterEnv.icon,
         type,
         payCycleAmount: 0,
-        // Type-specific fields with empty values
+        // Type-specific fields - use template values if available
         ...(type === "bill" && {
-          billAmount: 0,
-          frequency: "monthly" as const,
+          billAmount: masterEnv.targetAmount || 0,
+          frequency: (masterEnv.frequency || "monthly") as const,
           priority: masterEnv.priority,
         }),
         ...(type === "spending" && {
-          monthlyBudget: 0,
+          monthlyBudget: masterEnv.targetAmount || 0,
           priority: masterEnv.priority,
         }),
         ...(type === "savings" && {
-          savingsAmount: 0,
-          goalType: "savings" as const,
+          savingsAmount: masterEnv.targetAmount || 0,
+          goalType: (masterEnv.name.toLowerCase().includes("emergency") ? "emergency_fund" : "savings") as const,
         }),
       };
     });
@@ -247,11 +262,17 @@ export function EnvelopeCreationStep({
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold">Select Your Envelopes</h2>
+          <h2 className="text-3xl font-bold text-text-dark">Set up your envelopes</h2>
           <p className="text-muted-foreground">
-            Choose which envelopes you want to include in your budget
+            We've suggested some common ones to get you started
           </p>
         </div>
+
+        {/* Remy's Tip */}
+        <RemyTip>
+          Tick the ones that apply to you. Don't worry about getting it perfect,
+          you can always add, remove, or change these later.
+        </RemyTip>
 
         {/* Selection Controls */}
         <div className="flex items-center justify-between">

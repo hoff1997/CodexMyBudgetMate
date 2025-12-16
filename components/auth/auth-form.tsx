@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export function AuthForm() {
   const router = useRouter();
@@ -24,11 +25,11 @@ export function AuthForm() {
 
     // Validate
     if (!email || !email.includes("@")) {
-      setEmailError("Enter a valid email");
+      setEmailError("Please enter your email");
       return;
     }
-    if (!password || password.length < 8) {
-      setPasswordError("Password must be at least 8 characters");
+    if (!password) {
+      setPasswordError("Please enter your password");
       return;
     }
 
@@ -46,7 +47,8 @@ export function AuthForm() {
       const data = await response.json();
 
       if (!response.ok || data.error) {
-        toast.error(data.error || "Authentication failed");
+        // Show generic error for security
+        setEmailError("Invalid email or password");
         setIsLoading(false);
         return;
       }
@@ -61,22 +63,23 @@ export function AuthForm() {
       }, 100);
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong. Please try again shortly.");
+      toast.error("Something went wrong. Please try again.");
       setIsLoading(false);
     }
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit} suppressHydrationWarning>
       <div className="space-y-1">
         <Input
           placeholder="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
         />
         {emailError && (
-          <p className="text-xs text-destructive">{emailError}</p>
+          <p className="text-xs text-[#6B9ECE]">{emailError}</p>
         )}
       </div>
       <div className="space-y-1">
@@ -85,16 +88,24 @@ export function AuthForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
         />
         {passwordError && (
-          <p className="text-xs text-destructive">{passwordError}</p>
+          <p className="text-xs text-[#6B9ECE]">{passwordError}</p>
         )}
       </div>
-      <Button className="w-full bg-[#7A9E9A] hover:bg-[#5A7E7A]" type="submit" disabled={isLoading}>
-        {isLoading ? "Signing in…" : "Sign in"}
+      <Button className="w-full bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white" type="submit" disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Signing in...
+          </>
+        ) : (
+          "Sign In"
+        )}
       </Button>
-      <div className="text-center text-sm text-muted-foreground">
-        <Link href="/auth/forgot-password" className="text-primary hover:underline">
+      <div className="text-center">
+        <Link href="/forgot-password" className="text-sm text-[#5A7E7A] hover:underline">
           Forgot password?
         </Link>
       </div>

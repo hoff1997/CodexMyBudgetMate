@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Info, AlertTriangle, Wallet, CreditCard, DollarSign, Sparkles, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, Wallet, CreditCard, Sparkles, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import { AllocationStrategySelector } from "@/components/onboarding/allocation-strategy-selector";
 import { CreditCardHoldingSection } from "@/components/onboarding/credit-card-holding-section";
 import { WaterfallProgressCard } from "@/components/onboarding/waterfall-progress-card";
@@ -333,28 +334,18 @@ export function OpeningBalanceStep({
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-2">💰</div>
-        <h2 className="text-3xl font-bold text-text-dark">Opening Balances</h2>
+        <h2 className="text-3xl font-bold text-text-dark">Set your starting point</h2>
         <p className="text-text-medium">
-          Allocate your current funds to get your envelopes started on track
+          How much is in your accounts right now?
         </p>
       </div>
 
-      {/* Info Alert */}
-      <Alert className="border-blue bg-blue-light">
-        <Info className="h-5 w-5 text-blue" />
-        <AlertTitle>How Opening Balances Work</AlertTitle>
-        <AlertDescription className="text-sm space-y-2">
-          <p>
-            Opening balances help your envelopes start on track. The <strong>Auto-Fill</strong> button
-            allocates funds by priority: Essential items first, then Important, then Flexible.
-          </p>
-          <p>
-            You can adjust any amounts manually. The system will show a warning if you exceed
-            available funds, but you can still proceed.
-          </p>
-        </AlertDescription>
-      </Alert>
+      {/* Remy's Tip */}
+      <RemyTip>
+        Check your banking app for your current balances. This gives us a starting point
+        to work from. It doesn't need to be exact to the cent. The Auto-Fill button will
+        help allocate funds by priority: Essential items first, then Important, then Flexible.
+      </RemyTip>
 
       {/* Available Funds Summary */}
       <Card className="p-4 bg-gradient-to-br from-sage-very-light to-blue-light border-sage-light">

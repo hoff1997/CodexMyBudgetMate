@@ -92,6 +92,7 @@ export async function POST(request: Request) {
         full_name: fullName,
         user_persona: persona,
         onboarding_completed: true,
+        show_onboarding_menu: false,
       })
       .eq("id", userId);
 

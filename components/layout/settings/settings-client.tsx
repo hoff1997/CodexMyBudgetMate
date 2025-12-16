@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield, Loader2 } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
+import { AchievementGallery } from "@/components/achievements/AchievementGallery";
+import { SubscriptionCard } from "@/components/subscription";
 
 // Types
 type IncomeSourceRow = {
@@ -619,6 +621,14 @@ export function SettingsClient({ data, flash = null }: Props) {
 
       {/* Security Section */}
       <SecuritySection userEmail={data.profile.email} demoMode={data.demoMode} />
+
+      {/* Subscription Section */}
+      <section id="subscription" className="scroll-mt-4">
+        <SubscriptionCard />
+      </section>
+
+      {/* Achievements Section */}
+      <AchievementGallery />
 
       {/* Income Sources Section - Table Layout */}
       <section className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">

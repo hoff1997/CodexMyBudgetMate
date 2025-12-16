@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Sparkles, Pencil } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { PersonaType } from "@/lib/onboarding/personas";
 import { getPersona } from "@/lib/onboarding/personas";
 
@@ -24,12 +25,18 @@ export function BudgetingApproachStep({
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-2">🎯</div>
-        <h2 className="text-3xl font-bold">Choose Your Budgeting Approach</h2>
+        <h2 className="text-3xl font-bold text-text-dark">Choose Your Starting Point</h2>
         <p className="text-muted-foreground">
           How would you like to set up your envelopes?
         </p>
       </div>
+
+      {/* Remy's Tip */}
+      <RemyTip>
+        Everyone's different. Some people like a template to get started quickly,
+        others prefer to build from scratch. There's no wrong answer here, and you
+        can always adjust things later.
+      </RemyTip>
 
       {/* Options */}
       <div className="grid md:grid-cols-2 gap-6">

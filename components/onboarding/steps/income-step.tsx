@@ -13,7 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, DollarSign, Calendar, Info } from "lucide-react";
+import { Plus, Trash2, DollarSign, Calendar } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface IncomeStepProps {
@@ -84,23 +85,17 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
     <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-2">💵</div>
-        <h2 className="text-3xl font-bold">Set Up Your Income</h2>
+        <h2 className="text-3xl font-bold text-text-dark">Let's talk about your pay</h2>
         <p className="text-muted-foreground">
-          Tell us about the income/s you earn
+          This helps me work out how to spread your money between pay days
         </p>
       </div>
 
-      {/* Info Box */}
-      <div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg p-4 flex items-start gap-3">
-        <Info className="h-5 w-5 text-[#7A9E9A] flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-text-dark">
-          <p className="font-medium mb-1">Why this matters</p>
-          <p>
-            Got more than one income? Don&apos;t worry, My Budget Mate will take care of this for you.
-          </p>
-        </div>
-      </div>
+      {/* Remy's Tip */}
+      <RemyTip>
+        Pop in your main income here. If you've got a side hustle or other income,
+        no worries, you can add more. I'll help you manage multiple pay cycles.
+      </RemyTip>
 
       {/* Existing Income Sources */}
       {incomeSources.length > 0 && (
@@ -145,18 +140,18 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="incomeName">Income Source Name *</Label>
+            <Label htmlFor="incomeName">What's this income called? *</Label>
             <Input
               id="incomeName"
               type="text"
-              placeholder="e.g., Salary - Acme Corp, Freelance Work"
+              placeholder="e.g., My job, Freelance, Side hustle"
               value={newIncome.name}
               onChange={(e) => setNewIncome({ ...newIncome, name: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="incomeAmount">Amount Per Pay (After Tax) *</Label>
+            <Label htmlFor="incomeAmount">How much do you get paid? (after tax) *</Label>
             <div className="relative">
               <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -171,7 +166,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
                 className="pl-9"
               />
             </div>
-            <p className="text-xs text-muted-foreground">Enter your net pay (take-home) amount</p>
+            <p className="text-xs text-muted-foreground">Enter your take-home pay</p>
           </div>
 
           {/* Irregular Income Checkbox */}
@@ -185,7 +180,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
             />
             <div className="flex-1">
               <Label htmlFor="irregularIncome" className="cursor-pointer font-medium">
-                I don&apos;t get paid regularly
+                I don't get paid regularly
               </Label>
               <p className="text-xs text-muted-foreground">
                 Check this if your income varies or is irregular (defaults to monthly budgeting)
@@ -196,7 +191,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
           {/* Pay Frequency (only show if NOT irregular) */}
           {!newIncome.irregularIncome && (
             <div className="space-y-2">
-              <Label htmlFor="frequency">Pay Frequency *</Label>
+              <Label htmlFor="frequency">How often do you get paid? *</Label>
               <Select
                 value={newIncome.frequency}
                 onValueChange={(value: any) => setNewIncome({ ...newIncome, frequency: value })}
@@ -215,7 +210,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="nextPayDate">Next Pay Date</Label>
+            <Label htmlFor="nextPayDate">When's your next pay day?</Label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -231,7 +226,7 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
           <Button
             onClick={handleAddIncome}
             disabled={!newIncome.name.trim() || newIncome.amount <= 0}
-            className="w-full bg-[#7A9E9A] hover:bg-[#5A7E7A]"
+            className="w-full bg-sage hover:bg-sage-dark"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Income Source

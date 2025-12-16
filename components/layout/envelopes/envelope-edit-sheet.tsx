@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { add } from "date-fns";
 import { CalendarIcon, RefreshCcw, X } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 
 type CategoryOption = { id: string; name: string };
 
@@ -104,6 +105,24 @@ export function EnvelopeEditSheet({
   iconOptions = DEFAULT_ICON_OPTIONS,
 }: Props) {
   const [form, setForm] = useState<FormState | null>(null);
+  const [showEmergencyFundTip, setShowEmergencyFundTip] = useState(false);
+
+  // Check if we should show the Emergency Fund Remy tip (first-time only)
+  useEffect(() => {
+    if (envelope?.name?.toLowerCase().includes("emergency fund")) {
+      const tipDismissed = localStorage.getItem("remy-tip-emergency-fund-dismissed");
+      if (!tipDismissed) {
+        setShowEmergencyFundTip(true);
+      }
+    } else {
+      setShowEmergencyFundTip(false);
+    }
+  }, [envelope?.name]);
+
+  const handleDismissEmergencyFundTip = () => {
+    setShowEmergencyFundTip(false);
+    localStorage.setItem("remy-tip-emergency-fund-dismissed", "true");
+  };
 
   const iconChoices = useMemo(() => {
     if (!form || !form.icon) return iconOptions;
@@ -174,6 +193,22 @@ export function EnvelopeEditSheet({
               </button>
             </Dialog.Close>
           </div>
+
+          {/* Remy tip for Emergency Fund - shows on first view only */}
+          {showEmergencyFundTip && (
+            <div className="mt-4 relative">
+              <RemyTip pose="encouraging">
+                This is your safety net. Start small, even $20 a pay adds up.
+              </RemyTip>
+              <button
+                type="button"
+                onClick={handleDismissEmergencyFundTip}
+                className="absolute top-2 right-2 text-xs text-sage-dark hover:underline"
+              >
+                Got it
+              </button>
+            </div>
+          )}
 
           <form
             className="mt-6 space-y-6"

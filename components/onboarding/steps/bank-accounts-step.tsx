@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Plus, Trash2, DollarSign, Building2, Link2, Shield, CheckCircle2, ExternalLink } from "lucide-react";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface BankAccountsStepProps {
@@ -68,12 +69,18 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-2">🏦</div>
-        <h2 className="text-3xl font-bold">Your Bank Accounts</h2>
+        <h2 className="text-3xl font-bold text-text-dark">Connect your bank</h2>
         <p className="text-muted-foreground">
-          Connect automatically or add accounts manually
+          Your transactions will come through automatically
         </p>
       </div>
+
+      {/* Remy's Tip */}
+      <RemyTip>
+        Connecting your bank means you won't have to type in every transaction.
+        They'll flow in automatically via Akahu, a secure NZ service.
+        I never see your login details, promise.
+      </RemyTip>
 
       {/* Akahu Connection Option - Recommended */}
       <Card className="relative p-6 border-2 border-[#7A9E9A]">

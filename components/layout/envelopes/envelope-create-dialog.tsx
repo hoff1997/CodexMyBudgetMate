@@ -51,7 +51,7 @@ type FormState = {
   dueAmount: string;
   dueFrequency: PlannerFrequency;
   dueDate: string;
-  priority: "essential" | "important" | "discretionary";
+  priority: "essential" | "important" | "discretionary" | "";
 };
 
 const DEFAULT_FORM: FormState = {
@@ -64,7 +64,7 @@ const DEFAULT_FORM: FormState = {
   dueAmount: "0.00",
   dueFrequency: "monthly",
   dueDate: "",
-  priority: "important",
+  priority: "", // Force user to choose
 };
 
 function calculateNextDue(frequency: PlannerFrequency, base?: string) {
@@ -112,12 +112,20 @@ export function EnvelopeCreateDialog({
   const annualAmount = calculateAnnualFromTarget(dueAmountNumber, form.dueFrequency);
   const perPayAmount = calculateRequiredContribution(annualAmount, form.dueFrequency);
 
+  const [priorityError, setPriorityError] = useState(false);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!form.name.trim()) {
       toast.error("Envelope name is required");
       return;
     }
+    if (!form.priority) {
+      setPriorityError(true);
+      toast.error("Please select a priority level");
+      return;
+    }
+    setPriorityError(false);
     setSubmitting(true);
     try {
       const response = await fetch("/api/envelopes", {
@@ -244,23 +252,32 @@ export function EnvelopeCreateDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="envelope-priority" className="text-sm font-medium text-secondary">
-                  Priority
+                  Priority <span className="text-[#6B9ECE]">*</span>
                 </Label>
                 <select
                   id="envelope-priority"
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className={cn(
+                    "h-10 w-full rounded-lg border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                    priorityError ? "border-[#6B9ECE] ring-1 ring-[#6B9ECE]" : "border-border",
+                    !form.priority && "text-muted-foreground"
+                  )}
                   value={form.priority}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setPriorityError(false);
                     setForm((prev) => ({
                       ...prev,
-                      priority: event.target.value as "essential" | "important" | "discretionary",
-                    }))
-                  }
+                      priority: event.target.value as "essential" | "important" | "discretionary" | "",
+                    }));
+                  }}
                 >
+                  <option value="" disabled>Select a priority level</option>
                   <option value="essential">🔴 Essential (Must pay)</option>
                   <option value="important">🟡 Important (Should pay)</option>
-                  <option value="discretionary">🔵 Discretionary (Nice to have)</option>
+                  <option value="discretionary">🔵 Extras (Nice to have)</option>
                 </select>
+                {priorityError && (
+                  <p className="text-xs text-[#6B9ECE]">Please select a priority level</p>
+                )}
               </div>
             </div>
 
@@ -410,7 +427,7 @@ export function EnvelopeCreateDialog({
               </div>
             </div>
 
-            {perPayAmount > 0 && (
+            {perPayAmount > 0 && form.priority && (
               <BudgetImpactWidget
                 action="add"
                 payCycleAmount={perPayAmount}

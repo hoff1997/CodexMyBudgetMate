@@ -48,8 +48,11 @@ export default function DashboardShell({
           nextPayday: null,
           allocationData: {
             creditCardHolding: 0,
-            priorityEnvelopes: 0,
-            flexibleEnvelopes: 0,
+            essentialEnvelopes: 0,
+            importantEnvelopes: 0,
+            extrasEnvelopes: 0,
+            uncategorisedEnvelopes: 0,
+            uncategorisedCount: 0,
           },
           onboardingCompleted: context.onboardingCompleted,
         }}

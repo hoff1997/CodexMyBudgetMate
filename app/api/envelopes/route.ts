@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
 const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
 const subtypeSchema = z.enum(["bill", "spending", "savings", "goal"]).optional();
-const prioritySchema = z.enum(["essential", "important", "discretionary"]).optional();
+const prioritySchema = z.enum(["essential", "important", "discretionary"]);
 const goalTypeSchema = z.enum(["savings", "debt_payoff", "purchase", "emergency_fund", "other"]).optional();
 
 const schema = z.object({
@@ -78,6 +78,11 @@ export async function POST(request: Request) {
   const body = await request.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
+    // Check specifically for priority errors
+    const priorityError = parsed.error.errors.find(e => e.path.includes('priority'));
+    if (priorityError) {
+      return NextResponse.json({ error: "Priority is required" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
@@ -114,7 +119,7 @@ export async function POST(request: Request) {
     category_id: categoryId,
     envelope_type: payload.envelopeType ?? 'expense',
     subtype: payload.subtype ?? 'bill',
-    priority: payload.priority ?? 'important',
+    priority: payload.priority, // Required field, no fallback
     target_amount: payload.targetAmount,
     pay_cycle_amount: payload.payCycleAmount,
     frequency: payload.frequency ?? null,

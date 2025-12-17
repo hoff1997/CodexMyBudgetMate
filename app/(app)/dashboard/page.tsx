@@ -61,8 +61,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           nextPayday: null,
           allocationData: {
             creditCardHolding: 0,
-            priorityEnvelopes: 0,
-            flexibleEnvelopes: 0,
+            essentialEnvelopes: 0,
+            importantEnvelopes: 0,
+            extrasEnvelopes: 0,
+            uncategorisedEnvelopes: 0,
+            uncategorisedCount: 0,
           },
           onboardingCompleted: false,
         }}
@@ -176,14 +179,28 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     (e) => e.name?.toLowerCase().includes("holding") || e.name?.toLowerCase().includes("credit card")
   );
 
-  // Calculate allocation breakdown
-  const priorityEnvelopes = (envelopes ?? [])
-    .filter((e) => e.priority === "essential" || e.priority === "important")
+  // Calculate allocation breakdown by priority
+  const nonHoldingEnvelopes = (envelopes ?? []).filter(
+    (e) => !e.name?.toLowerCase().includes("holding") && !e.name?.toLowerCase().includes("credit card")
+  );
+
+  const essentialEnvelopes = nonHoldingEnvelopes
+    .filter((e) => e.priority === "essential")
     .reduce((sum, e) => sum + (e.current_amount || 0), 0);
 
-  const flexibleEnvelopes = (envelopes ?? [])
-    .filter((e) => e.priority === "flexible" || !e.priority)
+  const importantEnvelopes = nonHoldingEnvelopes
+    .filter((e) => e.priority === "important")
     .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+
+  const extrasEnvelopes = nonHoldingEnvelopes
+    .filter((e) => e.priority === "discretionary")
+    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+
+  // Uncategorised = envelopes without a priority set
+  const uncategorisedEnvelopesList = nonHoldingEnvelopes.filter((e) => !e.priority);
+  const uncategorisedEnvelopes = uncategorisedEnvelopesList
+    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const uncategorisedCount = uncategorisedEnvelopesList.length;
 
   const creditCardHoldingAmount = holdingEnvelopes.reduce(
     (sum, e) => sum + (e.current_amount || 0),
@@ -255,8 +272,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         nextPayday,
         allocationData: {
           creditCardHolding: creditCardHoldingAmount,
-          priorityEnvelopes,
-          flexibleEnvelopes,
+          essentialEnvelopes,
+          importantEnvelopes,
+          extrasEnvelopes,
+          uncategorisedEnvelopes,
+          uncategorisedCount,
         },
         onboardingCompleted: profile?.onboarding_completed ?? false,
         incomeSources: (incomeSources ?? []).map((s) => ({

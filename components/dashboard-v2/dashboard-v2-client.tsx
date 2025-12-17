@@ -5,14 +5,18 @@
  *
  * Main wrapper component for the rebuilt dashboard.
  * Receives server-fetched data and renders all sections.
+ *
+ * Layout:
+ * 1. Header - greeting + key totals + Remy
+ * 2. Quick Actions - action buttons row
+ * 3. Envelope Status - full width health check
+ * 4. Quick Glance + Upcoming Bills - side by side (50/50)
+ * 5. Allocation Flow - full width breakdown
  */
 
 import { useMemo, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { DashboardSummaryHeader } from "./dashboard-summary-header";
-import { FinancialHealthSection, type FinancialHealthData } from "./financial-health-section";
 import { EnvelopeStatusOverview, type EnvelopeStatusData } from "./envelope-status-overview";
-import { CreditCardSection } from "./credit-card-section";
 import { UpcomingNeedsSection, type UpcomingBill } from "./upcoming-needs-section";
 import { WaterfallPreview, type WaterfallData } from "./waterfall-preview";
 import { QuickActionsV2 } from "./quick-actions-v2";
@@ -79,11 +83,14 @@ export interface DashboardV2Data {
   incomeThisMonth: number;
   nextPayday?: Date | null;
 
-  // Allocation data
+  // Allocation data - priority breakdown
   allocationData: {
     creditCardHolding: number;
-    priorityEnvelopes: number;
-    flexibleEnvelopes: number;
+    essentialEnvelopes: number;
+    importantEnvelopes: number;
+    extrasEnvelopes: number;
+    uncategorisedEnvelopes: number;
+    uncategorisedCount: number;
   };
 
   // Flags
@@ -99,8 +106,6 @@ export function DashboardV2Client({
   data,
   demoMode = false,
 }: DashboardV2ClientProps) {
-  const router = useRouter();
-
   // Local envelope state for optimistic updates
   const [envelopeMonitorStates, setEnvelopeMonitorStates] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -212,16 +217,6 @@ export function DashboardV2Client({
     };
   }, [data]);
 
-  // Financial health data for the 6-card section
-  const financialHealthData: FinancialHealthData = {
-    bankBalance: calculations.bankBalance,
-    envelopeBalance: calculations.envelopeBalance,
-    creditCardDebt: calculations.creditCardDebt,
-    holdingBalance: calculations.holdingBalance,
-    totalTarget: calculations.totalTarget,
-    totalCurrent: calculations.envelopeBalance,
-  };
-
   // Envelope status data
   const envelopeStatusData: EnvelopeStatusData[] = data.envelopes.map((env) => ({
     id: env.id,
@@ -245,37 +240,16 @@ export function DashboardV2Client({
       priority: env.priority,
     }));
 
-  // Waterfall data
+  // Waterfall data with priority breakdown
   const waterfallData: WaterfallData = {
     totalIncome: data.incomeThisMonth,
     creditCardHolding: data.allocationData.creditCardHolding,
-    priorityEnvelopes: data.allocationData.priorityEnvelopes,
-    flexibleEnvelopes: data.allocationData.flexibleEnvelopes,
+    essentialEnvelopes: data.allocationData.essentialEnvelopes,
+    importantEnvelopes: data.allocationData.importantEnvelopes,
+    extrasEnvelopes: data.allocationData.extrasEnvelopes,
+    uncategorisedEnvelopes: data.allocationData.uncategorisedEnvelopes,
+    uncategorisedCount: data.allocationData.uncategorisedCount,
     remaining: calculations.unallocated,
-  };
-
-  // Handle card clicks for navigation
-  const handleCardClick = (cardId: string) => {
-    switch (cardId) {
-      case "bank-balance":
-        router.push("/accounts");
-        break;
-      case "envelope-balance":
-        router.push("/envelope-summary");
-        break;
-      case "credit-card-debt":
-        router.push("/accounts");
-        break;
-      case "holding-balance":
-        router.push("/envelope-summary");
-        break;
-      case "unallocated":
-        router.push("/allocation");
-        break;
-      case "funding-gap":
-        router.push("/envelope-planning");
-        break;
-    }
   };
 
   // Empty state for new users
@@ -332,37 +306,27 @@ export function DashboardV2Client({
         remyHelp={<RemyHelpPanel pageId="dashboard" />}
       />
 
-      {/* Section 2: Quick Actions and Quick Glance side-by-side on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <QuickActionsV2 />
-        </div>
-        <div className="lg:col-span-1">
-          <QuickGlanceWidget
-            envelopes={envelopesWithMonitorState}
-            onToggleMonitored={handleToggleMonitored}
-          />
-        </div>
-      </div>
+      {/* Section 2: Quick Actions (full width) */}
+      <QuickActionsV2 />
 
-      {/* Section 3: Financial Health Cards (6-card grid) */}
-      <FinancialHealthSection
-        data={financialHealthData}
-        onCardClick={handleCardClick}
-      />
-
-      {/* Section 4: Envelope Status (horizontal, full-width) */}
+      {/* Section 3: Envelope Status (full width) */}
       <EnvelopeStatusOverview envelopes={envelopeStatusData} />
 
-      {/* Section 5: Credit Cards */}
-      {data.creditCards.length > 0 && (
-        <CreditCardSection cards={data.creditCards} />
-      )}
+      {/* Section 4: Quick Glance + Upcoming Bills side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left: Quick Glance */}
+        <QuickGlanceWidget
+          envelopes={envelopesWithMonitorState}
+          onToggleMonitored={handleToggleMonitored}
+          surplusAmount={calculations.unallocated > 0 ? calculations.unallocated : 0}
+          ccHoldingAmount={calculations.holdingBalance}
+        />
 
-      {/* Section 6: Upcoming Bills */}
-      <UpcomingNeedsSection bills={upcomingBills} incomeSources={data.incomeSources} />
+        {/* Right: Upcoming Bills */}
+        <UpcomingNeedsSection bills={upcomingBills} incomeSources={data.incomeSources} />
+      </div>
 
-      {/* Section 7: Waterfall Preview */}
+      {/* Section 5: Allocation Flow (full width) */}
       <WaterfallPreview data={waterfallData} />
     </div>
   );

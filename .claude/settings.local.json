@@ -89,7 +89,11 @@
       "Bash(git merge:*)",
       "Bash(node scripts/apply-achievements-migration.mjs:*)",
       "Bash(node scripts/award-onboarding-achievement.mjs:*)",
-      "Bash(node scripts/fix-onboarding-menu.mjs:*)"
+      "Bash(node scripts/fix-onboarding-menu.mjs:*)",
+      "Bash(if [ -d \".next\" ])",
+      "Bash(then echo \"SUCCESS - .next folder exists\")",
+      "Bash(else echo \"FAILED\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

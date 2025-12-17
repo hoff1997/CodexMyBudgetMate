@@ -42,12 +42,16 @@ interface QuickGlanceWidgetProps {
   envelopes: QuickGlanceEnvelope[];
   needsReconciliation?: boolean;
   onToggleMonitored: (envelopeId: string, isMonitored: boolean) => void;
+  surplusAmount?: number;
+  ccHoldingAmount?: number;
 }
 
 export function QuickGlanceWidget({
   envelopes,
   needsReconciliation = false,
   onToggleMonitored,
+  surplusAmount = 0,
+  ccHoldingAmount = 0,
 }: QuickGlanceWidgetProps) {
   const [selectorOpen, setSelectorOpen] = useState(false);
 
@@ -149,6 +153,26 @@ export function QuickGlanceWidget({
               </span>
             </div>
           ))}
+
+          {/* Surplus and CC Holding at the bottom */}
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-sm text-[#6B6B6B]">Surplus</span>
+            <span className={cn(
+              "text-sm font-semibold",
+              surplusAmount > 0 ? "text-[#7A9E9A]" : "text-[#9CA3AF]"
+            )}>
+              {formatCurrency(surplusAmount)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-sm text-[#6B6B6B]">CC Holding</span>
+            <span className={cn(
+              "text-sm font-semibold",
+              ccHoldingAmount > 0 ? "text-[#7A9E9A]" : "text-[#9CA3AF]"
+            )}>
+              {formatCurrency(ccHoldingAmount)}
+            </span>
+          </div>
         </div>
       </CardContent>
 

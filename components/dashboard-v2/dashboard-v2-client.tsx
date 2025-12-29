@@ -90,6 +90,9 @@ export interface DashboardV2Data {
     importantEnvelopes: number;
     extrasEnvelopes: number;
     uncategorisedEnvelopes: number;
+    essentialCount: number;
+    importantCount: number;
+    extrasCount: number;
     uncategorisedCount: number;
   };
 
@@ -240,14 +243,17 @@ export function DashboardV2Client({
       priority: env.priority,
     }));
 
-  // Waterfall data with priority breakdown
-  const waterfallData: WaterfallData = {
+  // Allocation distribution data with priority breakdown
+  const allocationDistribution: WaterfallData = {
     totalIncome: data.incomeThisMonth,
     creditCardHolding: data.allocationData.creditCardHolding,
     essentialEnvelopes: data.allocationData.essentialEnvelopes,
     importantEnvelopes: data.allocationData.importantEnvelopes,
     extrasEnvelopes: data.allocationData.extrasEnvelopes,
     uncategorisedEnvelopes: data.allocationData.uncategorisedEnvelopes,
+    essentialCount: data.allocationData.essentialCount,
+    importantCount: data.allocationData.importantCount,
+    extrasCount: data.allocationData.extrasCount,
     uncategorisedCount: data.allocationData.uncategorisedCount,
     remaining: calculations.unallocated,
   };
@@ -327,7 +333,7 @@ export function DashboardV2Client({
       </div>
 
       {/* Section 5: Allocation Flow (full width) */}
-      <WaterfallPreview data={waterfallData} />
+      <WaterfallPreview data={allocationDistribution} />
     </div>
   );
 }

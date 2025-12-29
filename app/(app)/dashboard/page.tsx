@@ -65,6 +65,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             importantEnvelopes: 0,
             extrasEnvelopes: 0,
             uncategorisedEnvelopes: 0,
+            essentialCount: 0,
+            importantCount: 0,
+            extrasCount: 0,
             uncategorisedCount: 0,
           },
           onboardingCompleted: false,
@@ -184,22 +187,21 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     (e) => !e.name?.toLowerCase().includes("holding") && !e.name?.toLowerCase().includes("credit card")
   );
 
-  const essentialEnvelopes = nonHoldingEnvelopes
-    .filter((e) => e.priority === "essential")
-    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const essentialEnvelopesList = nonHoldingEnvelopes.filter((e) => e.priority === "essential");
+  const essentialEnvelopes = essentialEnvelopesList.reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const essentialCount = essentialEnvelopesList.length;
 
-  const importantEnvelopes = nonHoldingEnvelopes
-    .filter((e) => e.priority === "important")
-    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const importantEnvelopesList = nonHoldingEnvelopes.filter((e) => e.priority === "important");
+  const importantEnvelopes = importantEnvelopesList.reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const importantCount = importantEnvelopesList.length;
 
-  const extrasEnvelopes = nonHoldingEnvelopes
-    .filter((e) => e.priority === "discretionary")
-    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const extrasEnvelopesList = nonHoldingEnvelopes.filter((e) => e.priority === "discretionary");
+  const extrasEnvelopes = extrasEnvelopesList.reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const extrasCount = extrasEnvelopesList.length;
 
   // Uncategorised = envelopes without a priority set
   const uncategorisedEnvelopesList = nonHoldingEnvelopes.filter((e) => !e.priority);
-  const uncategorisedEnvelopes = uncategorisedEnvelopesList
-    .reduce((sum, e) => sum + (e.current_amount || 0), 0);
+  const uncategorisedEnvelopes = uncategorisedEnvelopesList.reduce((sum, e) => sum + (e.current_amount || 0), 0);
   const uncategorisedCount = uncategorisedEnvelopesList.length;
 
   const creditCardHoldingAmount = holdingEnvelopes.reduce(
@@ -276,6 +278,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           importantEnvelopes,
           extrasEnvelopes,
           uncategorisedEnvelopes,
+          essentialCount,
+          importantCount,
+          extrasCount,
           uncategorisedCount,
         },
         onboardingCompleted: profile?.onboarding_completed ?? false,

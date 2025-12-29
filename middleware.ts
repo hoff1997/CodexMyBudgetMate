@@ -2,6 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Audit mode bypass - disable auth for site audit
+  // Set NEXT_PUBLIC_AUDIT_MODE=true in .env.local to enable
+  if (process.env.NEXT_PUBLIC_AUDIT_MODE === 'true') {
+    console.log('[AUDIT MODE] Bypassing auth middleware for:', request.nextUrl.pathname);
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,

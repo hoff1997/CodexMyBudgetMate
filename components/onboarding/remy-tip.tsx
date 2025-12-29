@@ -17,7 +17,7 @@ interface RemyTipProps {
 export function RemyTip({ children, pose = "encouraging", className = "" }: RemyTipProps) {
   return (
     <div className={`flex items-start gap-4 p-4 bg-sage-very-light rounded-xl border border-sage-light ${className}`}>
-      <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow-sm bg-sage-light">
+      <div className="relative w-20 h-20 md:w-[72px] md:h-[72px] rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow-sm bg-sage-light">
         <Image
           src={`/Images/remy-${pose}.png`}
           alt="Remy"
@@ -43,13 +43,15 @@ interface RemyAvatarProps {
 
 /**
  * RemyAvatar - Standalone Remy avatar for headers
+ * Sizes increased by ~0.5cm and larger on mobile for better visibility
  */
 export function RemyAvatar({ pose = "welcome", size = "md", className = "" }: RemyAvatarProps) {
+  // Mobile sizes are larger for better visibility
   const sizeClasses = {
-    sm: "w-12 h-12",    // 48px - sidebar/small contexts
-    md: "w-16 h-16",    // 64px - onboarding dialogs
-    lg: "w-20 h-20",    // 80px - onboarding pages
-    xl: "w-24 h-24",    // 96px - celebration modals
+    sm: "w-16 h-16 md:w-14 md:h-14",    // 64px mobile, 56px desktop (was 48px)
+    md: "w-20 h-20 md:w-[72px] md:h-[72px]",  // 80px mobile, 72px desktop (was 64px)
+    lg: "w-24 h-24 md:w-[88px] md:h-[88px]",  // 96px mobile, 88px desktop (was 80px)
+    xl: "w-28 h-28 md:w-[104px] md:h-[104px]", // 112px mobile, 104px desktop (was 96px)
   };
 
   return (

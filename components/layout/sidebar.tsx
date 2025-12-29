@@ -59,11 +59,11 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "onboarding", label: "Getting Started", href: "/onboarding", icon: "🚀" },
   { id: "onboarding-resume", label: "Resume Setup", href: "/onboarding", icon: "▶️", isOnboardingSubmenu: true },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
-  { id: "allocation", label: "Allocation", href: "/allocation", icon: "💰" },
+  { id: "allocation", label: "Budget Allocation", href: "/allocation", icon: "💰" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
-  { id: "net-worth", label: "Net Worth", href: "/net-worth", icon: "📈" },
+  { id: "net-worth", label: "Financial Position", href: "/net-worth", icon: "📈" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
 
   // Retired items (pages still exist but hidden from nav)

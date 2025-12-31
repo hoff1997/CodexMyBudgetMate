@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, Save, Wand2, RotateCcw, Clock, ChevronDown, ChevronRight, Trash2, StickyNote } from "lucide-react";
+import { ArrowLeft, RefreshCw, Save, Wand2, RotateCcw, Clock, ChevronDown, ChevronRight, Trash2, StickyNote, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { RemyTip } from "@/components/onboarding/remy-tip";
@@ -22,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 
 type PriorityLevel = 'essential' | 'important' | 'discretionary';
 
@@ -72,6 +74,8 @@ const FREQUENCY_OPTIONS = [
  * Single table view with "Funded By" column instead of tabs
  */
 export function AllocationClient() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [envelopes, setEnvelopes] = useState<UnifiedEnvelopeData[]>([]);
   const [originalAllocations, setOriginalAllocations] = useState<Record<string, Record<string, number>>>({});
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
@@ -87,6 +91,35 @@ export function AllocationClient() {
     important: true,
     discretionary: true,
   });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [highlightedEnvelopeId, setHighlightedEnvelopeId] = useState<string | null>(null);
+
+  // Check for openCreateEnvelope query param
+  useEffect(() => {
+    if (searchParams.get("openCreateEnvelope") === "true") {
+      setCreateOpen(true);
+      // Clean up the URL without the query param
+      router.replace("/allocation", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  // Handle highlight query param for newly created envelopes
+  useEffect(() => {
+    const highlightId = searchParams.get("highlight");
+    if (highlightId && highlightId !== "new") {
+      setHighlightedEnvelopeId(highlightId);
+      // Clean up the URL
+      router.replace("/allocation", { scroll: false });
+
+      // Remove highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedEnvelopeId(null);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, router]);
 
   // Fetch data on mount
   useEffect(() => {
@@ -96,12 +129,18 @@ export function AllocationClient() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [envelopesRes, incomeRes, userRes, allocationsRes] = await Promise.all([
+      const [envelopesRes, incomeRes, userRes, allocationsRes, categoriesRes] = await Promise.all([
         fetch("/api/envelopes"),
         fetch("/api/income-sources"),
         fetch("/api/user-preferences"),
         fetch("/api/envelope-income-allocations"),
+        fetch("/api/envelope-categories"),
       ]);
+
+      if (categoriesRes.ok) {
+        const { categories: cats } = await categoriesRes.json();
+        setCategories(cats || []);
+      }
 
       let allocationsData: Record<string, Record<string, number>> = {};
       if (allocationsRes.ok) {
@@ -124,6 +163,13 @@ export function AllocationClient() {
           openingBalance: env.opening_balance || 0,
           incomeAllocations: allocationsData[env.id] || {},
           is_tracking_only: env.is_tracking_only,
+          // Suggested envelope fields
+          is_suggested: env.is_suggested,
+          suggestion_type: env.suggestion_type,
+          is_dismissed: env.is_dismissed,
+          auto_calculate_target: env.auto_calculate_target,
+          description: env.description,
+          snoozed_until: env.snoozed_until,
         }));
         setEnvelopes(transformed);
 
@@ -211,14 +257,14 @@ export function AllocationClient() {
   }, [incomeSources, payCycle]);
 
   /**
-   * Group envelopes by priority
+   * Group envelopes by priority (excluding suggested and tracking-only)
    */
   const envelopesByPriority = useMemo(() => {
-    const nonTracking = envelopes.filter(e => !e.is_tracking_only);
+    const nonTrackingNonSuggested = envelopes.filter(e => !e.is_tracking_only && !e.is_suggested);
     return {
-      essential: nonTracking.filter(e => e.priority === 'essential'),
-      important: nonTracking.filter(e => e.priority === 'important'),
-      discretionary: nonTracking.filter(e => e.priority === 'discretionary'),
+      essential: nonTrackingNonSuggested.filter(e => e.priority === 'essential'),
+      important: nonTrackingNonSuggested.filter(e => e.priority === 'important'),
+      discretionary: nonTrackingNonSuggested.filter(e => e.priority === 'discretionary'),
     };
   }, [envelopes]);
 
@@ -492,6 +538,7 @@ export function AllocationClient() {
                     getFundedBy={getFundedBy}
                     onFundedByChange={handleFundedByChange}
                     onEnvelopeChange={handleEnvelopeChange}
+                    isHighlighted={highlightedEnvelopeId === envelope.id}
                   />
                 ))}
               </tbody>
@@ -538,6 +585,14 @@ export function AllocationClient() {
         </div>
         <div className="flex items-center gap-2">
           <RemyHelpPanel pageId="allocation" />
+          <Button
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+            className="bg-sage hover:bg-sage-dark text-white gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            Add Envelope
+          </Button>
           <Button variant="outline" size="sm" onClick={handleAutoCalculate} disabled={isLoading || incomeSources.length === 0}>
             <Wand2 className="h-4 w-4 mr-1" />
             Suggest
@@ -646,6 +701,14 @@ export function AllocationClient() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create Envelope Dialog */}
+      <EnvelopeCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        categories={categories}
+        onCreated={fetchData}
+      />
     </div>
   );
 }
@@ -663,6 +726,7 @@ function EnvelopeRow({
   getFundedBy,
   onFundedByChange,
   onEnvelopeChange,
+  isHighlighted,
 }: {
   envelope: UnifiedEnvelopeData;
   incomeSources: IncomeSource[];
@@ -673,6 +737,7 @@ function EnvelopeRow({
   getFundedBy: (e: UnifiedEnvelopeData) => 'primary' | 'secondary' | 'split' | null;
   onFundedByChange: (envelopeId: string, value: string) => void;
   onEnvelopeChange: (envelopeId: string, field: keyof UnifiedEnvelopeData, value: any) => void;
+  isHighlighted?: boolean;
 }) {
   const perPay = calculatePerPay(envelope);
   const annual = calculateAnnual(envelope);
@@ -720,20 +785,51 @@ function EnvelopeRow({
   const inputClass = "w-full px-2 py-1 text-[13px] bg-transparent border border-transparent hover:border-silver-light focus:border-sage focus:outline-none rounded transition-colors";
   const selectClass = "px-2 py-1 text-[13px] bg-transparent border border-transparent hover:border-silver-light focus:border-sage focus:outline-none rounded cursor-pointer transition-colors";
 
+  // Special styling for suggested envelopes with $0 balance
+  const isSuggestedUnfunded = envelope.is_suggested && (envelope.currentAmount || 0) === 0;
+
+  // Highlight animation for newly created envelopes
+  const highlightClass = isHighlighted
+    ? "ring-2 ring-sage ring-offset-1 bg-sage-very-light animate-pulse"
+    : "";
+
+  const rowClass = cn(
+    isSuggestedUnfunded
+      ? "bg-sage-very-light hover:bg-sage-light transition-colors group"
+      : "hover:bg-[#E2EEEC] transition-colors group h-[44px]",
+    highlightClass
+  );
+
+  // Scroll into view when highlighted
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  useEffect(() => {
+    if (isHighlighted && rowRef.current) {
+      rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isHighlighted]);
+
   return (
-    <tr className="hover:bg-[#E2EEEC] transition-colors group h-[44px]">
+    <tr ref={rowRef} className={rowClass}>
       {/* Envelope Name */}
       <td className="px-3 py-1.5">
         <div className="flex items-center gap-2">
           <div className={cn("w-6 h-6 rounded-md flex items-center justify-center text-sm flex-shrink-0", iconBg)}>
             {envelope.icon}
           </div>
-          <input
-            type="text"
-            value={envelope.name}
-            onChange={(e) => onEnvelopeChange(envelope.id, 'name', e.target.value)}
-            className={cn(inputClass, "font-medium text-text-dark")}
-          />
+          <div className="flex flex-col">
+            <input
+              type="text"
+              value={envelope.name}
+              onChange={(e) => onEnvelopeChange(envelope.id, 'name', e.target.value)}
+              className={cn(inputClass, "font-medium text-text-dark")}
+              readOnly={envelope.is_suggested}
+            />
+            {envelope.description && (
+              <span className="text-[10px] text-text-medium leading-tight ml-2 max-w-[200px]">
+                {envelope.description}
+              </span>
+            )}
+          </div>
         </div>
       </td>
 
@@ -852,25 +948,33 @@ function EnvelopeRow({
 
       {/* Actions */}
       <td className="px-3 py-1.5">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            type="button"
-            className={cn(
-              "p-1 rounded hover:bg-silver-very-light",
-              envelope.notes ? "text-sage" : "text-text-light"
-            )}
-            title={envelope.notes || "Add note"}
-          >
-            <StickyNote className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            className="p-1 rounded text-text-light hover:bg-blue-light hover:text-blue"
-            title="Delete"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {envelope.is_suggested ? (
+          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[10px] text-text-light italic">
+              Manage in Envelope Summary
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              type="button"
+              className={cn(
+                "p-1 rounded hover:bg-silver-very-light",
+                envelope.notes ? "text-sage" : "text-text-light"
+              )}
+              title={envelope.notes || "Add note"}
+            >
+              <StickyNote className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              className="p-1 rounded text-text-light hover:bg-blue-light hover:text-blue"
+              title="Delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );

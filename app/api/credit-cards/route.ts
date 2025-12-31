@@ -7,6 +7,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { findOrCreateDebtCategory } from "@/lib/utils/credit-card-onboarding-utils";
+import { addDebtToSnowball } from "@/lib/utils/debt-progression";
 
 export async function GET() {
   try {
@@ -157,50 +159,73 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create credit card" }, { status: 500 });
     }
 
-    // Create CC Holding envelope
-    const initialHoldingAmount = usageType === "pay_in_full" ? (currentBalance || 0) : 0;
+    // For cards with debt (not pay_in_full), create a payoff envelope
+    let payoffEnvelope = null;
+    const debtAmount = startingDebtAmount || currentBalance || 0;
 
-    const { data: holdingEnvelope, error: envelopeError } = await supabase
-      .from("envelopes")
-      .insert({
-        user_id: user.id,
-        name: `${name} Holding`,
-        icon: "💳",
-        current_amount: initialHoldingAmount,
-        opening_balance: initialHoldingAmount,
-        is_cc_holding: true,
-        cc_account_id: account.id,
-        envelope_type: "expense",
-        is_spending: false,
-        is_goal: false,
-        priority: "essential",
-      })
-      .select()
-      .single();
+    if ((usageType === "paying_down" || usageType === "minimum_only") && debtAmount > 0) {
+      // Get or create "Debt" category
+      const debtCategoryId = await findOrCreateDebtCategory(supabase, user.id);
 
-    if (envelopeError) {
-      console.error("Error creating CC holding envelope:", envelopeError);
-      // Continue anyway - envelope can be created later
-    }
+      // Calculate minimum payment (use provided or default to 2% of balance)
+      const calculatedMinimum = minimumPayment || Math.ceil(debtAmount * 0.02);
 
-    // Create payoff projection if needed
-    if ((usageType === "paying_down" || usageType === "minimum_only") && apr && minimumPayment) {
-      await supabase.from("credit_card_payoff_projections").insert({
-        user_id: user.id,
-        account_id: account.id,
-        starting_balance: startingDebtAmount || currentBalance || 0,
-        current_balance: startingDebtAmount || currentBalance || 0,
-        apr,
-        minimum_payment: minimumPayment,
-        extra_payment: 0,
-        is_active: true,
-      });
+      // Create payoff envelope
+      const { data: createdPayoffEnvelope, error: payoffError } = await supabase
+        .from("envelopes")
+        .insert({
+          user_id: user.id,
+          name: `${name} Payoff`,
+          icon: "💳",
+          subtype: "bill",
+          target_amount: calculatedMinimum,
+          current_amount: 0,
+          frequency: "monthly",
+          due_date: paymentDueDay,
+          category_id: debtCategoryId,
+          priority: "essential",
+          cc_account_id: account.id,
+          envelope_type: "expense",
+          is_spending: false,
+          is_goal: false,
+          notes: `Debt payoff for ${name}`,
+        })
+        .select()
+        .single();
+
+      if (payoffError) {
+        console.error("Error creating payoff envelope:", payoffError);
+      } else {
+        payoffEnvelope = createdPayoffEnvelope;
+
+        // Add to debt snowball plan
+        await addDebtToSnowball(supabase, user.id, {
+          card_name: name,
+          balance: debtAmount,
+          envelope_id: createdPayoffEnvelope.id,
+          minimum_payment: calculatedMinimum,
+        });
+      }
+
+      // Create payoff projection
+      if (apr && minimumPayment) {
+        await supabase.from("credit_card_payoff_projections").insert({
+          user_id: user.id,
+          account_id: account.id,
+          starting_balance: debtAmount,
+          current_balance: debtAmount,
+          apr,
+          minimum_payment: minimumPayment,
+          extra_payment: 0,
+          is_active: true,
+        });
+      }
     }
 
     return NextResponse.json({
       success: true,
       creditCard: account,
-      holdingEnvelope,
+      payoffEnvelope,
     });
   } catch (error) {
     console.error("Create credit card error:", error);

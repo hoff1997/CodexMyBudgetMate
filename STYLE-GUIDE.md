@@ -427,4 +427,177 @@ Positive amounts should use sage, debt should use blue.
 
 ---
 
-*Last updated: December 2024*
+## Highlight & Focus States
+
+### Newly Created Item Highlight
+Used to draw attention to newly created items (e.g., after creating an envelope):
+
+- Ring: `ring-2 ring-sage ring-offset-1`
+- Background: `bg-sage-very-light`
+- Animation: `animate-pulse` (auto-removes after 3 seconds)
+
+```jsx
+<tr className={cn(
+  "hover:bg-sage-very-light",
+  isHighlighted && "ring-2 ring-sage ring-offset-1 bg-sage-very-light animate-pulse"
+)}>
+  {/* Row content */}
+</tr>
+```
+
+### Scroll Into View
+Highlighted items should auto-scroll:
+
+```tsx
+useEffect(() => {
+  if (isHighlighted && rowRef.current) {
+    rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}, [isHighlighted]);
+```
+
+---
+
+## Income & Budget Impact Patterns
+
+### Income Reality Banner
+Shows income surplus/commitment information in dialogs:
+
+- Background: `bg-blue-light/30` (`#DDEAF5` at 30% opacity)
+- Border: `border-blue-light`
+- Text: `text-blue` for values, `text-text-medium` for labels
+
+```jsx
+<div className="rounded-xl border border-blue-light bg-blue-light/30 p-4">
+  <div className="text-xs uppercase tracking-wide text-text-medium mb-2">
+    Your new pay cycle commitment
+  </div>
+  <div className="flex items-center justify-between">
+    <span className="text-sm text-text-dark">Income Name:</span>
+    <span className="font-semibold text-blue">$XX.XX per pay</span>
+  </div>
+</div>
+```
+
+### Budget Shortfall Warning
+Used when user's surplus can't cover a new commitment:
+
+- Background: `bg-gold-light/30` (`#F5E6C4` at 30% opacity)
+- Border: `border-gold`
+- Icon: `AlertCircle` with `text-gold`
+
+```jsx
+<div className="rounded-xl border border-gold bg-gold-light/30 p-4">
+  <div className="flex items-start gap-3">
+    <AlertCircle className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
+    <div>
+      <h4 className="font-semibold text-text-dark">Budget Needs Balancing</h4>
+      <p className="text-sm text-text-dark">
+        Still to find <strong>$XX.XX</strong>
+      </p>
+    </div>
+  </div>
+</div>
+```
+
+### Success Confirmation
+Used when budget action succeeds:
+
+- Background: `bg-sage-very-light`
+- Border: `border-sage-light`
+- Icon: `CheckCircle2` with `text-sage`
+
+```jsx
+<div className="rounded-xl border border-sage-light bg-sage-very-light p-4">
+  <div className="flex items-center gap-3">
+    <CheckCircle2 className="h-6 w-6 text-sage" />
+    <div>
+      <h3 className="font-semibold text-text-dark">Envelope Created!</h3>
+      <p className="text-sm text-text-medium">Now let's balance your budget</p>
+    </div>
+  </div>
+</div>
+```
+
+---
+
+## Dialog & Popover Patterns
+
+### Modal Date Picker
+For date pickers inside dialogs, use modal mode to prevent overflow:
+
+```jsx
+<Popover modal={true}>
+  <PopoverTrigger asChild>
+    <Button variant="outline" className="justify-between">
+      {date ? format(date, 'PPP') : 'Pick a date'}
+      <CalendarIcon className="h-4 w-4" />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent
+    className="p-0 z-[100]"
+    sideOffset={8}
+    align="start"
+    side="bottom"
+    avoidCollisions={true}
+    collisionPadding={16}
+  >
+    <Calendar mode="single" selected={date} onSelect={setDate} />
+  </PopoverContent>
+</Popover>
+```
+
+Key props:
+- `modal={true}` - Keeps popover within dialog stacking context
+- `z-[100]` - Ensures popover appears above dialog content
+- `avoidCollisions={true}` - Prevents calendar from appearing outside viewport
+- `collisionPadding={16}` - Adds safe margin from viewport edges
+
+---
+
+## Envelope Type Badges
+
+### Priority Traffic Light System
+Compact visual priority indicators:
+
+| Priority | Dot Color | CSS |
+|----------|-----------|-----|
+| Essential | Sage Dark | `bg-sage-dark` or `bg-[#5A7E7A]` |
+| Important | Silver | `bg-silver` or `bg-[#9CA3AF]` |
+| Discretionary | Blue | `bg-blue` or `bg-[#6B9ECE]` |
+
+```jsx
+// Compact dot (in table)
+<span className={cn(
+  "w-2.5 h-2.5 rounded-full",
+  priority === "essential" && "bg-sage-dark",
+  priority === "important" && "bg-silver",
+  priority === "discretionary" && "bg-blue"
+)} />
+```
+
+---
+
+## Remy Components
+
+### RemyTip Background
+Remy's coaching tips use a distinct sage-tinted style:
+
+- Background: `bg-sage-very-light` (`#E2EEEC`)
+- Border: `border-sage-light` (`#B8D4D0`)
+- Text: `text-sage-dark` (`#5A7E7A`)
+- Signature: `text-sage` (`#7A9E9A`)
+
+```jsx
+<div className="flex gap-3 rounded-2xl border border-sage-light bg-sage-very-light p-4">
+  <img src="/Images/remy-encouraging.png" className="w-12 h-12" />
+  <div className="flex-1">
+    <p className="text-sm text-sage-dark">Remy's tip message...</p>
+    <p className="text-xs text-sage mt-1 italic">— Remy</p>
+  </div>
+</div>
+```
+
+---
+
+*Last updated: December 2025*

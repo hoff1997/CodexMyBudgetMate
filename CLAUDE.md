@@ -472,3 +472,149 @@ Add `suppressHydrationWarning` to form elements:
 ```
 
 **Applied to**: `components/auth/auth-form.tsx`
+
+## ➕ Add Envelope Dialog (Updated Dec 2025)
+
+### Overview
+
+The Add Envelope dialog (`EnvelopeCreateDialog`) is a comprehensive envelope creation interface with budget impact awareness and multi-income support.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `components/layout/envelopes/envelope-create-dialog.tsx` | Main dialog component |
+| `app/api/budget/income-reality/route.ts` | API for income surplus data |
+| `app/(app)/allocation/allocation-client.tsx` | Handles post-creation navigation |
+
+### Features
+
+1. **Income Reality Banner** - Shows surplus per income source
+2. **Per-Income Impact Display** - Real-time calculation of per-pay amounts
+3. **Multi-Income Selection** - Radio buttons to choose funding source
+4. **Split Income Support** - Divides amount evenly when "split" selected
+5. **Post-Creation Prompt** - Guides user to balance budget
+6. **Envelope Highlighting** - Highlights newly created envelope on allocation page
+
+### Form Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| Name | Text | ✅ | Envelope name |
+| Type | Select | ✅ | bill, spending, savings, goal, tracking |
+| Priority | Select | ✅ | essential, important, discretionary |
+| Icon | Picker | ✅ | Emoji icon for envelope |
+| Category | Select | ❌ | Optional categorization |
+| Due Amount | Number | ❌ | Target amount per due frequency |
+| Due Frequency | Select | ❌ | weekly, fortnightly, monthly, etc. |
+| Due Date | Date | ❌ | Next due date |
+| Opening Balance | Number | ❌ | Starting balance |
+| Notes | Textarea | ❌ | Additional notes |
+| Spending Account | Checkbox | ❌ | Mark as spending envelope |
+| Monitor on Dashboard | Checkbox | ❌ | Show on dashboard widget |
+
+### Income Impact Calculation
+
+The dialog calculates per-pay impact based on selected income:
+
+```typescript
+// When specific income selected:
+displayImpacts = incomeImpacts.filter(i => i.incomeId === selectedIncomeId);
+
+// When "split" selected (divided evenly):
+displayImpacts = incomeImpacts.map(impact => ({
+  ...impact,
+  amountPerPay: impact.amountPerPay / numIncomes,
+  shortfall: Math.max(0, splitAmount - impact.surplusAmount),
+}));
+```
+
+### Pay Cycle Amount Formula
+
+```typescript
+function calculatePayCycleAmount(targetAmount, billFrequency, payFrequency) {
+  const billCyclesPerYear = PAY_FREQUENCY_CYCLES[billFrequency]; // 12 for monthly
+  const payCyclesPerYear = PAY_FREQUENCY_CYCLES[payFrequency];   // 26 for fortnightly
+  const annualAmount = targetAmount * billCyclesPerYear;
+  return annualAmount / payCyclesPerYear;
+}
+```
+
+**Example**: $100/month bill with fortnightly pay = ($100 × 12) ÷ 26 = $46.15/fortnight
+
+### Post-Creation Flow
+
+1. User fills form and clicks "Create & Adjust Budget"
+2. Envelope created via POST `/api/envelopes`
+3. Post-creation prompt appears with:
+   - Per-pay commitment summary (filtered by selected income)
+   - Budget balancing warning (if shortfall exists)
+   - Success message (if surplus covers it)
+   - Remy's tip
+4. User clicks "Balance Budget Now" or "I'll Balance It Later"
+5. If "Balance Budget Now": Navigate to `/allocation?highlight={envelopeId}`
+6. Allocation page highlights the new envelope for 3 seconds
+
+### Shared Component Pattern
+
+The `EnvelopeCreateDialog` is used by both pages:
+- **Allocation Page**: Opens directly via Add button
+- **Envelope Summary Page**: Navigates to allocation with `?openCreateEnvelope=true`
+
+```typescript
+// envelope-summary-client.tsx
+onClick={() => router.push("/allocation?openCreateEnvelope=true")}
+
+// allocation-client.tsx
+useEffect(() => {
+  if (searchParams.get("openCreateEnvelope") === "true") {
+    setCreateOpen(true);
+    router.replace("/allocation", { scroll: false });
+  }
+}, [searchParams, router]);
+```
+
+### Highlight Handling
+
+```typescript
+// allocation-client.tsx
+useEffect(() => {
+  const highlightId = searchParams.get("highlight");
+  if (highlightId && highlightId !== "new") {
+    setHighlightedEnvelopeId(highlightId);
+    router.replace("/allocation", { scroll: false });
+
+    // Remove highlight after 3 seconds
+    const timer = setTimeout(() => {
+      setHighlightedEnvelopeId(null);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }
+}, [searchParams, router]);
+
+// EnvelopeRow component
+const highlightClass = isHighlighted
+  ? "ring-2 ring-sage ring-offset-1 bg-sage-very-light animate-pulse"
+  : "";
+```
+
+### Income Reality API
+
+**Endpoint**: `GET /api/budget/income-reality`
+
+**Response**:
+```typescript
+{
+  incomes: [{
+    id: string;
+    name: string;
+    payFrequency: string;
+    nextPayDate: string | null;
+    incomeAmount: number;
+    totalCommittedPerPay: number;
+    surplusAmount: number;
+  }];
+  totalSurplus: number;
+  totalCommittedPerPay: number;
+  surplusEnvelopeBalance: number | null;
+}

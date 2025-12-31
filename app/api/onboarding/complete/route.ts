@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { createSuggestedEnvelopes } from "@/lib/utils/suggested-envelopes";
 
 const schema = z.object({
   persona: z.enum(['beginner', 'optimiser', 'wealth_builder']).optional(),
@@ -57,6 +58,13 @@ export async function POST(request: Request) {
         { error: profileError.message },
         { status: 400 }
       );
+    }
+
+    // Create "The My Budget Way" suggested envelopes
+    const suggestedResult = await createSuggestedEnvelopes(supabase, user.id);
+    if (!suggestedResult.success) {
+      console.error('Suggested envelopes error:', suggestedResult.error);
+      // Don't fail the request, just log
     }
 
     // Track onboarding completion feature

@@ -9,17 +9,21 @@ import HelpTooltip from "@/components/ui/help-tooltip";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { PRIORITY_CONFIG, type SummaryEnvelope, type PriorityLevel } from "@/components/layout/envelopes/envelope-summary-card";
 import { EnvelopeCategoryGroup, CATEGORY_ICONS } from "@/components/layout/envelopes/envelope-category-group";
-import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
-import { CreditCardHoldingWidget } from "@/components/layout/credit-card/credit-card-holding-widget";
 import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
-import { Target, Wallet, TrendingDown, Printer } from "lucide-react";
+import { Target, Wallet, TrendingDown, Printer, ChevronDown, ChevronRight, AlarmClock, RotateCw, Lock, CheckCircle2, Circle, Bell, X, Clock, Plus } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { TransferHistoryItem } from "@/lib/types/envelopes";
 import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { getPrimaryPaySchedule, type PaySchedule } from "@/lib/utils/pays-until-due";
 import { EnvelopeSummaryPrintView } from "@/components/layout/envelopes/envelope-summary-print-view";
+import { MyBudgetWayWidget, type MilestoneProgress as WidgetMilestoneProgress } from "@/components/my-budget-way";
 
 // Income source type for pay schedule calculation
 interface IncomeSourceForSchedule {
@@ -28,6 +32,19 @@ interface IncomeSourceForSchedule {
   nextPayDate?: string | null;
   frequency?: string | null;
   isActive?: boolean;
+}
+
+// Credit card debt data for CC Holding progress display
+export interface CreditCardDebtData {
+  currentDebt: number;
+  startingDebt: number;
+  phase: string;
+  hasDebt: boolean;
+  // Active debt being attacked (smallest first - snowball method)
+  activeDebt?: {
+    name: string;
+    balance: number;
+  } | null;
 }
 
 const FILTERS = [
@@ -117,6 +134,7 @@ export function EnvelopeSummaryClient({
   payPlan,
   categories: categoryOptions = [],
   incomeSources = [],
+  creditCardDebt,
 }: {
   list: SummaryEnvelope[];
   totals: { target: number; current: number };
@@ -125,14 +143,15 @@ export function EnvelopeSummaryClient({
   payPlan?: PayPlanSummary | null;
   categories?: CategoryOption[];
   incomeSources?: IncomeSourceForSchedule[];
+  creditCardDebt?: CreditCardDebtData;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
-  const [createOpen, setCreateOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [collapseAll, setCollapseAll] = useState(false);
+  const [myBudgetWayExpanded, setMyBudgetWayExpanded] = useState(true);
 
   // Handle ?action=transfer query param from dashboard quick actions
   useEffect(() => {
@@ -143,9 +162,9 @@ export function EnvelopeSummaryClient({
     }
   }, [searchParams, router]);
 
-  // Handle envelope edit by navigating to Budget Manager with deep link
-  const handleEnvelopeEdit = useCallback((envelope: SummaryEnvelope) => {
-    router.push(`/budget-manager?envelope=${envelope.id}`);
+  // Handle envelope click by navigating to envelope detail page
+  const handleEnvelopeClick = useCallback((envelope: SummaryEnvelope) => {
+    router.push(`/envelopes/${envelope.id}`);
   }, [router]);
 
   const payPlanMap = useMemo(() => {
@@ -170,6 +189,247 @@ export function EnvelopeSummaryClient({
       }))
     );
   }, [incomeSources]);
+
+  // Get suggested envelopes (The My Budget Way) - sorted by type
+  const suggestedEnvelopes = useMemo(() => {
+    const now = new Date();
+    const SUGGESTION_ORDER: Record<string, number> = {
+      'starter-stash': 0,
+      'safety-net': 1,
+      'cc-holding': 2,
+    };
+    return list
+      .filter(e => {
+        if (!e.is_suggested || e.is_dismissed) return false;
+        if (e.snoozed_until && new Date(e.snoozed_until) > now) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const orderA = SUGGESTION_ORDER[a.suggestion_type || ''] ?? 99;
+        const orderB = SUGGESTION_ORDER[b.suggestion_type || ''] ?? 99;
+        return orderA - orderB;
+      });
+  }, [list]);
+
+  // Get hidden suggested envelopes (snoozed or dismissed) for restore button
+  const hiddenSuggestedEnvelopes = useMemo(() => {
+    const now = new Date();
+    return list.filter(e => {
+      if (!e.is_suggested) return false;
+      if (e.is_dismissed) return true;
+      if (e.snoozed_until && new Date(e.snoozed_until) > now) return true;
+      return false;
+    });
+  }, [list]);
+
+  // Check if Starter Stash is complete ($1,000 funded)
+  // Used to show lock icons on Safety Net and CC Holding
+  const starterStashComplete = useMemo(() => {
+    const starterStash = suggestedEnvelopes.find(e => e.suggestion_type === 'starter-stash');
+    if (!starterStash) return false;
+    const current = Number(starterStash.current_amount ?? 0);
+    const target = Number(starterStash.target_amount ?? 1000);
+    return current >= target;
+  }, [suggestedEnvelopes]);
+
+  // Calculate milestone progress for the summary widget
+  const milestoneProgress = useMemo(() => {
+    // Filter out suggested envelopes for milestone calculation
+    const regularEnvelopes = orderedEnvelopes.filter(e => !e.is_suggested);
+
+    // Separate by priority
+    const priority1 = regularEnvelopes.filter(e => e.priority === 'essential');
+    const priority2 = regularEnvelopes.filter(e => e.priority === 'important');
+    const extras = regularEnvelopes.filter(e => e.priority === 'discretionary' || !e.priority);
+
+    // Calculate funding ratios for each group
+    const calcGroupFunding = (envelopes: SummaryEnvelope[]) => {
+      const totalTarget = envelopes.reduce((sum, e) => sum + Number(e.target_amount ?? 0), 0);
+      const totalCurrent = envelopes.reduce((sum, e) => sum + Number(e.current_amount ?? 0), 0);
+      if (totalTarget === 0) return 1; // No target means "complete"
+      return Math.min(1, totalCurrent / totalTarget);
+    };
+
+    const p1Funded = calcGroupFunding(priority1);
+    const p2Funded = calcGroupFunding(priority2);
+
+    // My Budget Way progress (suggested envelopes)
+    const myBudgetWayTarget = suggestedEnvelopes.reduce((sum, e) => sum + Number(e.target_amount ?? 0), 0);
+    const myBudgetWayCurrent = suggestedEnvelopes.reduce((sum, e) => sum + Number(e.current_amount ?? 0), 0);
+    const myBudgetWayFunded = myBudgetWayTarget > 0 ? Math.min(1, myBudgetWayCurrent / myBudgetWayTarget) : 1;
+
+    const extrasFunded = calcGroupFunding(extras);
+
+    // Overall progress (all envelopes including suggested)
+    const allEnvelopes = [...regularEnvelopes, ...suggestedEnvelopes];
+    const totalTarget = allEnvelopes.reduce((sum, e) => sum + Number(e.target_amount ?? 0), 0);
+    const totalCurrent = allEnvelopes.reduce((sum, e) => sum + Number(e.current_amount ?? 0), 0);
+    const overallProgress = totalTarget > 0 ? Math.min(100, (totalCurrent / totalTarget) * 100) : 100;
+
+    // Define milestones with their thresholds
+    const milestones = [
+      {
+        id: 'p1',
+        label: 'Essentials Covered',
+        threshold: 33,
+        achieved: p1Funded >= 1,
+        inProgress: p1Funded > 0 && p1Funded < 1,
+        progress: p1Funded
+      },
+      {
+        id: 'p2',
+        label: 'Important Covered',
+        threshold: 50,
+        achieved: p1Funded >= 1 && p2Funded >= 1,
+        inProgress: p1Funded >= 1 && p2Funded > 0 && p2Funded < 1,
+        progress: p2Funded
+      },
+      {
+        id: 'mbw',
+        label: 'My Budget Way Complete',
+        threshold: 65,
+        achieved: myBudgetWayFunded >= 1,
+        inProgress: myBudgetWayFunded > 0 && myBudgetWayFunded < 1,
+        progress: myBudgetWayFunded
+      },
+      {
+        id: 'extras',
+        label: 'Extras Funded',
+        threshold: 80,
+        achieved: extrasFunded >= 1,
+        inProgress: extrasFunded > 0 && extrasFunded < 1,
+        progress: extrasFunded
+      },
+      {
+        id: 'complete',
+        label: 'Everything On Track',
+        threshold: 100,
+        achieved: overallProgress >= 100,
+        inProgress: overallProgress >= 80 && overallProgress < 100,
+        progress: overallProgress / 100
+      },
+    ];
+
+    // Find next milestone (first non-achieved)
+    const nextMilestone = milestones.find(m => !m.achieved);
+
+    // Count funded envelopes (current >= target, with target > 0)
+    const fundedCount = regularEnvelopes.filter(e => {
+      const target = Number(e.target_amount ?? 0);
+      const current = Number(e.current_amount ?? 0);
+      return target > 0 && current >= target;
+    }).length;
+    const totalCount = regularEnvelopes.length;
+
+    // Calculate show/hide logic for "Fill Your Envelopes" row
+    // Check if any Priority 1 (Essential) envelopes are underfunded
+    const essentialsUnderfunded = priority1.some(e => {
+      const target = Number(e.target_amount ?? 0);
+      const current = Number(e.current_amount ?? 0);
+      return target > 0 && current < target;
+    });
+
+    // Count envelopes needing funding (for description)
+    const needsFunding = regularEnvelopes.filter(e => {
+      const target = Number(e.target_amount ?? 0);
+      const current = Number(e.current_amount ?? 0);
+      return target > 0 && current < target;
+    }).length;
+
+    // Determine if row should show
+    // Show when: less than 95% funded OR any essentials underfunded
+    const shouldShowEnvelopeRow =
+      overallProgress < 95 ||      // Less than 95% funded overall
+      essentialsUnderfunded;        // Any essentials need funding
+
+    return {
+      overallProgress,
+      milestones,
+      nextMilestone,
+      totalTarget,
+      totalCurrent,
+      fundingGap: Math.max(0, totalTarget - totalCurrent),
+      fundedCount,
+      totalCount,
+      // New fields for dynamic row visibility
+      essentialsUnderfunded,
+      needsFunding,
+      shouldShowEnvelopeRow,
+    };
+  }, [orderedEnvelopes, suggestedEnvelopes]);
+
+  // Check if CC Holding is locked (has debt to pay off)
+  const isCCHoldingLocked = useMemo(() => {
+    return creditCardDebt?.hasDebt ?? false;
+  }, [creditCardDebt]);
+
+  // Check if an envelope should show as locked (not yet unlocked in progression)
+  // CRITICAL: Safety Net and CC Holding are BOTH locked until ALL DEBT = $0
+  const isEnvelopeLocked = useCallback((suggestionType: string | null | undefined): boolean => {
+    if (!suggestionType) return false;
+    // Starter Stash is NEVER locked
+    if (suggestionType === 'starter-stash') return false;
+    // Safety Net is locked until ALL DEBT = $0 (not just Starter Stash!)
+    if (suggestionType === 'safety-net') {
+      return creditCardDebt?.hasDebt ?? false;
+    }
+    // CC Holding is locked until ALL DEBT = $0
+    if (suggestionType === 'cc-holding') {
+      return creditCardDebt?.hasDebt ?? false;
+    }
+    return false;
+  }, [creditCardDebt?.hasDebt]);
+
+  // Handle snoozing a suggested envelope
+  const handleSnoozeSuggested = useCallback(async (envelopeId: string, days: number) => {
+    try {
+      const response = await fetch('/api/envelopes/suggested/snooze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ envelopeId, days }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to snooze envelope');
+      }
+
+      toast.success(`Snoozed for ${days} days`);
+      router.refresh();
+    } catch (error) {
+      console.error('Error snoozing suggested envelope:', error);
+      toast.error('Failed to snooze');
+    }
+  }, [router]);
+
+  // Handle restoring all hidden (snoozed or dismissed) suggested envelopes
+  const handleRestoreAllHidden = useCallback(async () => {
+    try {
+      await Promise.all(
+        hiddenSuggestedEnvelopes.map(async env => {
+          if (env.snoozed_until) {
+            await fetch('/api/envelopes/suggested/snooze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ envelopeId: env.id }),
+            });
+          }
+          if (env.is_dismissed) {
+            await fetch('/api/envelopes/suggested/dismiss', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ envelopeId: env.id, dismiss: false }),
+            });
+          }
+        })
+      );
+
+      toast.success('Restored all goals');
+      router.refresh();
+    } catch (error) {
+      console.error('Error restoring hidden envelopes:', error);
+      toast.error('Failed to restore');
+    }
+  }, [hiddenSuggestedEnvelopes, router]);
 
   useEffect(() => {
     const sorted = [...list]
@@ -338,28 +598,20 @@ export function EnvelopeSummaryClient({
       {/* Ultra-compact print view - shows only when printing */}
       <EnvelopeSummaryPrintView envelopes={orderedEnvelopes} totals={totals} />
 
-      <header className="space-y-1 no-print">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-secondary">Envelope summary</h1>
-            <HelpTooltip
-              title="Envelope Summary"
-              content={[
-                "Monitor envelope health and track progress toward your budget goals. View balances, identify envelopes needing attention, and manage transfers between envelopes."
-              ]}
-            />
-          </div>
+      {/* Page Header */}
+      <div className="flex items-center justify-between no-print">
+        <h1 className="text-2xl font-bold text-text-dark">Envelope Summary</h1>
+        <div className="flex items-center gap-3">
           <RemyHelpPanel pageId="envelope-summary" />
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Snapshot of every envelope with progress markers so you can quickly see what needs topping
-          up before the next payday.
-        </p>
-      </header>
-      <div className="space-y-3 no-print">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-secondary">Envelope Summary</h2>
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => router.push("/allocation?openCreateEnvelope=true")}
+              className="bg-sage hover:bg-sage-dark text-white gap-1.5"
+            >
+              <Plus className="h-4 w-4" />
+              Add Envelope
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -370,34 +622,25 @@ export function EnvelopeSummaryClient({
               Print
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link href="/budget-manager">Budget Manager</Link>
+              <Link href="/allocation">Budget Allocation</Link>
             </Button>
           </div>
         </div>
+      </div>
+      <div className="space-y-3 no-print">
         <div className="space-y-3">
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <MetricCard
-              title="Total target"
-              value={formatCurrency(totals.target)}
-              description={`Across ${orderedEnvelopes.length} envelopes`}
-              icon={Target}
-            />
-            <MetricCard
-              title="Current balance"
-              value={formatCurrency(totals.current)}
-              description="Inclusive of pending envelopes"
-              icon={Wallet}
-            />
-            <MetricCard
-              title="Funding gap"
-              value={formatCurrency(Math.max(0, totals.target - totals.current))}
-              description="What is still required to hit targets"
-              icon={TrendingDown}
-            />
-          </section>
-
-          {/* Full-width Credit Card Widget */}
-          <CreditCardHoldingWidget horizontal />
+          {/* THE MY BUDGET WAY - Using new reusable widget */}
+          <MyBudgetWayWidget
+            mode="status"
+            suggestedEnvelopes={suggestedEnvelopes}
+            creditCardDebt={creditCardDebt}
+            milestoneProgress={milestoneProgress as WidgetMilestoneProgress}
+            hiddenCount={hiddenSuggestedEnvelopes.length}
+            onSnooze={handleSnoozeSuggested}
+            onRestoreHidden={handleRestoreAllHidden}
+            onEnvelopeClick={(envelope) => router.push(`/envelopes/${envelope.id}`)}
+            defaultExpanded={myBudgetWayExpanded}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
             <div className="flex flex-wrap gap-2">
@@ -436,7 +679,7 @@ export function EnvelopeSummaryClient({
           </div>
 
           <div className="space-y-2 md:hidden">
-            <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={handleEnvelopeEdit} />
+            <MobileEnvelopeList envelopes={filteredEnvelopes} onSelect={handleEnvelopeClick} />
           </div>
           <div className="hidden md:block">
             <div className="space-y-3">
@@ -448,7 +691,7 @@ export function EnvelopeSummaryClient({
                     collapsedAll={collapseAll}
                     isDragDisabled={statusFilter !== "all"}
                     paySchedule={paySchedule}
-                    onSelectEnvelope={handleEnvelopeEdit}
+                    onSelectEnvelope={handleEnvelopeClick}
                     onReorder={(from, to) => handleReorder(category.id, from, to)}
                   />
                 ))
@@ -463,15 +706,6 @@ export function EnvelopeSummaryClient({
           </div>
         </div>
       </div>
-
-      <EnvelopeCreateDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        categories={categoryOptions}
-        onCreated={() => {
-          router.refresh();
-        }}
-      />
 
       <EnvelopeTransferDialog
         open={transferOpen}
@@ -595,6 +829,15 @@ function MetricCard({
   );
 }
 
+interface Milestone {
+  id: string;
+  label: string;
+  threshold: number;
+  achieved: boolean;
+  inProgress: boolean;
+  progress: number;
+}
+
 function getStatusBucket(envelope: SummaryEnvelope): StatusFilter {
   if (envelope.is_tracking_only) return "tracking";
   if (envelope.is_spending) return "spending";
@@ -624,3 +867,4 @@ function getStatusLabel(status: StatusFilter) {
       return "All";
   }
 }
+

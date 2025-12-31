@@ -13,6 +13,51 @@ import type {
   PaymentSplitSuggestion,
 } from '@/lib/types/credit-card-onboarding';
 import type { AccountRow as Account } from '@/lib/types/accounts';
+import { SupabaseClient } from "@supabase/supabase-js";
+
+// =====================================================
+// CATEGORY HELPERS
+// =====================================================
+
+/**
+ * Find or create the "Debt" category for payoff envelopes
+ * Returns the category ID
+ */
+export async function findOrCreateDebtCategory(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  // Check if "Debt" category already exists
+  const { data: existing } = await supabase
+    .from("envelope_categories")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("name", "Debt")
+    .maybeSingle();
+
+  if (existing) {
+    return existing.id;
+  }
+
+  // Create new "Debt" category
+  const { data, error } = await supabase
+    .from("envelope_categories")
+    .insert({
+      user_id: userId,
+      name: "Debt",
+      icon: "💳",
+      sort_order: 1, // Show near top
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error creating Debt category:", error);
+    return null;
+  }
+
+  return data?.id || null;
+}
 
 // =====================================================
 // ENVELOPE CREATION
@@ -52,7 +97,30 @@ export function createCCHoldingEnvelope(config: CreditCardConfig): EnvelopeCreat
 }
 
 /**
- * Create CC Payment envelope (bill type) for a credit card
+ * Create CC Payoff envelope (bill type) for a credit card with debt
+ * This envelope is used to track and allocate money for debt elimination
+ */
+export function createCCPayoffEnvelope(config: CreditCardConfig): EnvelopeCreatePayload {
+  // Target amount is the minimum payment for debt payoff
+  const targetAmount = config.minimumPayment || Math.ceil((config.startingDebtAmount || 0) * 0.02);
+
+  return {
+    name: `${config.accountName} Payoff`,
+    subtype: 'bill',
+    target_amount: targetAmount,
+    current_amount: 0,
+    frequency: 'monthly',
+    due_day: config.billingCycle?.paymentDueDay,
+    priority: 1, // Essential priority - CC payments are must-pay
+    is_credit_card_payment: true,
+    linked_account_id: config.accountId,
+    notes: `Debt payoff for ${config.accountName}`,
+  };
+}
+
+/**
+ * Create CC Payment envelope (bill type) for a credit card (pay-in-full users)
+ * @deprecated Use createCCPayoffEnvelope for debt, this is for pay-in-full cards
  */
 export function createCCPaymentEnvelope(config: CreditCardConfig): EnvelopeCreatePayload {
   // Determine target amount based on usage type

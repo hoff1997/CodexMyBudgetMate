@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { EnvelopeData, BankAccount, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 import type { CreditCardConfig } from "@/lib/types/credit-card-onboarding";
 import { createOpeningBalanceTransactions } from "@/lib/server/create-opening-balance-transactions";
-import { getCurrentBillingCycle } from "@/lib/utils/credit-card-onboarding-utils";
+import { getCurrentBillingCycle, findOrCreateDebtCategory } from "@/lib/utils/credit-card-onboarding-utils";
 
 // Interface for custom categories from onboarding
 interface CustomCategoryInput {
@@ -132,9 +132,19 @@ export async function POST(request: Request) {
     }
 
     // 2.5. Process credit card configurations
-    const ccHoldingEnvelopeIds: string[] = [];
+    // Create payoff envelopes for cards with debt (NOT per-card CC Holding)
+    // The single "CC Holding" system envelope is created via suggested-envelopes.ts
+    const payoffEnvelopes: Array<{
+      card_name: string;
+      balance: number;
+      envelope_id: string;
+      minimum_payment: number;
+    }> = [];
 
     if (creditCardConfigs && creditCardConfigs.length > 0) {
+      // Get or create "Debt" category for payoff envelopes
+      const debtCategoryId = await findOrCreateDebtCategory(supabase, userId);
+
       for (const ccConfig of creditCardConfigs) {
         const realAccountId = accountIdMap.get(ccConfig.accountId);
         if (!realAccountId) {
@@ -155,41 +165,13 @@ export async function POST(request: Request) {
             apr: ccConfig.apr || null,
             statement_close_day: ccConfig.billingCycle?.statementCloseDay || null,
             payment_due_day: ccConfig.billingCycle?.paymentDueDay || null,
+            // CC Holding is locked by default until all debt is paid off
+            cc_holding_locked: ccConfig.usageType !== 'pay_in_full',
           })
           .eq("id", realAccountId);
 
         if (ccAccountError) {
           console.error("CC account update error:", ccAccountError);
-        }
-
-        // Create CC Holding envelope for this card
-        const holdingEnvelopeName = `${ccConfig.accountName} Holding`;
-        const initialHoldingAmount = ccConfig.usageType === 'pay_in_full'
-          ? (ccConfig.currentOutstanding || 0)
-          : 0;
-
-        const { data: holdingEnvelope, error: holdingError } = await supabase
-          .from("envelopes")
-          .insert({
-            user_id: userId,
-            name: holdingEnvelopeName,
-            icon: "💳",
-            current_amount: initialHoldingAmount,
-            opening_balance: initialHoldingAmount,
-            is_cc_holding: true,
-            cc_account_id: realAccountId,
-            envelope_type: "expense",
-            is_spending: false,
-            is_goal: false,
-            priority: "essential",
-          })
-          .select("id")
-          .single();
-
-        if (holdingError) {
-          console.error("CC Holding envelope error:", holdingError);
-        } else if (holdingEnvelope) {
-          ccHoldingEnvelopeIds.push(holdingEnvelope.id);
         }
 
         // Create initial billing cycle record if we have billing cycle info
@@ -204,8 +186,8 @@ export async function POST(request: Request) {
               user_id: userId,
               account_id: realAccountId,
               cycle_identifier: currentCycle,
-              opening_holding_amount: initialHoldingAmount,
-              current_holding_amount: initialHoldingAmount,
+              opening_holding_amount: 0,
+              current_holding_amount: 0,
               new_spending_total: 0,
               is_current_cycle: true,
             });
@@ -215,26 +197,96 @@ export async function POST(request: Request) {
           }
         }
 
-        // For paying_down types, create payoff projection
+        // For paying_down or minimum_only types, create payoff envelope and projection
         if ((ccConfig.usageType === 'paying_down' || ccConfig.usageType === 'minimum_only') &&
-            ccConfig.apr && ccConfig.minimumPayment && ccConfig.startingDebtAmount) {
+            ccConfig.startingDebtAmount && ccConfig.startingDebtAmount > 0) {
 
-          const { error: projectionError } = await supabase
-            .from("credit_card_payoff_projections")
+          // Calculate minimum payment (use provided or default to 2% of balance)
+          const minimumPayment = ccConfig.minimumPayment || Math.ceil(ccConfig.startingDebtAmount * 0.02);
+
+          // Create payoff envelope
+          const { data: payoffEnvelope, error: payoffError } = await supabase
+            .from("envelopes")
             .insert({
               user_id: userId,
-              account_id: realAccountId,
-              starting_balance: ccConfig.startingDebtAmount,
-              current_balance: ccConfig.startingDebtAmount,
-              apr: ccConfig.apr,
-              minimum_payment: ccConfig.minimumPayment,
-              extra_payment: 0,
-              is_active: true,
-            });
+              name: `${ccConfig.accountName} Payoff`,
+              icon: "💳",
+              subtype: "bill",
+              target_amount: minimumPayment,
+              current_amount: 0,
+              frequency: "monthly",
+              due_date: ccConfig.billingCycle?.paymentDueDay,
+              category_id: debtCategoryId,
+              priority: "essential",
+              cc_account_id: realAccountId,
+              envelope_type: "expense",
+              is_spending: false,
+              is_goal: false,
+              notes: `Debt payoff for ${ccConfig.accountName}`,
+            })
+            .select("id")
+            .single();
 
-          if (projectionError) {
-            console.error("CC payoff projection error:", projectionError);
+          if (payoffError) {
+            console.error("CC Payoff envelope error:", payoffError);
+          } else if (payoffEnvelope) {
+            payoffEnvelopes.push({
+              card_name: ccConfig.accountName,
+              balance: ccConfig.startingDebtAmount,
+              envelope_id: payoffEnvelope.id,
+              minimum_payment: minimumPayment,
+            });
           }
+
+          // Create payoff projection
+          if (ccConfig.apr && ccConfig.minimumPayment) {
+            const { error: projectionError } = await supabase
+              .from("credit_card_payoff_projections")
+              .insert({
+                user_id: userId,
+                account_id: realAccountId,
+                starting_balance: ccConfig.startingDebtAmount,
+                current_balance: ccConfig.startingDebtAmount,
+                apr: ccConfig.apr,
+                minimum_payment: ccConfig.minimumPayment,
+                extra_payment: 0,
+                is_active: true,
+              });
+
+            if (projectionError) {
+              console.error("CC payoff projection error:", projectionError);
+            }
+          }
+        }
+      }
+
+      // Create debt snowball plan if there are debts to pay off
+      if (payoffEnvelopes.length > 0) {
+        // Sort by balance (smallest first) for snowball method
+        const sortedDebts = payoffEnvelopes
+          .sort((a, b) => a.balance - b.balance)
+          .map((d, index) => ({
+            ...d,
+            order: index,
+            paid_off_at: null,
+          }));
+
+        const totalDebt = sortedDebts.reduce((sum, d) => sum + d.balance, 0);
+
+        const { error: planError } = await supabase
+          .from("debt_snowball_plan")
+          .insert({
+            user_id: userId,
+            plan_type: "balanced",
+            phase: "starter_stash", // Always start with building Starter Stash
+            debts: sortedDebts,
+            total_debt_monthly: Math.ceil(totalDebt / 24), // Rough 2-year payoff estimate
+          });
+
+        if (planError) {
+          console.error("Debt snowball plan creation error:", planError);
+        } else {
+          console.log(`Created debt snowball plan with ${sortedDebts.length} debts`);
         }
       }
     }

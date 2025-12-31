@@ -2342,6 +2342,189 @@ Celebratory toast notification when achievement unlocked.
 | Text Medium | `#4A5E5A` | `text-text-medium` | Body |
 | Muted | `#6B7B7A` | `text-muted-foreground` | Secondary |
 
+---
+
+## Add Envelope Dialog System
+
+**Status**: ✅ **COMPLETE** (Updated Dec 2025)
+
+### Overview
+
+The Add Envelope Dialog is a shared component used across multiple pages (Allocation, Envelope Summary, Dashboard) with income-aware features that help users understand the budget impact of new envelopes before creating them.
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| Income Reality Banner | Shows surplus/shortfall per income source |
+| Per-Income Impact | Calculates how new envelope affects each income |
+| Income Source Selection | Choose which income(s) fund the envelope |
+| Split Mode | Evenly divide amount across all incomes |
+| Post-Creation Prompt | Navigate options after creation |
+| Highlight Handling | Scrolls to and highlights newly created envelope |
+
+### Core Files
+
+| File | Purpose |
+|------|---------|
+| `components/layout/envelopes/envelope-create-dialog.tsx` | Main dialog component |
+| `app/api/budget/income-reality/route.ts` | Income surplus API |
+| `app/(app)/allocation/allocation-client.tsx` | Highlight handling integration |
+
+### Form Fields
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| Name | Text | ✅ | Envelope name |
+| Type | Select | ✅ | bill, spending, savings, goal, tracking |
+| Priority | Select | ✅ (bills only) | essential, important, discretionary |
+| Target Amount | Number | ✅ (bills/savings) | Total target |
+| Frequency | Select | ✅ (bills only) | weekly, fortnightly, monthly, etc. |
+| Due Date | Date | Optional | Next payment due |
+| Category | Select | ✅ | Expense category |
+| Income Source | Select | ✅ (multi-income) | Which income funds it |
+| Description | Textarea | Optional | Notes |
+| Initial Balance | Number | Optional | Starting amount |
+
+### Pay Cycle Amount Formula
+
+The dialog calculates the per-pay amount using this formula:
+
+```typescript
+const payCycleAmount = (targetAmount * billCyclesPerYear) / userPayCyclesPerYear;
+```
+
+**Example**: $2,400 annual bill for fortnightly payer:
+```
+payCycleAmount = ($2,400 × 1) ÷ 26 = $92.31 per fortnight
+```
+
+### Income Reality API
+
+**Endpoint**: `GET /api/budget/income-reality`
+
+**Response**:
+```typescript
+{
+  incomes: [{
+    id: string;
+    name: string;
+    payFrequency: string;
+    nextPayDate: string | null;
+    incomeAmount: number;
+    totalCommittedPerPay: number;
+    surplusAmount: number;
+  }];
+  totalSurplus: number;
+  totalCommittedPerPay: number;
+  surplusEnvelopeBalance: number | null;
+}
+```
+
+### Income Impact Calculation
+
+For each income source, the dialog calculates:
+
+```typescript
+interface PerIncomeImpact {
+  incomeId: string;
+  incomeName: string;
+  incomeAmount: number;
+  surplusAmount: number;
+  amountPerPay: number;      // Amount needed from this income
+  shortfall: number;          // Amount over surplus
+  coversIt: boolean;          // Can surplus cover it?
+}
+```
+
+### Split Income Mode
+
+When user selects "Split evenly across incomes":
+
+```typescript
+const displayImpacts = useMemo((): PerIncomeImpact[] => {
+  if (selectedIncomeId === "split") {
+    const numIncomes = incomeImpacts.length;
+    return incomeImpacts.map((impact) => {
+      const splitAmount = Math.round((impact.amountPerPay / numIncomes) * 100) / 100;
+      const shortfall = Math.max(0, splitAmount - impact.surplusAmount);
+      return {
+        ...impact,
+        amountPerPay: splitAmount,
+        shortfall: Math.round(shortfall * 100) / 100,
+        coversIt: impact.surplusAmount >= splitAmount,
+      };
+    });
+  }
+  return incomeImpacts.filter((impact) => impact.incomeId === selectedIncomeId);
+}, [incomeImpacts, selectedIncomeId]);
+```
+
+### Post-Creation Flow
+
+After envelope creation:
+1. Dialog shows success message with envelope name
+2. Displays budget impact summary per income
+3. Shows warning if any income has shortfall
+4. Offers navigation options:
+   - "Go to Envelope" → Navigates with `?highlight=<id>`
+   - "Add Another" → Resets form
+   - "Close" → Closes dialog
+
+### Highlight Handling
+
+When navigating to Allocation page with `?highlight=<id>`:
+
+```typescript
+// In allocation-client.tsx
+useEffect(() => {
+  const highlightId = searchParams.get("highlight");
+  if (highlightId && highlightId !== "new") {
+    setHighlightedEnvelopeId(highlightId);
+    router.replace("/allocation", { scroll: false });
+
+    // Remove highlight after 3 seconds
+    const timer = setTimeout(() => {
+      setHighlightedEnvelopeId(null);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }
+}, [searchParams, router]);
+```
+
+The highlighted row receives:
+- `ring-2 ring-sage ring-offset-1` - Sage ring border
+- `bg-sage-very-light` - Light sage background
+- `animate-pulse` - Pulsing animation
+- Auto-scroll into view with `scrollIntoView({ behavior: "smooth", block: "center" })`
+
+### Shared Component Pattern
+
+The dialog is opened via URL query params for cross-page consistency:
+
+```typescript
+// Open dialog from any page
+router.push("/allocation?action=create-envelope");
+
+// In Allocation page layout
+const showCreateDialog = searchParams.get("action") === "create-envelope";
+```
+
+### Integration Points
+
+**Pages using the dialog:**
+- `/allocation` - Primary budget management
+- `/envelope-summary` - Quick envelope creation
+- Dashboard quick actions (if implemented)
+
+**API endpoints called:**
+- `GET /api/budget/income-reality` - Fetch income surplus data
+- `POST /api/envelopes` - Create the envelope
+- `GET /api/categories` - Fetch category options
+
+---
+
 ### Key Principle: No Red/Amber for Warnings
 
 To reduce financial anxiety, the app uses **blue** for urgency indicators instead of traditional red/amber:

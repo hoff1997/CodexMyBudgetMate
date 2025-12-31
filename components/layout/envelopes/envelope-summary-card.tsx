@@ -13,6 +13,12 @@ export interface SummaryEnvelope extends EnvelopeRow {
   is_spending?: boolean | null;
   is_tracking_only?: boolean | null;
   priority?: PriorityLevel | null;
+  // Suggested envelope fields (The My Budget Way)
+  is_suggested?: boolean | null;
+  suggestion_type?: string | null;
+  is_dismissed?: boolean | null;
+  description?: string | null;
+  snoozed_until?: string | null;
 }
 
 // Priority configuration for consistent styling across components

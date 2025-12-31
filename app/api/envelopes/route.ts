@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { recalculateSafetyNetTarget } from "@/lib/utils/suggested-envelopes";
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
 const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
@@ -23,6 +24,7 @@ const schema = z.object({
   notes: z.string().max(2000).optional(),
   icon: z.string().max(10).optional(),
   isSpending: z.boolean().optional(),
+  isMonitored: z.boolean().optional(),
   // Goal-specific fields
   isGoal: z.boolean().optional(),
   goalType: goalTypeSchema,
@@ -51,12 +53,34 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  // Try to query with new suggested envelope columns first
+  let data, error;
+
+  // First try with the new columns (after migration is applied)
+  // Note: We return ALL envelopes including dismissed suggested ones,
+  // so the client can show the "Restore" button for hidden envelopes
+  const result = await supabase
     .from("envelopes")
-    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order")
+    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_suggested, suggestion_type, is_dismissed, auto_calculate_target, description, snoozed_until")
     .eq("user_id", user.id)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
+
+  if (result.error && result.error.message.includes("column")) {
+    // Fallback to query without suggested envelope columns (before migration)
+    const fallback = await supabase
+      .from("envelopes")
+      .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    data = fallback.data;
+    error = fallback.error;
+  } else {
+    data = result.data;
+    error = result.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -129,6 +153,7 @@ export async function POST(request: Request) {
     notes: payload.notes?.trim() ? payload.notes.trim() : null,
     icon: payload.icon ?? null,
     is_spending: payload.isSpending ?? false,
+    is_monitored: payload.isMonitored ?? false,
     // Goal-specific fields
     is_goal: payload.isGoal ?? false,
     goal_type: payload.goalType ?? null,
@@ -138,6 +163,11 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // Recalculate Safety Net target if an essential envelope was created
+  if (payload.priority === "essential") {
+    await recalculateSafetyNetTarget(supabase, user.id);
   }
 
   return NextResponse.json({ ok: true });

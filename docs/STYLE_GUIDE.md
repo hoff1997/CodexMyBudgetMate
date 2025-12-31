@@ -321,3 +321,143 @@ Inputs should use sage accent on focus:
 - Cancel/ghost buttons
 - Destructive actions (delete)
 - Standard outline buttons without sage accent
+
+---
+
+## Highlight & Focus States (Updated Dec 2025)
+
+### Newly Created Item Highlight
+Used to draw attention to newly created items (e.g., after creating an envelope):
+
+```tsx
+// Ring + background + animation
+const highlightClass = isHighlighted
+  ? "ring-2 ring-sage ring-offset-1 bg-sage-very-light animate-pulse"
+  : "";
+
+// Auto-scroll into view
+useEffect(() => {
+  if (isHighlighted && rowRef.current) {
+    rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}, [isHighlighted]);
+
+// Auto-remove after 3 seconds
+useEffect(() => {
+  if (highlightId) {
+    const timer = setTimeout(() => setHighlightedId(null), 3000);
+    return () => clearTimeout(timer);
+  }
+}, [highlightId]);
+```
+
+---
+
+## Income & Budget Impact Patterns (Updated Dec 2025)
+
+### Income Reality Banner
+Shows income surplus/commitment information in dialogs:
+
+```tsx
+<div className="rounded-xl border border-blue-light bg-blue-light/30 p-4">
+  <div className="text-xs uppercase tracking-wide text-text-medium mb-2">
+    Your new pay cycle commitment
+  </div>
+  <div className="flex items-center justify-between">
+    <span className="text-sm text-text-dark">Income Name:</span>
+    <span className="font-semibold text-blue">$XX.XX per pay</span>
+  </div>
+</div>
+```
+
+### Budget Shortfall Warning
+Used when user's surplus can't cover a new commitment:
+
+```tsx
+<div className="rounded-xl border border-gold bg-gold-light/30 p-4">
+  <div className="flex items-start gap-3">
+    <AlertCircle className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
+    <div>
+      <h4 className="font-semibold text-text-dark">Budget Needs Balancing</h4>
+      <p className="text-sm text-text-dark">
+        Still to find <strong>$XX.XX</strong>
+      </p>
+    </div>
+  </div>
+</div>
+```
+
+### Success Confirmation
+```tsx
+<div className="rounded-xl border border-sage-light bg-sage-very-light p-4">
+  <div className="flex items-center gap-3">
+    <CheckCircle2 className="h-6 w-6 text-sage" />
+    <div>
+      <h3 className="font-semibold text-text-dark">Envelope Created!</h3>
+      <p className="text-sm text-text-medium">Now let's balance your budget</p>
+    </div>
+  </div>
+</div>
+```
+
+---
+
+## Dialog & Popover Patterns (Updated Dec 2025)
+
+### Modal Date Picker
+For date pickers inside dialogs, use modal mode to prevent overflow:
+
+```tsx
+<Popover modal={true}>
+  <PopoverTrigger asChild>
+    <Button variant="outline" className="justify-between">
+      {date ? format(date, 'PPP') : 'Pick a date'}
+      <CalendarIcon className="h-4 w-4" />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent
+    className="p-0 z-[100]"
+    sideOffset={8}
+    align="start"
+    side="bottom"
+    avoidCollisions={true}
+    collisionPadding={16}
+  >
+    <Calendar mode="single" selected={date} onSelect={setDate} />
+  </PopoverContent>
+</Popover>
+```
+
+**Key props:**
+- `modal={true}` - Keeps popover within dialog stacking context
+- `z-[100]` - Ensures popover appears above dialog content
+- `avoidCollisions={true}` - Prevents calendar from appearing outside viewport
+- `collisionPadding={16}` - Adds safe margin from viewport edges
+
+---
+
+## Remy Component Styling
+
+### RemyTip Background
+Remy's coaching tips use a distinct sage-tinted style:
+
+| Property | Value | Hex |
+|----------|-------|-----|
+| Background | `bg-sage-very-light` | `#E2EEEC` |
+| Border | `border-sage-light` | `#B8D4D0` |
+| Text | `text-sage-dark` | `#5A7E7A` |
+| Signature | `text-sage` | `#7A9E9A` |
+
+```tsx
+<div className="flex gap-3 rounded-2xl border border-sage-light bg-sage-very-light p-4">
+  <img src="/Images/remy-encouraging.png" className="w-12 h-12" />
+  <div className="flex-1">
+    <p className="text-sm text-sage-dark">Remy's tip message...</p>
+    <p className="text-xs text-sage mt-1 italic">— Remy</p>
+  </div>
+</div>
+```
+
+---
+
+*Last updated: December 2025*

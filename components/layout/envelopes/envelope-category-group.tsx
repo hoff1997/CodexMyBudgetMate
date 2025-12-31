@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, ArrowRight } from "lucide-react";
 import { SummaryEnvelope, PRIORITY_CONFIG, type PriorityLevel } from "@/components/layout/envelopes/envelope-summary-card";
 import {
   DndContext,
@@ -136,7 +136,7 @@ export function EnvelopeCategoryGroup({
               <div className="text-right">Current</div>
               <div className="text-center">Due In</div>
               <div>Status</div>
-              <div className="text-right">Gap</div>
+              <div className="text-center">Gap</div>
             </div>
             {/* Table Rows */}
             <div className="divide-y divide-silver-light/60">
@@ -353,19 +353,22 @@ function SortableEnvelopeRow({
         <StatusIndicator status={statusLabel} />
       </div>
 
-      {/* Gap */}
-      <div className="text-right">
-        {hasGap ? (
-          <span className="text-sm font-medium text-blue">
-            -${gap.toFixed(0)}
-          </span>
-        ) : !isSpending && target > 0 && gap < 0 ? (
-          <span className="text-sm font-medium text-sage-dark">
-            +${Math.abs(gap).toFixed(0)}
-          </span>
-        ) : (
-          <span className="text-[11px] text-text-light">—</span>
-        )}
+      {/* Gap + Navigation Arrow */}
+      <div className="flex items-center justify-center gap-1 group">
+        <span className="text-center">
+          {hasGap ? (
+            <span className="text-sm font-medium text-blue">
+              -${gap.toFixed(0)}
+            </span>
+          ) : !isSpending && target > 0 && gap < 0 ? (
+            <span className="text-sm font-medium text-sage-dark">
+              +${Math.abs(gap).toFixed(0)}
+            </span>
+          ) : (
+            <span className="text-[11px] text-text-light">—</span>
+          )}
+        </span>
+        <ArrowRight className="h-4 w-4 text-text-light opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
       </div>
     </div>
   );

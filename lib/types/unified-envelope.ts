@@ -6,6 +6,7 @@
 export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
 export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annual' | 'annually';
 export type PriorityType = 'essential' | 'important' | 'discretionary';
+export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net';
 
 /**
  * Income source for multi-income allocation
@@ -77,6 +78,14 @@ export interface UnifiedEnvelopeData {
   is_goal?: boolean; // Goal envelope (doesn't need budget)
   is_spending?: boolean; // Spending envelope (doesn't need budget)
   is_tracking_only?: boolean; // Tracking-only envelope (e.g., reimbursements - doesn't need budget)
+
+  // Suggested envelope fields ("The My Budget Way")
+  is_suggested?: boolean; // True for system-suggested envelopes
+  suggestion_type?: SuggestionType; // 'starter-stash', 'cc-holding', or 'safety-net'
+  is_dismissed?: boolean; // True if user dismissed the suggestion
+  auto_calculate_target?: boolean; // True if target calculated dynamically (e.g., Safety Net)
+  description?: string; // Description shown under envelope name
+  snoozed_until?: string; // ISO timestamp when snooze expires
 
   // Locked state (for onboarding - e.g., CC Holding handled in later step)
   isLocked?: boolean;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { recalculateSafetyNetTarget } from "@/lib/utils/suggested-envelopes";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   console.log('🟢 [API /envelopes/[id]] PATCH request received for ID:', params.id);
@@ -137,6 +138,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   console.log('🟢 [API /envelopes/[id]] Successfully updated envelope:', data);
+
+  // Recalculate Safety Net target if an essential envelope was modified
+  // Check if priority changed or if target/frequency changed on an essential envelope
+  const shouldRecalculateSafetyNet =
+    "priority" in payload ||
+    "target_amount" in payload ||
+    "frequency" in payload;
+
+  if (shouldRecalculateSafetyNet) {
+    console.log('🟡 [API /envelopes/[id]] Recalculating Safety Net target...');
+    const result = await recalculateSafetyNetTarget(supabase, user.id);
+    if (result.success) {
+      console.log('🟢 [API /envelopes/[id]] Safety Net target updated to:', result.newTarget);
+    } else {
+      console.log('🔴 [API /envelopes/[id]] Failed to update Safety Net target:', result.error);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -166,6 +185,15 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   }
 
   console.log('🟢 [API /envelopes/[id]] Successfully deleted envelope');
+
+  // Recalculate Safety Net target after envelope deletion
+  // (in case it was an essential envelope)
+  console.log('🟡 [API /envelopes/[id]] Recalculating Safety Net target after deletion...');
+  const result = await recalculateSafetyNetTarget(supabase, user.id);
+  if (result.success) {
+    console.log('🟢 [API /envelopes/[id]] Safety Net target updated to:', result.newTarget);
+  }
+
   return NextResponse.json({ ok: true });
 }
 

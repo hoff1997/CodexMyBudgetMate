@@ -56,16 +56,16 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
       {/* Remy's celebration message */}
       <div className="bg-sage-very-light rounded-xl p-6 border border-sage-light">
         <p className="text-sage-dark leading-relaxed">
-          "You're all set up! You've taken control of your money and that's a massive deal.
+          "You've told your money where to go. That's huge!
         </p>
         <p className="text-sage-dark leading-relaxed mt-3">
-          From here, just check in after each pay day. Categorise your transactions,
-          top up your envelopes, and watch your progress.
+          Now comes the practice part - sticking with it, adjusting as you
+          learn, and building the habit. I'll be here every step of the way.
         </p>
         <p className="text-sage-dark leading-relaxed mt-3">
-          I'll be here whenever you need a hand. Let's do this!"
+          You've got this. Seriously."
         </p>
-        <p className="text-xs text-sage mt-3 font-medium">Remy 🚣</p>
+        <p className="text-xs text-sage mt-3 font-medium">- Remy, your financial coach</p>
       </div>
 
       {/* First goal hint */}

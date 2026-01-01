@@ -80,7 +80,7 @@ export function OnboardingMode({
       remyVoice:
         "Start by covering the basics – rent, bills, groceries. Once those are sorted, the rest feels a lot less stressful.",
       ctaText: "Go to Allocation",
-      ctaHref: "/allocation",
+      ctaHref: "/budgetallocation",
     },
     {
       id: "starter-stash",

@@ -31,8 +31,8 @@ export function ProfileStep({
 
       {/* Remy's tip */}
       <RemyTip pose="encouraging">
-        No stress here. Just your name so I know what to call you, and where you're at
-        with budgeting so I can tailor things for you.
+        Before we dive into the numbers, let's get to know each other a bit.
+        This helps me give you better guidance along the way.
       </RemyTip>
 
       {/* Full Name - Inline */}

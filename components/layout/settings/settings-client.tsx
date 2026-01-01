@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield, Loader2 } from "lucide-react";
+import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield, Loader2, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { AchievementGallery } from "@/components/achievements/AchievementGallery";
@@ -603,7 +604,7 @@ export function SettingsClient({ data, flash = null }: Props) {
               >
                 <option value="/dashboard">Dashboard</option>
                 <option value="/reconcile">Reconcile</option>
-                <option value="/allocation">Allocation</option>
+                <option value="/budgetallocation">Allocation</option>
                 <option value="/transactions">Transactions</option>
                 <option value="/envelope-summary">Envelope Summary</option>
                 <option value="/net-worth">Net Worth</option>
@@ -863,6 +864,20 @@ export function SettingsClient({ data, flash = null }: Props) {
         <div className="px-3 py-2 border-b border-[#E5E7EB]">
           <h2 className="font-semibold text-[#3D3D3D]">Data & Privacy</h2>
         </div>
+        {/* Archived Envelopes Row */}
+        <Link
+          href="/settings/archived-envelopes"
+          className="px-3 py-2 flex items-center justify-between border-b border-[#E5E7EB] hover:bg-[#F3F4F6] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Archive className="w-4 h-4 text-[#6B9ECE]" />
+            <div>
+              <span className="text-sm text-[#3D3D3D]">Archived envelopes</span>
+              <span className="ml-2 text-xs text-[#9CA3AF]">— View and restore archived envelopes</span>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+        </Link>
         {/* Export Row */}
         <div className="px-3 py-2 flex items-center justify-between border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">

@@ -92,9 +92,10 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip>
-        Pop in your main income here. If you've got a side hustle or other income,
-        no worries, you can add more. I'll help you manage multiple pay cycles.
+      <RemyTip pose="thinking">
+        Let's start with what's coming in. How much money flows into your
+        life each pay cycle? Be as accurate as you can - we'll build your
+        budget around what you've actually got.
       </RemyTip>
 
       {/* Existing Income Sources */}

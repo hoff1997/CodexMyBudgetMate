@@ -26,15 +26,12 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
       {/* Remy's explanation */}
       <RemyTip pose="thinking">
         <p className="mb-3">
-          Imagine you've got a pile of envelopes on your kitchen table.
-          One says "Rent", one says "Groceries", one says "Power".
+          Envelopes are how you tell your money where to go. Each envelope has
+          a job - rent, groceries, savings, whatever matters to you.
         </p>
         <p className="mb-3">
-          When your pay comes in, you put money into each envelope.
-          Then you only spend what's in that envelope for that thing.
-        </p>
-        <p>
-          Simple, right? That's envelope budgeting. We're just doing it digitally.
+          When money comes in, you decide which envelopes it fills. That's it.
+          Simple, intentional, and you're always in control.
         </p>
       </RemyTip>
 
@@ -192,13 +189,12 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
       {/* Remy's encouragement */}
       <RemyTip pose="encouraging">
         <p className="mb-2">
-          Grab a cuppa and get comfy. We&apos;re going to set up your budget properly.
-          It takes a bit of time upfront, but you only do it once. After this,
-          it&apos;s just quick check-ins.
+          Don't stress about getting this perfect. Start with your essentials -
+          the must-pays. You can add more envelopes anytime.
         </p>
         <p>
-          If you need to step away, your progress is saved. But stick with it
-          if you can - future you will be stoked.
+          Most people need about 5-10 to start. Future you will thank you for
+          keeping it simple.
         </p>
       </RemyTip>
 

@@ -93,7 +93,16 @@
       "Bash(if [ -d \".next\" ])",
       "Bash(then echo \"SUCCESS - .next folder exists\")",
       "Bash(else echo \"FAILED\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(node -e:*)",
+      "Bash(node scripts/apply-suggested-envelopes-migration.mjs:*)",
+      "Bash(node scripts/seed-suggested-envelopes.mjs:*)",
+      "Bash(node scripts/apply-snooze-migration.mjs:*)",
+      "Bash(timeout 60 bash:*)",
+      "Bash(node scripts/apply-envelope-categories-migration.mjs:*)",
+      "Bash(node scripts/apply-archive-migration.mjs:*)",
+      "Bash(node scripts/apply-leveled-bills-migration.mjs:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

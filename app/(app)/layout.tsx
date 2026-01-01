@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { CommandPaletteProvider } from "@/providers/command-palette-provider";
 import Sidebar from "@/components/layout/sidebar";
+import { SidebarProvider } from "@/components/layout/sidebar-context";
 import { getUserWithProfile } from "@/lib/server/get-user";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
@@ -17,9 +18,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <CommandPaletteProvider>
-      <Sidebar userEmail={user?.email} showOnboardingMenu={showOnboarding}>
-        {children}
-      </Sidebar>
+      <SidebarProvider>
+        <Sidebar userEmail={user?.email} showOnboardingMenu={showOnboarding}>
+          {children}
+        </Sidebar>
+      </SidebarProvider>
     </CommandPaletteProvider>
   );
 }

@@ -35,9 +35,10 @@ type PopoverProps = {
   children: ReactNode;
   open?: boolean;
   onOpenChange?: (value: boolean) => void;
+  modal?: boolean; // Not used but accepted for API compatibility
 };
 
-export function Popover({ children, open: openProp, onOpenChange }: PopoverProps) {
+export function Popover({ children, open: openProp, onOpenChange, modal: _modal }: PopoverProps) {
   const triggerRef = useRef<HTMLElement>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 
@@ -102,6 +103,9 @@ type PopoverContentProps = {
   className?: string;
   sideOffset?: number;
   align?: "start" | "center" | "end";
+  side?: "top" | "bottom" | "left" | "right"; // Not fully implemented but accepted for API compatibility
+  avoidCollisions?: boolean; // Not fully implemented but accepted for API compatibility
+  collisionPadding?: number; // Not fully implemented but accepted for API compatibility
 };
 
 export function PopoverContent({
@@ -109,6 +113,9 @@ export function PopoverContent({
   className,
   sideOffset = 8,
   align = "center",
+  side: _side,
+  avoidCollisions: _avoidCollisions,
+  collisionPadding: _collisionPadding,
 }: PopoverContentProps) {
   const { open, setOpen, triggerRef } = usePopoverContext("PopoverContent");
   const contentRef = useRef<HTMLDivElement | null>(null);

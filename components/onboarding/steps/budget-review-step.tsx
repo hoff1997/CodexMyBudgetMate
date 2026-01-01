@@ -77,9 +77,10 @@ export function BudgetReviewStep({
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip>
-        Have a look and make sure it feels right. You can change any of this later,
-        so don't overthink it. The key is getting started.
+      <RemyTip pose="thinking">
+        Let's review what you've built. Does this feel realistic? Does it
+        match how you actually live? If something feels off, trust that
+        feeling and adjust it. You're the expert on your life.
       </RemyTip>
 
       {/* Income Summary */}

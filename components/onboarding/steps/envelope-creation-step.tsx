@@ -285,9 +285,10 @@ export function EnvelopeCreationStep({
         </div>
 
         {/* Remy's Tip */}
-        <RemyTip>
-          Tick the ones that apply to you. Don't worry about getting it perfect,
-          you can always add, remove, or change these later.
+        <RemyTip pose="encouraging">
+          Let's create your envelopes. Start with the essentials - what
+          absolutely has to be paid? Think: rent, power, food, petrol. The
+          stuff that keeps life running. Everything else can come after.
         </RemyTip>
 
         {/* Selection Controls */}

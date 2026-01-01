@@ -76,10 +76,10 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip>
-        Connecting your bank means you won't have to type in every transaction.
-        They'll flow in automatically via Akahu, a secure NZ service.
-        I never see your login details, promise.
+      <RemyTip pose="thinking">
+        Connecting your bank accounts helps you see the full picture. It's
+        optional, but it makes tracking way easier. Your data stays secure
+        with Akahu - even I don't see your login details.
       </RemyTip>
 
       {/* Akahu Connection Option - Recommended */}

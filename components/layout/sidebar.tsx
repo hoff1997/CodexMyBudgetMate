@@ -23,9 +23,10 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, X, Menu } from "lucide-react";
+import { GripVertical, X, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { SidebarBadges } from "@/components/achievements/SidebarBadges";
+import { useSidebar } from "@/components/layout/sidebar-context";
 
 const STORAGE_KEY = "mbm-nav-order";
 const NAV_VERSION = "v18"; // Increment this when adding new menu items - v18: removed Reports and Future Features
@@ -59,7 +60,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "onboarding", label: "Getting Started", href: "/onboarding", icon: "🚀" },
   { id: "onboarding-resume", label: "Resume Setup", href: "/onboarding", icon: "▶️", isOnboardingSubmenu: true },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
-  { id: "allocation", label: "Budget Allocation", href: "/allocation", icon: "💰" },
+  { id: "allocation", label: "Budget Allocation", href: "/budgetallocation", icon: "💰" },
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
@@ -69,7 +70,6 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   // Retired items (pages still exist but hidden from nav)
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦", isRetired: true },
   { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄", isRetired: true },
-  { id: "budget-manager", label: "Old Budget Manager", href: "/budget-manager", icon: "🎯", isRetired: true },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑", isRetired: true },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isRetired: true },
   { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isRetired: true },
@@ -93,19 +93,29 @@ export default function Sidebar({
   showOnboardingMenu?: boolean;
 }) {
   const pathname = usePathname();
+  const sidebar = useSidebar();
   const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV_ITEMS);
   const [onboardingDraft, setOnboardingDraft] = useState<OnboardingDraft | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Use sidebar context for mobile menu state
+  const isMobileMenuOpen = sidebar.isOpen;
+  const setIsMobileMenuOpen = (open: boolean) => {
+    if (open) sidebar.open();
+    else sidebar.close();
+  };
+
+  // Desktop collapsed state
+  const isDesktopCollapsed = sidebar.isDesktopCollapsed;
 
   // Close mobile menu on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
+    sidebar.close();
+  }, [pathname, sidebar]);
 
   // Handle escape key and body scroll lock
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsMobileMenuOpen(false);
+      if (e.key === "Escape") sidebar.close();
     };
 
     if (isMobileMenuOpen) {
@@ -117,7 +127,7 @@ export default function Sidebar({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [isMobileMenuOpen]);
+  }, [isMobileMenuOpen, sidebar]);
 
   // Fetch onboarding draft status
   useEffect(() => {
@@ -291,12 +301,14 @@ export default function Sidebar({
         />
       )}
 
-      {/* Sidebar - Desktop (always visible) and Mobile (slide-in) */}
+      {/* Sidebar - Desktop (collapsible) and Mobile (slide-in) */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full bg-silver-very-light border-r border-silver-light z-50 flex flex-col justify-between transition-transform duration-200 ease-out",
-          // Mobile styles
-          "w-64 lg:w-56",
+          "fixed top-0 left-0 h-full bg-silver-very-light border-r border-silver-light z-50 flex flex-col justify-between transition-all duration-200 ease-out",
+          // Mobile styles (always w-64)
+          "w-64",
+          // Desktop: width changes based on collapsed state
+          isDesktopCollapsed ? "lg:w-14" : "lg:w-56",
           // Mobile: slide in/out
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full",
           // Desktop: always visible, static positioning
@@ -315,24 +327,95 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Desktop header */}
-        <div className="hidden lg:block px-3 py-2 text-base font-bold text-text-dark">
-          My Budget Mate
+        {/* Desktop header with collapse toggle */}
+        <div className={cn(
+          "hidden lg:flex items-center border-b border-silver-light",
+          isDesktopCollapsed ? "justify-center px-2 py-2" : "justify-between px-3 py-2"
+        )}>
+          {!isDesktopCollapsed && (
+            <span className="text-base font-bold text-text-dark">My Budget Mate</span>
+          )}
+          <button
+            onClick={() => sidebar.toggleDesktop()}
+            className="p-1.5 text-[#6B6B6B] hover:bg-[#E5E7EB] rounded-lg transition-colors"
+            aria-label={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isDesktopCollapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </button>
         </div>
 
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Navigation - hidden when collapsed on desktop */}
+        <div className={cn(
+          "flex-1 overflow-y-auto",
+          isDesktopCollapsed && "lg:hidden"
+        )}>
           {navigationContent}
         </div>
 
-        {/* Achievement Badges */}
-        <SidebarBadges />
+        {/* Collapsed desktop: show icons only */}
+        {isDesktopCollapsed && (
+          <div className="hidden lg:flex flex-1 flex-col items-center py-2 gap-1 overflow-y-auto">
+            {filteredNavItems.slice(0, 8).map((item) => {
+              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center rounded-lg transition-colors",
+                    isActive
+                      ? "bg-white text-text-dark border border-sage"
+                      : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                  )}
+                  title={item.label}
+                >
+                  <span className="text-lg">{item.icon}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
-        {/* Footer */}
-        <div className="px-3 py-2 border-t border-silver-light">
-          <Button asChild variant="outline" className="w-full text-xs h-8">
-            <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
-          </Button>
+        {/* Achievement Badges - hidden when collapsed */}
+        <div className={cn(isDesktopCollapsed && "lg:hidden")}>
+          <SidebarBadges />
+        </div>
+
+        {/* Footer - simplified when collapsed */}
+        <div className={cn(
+          "border-t border-silver-light",
+          isDesktopCollapsed ? "lg:px-2 lg:py-2 px-3 py-2" : "px-3 py-2"
+        )}>
+          {isDesktopCollapsed ? (
+            <>
+              {/* Mobile: full button */}
+              <div className="lg:hidden">
+                <Button asChild variant="outline" className="w-full text-xs h-8">
+                  <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
+                </Button>
+              </div>
+              {/* Desktop collapsed: icon only */}
+              <div className="hidden lg:flex justify-center">
+                <Link
+                  href="/api/auth/sign-out"
+                  prefetch={false}
+                  className="w-10 h-10 flex items-center justify-center rounded-lg text-text-medium hover:bg-silver-light hover:text-text-dark transition-colors"
+                  title="Sign out"
+                >
+                  <span className="text-lg">🚪</span>
+                </Link>
+              </div>
+            </>
+          ) : (
+            <Button asChild variant="outline" className="w-full text-xs h-8">
+              <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
+            </Button>
+          )}
         </div>
       </aside>
 

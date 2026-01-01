@@ -30,7 +30,7 @@ const QUICK_PAGES = [
   { id: "reconcile", title: "Reconciliation Centre", href: "/reconcile", icon: Receipt },
   { id: "transactions", title: "Transactions", href: "/transactions", icon: DollarSign },
   { id: "envelope-summary", title: "Envelope Summary", href: "/envelope-summary", icon: Wallet },
-  { id: "allocation", title: "Allocation", href: "/allocation", icon: Layers },
+  { id: "allocation", title: "Allocation", href: "/budgetallocation", icon: Layers },
   { id: "accounts", title: "Accounts", href: "/accounts", icon: FileText },
   { id: "settings", title: "Settings", href: "/settings", icon: Settings },
 ];

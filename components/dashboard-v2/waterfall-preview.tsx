@@ -138,7 +138,7 @@ export function WaterfallPreview({ data }: WaterfallPreviewProps) {
             How your money is allocated
           </CardTitle>
           <Link
-            href="/allocation"
+            href="/budgetallocation"
             className="flex items-center text-sm text-[#6B6B6B] hover:text-[#3D3D3D] transition-colors"
           >
             Adjust Allocations <ChevronRight className="h-4 w-4 ml-0.5" />
@@ -151,7 +151,7 @@ export function WaterfallPreview({ data }: WaterfallPreviewProps) {
         {rows.map((row) => (
           <Link
             key={row.id}
-            href={`/allocation?filter=${row.id}`}
+            href={`/budgetallocation?filter=${row.id}`}
             className={cn(
               "block group",
               row.needsAttention && "relative"

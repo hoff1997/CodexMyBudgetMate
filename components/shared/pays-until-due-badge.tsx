@@ -62,16 +62,12 @@ export function PaysUntilDueBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs whitespace-nowrap",
+        "inline-flex items-center px-2 py-0.5 rounded text-xs whitespace-nowrap",
         style.bg,
         style.text,
         className
       )}
     >
-      {/* Warning emoji for overdue/high urgency unfunded bills */}
-      {(urgency === 'overdue' || urgency === 'high') && !isFunded && (
-        <span className="text-[10px]">⚠️</span>
-      )}
       {displayText}
     </span>
   );

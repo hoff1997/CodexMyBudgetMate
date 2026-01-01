@@ -9,6 +9,18 @@ const subtypeSchema = z.enum(["bill", "spending", "savings", "goal"]).optional()
 const prioritySchema = z.enum(["essential", "important", "discretionary"]);
 const goalTypeSchema = z.enum(["savings", "debt_payoff", "purchase", "emergency_fund", "other"]).optional();
 
+const seasonalPatternSchema = z.enum(["winter-peak", "summer-peak", "custom"]).optional();
+
+const levelingDataSchema = z.object({
+  monthlyAmounts: z.array(z.number()).length(12),
+  yearlyAverage: z.number(),
+  bufferPercent: z.number(),
+  estimationType: z.enum(["12-month", "quick-estimate"]),
+  highSeasonEstimate: z.number().optional(),
+  lowSeasonEstimate: z.number().optional(),
+  lastUpdated: z.string(),
+}).optional();
+
 const schema = z.object({
   name: z.string().min(1),
   categoryId: z.string().uuid().optional(),
@@ -30,6 +42,10 @@ const schema = z.object({
   goalType: goalTypeSchema,
   goalTargetDate: z.string().optional(),
   interestRate: z.number().nonnegative().optional(), // For debt payoff goals
+  // Leveled bill fields
+  isLeveled: z.boolean().optional(),
+  levelingData: levelingDataSchema,
+  seasonalPattern: seasonalPatternSchema,
 }).superRefine((data, ctx) => {
   // Validate bill-specific requirements
   if (data.subtype === 'bill') {
@@ -43,7 +59,7 @@ const schema = z.object({
   }
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,25 +69,38 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
 
+  // Check for include_archived query param
+  const { searchParams } = new URL(request.url);
+  const includeArchived = searchParams.get("include_archived") === "true";
+
   // Try to query with new suggested envelope columns first
   let data, error;
 
   // First try with the new columns (after migration is applied)
   // Note: We return ALL envelopes including dismissed suggested ones,
   // so the client can show the "Restore" button for hidden envelopes
-  const result = await supabase
+  let query = supabase
     .from("envelopes")
-    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_suggested, suggestion_type, is_dismissed, auto_calculate_target, description, snoozed_until")
-    .eq("user_id", user.id)
+    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, category_display_order, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_suggested, suggestion_type, is_dismissed, auto_calculate_target, description, snoozed_until, is_tracking_only, is_archived, archived_at, archive_reason, is_leveled, leveling_data, seasonal_pattern")
+    .eq("user_id", user.id);
+
+  // Filter out archived unless explicitly requested
+  if (!includeArchived) {
+    query = query.or("is_archived.is.null,is_archived.eq.false");
+  }
+
+  const result = await query
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (result.error && result.error.message.includes("column")) {
-    // Fallback to query without suggested envelope columns (before migration)
-    const fallback = await supabase
+    // Fallback to query without archive columns (before migration)
+    let fallbackQuery = supabase
       .from("envelopes")
-      .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order")
-      .eq("user_id", user.id)
+      .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, category_display_order, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_tracking_only")
+      .eq("user_id", user.id);
+
+    const fallback = await fallbackQuery
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true });
 
@@ -159,6 +188,10 @@ export async function POST(request: Request) {
     goal_type: payload.goalType ?? null,
     goal_target_date: payload.goalTargetDate ?? null,
     interest_rate: payload.interestRate ?? null,
+    // Leveled bill fields
+    is_leveled: payload.isLeveled ?? false,
+    leveling_data: payload.levelingData ?? null,
+    seasonal_pattern: payload.seasonalPattern ?? null,
   });
 
   if (error) {

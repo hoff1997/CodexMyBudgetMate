@@ -19,7 +19,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   MoreVertical,
-  Edit,
   Trash2,
   CheckCircle2,
   AlertCircle,
@@ -29,7 +28,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -266,14 +264,6 @@ export function EnvelopeDetailClient({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/budget-manager?envelope=${envelope.id}`)}
-          >
-            <Edit className="w-4 h-4 mr-1.5" />
-            Edit
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -281,11 +271,6 @@ export function EnvelopeDetailClient({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/budget-manager?envelope=${envelope.id}`)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Details
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-red-600"
                 onClick={() => setDeleteDialogOpen(true)}
@@ -371,13 +356,6 @@ export function EnvelopeDetailClient({
         >
           <ArrowUpRight className="w-4 h-4 mr-1.5" />
           Transfer Funds
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => router.push(`/budget-manager?envelope=${envelope.id}`)}
-        >
-          <Edit className="w-4 h-4 mr-1.5" />
-          Edit Envelope
         </Button>
       </div>
 

@@ -24,6 +24,7 @@ import type { PayPlanSummary } from "@/lib/types/pay-plan";
 import { getPrimaryPaySchedule, type PaySchedule } from "@/lib/utils/pays-until-due";
 import { EnvelopeSummaryPrintView } from "@/components/layout/envelopes/envelope-summary-print-view";
 import { MyBudgetWayWidget, type MilestoneProgress as WidgetMilestoneProgress } from "@/components/my-budget-way";
+import { EnvelopeFilterTabs, type StatusFilter as SharedStatusFilter } from "@/components/shared/envelope-filter-tabs";
 
 // Income source type for pay schedule calculation
 interface IncomeSourceForSchedule {
@@ -47,15 +48,7 @@ export interface CreditCardDebtData {
   } | null;
 }
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "healthy", label: "On track" },
-  { key: "attention", label: "Needs attention" },
-  { key: "surplus", label: "Surplus" },
-  { key: "no-target", label: "No target" },
-  { key: "spending", label: "Spending" },
-  { key: "tracking", label: "Tracking" },
-] as const;
+// FILTERS constant removed - now using shared EnvelopeFilterTabs component
 
 // Auto-categorization function for envelopes without explicit categories
 function guessCategory(envelopeName: string): { id: string; name: string; icon: string } {
@@ -122,7 +115,8 @@ function guessCategory(envelopeName: string): { id: string; name: string; icon: 
   return { id: 'uncategorised', name: 'Uncategorised', icon: '📁' };
 }
 
-type StatusFilter = (typeof FILTERS)[number]["key"];
+// Use SharedStatusFilter from the shared component for consistency
+type StatusFilter = SharedStatusFilter;
 
 type CategoryOption = { id: string; name: string; sortOrder?: number; icon?: string };
 
@@ -606,7 +600,7 @@ export function EnvelopeSummaryClient({
           <div className="flex gap-2">
             <Button
               size="sm"
-              onClick={() => router.push("/allocation?openCreateEnvelope=true")}
+              onClick={() => router.push("/budgetallocation?openCreateEnvelope=true")}
               className="bg-sage hover:bg-sage-dark text-white gap-1.5"
             >
               <Plus className="h-4 w-4" />
@@ -622,7 +616,7 @@ export function EnvelopeSummaryClient({
               Print
             </Button>
             <Button asChild variant="outline" size="sm">
-              <Link href="/allocation">Budget Allocation</Link>
+              <Link href="/budgetallocation">Budget Allocation</Link>
             </Button>
           </div>
         </div>
@@ -643,24 +637,12 @@ export function EnvelopeSummaryClient({
           />
 
           <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
-            <div className="flex flex-wrap gap-2">
-              {FILTERS.map((filter) => (
-                <button
-                  key={filter.key}
-                  type="button"
-                  onClick={() => setStatusFilter(filter.key)}
-                  className={cn(
-                    "rounded-full px-4 py-1.5 text-xs font-medium transition",
-                    statusFilter === filter.key
-                      ? "bg-sage text-white"  // Style guide: sage for active state
-                      : "bg-silver-very-light text-text-medium hover:bg-silver-light border border-silver-light",
-                  )}
-                >
-                  {filter.label}
-                  <span className="ml-1 text-[10px] opacity-80">({statusCounts[filter.key]})</span>
-                </button>
-              ))}
-            </div>
+            {/* Use shared EnvelopeFilterTabs component */}
+            <EnvelopeFilterTabs
+              activeFilter={statusFilter}
+              onFilterChange={setStatusFilter}
+              envelopeCounts={statusCounts}
+            />
             <div className="flex gap-2">
               <Button
                 size="sm"

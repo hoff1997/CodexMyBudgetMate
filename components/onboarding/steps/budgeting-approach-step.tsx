@@ -32,10 +32,10 @@ export function BudgetingApproachStep({
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip>
-        Everyone's different. Some people like a template to get started quickly,
-        others prefer to build from scratch. There's no wrong answer here, and you
-        can always adjust things later.
+      <RemyTip pose="encouraging">
+        Two ways to start: use a template (quick start) or build from scratch
+        (full control). There's no wrong choice - pick what feels right for
+        you. You can always adjust later.
       </RemyTip>
 
       {/* Options */}

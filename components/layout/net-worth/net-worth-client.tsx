@@ -184,7 +184,7 @@ export function NetWorthClient({ assets, liabilities, snapshots, monthlySnapshot
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link href="/allocation">Planner</Link>
+            <Link href="/budgetallocation">Planner</Link>
           </Button>
           <Button size="sm" onClick={createSnapshot} disabled={!canEdit || snapshotLoading} className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-white">
             {snapshotLoading ? "Saving…" : "Take snapshot"}

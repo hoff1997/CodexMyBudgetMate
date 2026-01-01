@@ -345,7 +345,7 @@ export function EnvelopeCreateDialog({
     onOpenChange(false);
     setForm(DEFAULT_FORM);
     toast.success("Envelope created");
-    router.push(`/allocation?highlight=${createdEnvelope?.id || "new"}`);
+    router.push(`/budgetallocation?highlight=${createdEnvelope?.id || "new"}`);
   };
 
   const handleBalanceLater = () => {

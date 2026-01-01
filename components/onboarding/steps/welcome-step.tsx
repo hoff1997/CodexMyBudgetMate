@@ -16,22 +16,23 @@ export function WelcomeStep({ isMobile, onContinue }: WelcomeStepProps) {
       <div className="text-center">
         <RemyAvatar pose="welcome" size="lg" className="mx-auto mb-4" />
         <h1 className="text-3xl font-bold text-text-dark">Kia ora! I'm Remy</h1>
-        <p className="text-muted-foreground mt-1">
-          Your paddling partner on your money journey
+        <p className="text-sage italic mt-1">
+          Your financial coach - helping you tell your money where to go
         </p>
       </div>
 
       {/* Remy's intro speech */}
       <div className="bg-sage-very-light rounded-xl p-5 border border-sage-light">
         <p className="text-sage-dark leading-relaxed">
-          "Think of me as the one paddling the waka while you chart the course.
-          I'll help you get your money sorted, step by step.
+          "Hey! I'm Remy, your financial coach. My job is to help you tell your
+          money where to go - not the other way around.
         </p>
         <p className="text-sage-dark leading-relaxed mt-3">
-          When you tell your money where to go, you stop wondering where it went.
-          Let's get started. It only takes a few minutes."
+          You're in control here. I'm just here to guide you, ask the right
+          questions, and keep you on track. Let's get started - it only takes
+          a few minutes."
         </p>
-        <p className="text-xs text-sage mt-3 font-medium">Remy</p>
+        <p className="text-xs text-sage mt-3 font-medium">- Remy</p>
       </div>
 
       {/* Two Column Layout */}

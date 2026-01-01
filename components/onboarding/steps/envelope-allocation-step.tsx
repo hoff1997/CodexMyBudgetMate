@@ -175,10 +175,10 @@ export function EnvelopeAllocationStep({
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip>
-        With multiple incomes, you get to decide which pay covers which expenses.
-        The goal is to allocate all your income, so every dollar has a purpose.
-        You can split envelope funding across multiple incomes if that works better for you.
+      <RemyTip pose="thinking">
+        Time to allocate your income. Let's make sure your essentials are
+        covered first - the must-pays that keep life running. What's left
+        goes to your priorities. You decide what matters most.
       </RemyTip>
 
       {/* Income Summary Cards */}

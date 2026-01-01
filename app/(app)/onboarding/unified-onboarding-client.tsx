@@ -17,7 +17,7 @@ import { IncomeStep } from "@/components/onboarding/steps/income-step";
 import { BudgetingApproachStep } from "@/components/onboarding/steps/budgeting-approach-step";
 import { EnvelopeEducationStep } from "@/components/onboarding/steps/envelope-education-step";
 import { EnvelopeCreationStepV2 as EnvelopeCreationStep } from "@/components/onboarding/steps/envelope-creation-step-v2";
-import { BudgetManagerStep } from "@/components/onboarding/steps/budget-manager-step";
+import { EnvelopeAllocationStep } from "@/components/onboarding/steps/envelope-allocation-step";
 import { OpeningBalanceStep } from "@/components/onboarding/steps/opening-balance-step";
 import { BudgetReviewStep } from "@/components/onboarding/steps/budget-review-step";
 import { CompletionStep } from "@/components/onboarding/steps/completion-step";
@@ -489,12 +489,10 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
 
       case 9:
         return (
-          <BudgetManagerStep
+          <EnvelopeAllocationStep
             envelopes={envelopes}
-            onEnvelopesChange={setEnvelopes}
             incomeSources={incomeSources}
-            envelopeAllocations={envelopeAllocations}
-            onEnvelopeAllocationsChange={setEnvelopeAllocations}
+            onAllocationsChange={setEnvelopeAllocations}
           />
         );
 

@@ -7,6 +7,20 @@ export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracki
 export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annual' | 'annually';
 export type PriorityType = 'essential' | 'important' | 'discretionary';
 export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net';
+export type SeasonalPatternType = 'winter-peak' | 'summer-peak' | 'custom';
+
+/**
+ * Leveling data for seasonal bills (stored in JSONB column)
+ */
+export interface LevelingData {
+  monthlyAmounts: number[]; // 12 values, Jan=0 to Dec=11
+  yearlyAverage: number;
+  bufferPercent: number;
+  estimationType: '12-month' | 'quick-estimate';
+  highSeasonEstimate?: number; // For quick-estimate only
+  lowSeasonEstimate?: number; // For quick-estimate only
+  lastUpdated: string; // ISO date string
+}
 
 /**
  * Income source for multi-income allocation
@@ -78,6 +92,12 @@ export interface UnifiedEnvelopeData {
   is_goal?: boolean; // Goal envelope (doesn't need budget)
   is_spending?: boolean; // Spending envelope (doesn't need budget)
   is_tracking_only?: boolean; // Tracking-only envelope (e.g., reimbursements - doesn't need budget)
+  is_monitored?: boolean; // True if shown in dashboard Quick Glance widget
+
+  // Leveled bill fields (for seasonal expenses like power, gas, water)
+  is_leveled?: boolean; // True if using leveled payments
+  leveling_data?: LevelingData; // Stored monthly amounts and calculation data
+  seasonal_pattern?: SeasonalPatternType; // 'winter-peak', 'summer-peak', or 'custom'
 
   // Suggested envelope fields ("The My Budget Way")
   is_suggested?: boolean; // True for system-suggested envelopes
@@ -95,7 +115,9 @@ export interface UnifiedEnvelopeData {
   validationWarnings?: ValidationWarning[];
 
   // Metadata
-  categoryId?: string;
+  categoryId?: string; // Legacy camelCase field
+  category_id?: string | null; // Database field
+  category_display_order?: number; // Order within category
   createdAt?: string;
   updatedAt?: string;
 }

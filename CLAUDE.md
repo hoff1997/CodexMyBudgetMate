@@ -229,11 +229,24 @@ Uses **blue colors only** (not red/amber) for urgency to avoid financial anxiety
 - Medium urgency: `bg-[#F3F4F6]` / `text-[#6B6B6B]`
 - Low/none: transparent / `text-[#9CA3AF]`
 
-## 🚣 Remy - The Mascot & Guide (Updated Dec 2025)
+## 🏋️ Remy - Your Financial Coach (Updated Jan 2026)
+
+### Tagline
+
+**"Your financial coach - helping you tell your money where to go"**
 
 ### Overview
 
-Remy is the friendly Kiwi mascot who guides users through the app. He appears throughout onboarding and provides encouraging, warm guidance in a distinctly New Zealand voice.
+Remy is the friendly Kiwi mascot who guides users through the app. He appears throughout onboarding and provides encouraging, warm guidance in a distinctly New Zealand voice. Remy is a **financial coach**, not a paddler - he guides and empowers, but the user is always in control.
+
+### Core Coaching Principles
+
+1. **User has control** - Remy guides, doesn't decide
+2. **Ask questions** - Don't give directives
+3. **Non-judgmental** - Setbacks are learning opportunities
+4. **Celebrate wins** - Acknowledge progress genuinely
+5. **Partnership** - "We're in this together"
+6. **Empowerment** - "You know what's best for you"
 
 ### Remy's Personality
 
@@ -241,6 +254,7 @@ Remy is the friendly Kiwi mascot who guides users through the app. He appears th
 - **Kiwi Voice** - Uses NZ English: "sorted", "no worries", "stoked", "cuppa", "mate"
 - **Direct & Practical** - Gets to the point without corporate jargon
 - **Calm & Reassuring** - Reduces financial anxiety, never creates urgency
+- **Coaching Mindset** - Asks questions instead of giving directives
 
 ### Banned Phrases (NEVER USE)
 
@@ -248,6 +262,8 @@ Remy is the friendly Kiwi mascot who guides users through the app. He appears th
 - "Baby steps" (Dave Ramsey trademark)
 - "Zero-based budgeting" (too technical)
 - Generic corporate phrases
+- Waka/paddling/nautical metaphors (deprecated)
+- "You should..." / "You must..." / "You need to..." (directive language)
 
 ### Remy Components
 
@@ -325,20 +341,55 @@ The completion step (`completion-step.tsx`) includes:
 
 ### Style Guidelines for Remy Messages
 
-**DO:**
+**DO (Coaching Language):**
 ```
-"Grab a cuppa and get comfy."
-"Sweet as! With one income, this part's easy."
-"Have a look and make sure it feels right."
-"Future you will be stoked."
+"You're in control here - I'm just here to guide you."
+"What feels right to you?"
+"You know your situation best."
+"Does this feel realistic for how you actually live?"
+"If something feels off, trust that feeling."
+"You've got this. Seriously."
 ```
 
-**DON'T:**
+**DON'T (Directive Language):**
 ```
-"Welcome to the budgeting journey!"
-"Let's optimize your financial future!"
+"You should allocate more to savings."
+"You need to reduce your spending."
+"You must set up an emergency fund."
 "Every dollar has a job to do!"
-"Great job! You're doing amazing!"
+"Think of me as the one paddling the waka..."
+```
+
+### Key Empowering Phrases
+
+Use these phrases to maintain Remy's coaching voice:
+- "You're in control"
+- "You know what's best for you"
+- "This is your budget, your rules"
+- "Trust yourself on this"
+- "You've got this"
+- "What feels right to you?"
+- "You decide what matters most"
+- "I'm in your corner"
+- "Progress, not perfection"
+- "You're building a solid habit"
+
+### Coaching Messages Utility
+
+**Location**: `lib/utils/remy-coaching-messages.ts`
+
+This file contains pre-written coaching messages for various scenarios:
+- Budget states (balanced, surplus, shortfall)
+- Progress updates (on track, needs attention)
+- Setbacks (overspent, missed goal)
+- Wins (goal achieved, debt progress)
+- Encouragement (struggling, new user)
+
+```typescript
+import { getCoachingMessage } from "@/lib/utils/remy-coaching-messages";
+
+const message = getCoachingMessage('surplus');
+// Returns: { title: "You've got surplus", message: "Nice! You've covered..." }
 ```
 
 ## 🎨 Style Guide Colors (Updated Dec 2025)

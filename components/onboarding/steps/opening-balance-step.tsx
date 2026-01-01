@@ -341,10 +341,10 @@ export function OpeningBalanceStep({
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip>
-        Check your banking app for your current balances. This gives us a starting point
-        to work from. It doesn't need to be exact to the cent. The Auto-Fill button will
-        help allocate funds by priority: Essential items first, then Important, then Flexible.
+      <RemyTip pose="thinking">
+        Let's set your starting balances. This tells us where you're at right
+        now - no judgment, just reality. The more accurate you are here, the
+        better your budget works from day one.
       </RemyTip>
 
       {/* Available Funds Summary */}

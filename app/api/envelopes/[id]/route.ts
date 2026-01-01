@@ -20,6 +20,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const allowedFields = [
     "name",
     "category_id",
+    "category_display_order",
     "envelope_type",
     "subtype",
     "priority",
@@ -37,6 +38,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "is_monitored",
     "icon",
     "opening_balance",
+    // Leveled bill fields
+    "is_leveled",
+    "leveling_data",
+    "seasonal_pattern",
   ];
 
   const payload = Object.fromEntries(
@@ -63,6 +68,26 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if ("subtype" in payload) {
     payload.is_tracking_only = payload.subtype === "tracking";
   }
+
+  // Validate and handle leveling fields
+  if ("is_leveled" in payload) {
+    payload.is_leveled = Boolean(payload.is_leveled);
+    // Clear leveling data if turning off leveling
+    if (!payload.is_leveled) {
+      payload.leveling_data = null;
+      payload.seasonal_pattern = null;
+    }
+  }
+
+  if ("seasonal_pattern" in payload) {
+    const validPatterns: (string | null)[] = ["winter-peak", "summer-peak", "custom", null];
+    if (!validPatterns.includes(payload.seasonal_pattern as string | null)) {
+      payload.seasonal_pattern = null;
+    }
+  }
+
+  // leveling_data is stored as JSONB, so just pass it through if provided
+  // The database will validate the JSON structure
 
   if ("opening_balance" in payload) {
     const value = Number(payload.opening_balance ?? 0);

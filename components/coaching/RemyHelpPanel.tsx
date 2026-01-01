@@ -54,7 +54,7 @@ export function RemyHelpPanel({ pageId }: RemyHelpPanelProps) {
                 <div>
                   <h2 className="font-semibold text-[#3D3D3D]">Remy</h2>
                   <p className="text-xs text-[#5A7E7A]">
-                    Your paddling partner 🛶
+                    Your financial coach
                   </p>
                   <p className="text-xs text-[#6B6B6B] mt-0.5">
                     {coaching.pageName}
@@ -211,7 +211,7 @@ export function RemyHelpPanel({ pageId }: RemyHelpPanelProps) {
                 />
               </div>
               <p className="text-xs text-[#9CA3AF] italic">
-                I keep things steady while you chart the course.
+                You're in control - I'm here to guide you.
               </p>
             </div>
           </div>

@@ -15,7 +15,15 @@ import { PartyPopper } from "lucide-react";
 import type { DetectedMilestone } from "@/lib/utils/milestone-detector";
 
 // Import confetti for celebration effect
-let confetti: typeof import("canvas-confetti").default | null = null;
+type ConfettiFn = (options?: {
+  particleCount?: number;
+  spread?: number;
+  origin?: { x?: number; y?: number };
+  colors?: string[];
+  angle?: number;
+}) => Promise<null> | null;
+
+let confetti: ConfettiFn | null = null;
 
 interface MilestoneCompletionDialogProps {
   milestone: DetectedMilestone | null;
@@ -46,7 +54,7 @@ export function MilestoneCompletionDialog({
     if (!confetti) {
       try {
         const confettiModule = await import("canvas-confetti");
-        confetti = confettiModule.default;
+        confetti = confettiModule.default as unknown as ConfettiFn;
       } catch (error) {
         console.error("Failed to load confetti:", error);
         return;

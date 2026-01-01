@@ -14,13 +14,24 @@
  * - Remy's encouraging message
  */
 
-import type { UnifiedEnvelope } from "@/lib/types/unified-envelope";
 import type { EnvelopeAnalysis } from "./milestone-detector";
 import { analyzeEnvelopes } from "./milestone-detector";
 
 // ============================================
 // TYPES
 // ============================================
+
+// Database envelope type (snake_case as returned by Supabase)
+interface DatabaseEnvelope {
+  id: string;
+  name: string;
+  subtype?: string;
+  priority?: string;
+  target_amount?: number | null;
+  current_amount?: number | null;
+  monthly_amount?: number | null;
+  days_until_due?: number | null;
+}
 
 export type SuggestionType =
   | "starter_stash"
@@ -50,7 +61,7 @@ export interface SmartSuggestion {
 }
 
 export interface SuggestionContext {
-  envelopes: UnifiedEnvelope[];
+  envelopes: DatabaseEnvelope[];
   surplusAmount: number;
   monthlyIncome: number;
   unallocatedIncome: number;
@@ -197,7 +208,7 @@ function generateDebtSuggestions(
  * Generate bill funding suggestions
  */
 function generateBillFundingSuggestions(
-  envelopes: UnifiedEnvelope[],
+  envelopes: DatabaseEnvelope[],
   context: SuggestionContext
 ): SmartSuggestion[] {
   const suggestions: SmartSuggestion[] = [];
@@ -345,7 +356,7 @@ function generateSurplusAllocationSuggestion(
  * Generate priority rebalance suggestion
  */
 function generatePriorityRebalanceSuggestion(
-  envelopes: UnifiedEnvelope[],
+  envelopes: DatabaseEnvelope[],
   context: SuggestionContext
 ): SmartSuggestion | null {
   // Find discretionary envelopes that are overfunded while essential ones are underfunded

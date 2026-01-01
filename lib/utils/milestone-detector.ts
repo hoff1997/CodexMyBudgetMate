@@ -13,11 +13,19 @@
  * - Use Remy's encouraging voice
  */
 
-import type { UnifiedEnvelope } from "@/lib/types/unified-envelope";
-
 // ============================================
 // TYPES
 // ============================================
+
+// Database envelope type (snake_case as returned by Supabase)
+interface DatabaseEnvelope {
+  id: string;
+  name: string;
+  subtype?: string;
+  priority?: string;
+  target_amount?: number | null;
+  current_amount?: number | null;
+}
 
 export type MilestoneKey =
   | "starter_stash_complete"
@@ -53,7 +61,7 @@ export interface EnvelopeAnalysis {
   emergencyFundTarget: number;
   emergencyFundPercent: number;
   totalDebt: number;
-  debtEnvelopes: UnifiedEnvelope[];
+  debtEnvelopes: DatabaseEnvelope[];
   fundedBillsCount: number;
   totalBillsCount: number;
   fundedBillsPercent: number;
@@ -176,7 +184,7 @@ export const MILESTONES: Record<MilestoneKey, Milestone> = {
 /**
  * Analyze envelopes to extract key financial metrics
  */
-export function analyzeEnvelopes(envelopes: UnifiedEnvelope[]): EnvelopeAnalysis {
+export function analyzeEnvelopes(envelopes: DatabaseEnvelope[]): EnvelopeAnalysis {
   // Find starter stash / emergency fund envelopes
   const starterStashEnvelope = envelopes.find(
     (e) =>
@@ -338,7 +346,7 @@ export function detectMilestones(
  * Get the highest priority milestone to celebrate
  */
 export function getTopMilestone(
-  envelopes: UnifiedEnvelope[],
+  envelopes: DatabaseEnvelope[],
   dismissedMilestones: string[] = []
 ): DetectedMilestone | null {
   const analysis = analyzeEnvelopes(envelopes);

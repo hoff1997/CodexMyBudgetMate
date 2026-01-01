@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTopSuggestions, type SuggestionContext } from "@/lib/utils/smart-suggestion-generator";
-import type { UnifiedEnvelope } from "@/lib/types/unified-envelope";
 
 /**
  * GET /api/suggestions
@@ -79,7 +78,7 @@ export async function GET() {
 
     // Find surplus envelope balance
     const surplusEnvelope = (envelopes ?? []).find(
-      (e: UnifiedEnvelope) =>
+      (e) =>
         e.name?.toLowerCase() === "surplus" ||
         e.name?.toLowerCase().includes("unallocated")
     );
@@ -87,7 +86,7 @@ export async function GET() {
 
     // Build context for suggestion generator
     const context: SuggestionContext = {
-      envelopes: (envelopes ?? []) as UnifiedEnvelope[],
+      envelopes: envelopes ?? [],
       surplusAmount: Math.max(0, surplusAmount),
       monthlyIncome,
       unallocatedIncome: Math.max(0, unallocatedIncome),

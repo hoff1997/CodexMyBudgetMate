@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { analyzeEnvelopes, detectMilestones, getTopMilestone } from "@/lib/utils/milestone-detector";
-import type { UnifiedEnvelope } from "@/lib/types/unified-envelope";
+import { analyzeEnvelopes, detectMilestones } from "@/lib/utils/milestone-detector";
 
 /**
  * GET /api/milestones/detect
@@ -45,7 +44,7 @@ export async function GET() {
     const dismissedMilestones = dismissals?.map((d) => d.milestone_key) ?? [];
 
     // Analyze envelopes and detect milestones
-    const analysis = analyzeEnvelopes((envelopes ?? []) as UnifiedEnvelope[]);
+    const analysis = analyzeEnvelopes(envelopes ?? []);
     const allMilestones = detectMilestones(analysis, dismissedMilestones);
     const topMilestone = allMilestones.length > 0 ? allMilestones[0] : null;
 

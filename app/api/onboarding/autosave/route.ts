@@ -38,7 +38,6 @@ export async function GET() {
       draft: {
         currentStep: draft.current_step,
         fullName: draft.full_name,
-        persona: draft.persona,
         bankAccounts: draft.bank_accounts || [],
         incomeSources: draft.income_sources || [],
         useTemplate: draft.use_template,
@@ -74,7 +73,6 @@ export async function POST(request: Request) {
     const {
       currentStep,
       fullName,
-      persona,
       bankAccounts,
       incomeSources,
       useTemplate,
@@ -91,7 +89,6 @@ export async function POST(request: Request) {
           user_id: user.id,
           current_step: currentStep,
           full_name: fullName || null,
-          persona: persona || null,
           bank_accounts: bankAccounts || [],
           income_sources: incomeSources || [],
           use_template: useTemplate ?? true,

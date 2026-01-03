@@ -44,7 +44,6 @@ interface EnvelopeCreationStepV2Props {
   onCustomCategoriesChange?: (categories: CustomCategory[]) => void;
   categoryOrder?: string[];
   onCategoryOrderChange?: (order: string[]) => void;
-  persona: any;
   useTemplate: boolean | undefined;
   incomeSources: IncomeSource[];
   bankBalance?: number;
@@ -157,7 +156,6 @@ function PriorityDropdown({
 export function EnvelopeCreationStepV2({
   envelopes,
   onEnvelopesChange,
-  persona,
   useTemplate,
   incomeSources,
   bankBalance = 0,

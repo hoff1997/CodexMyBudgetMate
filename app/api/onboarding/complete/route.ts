@@ -4,14 +4,13 @@ import { z } from "zod";
 import { createSuggestedEnvelopes } from "@/lib/utils/suggested-envelopes";
 
 const schema = z.object({
-  persona: z.enum(['beginner', 'optimiser', 'wealth_builder']).optional(),
   dataChoice: z.enum(['demo', 'akahu', 'csv', 'manual']).optional(),
   completedAt: z.string(),
 });
 
 /**
  * POST /api/onboarding/complete
- * Save onboarding completion state
+ * Save onboarding completion state (legacy endpoint)
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -33,14 +32,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { persona, dataChoice, completedAt } = parsed.data;
+  const { dataChoice, completedAt } = parsed.data;
 
   try {
     // Update profile with onboarding completion
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
-        user_persona: persona,
         onboarding_completed: true,
         onboarding_step: 5,
         show_onboarding_menu: false,
@@ -71,7 +69,7 @@ export async function POST(request: Request) {
     const { error: progressError } = await supabase.rpc('track_feature_usage', {
       p_user_id: user.id,
       p_feature_key: 'onboarding',
-      p_metadata: { persona, dataChoice, completedAt },
+      p_metadata: { dataChoice, completedAt },
     });
 
     if (progressError) {
@@ -86,7 +84,7 @@ export async function POST(request: Request) {
         .insert({
           user_id: user.id,
           started_at: completedAt,
-          session_metadata: { persona, source: 'onboarding' },
+          session_metadata: { source: 'onboarding' },
         });
 
       if (demoError) {
@@ -95,7 +93,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ ok: true, persona, dataChoice });
+    return NextResponse.json({ ok: true, dataChoice });
   } catch (error: any) {
     console.error('Onboarding completion error:', error);
     return NextResponse.json(

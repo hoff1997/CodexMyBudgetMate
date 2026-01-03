@@ -1,25 +1,23 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Sparkles, Pencil } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
-import type { PersonaType } from "@/lib/onboarding/personas";
-import { getPersona } from "@/lib/onboarding/personas";
+import { MASTER_ENVELOPE_LIST } from "@/lib/onboarding/master-envelope-list";
 
 interface BudgetingApproachStepProps {
   useTemplate: boolean | undefined;
   onUseTemplateChange: (useTemplate: boolean) => void;
-  persona: PersonaType | undefined;
 }
 
 export function BudgetingApproachStep({
   useTemplate,
   onUseTemplateChange,
-  persona,
 }: BudgetingApproachStepProps) {
-  const personaData = persona ? getPersona(persona) : null;
-  const envelopeCount = personaData?.envelopeTemplates?.length || 8;
+  // Get sample envelopes for preview (first 6 popular ones)
+  const sampleEnvelopes = MASTER_ENVELOPE_LIST
+    .filter(e => e.defaultSelected || ['rent', 'groceries', 'power', 'petrol', 'internet', 'phone'].includes(e.id))
+    .slice(0, 6);
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -33,9 +31,9 @@ export function BudgetingApproachStep({
 
       {/* Remy's Tip */}
       <RemyTip pose="encouraging">
-        Two ways to start: use a template (quick start) or build from scratch
-        (full control). There's no wrong choice - pick what feels right for
-        you. You can always adjust later.
+        Two ways to start: pick from our list of common household expenses
+        (quick start) or build from scratch (full control). There's no wrong
+        choice - pick what feels right for you. You can always adjust later.
       </RemyTip>
 
       {/* Options */}
@@ -64,11 +62,11 @@ export function BudgetingApproachStep({
 
             <div>
               <h3 className="text-xl font-semibold mb-2">
-                Start with a Template
+                Pick from Our List
               </h3>
               <p className="text-sm text-muted-foreground">
-                We&apos;ll suggest envelopes based on your {personaData?.label || "profile"}.
-                You can customize them all to match your needs.
+                Choose from 80+ common household expenses. Just tick the ones
+                that apply to you - we've organised them by category.
               </p>
             </div>
 
@@ -79,7 +77,7 @@ export function BudgetingApproachStep({
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />
-                <span>Proven budget structure</span>
+                <span>Comprehensive expense categories</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />
@@ -87,25 +85,21 @@ export function BudgetingApproachStep({
               </div>
             </div>
 
-            {persona && (
-              <div className="bg-white/50 border rounded-lg p-3 mt-4">
-                <p className="text-xs font-medium text-muted-foreground mb-2">
-                  Template preview for {personaData?.label}:
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {personaData?.envelopeTemplates?.slice(0, 6).map((template, idx) => (
-                    <span key={idx} className="text-xs bg-[#E2EEEC] text-[#5A7E7A] px-2 py-1 rounded">
-                      {template.icon} {template.name}
-                    </span>
-                  ))}
-                  {envelopeCount > 6 && (
-                    <span className="text-xs text-muted-foreground px-2 py-1">
-                      +{envelopeCount - 6} more
-                    </span>
-                  )}
-                </div>
+            <div className="bg-white/50 border rounded-lg p-3 mt-4">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Sample envelopes you can choose:
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {sampleEnvelopes.map((envelope) => (
+                  <span key={envelope.id} className="text-xs bg-[#E2EEEC] text-[#5A7E7A] px-2 py-1 rounded">
+                    {envelope.icon} {envelope.name}
+                  </span>
+                ))}
+                <span className="text-xs text-muted-foreground px-2 py-1">
+                  +80 more
+                </span>
               </div>
-            )}
+            </div>
           </div>
         </Card>
 

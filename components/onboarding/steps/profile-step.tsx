@@ -2,37 +2,31 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PersonaSelector } from "@/components/onboarding/persona-selector";
 import { RemyTip } from "@/components/onboarding/remy-tip";
-import type { PersonaType } from "@/lib/onboarding/personas";
 
 interface ProfileStepProps {
   fullName: string;
-  persona: PersonaType;
   onFullNameChange: (name: string) => void;
-  onPersonaChange: (persona: PersonaType) => void;
 }
 
 export function ProfileStep({
   fullName,
-  persona,
   onFullNameChange,
-  onPersonaChange,
 }: ProfileStepProps) {
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
+    <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-text-dark">Let's get to know each other</h2>
         <p className="text-sm text-muted-foreground">
-          Just the basics so I can personalise your experience
+          Just a quick intro so I can personalise your experience
         </p>
       </div>
 
       {/* Remy's tip */}
       <RemyTip pose="encouraging">
-        Before we dive into the numbers, let's get to know each other a bit.
-        This helps me give you better guidance along the way.
+        Before we dive into the numbers, let me know what to call you.
+        This helps me give you a more personal experience along the way.
       </RemyTip>
 
       {/* Full Name - Inline */}
@@ -50,12 +44,6 @@ export function ProfileStep({
           autoFocus
         />
       </div>
-
-      {/* Persona Selection */}
-      <PersonaSelector
-        onSelect={onPersonaChange}
-        selectedPersona={persona}
-      />
     </div>
   );
 }

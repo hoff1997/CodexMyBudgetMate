@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, Loader2, Save, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import type { PersonaType } from "@/lib/onboarding/personas";
 
 // Step components
 import { WelcomeStep } from "@/components/onboarding/steps/welcome-step";
@@ -73,7 +72,7 @@ interface OnboardingStep {
 
 const STEPS: OnboardingStep[] = [
   { id: 1, title: "Welcome", description: "Set expectations" },
-  { id: 2, title: "About You", description: "Profile & persona" },
+  { id: 2, title: "About You", description: "Your name" },
   { id: 3, title: "Bank Accounts", description: "Connect accounts" },
   { id: 4, title: "Credit Cards", description: "Configure cards" },
   { id: 5, title: "Income", description: "Set up pay cycle" },
@@ -105,7 +104,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
 
   // Step data state
   const [fullName, setFullName] = useState("");
-  const [persona, setPersona] = useState<PersonaType>("beginner");
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [creditCardConfigs, setCreditCardConfigs] = useState<CreditCardConfig[]>([]);
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
@@ -165,7 +163,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           const draft = data.draft;
           setCurrentStep(draft.currentStep || 1);
           setFullName(draft.fullName || "");
-          setPersona(draft.persona || "beginner");
           setBankAccounts(draft.bankAccounts || []);
           setCreditCardConfigs(draft.creditCardConfigs || []);
           // Convert date strings back to Date objects for income sources
@@ -206,7 +203,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         body: JSON.stringify({
           currentStep,
           fullName,
-          persona,
           bankAccounts,
           creditCardConfigs,
           incomeSources: incomeSources.map(source => ({
@@ -230,7 +226,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
     } finally {
       setIsSaving(false);
     }
-  }, [currentStep, fullName, persona, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances]);
+  }, [currentStep, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances]);
 
   // Debounced autosave on data changes
   useEffect(() => {
@@ -251,7 +247,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [currentStep, fullName, persona, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances, isLoadingDraft, saveProgress]);
+  }, [currentStep, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances, isLoadingDraft, saveProgress]);
 
   // Save immediately when changing steps
   useEffect(() => {
@@ -317,7 +313,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
     try {
       console.log("Starting onboarding completion...", {
         fullName,
-        persona,
         bankAccounts: bankAccounts.length,
         incomeSources: incomeSources.length,
         envelopes: envelopes.length,
@@ -340,7 +335,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
-          persona,
           bankAccounts,
           creditCardConfigs, // Credit card configurations
           incomeSources: incomeSources.map(source => ({
@@ -420,9 +414,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         return (
           <ProfileStep
             fullName={fullName}
-            persona={persona}
             onFullNameChange={setFullName}
-            onPersonaChange={setPersona}
           />
         );
 
@@ -465,7 +457,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           <BudgetingApproachStep
             useTemplate={useTemplate}
             onUseTemplateChange={setUseTemplate}
-            persona={persona}
           />
         );
 
@@ -481,7 +472,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
             onCustomCategoriesChange={setCustomCategories}
             categoryOrder={categoryOrder}
             onCategoryOrderChange={setCategoryOrder}
-            persona={persona}
             useTemplate={useTemplate}
             incomeSources={incomeSources}
           />

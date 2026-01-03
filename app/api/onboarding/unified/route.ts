@@ -31,7 +31,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       fullName,
-      persona,
       bankAccounts,
       creditCardConfigs,
       incomeSources,
@@ -43,7 +42,6 @@ export async function POST(request: Request) {
       completedAt,
     }: {
       fullName: string;
-      persona: string;
       bankAccounts: BankAccount[];
       creditCardConfigs?: CreditCardConfig[];
       incomeSources: IncomeSource[];
@@ -56,7 +54,7 @@ export async function POST(request: Request) {
     } = body;
 
     // Validate required data
-    if (!fullName || !persona) {
+    if (!fullName) {
       return NextResponse.json(
         { error: "Missing required profile data" },
         { status: 400 }
@@ -85,12 +83,11 @@ export async function POST(request: Request) {
     });
 
     // Start transaction-like operations
-    // 1. Update profile with name, persona, and onboarding_completed
+    // 1. Update profile with name and onboarding_completed
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
         full_name: fullName,
-        user_persona: persona,
         onboarding_completed: true,
         show_onboarding_menu: false,
       })

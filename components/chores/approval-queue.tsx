@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
+import Image from "next/image";
 import {
   Check,
   X,
@@ -151,9 +152,11 @@ export function ApprovalQueue({
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-sage-light flex items-center justify-center text-xl">
                       {child?.avatar_url ? (
-                        <img
+                        <Image
                           src={child.avatar_url}
                           alt={child.name}
+                          width={40}
+                          height={40}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
@@ -251,7 +254,7 @@ export function ApprovalQueue({
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Send Back for Redo</DialogTitle>
           </DialogHeader>

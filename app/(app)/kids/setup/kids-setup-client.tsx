@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddChildDialog } from "@/components/kids/add-child-dialog";
@@ -73,7 +74,7 @@ export function KidsSetupClient({ initialChildren }: KidsSetupClientProps) {
       {/* Empty State */}
       {children.length === 0 && (
         <Card className="mb-6">
-          <CardContent className="py-12 text-center">
+          <CardContent className="py-6 md:py-12 text-center">
             <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
             <h2 className="text-xl font-semibold text-text-dark mb-2">
               No children added yet
@@ -103,9 +104,11 @@ export function KidsSetupClient({ initialChildren }: KidsSetupClientProps) {
                   {/* Avatar */}
                   <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl shrink-0">
                     {child.avatar_url ? (
-                      <img
+                      <Image
                         src={child.avatar_url}
                         alt={child.name}
+                        width={64}
+                        height={64}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (

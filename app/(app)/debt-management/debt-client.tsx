@@ -90,7 +90,7 @@ export function DebtClient({ categories }: DebtClientProps) {
                 <CreditCard className="h-6 w-6 text-red-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Debt Management</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Debt Management</h1>
                 <p className="text-gray-500">Track and eliminate your debts</p>
               </div>
             </div>
@@ -157,7 +157,7 @@ export function DebtClient({ categories }: DebtClientProps) {
 
         {/* Debts Grid */}
         {debts.length === 0 ? (
-          <div className="bg-white border rounded-lg p-12 text-center">
+          <div className="bg-white border rounded-lg p-6 md:p-12 text-center">
             <div className="max-w-sm mx-auto">
               <div className="inline-flex p-4 bg-red-100 rounded-full mb-4">
                 <CreditCard className="h-8 w-8 text-red-600" />

@@ -21,6 +21,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Star, Clock, DollarSign, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import Image from "next/image";
 
 interface ChoreTemplate {
   id: string;
@@ -41,7 +42,7 @@ interface AssignChoreDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   template: ChoreTemplate;
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
   weekStarting: string;
   onCreated: () => void;
 }
@@ -66,7 +67,7 @@ export function AssignChoreDialog({
   open,
   onOpenChange,
   template,
-  children,
+  childProfiles,
   weekStarting,
   onCreated,
 }: AssignChoreDialogProps) {
@@ -149,7 +150,7 @@ export function AssignChoreDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className="text-2xl">{template.icon || "📋"}</span>
@@ -162,7 +163,7 @@ export function AssignChoreDialog({
           <div className="space-y-2">
             <Label>Assign to</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {children.map((child) => (
+              {childProfiles.map((child) => (
                 <button
                   key={child.id}
                   type="button"
@@ -176,9 +177,11 @@ export function AssignChoreDialog({
                 >
                   <div className="w-8 h-8 rounded-full bg-sage-light flex items-center justify-center text-lg">
                     {child.avatar_url ? (
-                      <img
+                      <Image
                         src={child.avatar_url}
                         alt={child.name}
+                        width={32}
+                        height={32}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (

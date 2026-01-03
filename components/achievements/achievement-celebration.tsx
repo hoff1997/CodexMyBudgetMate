@@ -57,7 +57,7 @@ export function AchievementCelebration({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm text-center border-2 border-gold">
+      <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto text-center border-2 border-gold">
         <div className="space-y-4 py-6">
           {/* Achievement Icon */}
           <div className="relative inline-block">

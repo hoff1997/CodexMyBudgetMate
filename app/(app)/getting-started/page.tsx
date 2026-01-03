@@ -31,10 +31,10 @@ const steps = [
 
 export default function GettingStartedPage() {
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-10 py-12">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-6 md:px-10 md:py-12">
       <header className="space-y-2">
         <p className="text-sm uppercase tracking-[0.25em] text-primary/70">Kick-off</p>
-        <h1 className="text-3xl font-semibold text-secondary">Getting started</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Getting started</h1>
         <p className="text-base text-muted-foreground">
           Work through these steps to get My Budget Mate humming. Each checklist item unlocks a
           downstream feature like envelope health and rolling balances.

@@ -15,7 +15,7 @@ export function WelcomeStep({ isMobile, onContinue }: WelcomeStepProps) {
       {/* Hero Section with Remy */}
       <div className="text-center">
         <RemyAvatar pose="welcome" size="lg" className="mx-auto mb-4" />
-        <h1 className="text-3xl font-bold text-text-dark">Kia ora! I'm Remy</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-text-dark">Kia ora! I'm Remy</h1>
         <p className="text-sage italic mt-1">
           Your financial coach - helping you tell your money where to go
         </p>

@@ -1044,7 +1044,7 @@ export function EnvelopeCreationStepV2({
 
       {/* Add Instance Dialog */}
       <Dialog open={addInstanceDialogOpen} onOpenChange={setAddInstanceDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Another {currentMasterForInstance?.multipleLabel || 'Item'}</DialogTitle>
           </DialogHeader>
@@ -1086,7 +1086,7 @@ export function EnvelopeCreationStepV2({
 
       {/* Add Custom Envelope Dialog */}
       <Dialog open={addCustomDialogOpen} onOpenChange={setAddCustomDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Custom Envelope</DialogTitle>
           </DialogHeader>
@@ -1166,7 +1166,7 @@ export function EnvelopeCreationStepV2({
 
       {/* Edit Envelope Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Envelope</DialogTitle>
           </DialogHeader>

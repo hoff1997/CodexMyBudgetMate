@@ -218,7 +218,7 @@ export function RulesClient({ data }: Props) {
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <GitBranch className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-semibold text-secondary">Merchant memory</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Merchant memory</h1>
           {data.demoMode ? (
             <Badge variant="secondary" className="uppercase tracking-wide">
               Demo

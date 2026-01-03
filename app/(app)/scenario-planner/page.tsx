@@ -67,7 +67,7 @@ export default function ScenarioPlannerPage() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">What-If Scenario Planner</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">What-If Scenario Planner</h1>
         <p className="text-muted-foreground mt-2">
           See how small changes can transform your budget and help you get ahead
         </p>

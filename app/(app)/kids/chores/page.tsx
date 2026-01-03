@@ -102,7 +102,7 @@ export default async function ChoresPage() {
 
   return (
     <ChoresClient
-      children={children || []}
+      childProfiles={children || []}
       templates={templates || []}
       assignments={assignments}
       rotations={rotations || []}

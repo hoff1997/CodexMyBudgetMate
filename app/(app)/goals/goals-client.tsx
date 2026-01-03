@@ -83,7 +83,7 @@ export function GoalsClient({ categories }: GoalsClientProps) {
                 <Target className="h-6 w-6 text-sky-600" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Goals</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Goals</h1>
                 <p className="text-gray-500">Track your savings goals and milestones</p>
               </div>
             </div>
@@ -211,7 +211,7 @@ export function GoalsClient({ categories }: GoalsClientProps) {
 
         {/* Goals Grid */}
         {filteredGoals.length === 0 ? (
-          <div className="bg-white border rounded-lg p-12 text-center">
+          <div className="bg-white border rounded-lg p-6 md:p-12 text-center">
             <div className="max-w-sm mx-auto">
               <div className="inline-flex p-4 bg-sky-100 rounded-full mb-4">
                 <Target className="h-8 w-8 text-sky-600" />

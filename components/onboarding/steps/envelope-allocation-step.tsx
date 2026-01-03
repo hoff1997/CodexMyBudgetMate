@@ -125,7 +125,7 @@ export function EnvelopeAllocationStep({
       <div className="max-w-2xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold text-text-dark">Allocation Complete!</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Allocation Complete!</h2>
           <p className="text-muted-foreground">
             Since you have one income source, all envelopes are automatically funded from{" "}
             <span className="font-semibold">{incomeSources[0].name}</span>
@@ -168,7 +168,7 @@ export function EnvelopeAllocationStep({
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-text-dark">Allocate Your Income</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Allocate Your Income</h2>
         <p className="text-muted-foreground">
           Decide which income sources fund each envelope
         </p>

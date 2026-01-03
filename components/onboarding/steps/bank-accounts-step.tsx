@@ -69,7 +69,7 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-text-dark">Connect your bank</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Connect your bank</h2>
         <p className="text-muted-foreground">
           Your transactions will come through automatically
         </p>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -210,9 +211,11 @@ export default function KidsLoginPage() {
                 >
                   <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center text-4xl mb-2">
                     {child.avatar_url ? (
-                      <img
+                      <Image
                         src={child.avatar_url}
                         alt={child.name}
+                        width={80}
+                        height={80}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (

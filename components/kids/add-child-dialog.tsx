@@ -115,7 +115,7 @@ export function AddChildDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {createdChild ? "🎉 Child Added!" : "Add a Child"}

@@ -374,7 +374,7 @@ export default function BankConnectionManager({
 
       {/* Connect Bank Dialog */}
       <Dialog open={showConnectDialog} onOpenChange={setShowConnectDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Connect Your Bank via Akahu</DialogTitle>
             <DialogDescription>
@@ -421,7 +421,7 @@ export default function BankConnectionManager({
 
       {/* Two-Factor Authentication Dialog */}
       <Dialog open={show2FAValidation} onOpenChange={setShow2FAValidation}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <ShieldAlert className="h-5 w-5 mr-2" />

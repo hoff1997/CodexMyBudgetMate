@@ -72,7 +72,7 @@ export function InteractionsClient({ data }: Props) {
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <Wand2 className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-semibold text-secondary">Merchant interactions</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Merchant interactions</h1>
           {data.demoMode ? (
             <Badge variant="secondary" className="uppercase tracking-wide">
               Demo

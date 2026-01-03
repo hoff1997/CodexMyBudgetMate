@@ -290,7 +290,7 @@ export function EnvelopeCreationStep({
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold text-text-dark">Set up your envelopes</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Set up your envelopes</h2>
           <p className="text-muted-foreground">
             We've suggested some common ones to get you started
           </p>
@@ -416,7 +416,7 @@ export function EnvelopeCreationStep({
 
         {/* Leveling Info Dialog */}
         <Dialog open={levelingInfoOpen} onOpenChange={setLevelingInfoOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
                 <RemyAvatar pose="thinking" size="sm" />
@@ -468,7 +468,7 @@ export function EnvelopeCreationStep({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold">Configure Your Envelopes</h2>
+          <h2 className="text-2xl md:text-3xl font-bold">Configure Your Envelopes</h2>
           <p className="text-muted-foreground">
             Enter amounts and details for each envelope
           </p>

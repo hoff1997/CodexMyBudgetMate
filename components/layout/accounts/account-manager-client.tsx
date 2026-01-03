@@ -89,7 +89,7 @@ export function AccountManagerClient({ accounts, canEdit }: Props) {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 pb-20 pt-6 md:px-6 md:pb-8 md:gap-5">
       <header className="space-y-1.5">
-        <h1 className="text-3xl font-semibold text-secondary">Accounts</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Accounts</h1>
         <p className="text-base text-muted-foreground">
           Manage every account feeding your budget. Balances sync with the planner, dashboard, and reconciliation tools.
         </p>

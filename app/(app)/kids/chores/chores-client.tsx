@@ -101,7 +101,7 @@ interface ChoreRotation {
 }
 
 interface ChoresClientProps {
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
   templates: ChoreTemplate[];
   assignments: unknown[];
   rotations: ChoreRotation[];
@@ -123,7 +123,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function ChoresClient({
-  children,
+  childProfiles,
   templates,
   assignments: initialAssignments,
   rotations,
@@ -232,11 +232,11 @@ export function ChoresClient({
     return `${formatDate(start)} - ${formatDate(end)}`;
   };
 
-  if (children.length === 0) {
+  if (childProfiles.length === 0) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="py-6 md:py-12 text-center">
             <div className="text-6xl mb-4">👶</div>
             <h2 className="text-xl font-bold text-text-dark mb-2">
               No kids set up yet
@@ -358,7 +358,7 @@ export function ChoresClient({
             </CardHeader>
             <CardContent>
               <WeeklyChoreGrid
-                children={children}
+                childProfiles={childProfiles}
                 assignments={weekAssignments}
                 weekStarting={currentWeekStart}
                 onAssignChore={(childId, dayOfWeek) => {
@@ -449,7 +449,7 @@ export function ChoresClient({
           open={isAssignDialogOpen}
           onOpenChange={setIsAssignDialogOpen}
           template={selectedTemplate}
-          children={children}
+          childProfiles={childProfiles}
           weekStarting={currentWeekStart}
           onCreated={handleAssignmentCreated}
         />

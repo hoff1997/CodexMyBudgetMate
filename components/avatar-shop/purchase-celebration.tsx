@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
+import Image from "next/image";
 
 interface PurchaseCelebrationProps {
   item: {
@@ -63,7 +64,7 @@ export function PurchaseCelebration({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm text-center">
+      <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto text-center">
         <div className="space-y-4 py-6">
           {/* Celebration Header */}
           <div className="text-6xl animate-bounce">🎉</div>
@@ -73,9 +74,11 @@ export function PurchaseCelebration({
           <div className="bg-sage-very-light rounded-xl p-6">
             <div className="w-24 h-24 mx-auto bg-white rounded-lg flex items-center justify-center mb-3">
               {item.image_url ? (
-                <img
+                <Image
                   src={item.image_url}
                   alt={item.name}
+                  width={96}
+                  height={96}
                   className="w-full h-full object-cover rounded-lg"
                 />
               ) : (

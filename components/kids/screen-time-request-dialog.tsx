@@ -87,7 +87,7 @@ export function ScreenTimeRequestDialog({
           Request Screen Time
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Tv className="h-5 w-5 text-blue" />

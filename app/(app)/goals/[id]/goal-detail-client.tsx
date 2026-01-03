@@ -83,7 +83,7 @@ export function GoalDetailClient({ goal: initialGoal }: GoalDetailClientProps) {
               <div className="flex items-center gap-4">
                 <div className="text-5xl">{goal.icon || "🎯"}</div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-1">{goal.name}</h1>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{goal.name}</h1>
                   <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getGoalStatusColor(progress.status)}`}>
                       {getGoalStatusLabel(progress.status)}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyEnvelopeCard } from "@/components/kids/money-envelope-card";
@@ -83,9 +84,11 @@ export function KidMoneyClient({
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-sage-light flex items-center justify-center text-2xl border-4 border-sage">
               {child.avatar_url ? (
-                <img
+                <Image
                   src={child.avatar_url}
                   alt={child.name}
+                  width={56}
+                  height={56}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (

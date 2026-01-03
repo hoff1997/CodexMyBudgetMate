@@ -334,7 +334,7 @@ export function OpeningBalanceStep({
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-text-dark">Set your starting point</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Set your starting point</h2>
         <p className="text-text-medium">
           How much is in your accounts right now?
         </p>

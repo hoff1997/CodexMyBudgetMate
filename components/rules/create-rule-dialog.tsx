@@ -131,7 +131,7 @@ export default function CreateRuleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center space-x-2">
             <GitBranch className="h-5 w-5 text-primary" />

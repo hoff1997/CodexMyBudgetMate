@@ -185,7 +185,7 @@ export function RecurringIncomeClient({
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 pb-24 pt-12 md:px-10 md:pb-12">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-secondary">Recurring income</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Recurring income</h1>
         <p className="text-base text-muted-foreground">
           Capture salary, benefits, and recurring deposit streams. Edits sync with the planner and dashboard metrics.
         </p>

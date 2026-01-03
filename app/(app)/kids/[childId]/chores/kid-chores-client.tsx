@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -157,9 +158,11 @@ export function KidChoresClient({
         <div className="flex items-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl border-4 border-sage">
             {child.avatar_url ? (
-              <img
+              <Image
                 src={child.avatar_url}
                 alt={child.name}
+                width={64}
+                height={64}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (

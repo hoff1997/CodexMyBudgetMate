@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +101,7 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-text-dark mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-text-dark mb-2">
               {recipe.title}
             </h1>
             {recipe.description && (
@@ -157,11 +158,12 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
 
         {/* Image */}
         {recipe.image_url && (
-          <div className="aspect-video rounded-xl overflow-hidden mb-6">
-            <img
+          <div className="aspect-video rounded-xl overflow-hidden mb-6 relative">
+            <Image
               src={recipe.image_url}
               alt={recipe.title}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           </div>
         )}

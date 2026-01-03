@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -120,9 +121,11 @@ export function KidDashboardClient({
         <div className="flex items-center gap-4 mb-6">
           <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center text-4xl border-4 border-sage">
             {child.avatar_url ? (
-              <img
+              <Image
                 src={child.avatar_url}
                 alt={child.name}
+                width={80}
+                height={80}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (

@@ -67,7 +67,7 @@ export default function IncomeAllocationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Income & Allocation</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Income & Allocation</h1>
           <p className="text-muted-foreground mt-2">
             Manage your income sources and automatic envelope allocations
           </p>
@@ -80,7 +80,7 @@ export default function IncomeAllocationPage() {
       {/* Income Sources */}
       {incomeSources.length === 0 ? (
         <Card>
-          <CardContent className="p-12 text-center">
+          <CardContent className="p-6 md:p-12 text-center">
             <p className="text-muted-foreground mb-4">
               No income sources configured yet. Add one to get started.
             </p>

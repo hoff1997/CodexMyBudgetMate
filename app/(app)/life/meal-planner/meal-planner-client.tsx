@@ -538,7 +538,7 @@ export function MealPlannerClient({
 
       {/* Save as Template Dialog */}
       <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Save Week as Template</DialogTitle>
             <DialogDescription>

@@ -31,7 +31,7 @@ interface ChoreAssignment {
 }
 
 interface WeeklyChoreGridProps {
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
   assignments: ChoreAssignment[];
   weekStarting: string;
   onAssignChore: (childId: string, dayOfWeek: number | null) => void;
@@ -67,7 +67,7 @@ const CURRENCY_ICONS = {
 };
 
 export function WeeklyChoreGrid({
-  children,
+  childProfiles,
   assignments,
   weekStarting,
   onAssignChore,
@@ -122,7 +122,7 @@ export function WeeklyChoreGrid({
           </tr>
         </thead>
         <tbody>
-          {children.map((child) => {
+          {childProfiles.map((child) => {
             const stats = getChildStats(child.id);
             return (
               <tr key={child.id} className="border-b border-silver-light">

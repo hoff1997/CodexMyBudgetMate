@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,11 +47,11 @@ interface ChildEarnings {
 }
 
 interface InvoicesClientProps {
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
   earnings: Record<string, ChildEarnings>;
 }
 
-export function InvoicesClient({ children, earnings }: InvoicesClientProps) {
+export function InvoicesClient({ childProfiles, earnings }: InvoicesClientProps) {
   const router = useRouter();
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
   const [payDialogOpen, setPayDialogOpen] = useState(false);
@@ -76,7 +77,7 @@ export function InvoicesClient({ children, earnings }: InvoicesClientProps) {
   };
 
   const selectedChildData = selectedChild
-    ? children.find((c) => c.id === selectedChild)
+    ? childProfiles.find((c) => c.id === selectedChild)
     : null;
   const selectedEarnings = selectedChild ? earnings[selectedChild] : null;
 
@@ -136,7 +137,7 @@ export function InvoicesClient({ children, earnings }: InvoicesClientProps) {
 
       {/* Children Cards */}
       <div className="space-y-4">
-        {children.map((child) => {
+        {childProfiles.map((child) => {
           const childEarnings = earnings[child.id];
           const hasEarnings = childEarnings.total > 0;
 
@@ -147,9 +148,11 @@ export function InvoicesClient({ children, earnings }: InvoicesClientProps) {
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center text-2xl">
                       {child.avatar_url ? (
-                        <img
+                        <Image
                           src={child.avatar_url}
                           alt={child.name}
+                          width={48}
+                          height={48}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
@@ -220,14 +223,16 @@ export function InvoicesClient({ children, earnings }: InvoicesClientProps) {
 
       {/* Payment Detail Dialog */}
       <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedChildData?.avatar_url ? (
-                <img
+                <Image
                   src={selectedChildData.avatar_url}
                   alt={selectedChildData.name}
-                  className="w-8 h-8 rounded-full object-cover"
+                  width={32}
+                  height={32}
+                  className="rounded-full object-cover"
                 />
               ) : (
                 <span className="text-2xl">👤</span>

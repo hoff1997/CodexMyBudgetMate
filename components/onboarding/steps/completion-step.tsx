@@ -47,7 +47,7 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
       {/* Remy celebrating */}
       <div className="text-center">
         <RemyAvatar pose="celebrating" size="xl" className="mx-auto mb-6 border-gold" />
-        <h1 className="text-3xl font-bold text-text-dark mb-2">You legend!</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-text-dark mb-2">You legend!</h1>
         <p className="text-muted-foreground text-lg">
           You've just done something most people put off forever
         </p>

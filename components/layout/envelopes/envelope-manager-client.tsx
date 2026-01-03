@@ -172,7 +172,7 @@ export function EnvelopeManagerClient({ envelopes, categories, canEdit, transfer
         <div className="flex items-start gap-3">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-semibold text-secondary">Manage envelopes</h1>
+              <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Manage envelopes</h1>
               <HelpTooltip
                 title="Manage Envelopes"
                 content={[

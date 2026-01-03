@@ -218,7 +218,7 @@ export function EnvelopeBalancesClient({ envelopes, categories }: Props) {
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Envelope Balances Report</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Envelope Balances Report</h1>
               <p className="text-muted-foreground">
                 Complete overview of all envelope balances as at{" "}
                 {format(new Date(), "dd MMMM yyyy")}

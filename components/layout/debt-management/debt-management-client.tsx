@@ -209,7 +209,7 @@ export function DebtManagementClient({ liabilities, envelopes, demoMode }: Props
         <Badge variant="secondary" className="w-fit uppercase tracking-wide">
           Debt tools {demoMode ? "· demo data" : ""}
         </Badge>
-        <h1 className="text-3xl font-semibold text-secondary">Debt management</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Debt management</h1>
         <p className="text-base text-muted-foreground">
           See every balance, pick a payoff strategy, and celebrate milestones as you move towards
           financial freedom.

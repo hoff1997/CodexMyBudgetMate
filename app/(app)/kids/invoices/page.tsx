@@ -103,7 +103,7 @@ export default async function InvoicesPage() {
 
   return (
     <InvoicesClient
-      children={children}
+      childProfiles={children}
       earnings={childEarnings}
     />
   );

@@ -70,7 +70,7 @@ export function BudgetReviewStep({
     <div className="max-w-3xl mx-auto space-y-8">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold text-text-dark">Let's review your setup</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Let's review your setup</h2>
         <p className="text-muted-foreground">
           Here's what we've got so far
         </p>

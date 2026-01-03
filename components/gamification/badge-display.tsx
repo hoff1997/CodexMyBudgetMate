@@ -168,7 +168,7 @@ export function BadgeDisplay({
       {/* Empty state */}
       {achievements.length === 0 && (
         <Card>
-          <CardContent className="p-12 text-center">
+          <CardContent className="p-6 md:p-12 text-center">
             <div className="text-6xl mb-4">🌟</div>
             <h3 className="font-semibold text-lg mb-2">Start Your Journey!</h3>
             <p className="text-muted-foreground">

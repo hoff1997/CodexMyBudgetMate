@@ -498,7 +498,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-3xl font-semibold text-secondary">Envelope Planning</h1>
+                  <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Envelope Planning</h1>
                   <HelpTooltip
                     title="Envelope Planning"
                     content={[

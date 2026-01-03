@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,6 +59,70 @@ export function HouseholdHubClient({
 
   const searchParams = useSearchParams();
 
+  const handleConnectCalendar = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch("/api/calendar/auth-url");
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setNotification({
+          type: "error",
+          message: "Failed to get authorization URL",
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: "error",
+        message: "Failed to connect to Google Calendar",
+      });
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const refreshDashboard = useCallback(async () => {
+    try {
+      const res = await fetch("/api/household-hub/dashboard");
+      if (res.ok) {
+        const data = await res.json();
+        setDashboard(data);
+      }
+    } catch (error) {
+      console.error("Failed to refresh dashboard:", error);
+    }
+  }, []);
+
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/calendar/sync", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        setNotification({
+          type: "success",
+          message: `Synced ${data.events_synced} events from ${data.calendars_synced} calendars`,
+        });
+        // Refresh dashboard data
+        await refreshDashboard();
+      } else if (data.errors) {
+        setNotification({
+          type: "error",
+          message: data.errors[0] || "Some calendars failed to sync",
+        });
+      }
+    } catch (error) {
+      setNotification({
+        type: "error",
+        message: "Failed to sync calendars",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshDashboard]);
+
   // Handle OAuth callback notifications
   useEffect(() => {
     const success = searchParams.get("success");
@@ -91,71 +155,7 @@ export function HouseholdHubClient({
       const timer = setTimeout(() => setNotification(null), 5000);
       return () => clearTimeout(timer);
     }
-  }, [searchParams]);
-
-  const handleConnectCalendar = async () => {
-    setConnecting(true);
-    try {
-      const res = await fetch("/api/calendar/auth-url");
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setNotification({
-          type: "error",
-          message: "Failed to get authorization URL",
-        });
-      }
-    } catch (error) {
-      setNotification({
-        type: "error",
-        message: "Failed to connect to Google Calendar",
-      });
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await fetch("/api/calendar/sync", { method: "POST" });
-      const data = await res.json();
-
-      if (data.success) {
-        setNotification({
-          type: "success",
-          message: `Synced ${data.events_synced} events from ${data.calendars_synced} calendars`,
-        });
-        // Refresh dashboard data
-        await refreshDashboard();
-      } else if (data.errors) {
-        setNotification({
-          type: "error",
-          message: data.errors[0] || "Some calendars failed to sync",
-        });
-      }
-    } catch (error) {
-      setNotification({
-        type: "error",
-        message: "Failed to sync calendars",
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
-  const refreshDashboard = async () => {
-    try {
-      const res = await fetch("/api/household-hub/dashboard");
-      if (res.ok) {
-        const data = await res.json();
-        setDashboard(data);
-      }
-    } catch (error) {
-      console.error("Failed to refresh dashboard:", error);
-    }
-  };
+  }, [searchParams, handleSync]);
 
   const refreshConnections = async () => {
     try {

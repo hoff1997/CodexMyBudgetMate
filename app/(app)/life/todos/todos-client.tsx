@@ -51,10 +51,10 @@ interface Template {
 
 interface TodosClientProps {
   initialLists: TodoList[];
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
 }
 
-export function TodosClient({ initialLists, children }: TodosClientProps) {
+export function TodosClient({ initialLists, childProfiles }: TodosClientProps) {
   const router = useRouter();
   const [lists, setLists] = useState<TodoList[]>(initialLists);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -371,7 +371,7 @@ export function TodosClient({ initialLists, children }: TodosClientProps) {
               <TodoListView
                 key={list.id}
                 list={list}
-                children={children}
+                childProfiles={childProfiles}
                 onAddItem={handleAddItem}
                 onToggleItem={handleToggleItem}
                 onDeleteItem={handleDeleteItem}

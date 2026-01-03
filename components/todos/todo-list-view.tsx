@@ -55,7 +55,7 @@ interface ChildProfile {
 
 interface TodoListViewProps {
   list: TodoList;
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
   onAddItem: (listId: string, text: string) => Promise<void>;
   onToggleItem: (itemId: string, completed: boolean) => Promise<void>;
   onDeleteItem: (itemId: string) => Promise<void>;
@@ -66,7 +66,7 @@ interface TodoListViewProps {
 
 export function TodoListView({
   list,
-  children,
+  childProfiles,
   onAddItem,
   onToggleItem,
   onDeleteItem,
@@ -112,7 +112,7 @@ export function TodoListView({
   };
 
   const getChildName = (childId: string) => {
-    return children.find((c) => c.id === childId)?.name || "Unknown";
+    return childProfiles.find((c) => c.id === childId)?.name || "Unknown";
   };
 
   const progress =

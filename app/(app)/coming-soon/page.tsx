@@ -17,9 +17,9 @@ const roadmapItems = [
 
 export default function ComingSoonPage() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-10 py-12">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-6 md:px-10 md:py-12">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-secondary">Coming soon</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Coming soon</h1>
         <p className="text-base text-muted-foreground">
           Here’s what we’re actively building to level up your budgeting workflow.
         </p>

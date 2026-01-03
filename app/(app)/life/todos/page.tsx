@@ -46,7 +46,7 @@ export default async function TodosPage() {
   return (
     <TodosClient
       initialLists={processedLists}
-      children={children || []}
+      childProfiles={children || []}
     />
   );
 }

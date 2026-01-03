@@ -40,7 +40,7 @@ export default function PaydayAllocatorPage() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Payday Allocator</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Payday Allocator</h1>
         <p className="text-muted-foreground mt-2">
           See how your paycheck gets distributed across all envelopes
         </p>

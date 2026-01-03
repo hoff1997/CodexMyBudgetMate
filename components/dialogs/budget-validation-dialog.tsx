@@ -45,7 +45,7 @@ export function BudgetValidationDialog({
   if (type === 'overspent') {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-700">
               <AlertCircle className="h-5 w-5" />
@@ -89,7 +89,7 @@ export function BudgetValidationDialog({
   if (type === 'surplus') {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-blue-700">
               <TrendingUp className="h-5 w-5" />
@@ -138,7 +138,7 @@ export function BudgetValidationDialog({
   if (type === 'navigation') {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-700">
               <AlertTriangle className="h-5 w-5" />

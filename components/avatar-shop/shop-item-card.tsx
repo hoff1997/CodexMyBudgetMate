@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, Lock, Star, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import Image from "next/image";
 import { useState } from "react";
 
 interface ShopItem {
@@ -59,12 +60,13 @@ export function ShopItemCard({
       )}
     >
       {/* Item Image */}
-      <div className="aspect-square bg-silver-very-light rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+      <div className="aspect-square bg-silver-very-light rounded-lg mb-3 flex items-center justify-center overflow-hidden relative">
         {item.image_url ? (
-          <img
+          <Image
             src={item.image_url}
             alt={item.name}
-            className="w-full h-full object-cover rounded-lg"
+            fill
+            className="object-cover rounded-lg"
           />
         ) : (
           <span className="text-4xl">

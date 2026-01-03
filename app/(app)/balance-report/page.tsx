@@ -26,9 +26,9 @@ export default async function BalanceReportPage() {
   const netBalance = totals.assets - totals.liabilities;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-10 py-12">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 md:px-10 md:py-12">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-secondary">Balance report</h1>
+        <h1 className="text-2xl md:text-3xl font-semibold text-secondary">Balance report</h1>
         <p className="text-base text-muted-foreground">
           Live view of account balances grouped by assets and liabilities. Use it to understand
           how envelopes reconcile to real-world totals.

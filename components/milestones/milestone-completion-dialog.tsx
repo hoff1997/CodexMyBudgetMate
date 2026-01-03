@@ -114,7 +114,7 @@ export function MilestoneCompletionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader className="text-center">
           {/* Celebration header with Remy */}
           <div className="flex flex-col items-center gap-4 mb-4">

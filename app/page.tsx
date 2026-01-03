@@ -48,9 +48,9 @@ export default function MarketingPage() {
             <Image
               src="/Images/remy-fullsize.png"
               alt="Remy, your budgeting guide, showing the My Budget Mate app"
-              width={360}
-              height={450}
-              className="object-contain max-w-[280px] lg:max-w-[360px] w-full h-auto"
+              width={300}
+              height={375}
+              className="object-contain max-w-[220px] lg:max-w-[300px] w-full h-auto"
               priority
             />
           </div>

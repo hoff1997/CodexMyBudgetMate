@@ -410,7 +410,26 @@ export default function CategoryManager() {
                       <FormItem>
                         <FormLabel>Color</FormLabel>
                         <FormControl>
-                          <Input type="color" {...field} />
+                          <div className="flex items-center gap-3">
+                            <div className="relative">
+                              <input
+                                type="color"
+                                {...field}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <div
+                                className="w-10 h-10 rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer"
+                                style={{ backgroundColor: field.value }}
+                              />
+                            </div>
+                            <Input
+                              type="text"
+                              value={field.value}
+                              onChange={(e) => field.onChange(e.target.value)}
+                              placeholder="#3b82f6"
+                              className="w-28 font-mono text-sm"
+                            />
+                          </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -531,7 +550,26 @@ export default function CategoryManager() {
                     <FormItem>
                       <FormLabel>Color</FormLabel>
                       <FormControl>
-                        <Input type="color" {...field} />
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <input
+                              type="color"
+                              {...field}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div
+                              className="w-10 h-10 rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer"
+                              style={{ backgroundColor: field.value }}
+                            />
+                          </div>
+                          <Input
+                            type="text"
+                            value={field.value}
+                            onChange={(e) => field.onChange(e.target.value)}
+                            placeholder="#3b82f6"
+                            className="w-28 font-mono text-sm"
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

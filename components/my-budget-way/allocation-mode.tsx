@@ -19,7 +19,7 @@ interface AllocationModeProps {
   onAllocateToEnvelope?: (envelopeId: string, amount: number) => void;
 }
 
-type Priority = "essentials" | "starter-stash" | "important" | "debt" | "extras" | "safety-net";
+type Priority = "essentials" | "starter-stash" | "debt" | "safety-net" | "cc-holding";
 
 interface AllocationStep {
   id: Priority;
@@ -33,9 +33,9 @@ interface AllocationStep {
 const ALLOCATION_STEPS: AllocationStep[] = [
   {
     id: "essentials",
-    icon: "🔴",
-    title: "Essential Bills",
-    description: "Rent, utilities, groceries – the must-haves.",
+    icon: "📋",
+    title: "Fill Your Envelopes",
+    description: "Fund your bills and spending envelopes.",
     urgentDescription: "Cover your essentials first. These are non-negotiable.",
     priority: 1,
   },
@@ -48,28 +48,12 @@ const ALLOCATION_STEPS: AllocationStep[] = [
     priority: 2,
   },
   {
-    id: "important",
-    icon: "🟡",
-    title: "Important Expenses",
-    description: "Insurance, transport, healthcare.",
-    urgentDescription: "These keep your life running smoothly.",
-    priority: 3,
-  },
-  {
     id: "debt",
     icon: "💪",
-    title: "Debt Payments",
+    title: "Smash Your Debt",
     description: "Extra payments towards smallest debt.",
     urgentDescription: "Every extra dollar speeds up your freedom date.",
-    priority: 4,
-  },
-  {
-    id: "extras",
-    icon: "🟢",
-    title: "Flexible Spending",
-    description: "Entertainment, hobbies, dining out.",
-    urgentDescription: "The fun stuff – but only after the basics are covered.",
-    priority: 5,
+    priority: 3,
   },
   {
     id: "safety-net",
@@ -77,7 +61,15 @@ const ALLOCATION_STEPS: AllocationStep[] = [
     title: "Safety Net",
     description: "Three months of expenses.",
     urgentDescription: "Unlocks after debt is cleared.",
-    priority: 6,
+    priority: 4,
+  },
+  {
+    id: "cc-holding",
+    icon: "💳",
+    title: "Credit Card Holding",
+    description: "Set aside money for credit card payments.",
+    urgentDescription: "Keep funds ready for your credit card bill.",
+    priority: 5,
   },
 ];
 
@@ -133,16 +125,6 @@ export function AllocationMode({
         }
         return { current: 0, target: 1000, percent: 0, status: "pending", gap: 1000 };
 
-      case "important":
-        // Approximation for important priority
-        return {
-          current: milestoneProgress.totalCurrent * 0.3,
-          target: milestoneProgress.totalTarget * 0.3,
-          percent: 85,
-          status: "active",
-          gap: 200,
-        };
-
       case "debt":
         if (!creditCardDebt?.startingDebt) {
           return { current: 0, target: 0, percent: 100, status: "completed", gap: 0 };
@@ -157,15 +139,6 @@ export function AllocationMode({
           gap: creditCardDebt.currentDebt,
         };
 
-      case "extras":
-        return {
-          current: milestoneProgress.totalCurrent * 0.2,
-          target: milestoneProgress.totalTarget * 0.2,
-          percent: 70,
-          status: "pending",
-          gap: 150,
-        };
-
       case "safety-net":
         if (hasDebt) {
           return { current: 0, target: 0, percent: 0, status: "locked", gap: 0 };
@@ -173,6 +146,23 @@ export function AllocationMode({
         if (safetyNet) {
           const current = Number(safetyNet.current_amount ?? 0);
           const target = Number(safetyNet.target_amount ?? 0);
+          const percent = target > 0 ? (current / target) * 100 : 0;
+          return {
+            current,
+            target,
+            percent,
+            status: percent >= 100 ? "completed" : percent > 0 ? "active" : "pending",
+            gap: Math.max(0, target - current),
+          };
+        }
+        return { current: 0, target: 0, percent: 0, status: "pending", gap: 0 };
+
+      case "cc-holding":
+        // Credit card holding - tracks funds set aside for CC payments
+        const ccHoldingEnvelope = getEnvelopeByType("cc-holding");
+        if (ccHoldingEnvelope) {
+          const current = Number(ccHoldingEnvelope.current_amount ?? 0);
+          const target = Number(ccHoldingEnvelope.target_amount ?? 0);
           const percent = target > 0 ? (current / target) * 100 : 0;
           return {
             current,

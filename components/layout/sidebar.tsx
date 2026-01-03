@@ -64,7 +64,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
-  { id: "net-worth", label: "Financial Position", href: "/net-worth", icon: "📈" },
+  { id: "financial-position", label: "Financial Position", href: "/financial-position", icon: "📈" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
 
   // Retired items (pages still exist but hidden from nav)
@@ -87,10 +87,12 @@ export default function Sidebar({
   children,
   userEmail,
   showOnboardingMenu = true,
+  hasBetaAccess = false,
 }: {
   children: React.ReactNode;
   userEmail?: string | null;
   showOnboardingMenu?: boolean;
+  hasBetaAccess?: boolean;
 }) {
   const pathname = usePathname();
   const sidebar = useSidebar();
@@ -275,6 +277,130 @@ export default function Sidebar({
           </nav>
         </SortableContext>
       </DndContext>
+
+      {/* Achievement Badges - after all nav items, before the divider */}
+      <div className="px-1 py-2">
+        <SidebarBadges />
+      </div>
+
+      {/* Kids + Life Beta Features */}
+      {hasBetaAccess && (
+        <div className="mt-4 pt-4 border-t border-silver-light">
+          {/* Kids Section */}
+          <div className="px-3 py-1.5">
+            <span className="text-[10px] font-semibold text-text-light uppercase tracking-wider">
+              My Budget Mate Kids
+            </span>
+          </div>
+          <nav className="px-1 space-y-0.5">
+            <Link
+              href="/kids/setup"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/kids/setup" || pathname?.startsWith("/kids/")
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>👨‍👩‍👧‍👦</span>
+              <span>Kids Dashboard</span>
+            </Link>
+            <Link
+              href="/kids/chores"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/kids/chores"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>📋</span>
+              <span>Chores</span>
+            </Link>
+          </nav>
+
+          {/* Life Section */}
+          <div className="px-3 py-1.5 mt-3">
+            <span className="text-[10px] font-semibold text-text-light uppercase tracking-wider">
+              My Budget Mate Life
+            </span>
+          </div>
+          <nav className="px-1 space-y-0.5">
+            <Link
+              href="/life/hub"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/hub"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>🏠</span>
+              <span>Household Hub</span>
+            </Link>
+            <Link
+              href="/life/birthdays"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/birthdays"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>🎂</span>
+              <span>Birthdays</span>
+            </Link>
+            <Link
+              href="/life/todos"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/todos"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>✅</span>
+              <span>To-Do Lists</span>
+            </Link>
+            <Link
+              href="/life/shopping"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/shopping"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>🛒</span>
+              <span>Shopping Lists</span>
+            </Link>
+            <Link
+              href="/life/recipes"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/recipes"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>📖</span>
+              <span>Recipes</span>
+            </Link>
+            <Link
+              href="/life/meal-planner"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/meal-planner"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>📅</span>
+              <span>Meal Planner</span>
+            </Link>
+          </nav>
+        </div>
+      )}
     </>
   );
 
@@ -378,13 +504,39 @@ export default function Sidebar({
                 </Link>
               );
             })}
+
+            {/* Kids + Life Beta (collapsed icons) */}
+            {hasBetaAccess && (
+              <>
+                <div className="w-8 border-t border-silver-light my-1" />
+                <Link
+                  href="/kids/setup"
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center rounded-lg transition-colors",
+                    pathname?.startsWith("/kids/")
+                      ? "bg-white text-text-dark border border-sage"
+                      : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                  )}
+                  title="Kids Dashboard"
+                >
+                  <span className="text-lg">👨‍👩‍👧‍👦</span>
+                </Link>
+                <Link
+                  href="/life/hub"
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center rounded-lg transition-colors",
+                    pathname?.startsWith("/life/")
+                      ? "bg-white text-text-dark border border-sage"
+                      : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+                  )}
+                  title="Household Hub"
+                >
+                  <span className="text-lg">🏠</span>
+                </Link>
+              </>
+            )}
           </div>
         )}
-
-        {/* Achievement Badges - hidden when collapsed */}
-        <div className={cn(isDesktopCollapsed && "lg:hidden")}>
-          <SidebarBadges />
-        </div>
 
         {/* Footer - simplified when collapsed */}
         <div className={cn(

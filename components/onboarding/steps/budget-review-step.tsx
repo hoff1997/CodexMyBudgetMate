@@ -227,8 +227,8 @@ export function BudgetReviewStep({
               <div className="text-sm text-text-dark">
                 <p className="font-semibold mb-1">⚠️ You&apos;re allocating more than you earn</p>
                 <p>
-                  You need to reduce your envelope amounts by ${Math.abs(remainingPerCycle).toFixed(2)} per paycheck,
-                  or add more income sources.
+                  How about we trim your envelope amounts by ${Math.abs(remainingPerCycle).toFixed(2)} per paycheck,
+                  or add more income sources?
                 </p>
               </div>
             </div>

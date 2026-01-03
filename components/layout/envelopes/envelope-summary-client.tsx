@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,9 +143,31 @@ export function EnvelopeSummaryClient({
   const searchParams = useSearchParams();
   const [orderedEnvelopes, setOrderedEnvelopes] = useState<SummaryEnvelope[]>([]);
   const [transferOpen, setTransferOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  // Status filter with URL persistence
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    const urlFilter = searchParams.get('filter');
+    if (urlFilter && ['all', 'healthy', 'attention', 'surplus', 'no-target', 'spending', 'tracking'].includes(urlFilter)) {
+      return urlFilter as StatusFilter;
+    }
+    return 'all';
+  });
   const [collapseAll, setCollapseAll] = useState(false);
   const [myBudgetWayExpanded, setMyBudgetWayExpanded] = useState(true);
+
+  // Handle filter change with URL persistence
+  const handleFilterChange = useCallback((filter: StatusFilter) => {
+    setStatusFilter(filter);
+
+    // Update URL params
+    const params = new URLSearchParams(searchParams.toString());
+    if (filter !== 'all') {
+      params.set('filter', filter);
+    } else {
+      params.delete('filter');
+    }
+    const newUrl = params.toString() ? `?${params.toString()}` : '/envelope-summary';
+    router.replace(newUrl, { scroll: false });
+  }, [searchParams, router]);
 
   // Handle ?action=transfer query param from dashboard quick actions
   useEffect(() => {
@@ -537,23 +559,42 @@ export function EnvelopeSummaryClient({
       });
   }, [filteredEnvelopes, categoryOptions]);
 
+  // Ref for debounced reorder timeout
+  const reorderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingReorderRef = useRef<SummaryEnvelope[] | null>(null);
+
   const persistOrder = useCallback(async (envelopes: SummaryEnvelope[]) => {
-    try {
-      await Promise.all(
-        envelopes.map((envelope, index) =>
-          fetch(`/api/envelopes/${envelope.id}`, {
-            method: "PATCH",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sort_order: index }),
-          }),
-        ),
-      );
-      toast.success("Envelope order saved");
-    } catch (error) {
-      console.error(error);
-      toast.info("Order updated locally. Connect the reorder API to persist.");
+    // Store the latest order to persist
+    pendingReorderRef.current = envelopes;
+
+    // Clear any existing timeout
+    if (reorderTimeoutRef.current) {
+      clearTimeout(reorderTimeoutRef.current);
     }
+
+    // Debounce: wait 1000ms before persisting to avoid multiple API calls during rapid reordering
+    reorderTimeoutRef.current = setTimeout(async () => {
+      const orderToPersist = pendingReorderRef.current;
+      if (!orderToPersist) return;
+
+      try {
+        await Promise.all(
+          orderToPersist.map((envelope, index) =>
+            fetch(`/api/envelopes/${envelope.id}`, {
+              method: "PATCH",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sort_order: index }),
+            }),
+          ),
+        );
+        toast.success("Envelope order saved");
+      } catch (error) {
+        console.error(error);
+        toast.info("Order updated locally. Connect the reorder API to persist.");
+      }
+      pendingReorderRef.current = null;
+    }, 1000);
   }, []);
 
   const handleReorder = useCallback(
@@ -640,7 +681,7 @@ export function EnvelopeSummaryClient({
             {/* Use shared EnvelopeFilterTabs component */}
             <EnvelopeFilterTabs
               activeFilter={statusFilter}
-              onFilterChange={setStatusFilter}
+              onFilterChange={handleFilterChange}
               envelopeCounts={statusCounts}
             />
             <div className="flex gap-2">

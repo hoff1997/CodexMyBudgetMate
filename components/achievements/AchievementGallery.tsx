@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   ACHIEVEMENTS,
-  AchievementDefinition,
-  getAllAchievements,
-} from "@/lib/achievements/definitions";
+  Achievement,
+  AchievementCategory,
+} from "@/lib/gamification/achievements";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 interface UnlockedAchievement {
   achievement_type: string;
@@ -16,7 +17,7 @@ interface UnlockedAchievement {
 }
 
 interface AchievementCardProps {
-  achievement: AchievementDefinition;
+  achievement: Achievement;
   unlocked: boolean;
   unlockedAt?: string;
 }
@@ -24,50 +25,48 @@ interface AchievementCardProps {
 function AchievementCard({
   achievement,
   unlocked,
-  unlockedAt,
 }: AchievementCardProps) {
   return (
     <div
       className={cn(
-        "relative p-4 rounded-lg border transition-all",
+        "relative flex items-start gap-2 px-2 py-1.5 rounded-md border transition-all",
         unlocked
-          ? "bg-card border-primary/30 shadow-sm"
-          : "bg-muted/30 border-border/50 opacity-60"
+          ? "bg-card border-primary/30"
+          : "bg-muted/30 border-border/50 opacity-50"
       )}
     >
       {/* Badge icon */}
       <div
         className={cn(
-          "text-4xl mb-3",
-          unlocked ? "" : "grayscale opacity-50"
+          "w-6 h-6 flex items-center justify-center text-base flex-shrink-0 mt-0.5",
+          unlocked ? "" : "grayscale"
         )}
       >
         {achievement.icon}
       </div>
 
-      {/* Achievement info */}
-      <h3
-        className={cn(
-          "font-semibold text-sm",
-          unlocked ? "text-foreground" : "text-muted-foreground"
-        )}
-      >
-        {achievement.name}
-      </h3>
-      <p className="text-xs text-muted-foreground mt-1">
-        {achievement.description}
-      </p>
+      {/* Achievement name and description */}
+      <div className="flex-1 min-w-0">
+        <div
+          className={cn(
+            "text-[11px] leading-tight font-medium truncate",
+            unlocked ? "text-foreground" : "text-muted-foreground"
+          )}
+        >
+          {achievement.title}
+        </div>
+        <div className="text-[10px] text-muted-foreground leading-tight truncate">
+          {achievement.description}
+        </div>
+      </div>
 
-      {/* Unlocked date */}
-      {unlocked && unlockedAt && (
-        <p className="text-xs text-primary mt-2">
-          Unlocked {new Date(unlockedAt).toLocaleDateString()}
-        </p>
-      )}
-
-      {/* Locked overlay indicator */}
-      {!unlocked && (
-        <div className="absolute top-2 right-2 text-lg opacity-50">🔒</div>
+      {/* Completed tick or locked indicator */}
+      {unlocked ? (
+        <div className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center">
+          <Check className="w-2.5 h-2.5 text-white" />
+        </div>
+      ) : (
+        <div className="absolute top-0.5 right-0.5 text-[10px] opacity-40">🔒</div>
       )}
     </div>
   );
@@ -108,23 +107,27 @@ export function AchievementGallery() {
     fetchAchievements();
   }, []);
 
-  const allAchievements = getAllAchievements();
+  const allAchievements = Object.values(ACHIEVEMENTS);
   const unlockedCount = Object.keys(unlockedMap).length;
   const totalCount = allAchievements.length;
 
-  // Group by category
-  const categories = {
-    savings: allAchievements.filter((a) => a.category === "savings"),
+  // Group by category (from gamification achievements)
+  const categories: Record<AchievementCategory, Achievement[]> = {
+    getting_started: allAchievements.filter((a) => a.category === "getting_started"),
+    mastery: allAchievements.filter((a) => a.category === "mastery"),
+    goals: allAchievements.filter((a) => a.category === "goals"),
     debt: allAchievements.filter((a) => a.category === "debt"),
-    budgeting: allAchievements.filter((a) => a.category === "budgeting"),
-    consistency: allAchievements.filter((a) => a.category === "consistency"),
+    streaks: allAchievements.filter((a) => a.category === "streaks"),
+    community: allAchievements.filter((a) => a.category === "community"),
   };
 
-  const categoryLabels = {
-    savings: "Savings",
+  const categoryLabels: Record<AchievementCategory, string> = {
+    getting_started: "Getting Started",
+    mastery: "Mastery",
+    goals: "Goals",
     debt: "Debt Freedom",
-    budgeting: "Budgeting",
-    consistency: "Consistency",
+    streaks: "Streaks",
+    community: "Community",
   };
 
   if (isLoading) {
@@ -159,25 +162,26 @@ export function AchievementGallery() {
           />
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {(Object.keys(categories) as Array<keyof typeof categories>).map(
-          (category) => (
-            <div key={category}>
-              <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                {categoryLabels[category]}
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {categories[category].map((achievement) => (
-                  <AchievementCard
-                    key={achievement.id}
-                    achievement={achievement}
-                    unlocked={!!unlockedMap[achievement.id]}
-                    unlockedAt={unlockedMap[achievement.id]?.unlocked_at}
-                  />
-                ))}
+      <CardContent className="space-y-4">
+        {(Object.keys(categories) as Array<AchievementCategory>).map(
+          (category) =>
+            categories[category].length > 0 && (
+              <div key={category}>
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                  {categoryLabels[category]}
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
+                  {categories[category].map((achievement) => (
+                    <AchievementCard
+                      key={achievement.key}
+                      achievement={achievement}
+                      unlocked={!!unlockedMap[achievement.key]}
+                      unlockedAt={unlockedMap[achievement.key]?.unlocked_at}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )
+            )
         )}
       </CardContent>
     </Card>

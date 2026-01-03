@@ -114,12 +114,12 @@ export const ACHIEVEMENTS: Record<string, AchievementDefinition> = {
     category: "consistency",
   },
 
-  "consistency-king": {
-    id: "consistency-king",
-    name: "Consistency King",
+  "consistency-club": {
+    id: "consistency-club",
+    name: "Consistency Club",
     description: "Reconcile 4 weeks in a row",
     icon: "📅",
-    celebrationTitle: "Consistency King!",
+    celebrationTitle: "Consistency Club!",
     celebrationMessage:
       "4 weeks of reconciling in a row. You've built a habit!",
     remyMessage:

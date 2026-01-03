@@ -4,6 +4,7 @@ import { CommandPaletteProvider } from "@/providers/command-palette-provider";
 import Sidebar from "@/components/layout/sidebar";
 import { SidebarProvider } from "@/components/layout/sidebar-context";
 import { getUserWithProfile } from "@/lib/server/get-user";
+import { checkBetaAccess } from "@/lib/utils/beta-access";
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   // Use cached fetch - deduplicated across all server components in this request
@@ -16,10 +17,17 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   const showOnboarding = profile?.show_onboarding_menu ?? true;
 
+  // Check if user has beta access to Kids + Life features
+  const betaAccess = await checkBetaAccess();
+
   return (
     <CommandPaletteProvider>
       <SidebarProvider>
-        <Sidebar userEmail={user?.email} showOnboardingMenu={showOnboarding}>
+        <Sidebar
+          userEmail={user?.email}
+          showOnboardingMenu={showOnboarding}
+          hasBetaAccess={betaAccess.hasAccess}
+        >
           {children}
         </Sidebar>
       </SidebarProvider>

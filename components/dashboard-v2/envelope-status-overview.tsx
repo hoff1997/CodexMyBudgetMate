@@ -126,21 +126,21 @@ export function EnvelopeStatusOverview({
   return (
     <Card className="bg-white border border-silver-light rounded-xl">
       {/* Header */}
-      <CardHeader className="pb-3 border-b border-silver-light">
-        <CardTitle className="text-base font-semibold text-text-dark flex items-center justify-between">
+      <CardHeader className="py-2 px-4 border-b border-silver-light">
+        <CardTitle className="text-sm font-semibold text-text-dark flex items-center justify-between">
           <span>Envelope Status</span>
           <Link
             href="/envelope-summary"
-            className="flex items-center text-sm font-normal text-sage hover:text-sage-dark"
+            className="flex items-center text-xs font-normal text-sage hover:text-sage-dark"
           >
-            View All <ChevronRight className="h-4 w-4 ml-0.5" />
+            View All <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
           </Link>
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="pt-4">
+      <CardContent className="py-2 px-4">
         {/* Horizontal Stats Row */}
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-1">
           {(["on_track", "attention", "no_target", "surplus"] as StatusBucket[]).map((status) => {
             const config = STATUS_CONFIG[status];
             const count = statusCounts[status];
@@ -150,13 +150,13 @@ export function EnvelopeStatusOverview({
                 key={status}
                 onClick={() => handleStatClick(config.filter)}
                 className={cn(
-                  "flex flex-col items-center p-3 rounded-lg transition-colors",
+                  "flex flex-col items-center py-2 px-1 rounded-lg transition-colors",
                   "hover:bg-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-sage/50"
                 )}
               >
-                <span className={cn("w-2.5 h-2.5 rounded-full mb-2", config.dotColor)} />
-                <span className="text-2xl font-semibold text-text-dark">{count}</span>
-                <span className="text-[10px] text-text-medium text-center leading-tight mt-0.5">
+                <span className={cn("w-2 h-2 rounded-full mb-1", config.dotColor)} />
+                <span className="text-lg font-semibold text-text-dark">{count}</span>
+                <span className="text-[9px] text-text-medium text-center leading-tight">
                   {config.label}
                 </span>
               </button>
@@ -164,9 +164,9 @@ export function EnvelopeStatusOverview({
           })}
 
           {/* Total - separated with border */}
-          <div className="flex flex-col items-center p-3 border-l border-silver-light">
-            <span className="text-2xl font-semibold text-text-dark">{totalEnvelopes}</span>
-            <span className="text-[10px] text-text-medium mt-0.5">Total</span>
+          <div className="flex flex-col items-center py-2 px-1 border-l border-silver-light">
+            <span className="text-lg font-semibold text-text-dark">{totalEnvelopes}</span>
+            <span className="text-[9px] text-text-medium">Total</span>
           </div>
         </div>
       </CardContent>

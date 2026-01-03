@@ -10,11 +10,12 @@ import {
   Target,
   TrendingUp,
   ArrowRight,
-  HelpCircle,
-  Receipt,
   Loader2,
   ChevronDown,
   ChevronUp,
+  Sparkles,
+  AlertTriangle,
+  CheckCircle2,
 } from "lucide-react";
 import type { SmartSuggestion } from "@/lib/utils/smart-suggestion-generator";
 import { cn } from "@/lib/cn";
@@ -28,6 +29,60 @@ interface ContextualRemyBannerProps {
   className?: string;
   compact?: boolean;
 }
+
+// Journey stage configuration
+type JourneyStage = {
+  key: string;
+  title: string;
+  description: string;
+  icon: typeof Shield;
+  color: "sage" | "blue" | "gold";
+};
+
+const JOURNEY_STAGES: Record<string, JourneyStage> = {
+  starter_stash: {
+    key: "starter_stash",
+    title: "Building Your Starter Stash",
+    description: "First $1,000 for emergencies",
+    icon: Shield,
+    color: "sage",
+  },
+  debt_payoff: {
+    key: "debt_payoff",
+    title: "Paying Down Debt",
+    description: "Tackling high-interest debt first",
+    icon: CreditCard,
+    color: "blue",
+  },
+  safety_net: {
+    key: "safety_net",
+    title: "Building Your Safety Net",
+    description: "3-6 months of expenses saved",
+    icon: Target,
+    color: "sage",
+  },
+  goals: {
+    key: "goals",
+    title: "Growing Your Goals",
+    description: "Investing in your future",
+    icon: TrendingUp,
+    color: "sage",
+  },
+  balanced: {
+    key: "balanced",
+    title: "Budget Balanced",
+    description: "All income allocated",
+    icon: CheckCircle2,
+    color: "sage",
+  },
+  over_allocated: {
+    key: "over_allocated",
+    title: "Budget Over-Allocated",
+    description: "Reduce allocations to balance",
+    icon: AlertTriangle,
+    color: "blue",
+  },
+};
 
 export function ContextualRemyBanner({
   allocationState,
@@ -45,7 +100,7 @@ export function ContextualRemyBanner({
 
   // Load dismissed state from localStorage
   useEffect(() => {
-    const dismissed = localStorage.getItem("allocation-remy-dismissed");
+    const dismissed = localStorage.getItem("allocation-banner-dismissed");
     setIsDismissed(dismissed === "true");
   }, []);
 
@@ -69,7 +124,7 @@ export function ContextualRemyBanner({
 
   // Handle dismiss
   const handleDismiss = () => {
-    localStorage.setItem("allocation-remy-dismissed", "true");
+    localStorage.setItem("allocation-banner-dismissed", "true");
     setIsDismissed(true);
   };
 
@@ -80,133 +135,180 @@ export function ContextualRemyBanner({
     return null;
   }
 
-  // Get Remy's message for compact mode - highlight the next step
-  const getCompactMessage = () => {
+  // Determine current journey stage
+  const getJourneyStage = (): JourneyStage => {
     if (allocationState === "over") {
-      return (
-        <>
-          <span className="text-blue font-semibold">${overAllocatedAmount.toFixed(2)} over</span>
-          <span className="text-text-medium"> — trim Flexible items first</span>
-        </>
-      );
+      return JOURNEY_STAGES.over_allocated;
     }
-    if (allocationState === "under") {
-      // If we have suggestions, mention the top priority
-      if (suggestions.length > 0) {
-        const topSuggestion = suggestions[0];
-        return (
-          <>
-            <span className="text-sage-dark font-semibold">${unallocatedAmount.toFixed(2)} to allocate</span>
-            <span className="text-text-medium"> → </span>
-            <span className="text-sage font-medium">{topSuggestion.title}</span>
-          </>
-        );
-      }
-      if (isLoadingSuggestions) {
-        return (
-          <>
-            <span className="text-sage-dark font-semibold">${unallocatedAmount.toFixed(2)} to allocate</span>
-            <span className="text-text-medium"> — finding best options...</span>
-          </>
-        );
-      }
-      return (
-        <>
-          <span className="text-sage-dark font-semibold">${unallocatedAmount.toFixed(2)} to allocate</span>
-          <span className="text-text-medium"> — assign to envelopes below</span>
-        </>
-      );
+    if (allocationState === "balanced") {
+      return JOURNEY_STAGES.balanced;
     }
-    return (
-      <>
-        <span className="text-sage font-semibold">Budget balanced</span>
-        <span className="text-text-medium"> you're all set!</span>
-      </>
-    );
+    // Default to starter stash for under-allocated (suggestions will refine this)
+    if (suggestions.length > 0) {
+      const topSuggestion = suggestions[0];
+      if (topSuggestion.type === "starter_stash") return JOURNEY_STAGES.starter_stash;
+      if (topSuggestion.type === "debt_payoff") return JOURNEY_STAGES.debt_payoff;
+      if (topSuggestion.type === "emergency_fund") return JOURNEY_STAGES.safety_net;
+      if (topSuggestion.type === "savings_goal") return JOURNEY_STAGES.goals;
+    }
+    return JOURNEY_STAGES.starter_stash;
   };
 
-  const getCompactColor = () => {
-    if (allocationState === "over") return "blue";
-    if (allocationState === "under") return "sage";
-    return "sage";
+  const journeyStage = getJourneyStage();
+  const StageIcon = journeyStage.icon;
+
+  // Color classes for icon backgrounds
+  const iconBgClasses: Record<string, string> = {
+    sage: "bg-sage-light",
+    blue: "bg-blue-light",
+    gold: "bg-gold-light",
   };
 
-  // Compact mode - inline banner for header (expands to fill available space)
+  const iconTextClasses: Record<string, string> = {
+    sage: "text-sage-dark",
+    blue: "text-blue",
+    gold: "text-gold",
+  };
+
+  const bannerBgClasses: Record<string, string> = {
+    sage: "bg-sage-very-light border-sage-light",
+    blue: "bg-blue-light/30 border-blue-light",
+    gold: "bg-gold-light/30 border-gold",
+  };
+
+  // Compact mode - inline banner for header
   if (compact) {
-    const color = getCompactColor();
-    const colorClasses: Record<string, string> = {
-      sage: "bg-sage-very-light border-sage-light",
-      blue: "bg-blue-light/30 border-blue-light",
-      gold: "bg-gold-light/30 border-gold",
-    };
-
     return (
       <div className={cn("flex-1 mr-3", className)}>
-        <div
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
           className={cn(
-            "flex items-start gap-2.5 rounded-xl border px-3 py-2",
-            colorClasses[color]
+            "w-full rounded-xl border px-3 py-2.5 text-left hover:opacity-90 transition-opacity",
+            bannerBgClasses[journeyStage.color]
           )}
         >
-          <RemyAvatar pose="small" size="sm" className="!w-10 !h-10 !border-2 flex-shrink-0" />
-          <span className="text-sm font-medium text-text-dark flex-1 leading-snug">
-            {getCompactMessage()}
-          </span>
-          {allocationState === "under" && suggestions.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="h-6 w-6 p-0 flex-shrink-0"
-            >
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
+          <div className="flex items-center gap-3">
+            {/* Journey stage icon */}
+            <div
+              className={cn(
+                "h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                iconBgClasses[journeyStage.color]
               )}
-            </Button>
-          )}
-        </div>
+            >
+              <StageIcon className={cn("h-5 w-5", iconTextClasses[journeyStage.color])} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              {/* Top row: Stage title + Amount */}
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <h4 className="font-semibold text-text-dark text-sm">
+                  {journeyStage.title}
+                </h4>
+
+                {allocationState === "under" && (
+                  <span className="text-sm font-semibold text-sage-dark">
+                    ${unallocatedAmount.toFixed(2)} to allocate
+                  </span>
+                )}
+
+                {allocationState === "over" && (
+                  <span className="text-sm font-semibold text-blue">
+                    ${overAllocatedAmount.toFixed(2)} over
+                  </span>
+                )}
+              </div>
+
+              {/* Bottom row: Description + CTA */}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-text-medium">
+                  {journeyStage.description}
+                </p>
+
+                <div className="flex items-center gap-1.5">
+                  <span className={cn("text-xs", iconTextClasses[journeyStage.color])}>
+                    {isExpanded ? "Hide" : "See suggestions"}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp className={cn("h-3.5 w-3.5", iconTextClasses[journeyStage.color])} />
+                  ) : (
+                    <ChevronDown className={cn("h-3.5 w-3.5", iconTextClasses[journeyStage.color])} />
+                  )}
+                  {suggestions.length > 0 && !isExpanded && (
+                    <span className="text-xs text-text-light">
+                      ({suggestions.length})
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Dismiss button (only for non-critical) */}
+            {!isCritical && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDismiss();
+                }}
+                className="flex-shrink-0 h-7 w-7 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </button>
 
         {/* Expanded suggestions dropdown */}
-        {isExpanded && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-white rounded-xl border border-sage-light shadow-lg p-3">
-            <div className="flex items-start gap-3 mb-3">
-              <RemyAvatar pose="encouraging" size="sm" className="flex-shrink-0" />
-              <p className="text-sm text-text-dark">
-                Here's where I suggest putting that ${unallocatedAmount.toFixed(2)}:
+        {isExpanded && (
+          <div className="mt-2 bg-white rounded-xl border border-silver-light shadow-lg p-4">
+            {isLoadingSuggestions ? (
+              <div className="flex items-center gap-2 py-3 text-sage">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Analysing your budget...</span>
+              </div>
+            ) : suggestions.length > 0 ? (
+              <>
+                <p className="text-sm text-text-dark mb-3">
+                  Here's where to put that ${unallocatedAmount.toFixed(2)}:
+                </p>
+                <div className="space-y-2">
+                  {suggestions.slice(0, 3).map((suggestion, index) => (
+                    <SuggestionCard
+                      key={suggestion.id}
+                      suggestion={suggestion}
+                      rank={index + 1}
+                      onTransfer={onTransfer}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-text-medium mt-3 text-center">
+                  Suggestions powered by The My Budget Way
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-text-medium">
+                {allocationState === "over"
+                  ? "Reduce allocations in your envelopes below to balance your budget."
+                  : "Allocate your remaining income to envelopes below."}
               </p>
-            </div>
-            <div className="space-y-2">
-              {suggestions.slice(0, 3).map((suggestion, index) => (
-                <SuggestionCard
-                  key={suggestion.id}
-                  suggestion={suggestion}
-                  rank={index + 1}
-                  onTransfer={onTransfer}
-                />
-              ))}
-            </div>
+            )}
           </div>
         )}
       </div>
     );
   }
 
-  // Full mode - clearer messaging about allocation vs balance
+  // Full mode - larger banner with more details
   const getBannerContent = () => {
     // CRITICAL: Over-allocated
     if (allocationState === "over") {
       return {
-        pose: "thinking" as const,
-        color: "blue",
+        stage: JOURNEY_STAGES.over_allocated,
         canDismiss: false,
         content: (
           <>
             <div className="mb-3">
-              <h4 className="font-semibold text-text-dark mb-1">
-                Your Budget is Over by ${overAllocatedAmount.toFixed(2)}
-              </h4>
               <p className="text-sm text-text-dark">
                 You've promised your envelopes more money than you actually earn per pay.
                 Trim some allocations below to match your real income.
@@ -230,15 +332,11 @@ export function ContextualRemyBanner({
     // CRITICAL: Unallocated with smart suggestions
     if (allocationState === "under" && (suggestions.length > 0 || isLoadingSuggestions)) {
       return {
-        pose: "encouraging" as const,
-        color: "sage",
+        stage: journeyStage,
         canDismiss: false,
         content: (
           <>
             <div className="mb-3">
-              <h4 className="font-semibold text-text-dark mb-1">
-                You Have ${unallocatedAmount.toFixed(2)} Unallocated Income
-              </h4>
               <p className="text-sm text-text-dark mb-2">
                 This is money from your income that isn't assigned to any envelope yet.
                 Let's give it a job:
@@ -248,7 +346,7 @@ export function ContextualRemyBanner({
             {/* Explanation box */}
             <div className="bg-white rounded-lg border border-sage-light p-2.5 mb-3 text-xs">
               <div className="font-semibold text-text-dark mb-1">
-                📋 Budget Allocation vs Envelope Balance:
+                Budget Allocation vs Envelope Balance:
               </div>
               <div className="space-y-1 text-text-medium">
                 <div>
@@ -270,7 +368,7 @@ export function ContextualRemyBanner({
             ) : (
               <div className="space-y-2.5">
                 <div className="text-xs font-semibold text-text-dark mb-1">
-                  Suggested allocations (based on The My Budget Way):
+                  Suggested allocations:
                 </div>
                 {suggestions.slice(0, 3).map((suggestion, index) => (
                   <SuggestionCard
@@ -290,55 +388,67 @@ export function ContextualRemyBanner({
     // CRITICAL: Unallocated without suggestions
     if (allocationState === "under") {
       return {
-        pose: "thinking" as const,
-        color: "gold",
+        stage: journeyStage,
         canDismiss: false,
         content: (
-          <>
-            <h4 className="font-semibold text-text-dark mb-1">
-              You Have ${unallocatedAmount.toFixed(2)} Unallocated Income
-            </h4>
-            <p className="text-sm text-text-dark">
-              This income isn't assigned to any envelope yet. Allocate it below
-              to complete your budget plan.
-            </p>
-          </>
+          <p className="text-sm text-text-dark">
+            This income isn't assigned to any envelope yet. Allocate it below
+            to complete your budget plan.
+          </p>
         ),
       };
     }
 
     // DEFAULT: All good
     return {
-      pose: "encouraging" as const,
-      color: "sage",
+      stage: JOURNEY_STAGES.balanced,
       canDismiss: true,
       content: (
         <p className="text-sm text-text-dark">
-          Budget balanced! You're telling your money exactly where to go.
-          You're in control - I'm here if you need me.
+          You're telling your money exactly where to go. Great job!
         </p>
       ),
     };
   };
 
   const banner = getBannerContent();
-
-  const colorClasses: Record<string, string> = {
-    sage: "bg-sage-very-light border-sage-light",
-    blue: "bg-blue-light/30 border-blue-light",
-    gold: "bg-gold-light/30 border-gold",
-  };
+  const BannerIcon = banner.stage.icon;
 
   return (
-    <div className={cn("relative rounded-xl border p-3", colorClasses[banner.color], className)}>
+    <div className={cn("relative rounded-xl border p-4", bannerBgClasses[banner.stage.color], className)}>
       <div className="flex items-start gap-3">
-        <RemyAvatar pose={banner.pose} size="md" className="flex-shrink-0" />
+        {/* Journey stage icon */}
+        <div
+          className={cn(
+            "h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0",
+            iconBgClasses[banner.stage.color]
+          )}
+        >
+          <BannerIcon className={cn("h-6 w-6", iconTextClasses[banner.stage.color])} />
+        </div>
 
         <div className="flex-1 min-w-0">
+          {/* Header with title and amount */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <h4 className="font-semibold text-text-dark">
+              {banner.stage.title}
+            </h4>
+            {allocationState === "under" && (
+              <span className="text-sm font-semibold text-sage-dark">
+                ${unallocatedAmount.toFixed(2)} to allocate
+              </span>
+            )}
+            {allocationState === "over" && (
+              <span className="text-sm font-semibold text-blue">
+                ${overAllocatedAmount.toFixed(2)} over
+              </span>
+            )}
+          </div>
+
           {banner.content}
 
-          <p className="text-xs text-sage-dark mt-2 italic">
-            - Remy, your financial coach
+          <p className="text-xs text-text-medium mt-3 text-center">
+            Suggestions powered by The My Budget Way
           </p>
         </div>
 
@@ -357,7 +467,7 @@ export function ContextualRemyBanner({
   );
 }
 
-// Suggestion card component (nested inside Remy's message) - Compact styling
+// Suggestion card component - Compact styling
 function SuggestionCard({
   suggestion,
   rank,
@@ -442,17 +552,17 @@ function SuggestionCard({
   );
 }
 
-// Help icon button to re-show dismissed banner
+// Help icon button with Remy avatar
 export function RemyHelpButton({ onClick }: { onClick: () => void }) {
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       onClick={onClick}
-      className="h-9 w-9 p-0"
-      title="Show Remy's guidance"
+      className="h-9 w-9 p-0 border-silver-light hover:border-sage-light hover:bg-sage-very-light overflow-hidden"
+      title="Ask Remy for help"
     >
-      <HelpCircle className="h-5 w-5 text-text-medium" />
+      <RemyAvatar pose="small" size="sm" className="!w-7 !h-7 !border-0" />
     </Button>
   );
 }

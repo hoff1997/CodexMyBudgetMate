@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import {
   calculateIdealAllocation,
   calculateIdealAllocationMultiIncome,
+  getCyclesPerYear,
   type PayCycle,
   type BillFrequency
 } from "@/lib/utils/ideal-allocation-calculator";
@@ -128,24 +129,5 @@ export async function POST(request: Request) {
       { error: error.message || "Failed to generate suggestions" },
       { status: 500 }
     );
-  }
-}
-
-function getCyclesPerYear(frequency: PayCycle | BillFrequency): number {
-  switch (frequency) {
-    case 'weekly':
-      return 52;
-    case 'fortnightly':
-      return 26;
-    case 'twice_monthly':
-      return 24;
-    case 'monthly':
-      return 12;
-    case 'quarterly':
-      return 4;
-    case 'annual':
-      return 1;
-    default:
-      return 12;
   }
 }

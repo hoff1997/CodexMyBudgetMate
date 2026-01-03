@@ -3,10 +3,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { RefreshCw, ChevronDown, ChevronRight, StickyNote, Plus, ArrowUpDown, ArrowUp, ArrowDown, X, GripVertical, CheckCircle2, AlertCircle, TrendingUp, MinusCircle, DollarSign, Receipt, ArrowUpRight, Archive, Printer } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronRight, StickyNote, Plus, ArrowUpDown, ArrowUp, ArrowDown, X, GripVertical, CheckCircle2, AlertCircle, TrendingUp, MinusCircle, DollarSign, Receipt, ArrowUpRight, Archive, Printer, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
-import { ContextualRemyBanner } from "@/components/allocation/contextual-remy-banner";
+import { CoachingWidget } from "@/components/coaching/coaching-widget";
+import { getTopSuggestions, type SmartSuggestion } from "@/lib/utils/smart-suggestion-generator";
 import { IncomeProgressCard } from "@/components/allocation/income-progress-card";
 import { IncomeCoachingBanner, IncomeInfoButton } from "@/components/allocation/income-coaching-banner";
 import { calculateIdealAllocation, type PayCycle } from "@/lib/utils/ideal-allocation-calculator";
@@ -26,11 +27,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import { EnvelopeTransferDialog } from "@/components/layout/envelopes/envelope-transfer-dialog";
-import { EnvelopeFilterTabs, getStatusBucket, type StatusFilter } from "@/components/shared/envelope-filter-tabs";
+import { EnvelopeFilterTabs, getStatusBucket, FILTER_OPTIONS, type StatusFilter } from "@/components/shared/envelope-filter-tabs";
 import { CompactProgressBar } from "@/components/shared/envelope-progress-bar";
 import { EnvelopeStatusBadge, calculateEnvelopeStatus } from "@/components/shared/envelope-status-badge";
 import { MyBudgetWayWidget, type CreditCardDebtData, type SuggestedEnvelope, type MilestoneProgress } from "@/components/my-budget-way/my-budget-way-widget";
-import { useSidebar } from "@/components/layout/sidebar-context";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { MobileGuidanceBanner } from "@/components/allocation/mobile-guidance-banner";
 import { ChangeCategoryDialog } from "@/components/allocation/change-category-dialog";
@@ -51,9 +51,12 @@ import {
 import { MoreVertical, FolderInput, History, Eye } from "lucide-react";
 import { MilestoneCompletionDialog } from "@/components/milestones/milestone-completion-dialog";
 import type { DetectedMilestone } from "@/lib/utils/milestone-detector";
+import { SortButton, type SortColumn, type SortDirection } from "@/components/allocation/sort-banner";
+import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-dialog";
+import { Gift } from "lucide-react";
+import type { GiftRecipient, GiftRecipientInput } from "@/lib/types/celebrations";
 
 type PriorityLevel = 'essential' | 'important' | 'discretionary';
-type SortColumn = 'name' | 'target' | 'current' | 'status' | 'gap' | 'perPay' | null;
 
 const PRIORITY_CONFIG: Record<PriorityLevel, {
   label: string;
@@ -169,7 +172,6 @@ function getEnvelopeStatusIcon(envelope: {
 export function AllocationClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const sidebar = useSidebar();
   const [envelopes, setEnvelopes] = useState<UnifiedEnvelopeData[]>([]);
   const [originalAllocations, setOriginalAllocations] = useState<Record<string, Record<string, number>>>({});
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
@@ -192,6 +194,7 @@ export function AllocationClient() {
     id: string;
     name: string;
     icon?: string | null;
+    color?: string | null;
     is_system: boolean;
     display_order: number;
   }[]>([]);
@@ -208,6 +211,39 @@ export function AllocationClient() {
     }
     return 'priority';
   });
+
+  // Sort state with URL persistence
+  // No pre-selected sort for any view - user must choose
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    const urlSort = searchParams.get('sort');
+    const validSorts = ['name', 'category', 'priority', 'status', 'subtype', 'targetAmount', 'frequency', 'dueDate', 'currentAmount', 'totalFunded'];
+    if (urlSort && validSorts.includes(urlSort)) {
+      return urlSort as SortColumn;
+    }
+    // No default sort - return null for all views
+    return null;
+  });
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const urlDir = searchParams.get('dir');
+    return urlDir === 'desc' ? 'desc' : 'asc';
+  });
+
+  // Handle sort change with URL persistence
+  const handleSortChange = useCallback((column: SortColumn, direction: SortDirection) => {
+    setSortColumn(column);
+    setSortDirection(direction);
+
+    // Update URL params
+    const params = new URLSearchParams(searchParams.toString());
+    if (column) {
+      params.set('sort', column);
+      params.set('dir', direction);
+    } else {
+      params.delete('sort');
+      params.delete('dir');
+    }
+    router.replace(`/budgetallocation?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
   // Change category dialog state
   const [changeCategoryDialogOpen, setChangeCategoryDialogOpen] = useState(false);
@@ -239,10 +275,11 @@ export function AllocationClient() {
   const [currentMilestone, setCurrentMilestone] = useState<DetectedMilestone | null>(null);
   const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false);
 
-  // Auto-collapse desktop sidebar on mount for more table space
-  useEffect(() => {
-    sidebar.collapseDesktop();
-  }, [sidebar]);
+  // Gift allocation dialog state (for celebration envelopes)
+  const [giftDialogOpen, setGiftDialogOpen] = useState(false);
+  const [giftEnvelope, setGiftEnvelope] = useState<UnifiedEnvelopeData | null>(null);
+  const [giftRecipients, setGiftRecipients] = useState<GiftRecipient[]>([]);
+
 
   // ========================
   // ENHANCED VIEW FEATURE FLAG
@@ -263,10 +300,6 @@ export function AllocationClient() {
   // Filter state for enhanced view
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
 
-  // Sort state for enhanced view
-  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-
   // Toggle enhanced view and persist to localStorage
   const toggleEnhancedView = useCallback(() => {
     setEnhancedView(prev => {
@@ -284,7 +317,11 @@ export function AllocationClient() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('allocation-view-mode', mode);
     }
-  }, []);
+    // When switching to snapshot view and no sort is active, default to dueDate
+    if (mode === 'snapshot' && !sortColumn) {
+      handleSortChange('dueDate', 'asc');
+    }
+  }, [sortColumn, handleSortChange]);
 
   // Handle opening change category dialog
   const handleChangeCategoryClick = useCallback((envelope: UnifiedEnvelopeData) => {
@@ -296,6 +333,33 @@ export function AllocationClient() {
   const handleArchiveClick = useCallback((envelope: UnifiedEnvelopeData) => {
     setEnvelopeToArchive(envelope);
     setArchiveDialogOpen(true);
+  }, []);
+
+  // Handle editing a category (name, color)
+  const handleEditCategory = useCallback(async (
+    categoryId: string,
+    updates: { name?: string; color?: string }
+  ) => {
+    try {
+      const res = await fetch(`/api/envelope-categories/${categoryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (res.ok) {
+        // Update local categories state
+        setCategories(prev => prev.map(cat =>
+          cat.id === categoryId
+            ? { ...cat, ...updates }
+            : cat
+        ));
+      } else {
+        throw new Error('Failed to update category');
+      }
+    } catch (error) {
+      console.error('Failed to update category:', error);
+    }
   }, []);
 
   // Handle archiving an envelope
@@ -318,6 +382,91 @@ export function AllocationClient() {
       throw error;
     }
   }, []);
+
+  // Handle opening gift allocation dialog for celebration envelopes
+  const handleGiftAllocationClick = useCallback(async (envelope: UnifiedEnvelopeData) => {
+    // Set envelope and open dialog immediately
+    setGiftEnvelope(envelope);
+    setGiftRecipients([]);
+    setGiftDialogOpen(true);
+
+    // Fetch existing gift recipients in background
+    try {
+      const res = await fetch(`/api/envelopes/${envelope.id}/gift-recipients`);
+      if (res.ok) {
+        const data = await res.json();
+        setGiftRecipients(data.recipients || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch gift recipients:', error);
+    }
+  }, []);
+
+  // Handle saving gift recipients
+  const handleSaveGiftRecipients = useCallback(async (
+    recipients: GiftRecipientInput[],
+    budgetChange: number,
+    envelopeUpdates?: { name?: string; icon?: string; category_id?: string; priority?: string; notes?: string }
+  ) => {
+    if (!giftEnvelope) return;
+
+    // Save recipients
+    const res = await fetch(`/api/envelopes/${giftEnvelope.id}/gift-recipients`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipients }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error('Gift recipients save failed:', res.status, errorData);
+      throw new Error(errorData.error || 'Failed to save gift recipients');
+    }
+
+    const data = await res.json();
+
+    // If there are envelope updates, save them too
+    if (envelopeUpdates && Object.keys(envelopeUpdates).length > 0) {
+      const envelopeRes = await fetch(`/api/envelopes/${giftEnvelope.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(envelopeUpdates),
+      });
+
+      if (!envelopeRes.ok) {
+        console.error('Failed to update envelope settings');
+        // Non-fatal - recipients were saved
+      }
+    }
+
+    // Update local envelope state with new target amount, recipient count, and any updates
+    setEnvelopes(prev => prev.map(env => {
+      if (env.id !== giftEnvelope.id) return env;
+
+      const updated: UnifiedEnvelopeData = {
+        ...env,
+        targetAmount: data.total_budget,
+        is_celebration: true,
+        gift_recipient_count: data.recipients?.length || 0,
+      };
+
+      // Apply envelope updates to local state with proper typing
+      if (envelopeUpdates?.name) updated.name = envelopeUpdates.name;
+      if (envelopeUpdates?.icon) updated.icon = envelopeUpdates.icon;
+      if (envelopeUpdates?.category_id !== undefined) {
+        updated.category_id = envelopeUpdates.category_id || null;
+      }
+      if (envelopeUpdates?.priority) {
+        updated.priority = envelopeUpdates.priority as 'essential' | 'important' | 'discretionary';
+      }
+      if (envelopeUpdates?.notes !== undefined) updated.notes = envelopeUpdates.notes || '';
+
+      return updated;
+    }));
+
+    // Refresh data
+    // Could also do: queryClient.invalidateQueries(['envelopes']);
+  }, [giftEnvelope]);
 
   // Handle opening leveling dialog
   const handleLevelBillClick = useCallback((envelope: UnifiedEnvelopeData) => {
@@ -423,21 +572,23 @@ export function AllocationClient() {
 
   // Handle column header click for sorting
   const handleSort = useCallback((column: SortColumn) => {
+    let newColumn: SortColumn = column;
+    let newDirection: SortDirection = 'asc';
+
     if (sortColumn === column) {
       // Same column - toggle direction or clear
       if (sortDirection === 'asc') {
-        setSortDirection('desc');
+        newDirection = 'desc';
       } else {
         // Third click - clear sort
-        setSortColumn(null);
-        setSortDirection('asc');
+        newColumn = null;
+        newDirection = 'asc';
       }
-    } else {
-      // New column - set ascending
-      setSortColumn(column);
-      setSortDirection('asc');
     }
-  }, [sortColumn, sortDirection]);
+
+    // Use handleSortChange to update both state and URL
+    handleSortChange(newColumn, newDirection);
+  }, [sortColumn, sortDirection, handleSortChange]);
 
   // Get sort icon for column header
   const getSortIcon = useCallback((column: SortColumn) => {
@@ -526,10 +677,18 @@ export function AllocationClient() {
         fetch("/api/envelope-categories"),
       ]);
 
+      let categoriesData: Array<{ id: string; name: string; icon?: string | null; is_system: boolean; display_order: number }> = [];
       if (categoriesRes.ok) {
         const { categories: cats } = await categoriesRes.json();
-        setCategories(cats || []);
+        categoriesData = cats || [];
+        setCategories(categoriesData);
       }
+
+      // Build category lookup map
+      const categoryLookup = new Map<string, string>();
+      categoriesData.forEach((cat) => {
+        categoryLookup.set(cat.id, cat.name);
+      });
 
       let allocationsData: Record<string, Record<string, number>> = {};
       if (allocationsRes.ok) {
@@ -555,6 +714,7 @@ export function AllocationClient() {
           is_monitored: env.is_monitored ?? false,
           // Category fields
           category_id: env.category_id,
+          category_name: env.category_id ? categoryLookup.get(env.category_id) || null : null,
           category_display_order: env.category_display_order,
           // Suggested envelope fields
           is_suggested: env.is_suggested,
@@ -567,6 +727,9 @@ export function AllocationClient() {
           is_leveled: env.is_leveled,
           leveling_data: env.leveling_data,
           seasonal_pattern: env.seasonal_pattern,
+          // Celebration envelope fields
+          is_celebration: env.is_celebration,
+          gift_recipient_count: env.gift_recipient_count,
         }));
         setEnvelopes(transformed);
 
@@ -665,16 +828,107 @@ export function AllocationClient() {
   }, [incomeSources, payCycle]);
 
   /**
+   * Sort function for envelopes
+   */
+  const sortEnvelopes = useCallback((envList: UnifiedEnvelopeData[], column: SortColumn, direction: SortDirection): UnifiedEnvelopeData[] => {
+    if (!column) return envList;
+
+    const sorted = [...envList];
+    const priorityOrder = { essential: 1, important: 2, discretionary: 3 };
+    const frequencyOrder: Record<string, number> = {
+      weekly: 1, fortnightly: 2, twice_monthly: 3,
+      monthly: 4, quarterly: 5, annual: 6
+    };
+
+    sorted.sort((a, b) => {
+      let comparison = 0;
+
+      switch (column) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+
+        case 'category':
+          const catA = a.category_name || '';
+          const catB = b.category_name || '';
+          comparison = catA.localeCompare(catB);
+          break;
+
+        case 'priority':
+          const orderA = priorityOrder[a.priority as keyof typeof priorityOrder] || 999;
+          const orderB = priorityOrder[b.priority as keyof typeof priorityOrder] || 999;
+          comparison = orderA - orderB;
+          break;
+
+        case 'status':
+          // Status is based on funding ratio: needs attention < on track < surplus
+          const getStatusOrder = (env: UnifiedEnvelopeData): number => {
+            if (env.is_tracking_only || env.subtype === 'tracking' || env.subtype === 'spending') return 4; // No status
+            const target = Number(env.targetAmount ?? 0);
+            if (!target || target === 0) return 4; // No target
+            const current = Number(env.currentAmount ?? 0);
+            const ratio = current / target;
+            if (ratio >= 1.05) return 3; // Surplus
+            if (ratio >= 0.8) return 2; // On track
+            return 1; // Needs attention
+          };
+          comparison = getStatusOrder(a) - getStatusOrder(b);
+          break;
+
+        case 'subtype':
+          comparison = (a.subtype || '').localeCompare(b.subtype || '');
+          break;
+
+        case 'targetAmount':
+          comparison = (Number(a.targetAmount) || 0) - (Number(b.targetAmount) || 0);
+          break;
+
+        case 'frequency':
+          const freqA = a.frequency ? (frequencyOrder[a.frequency] || 999) : 999;
+          const freqB = b.frequency ? (frequencyOrder[b.frequency] || 999) : 999;
+          comparison = freqA - freqB;
+          break;
+
+        case 'dueDate':
+          const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+          const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+          comparison = dateA - dateB;
+          break;
+
+        case 'currentAmount':
+          comparison = (Number(a.currentAmount) || 0) - (Number(b.currentAmount) || 0);
+          break;
+
+        case 'totalFunded':
+          // Sum all income allocations for each envelope
+          const totalA = Object.values(a.incomeAllocations || {}).reduce(
+            (sum: number, amt) => sum + (Number(amt) || 0), 0
+          );
+          const totalB = Object.values(b.incomeAllocations || {}).reduce(
+            (sum: number, amt) => sum + (Number(amt) || 0), 0
+          );
+          comparison = totalA - totalB;
+          break;
+      }
+
+      return direction === 'asc' ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, []);
+
+  /**
    * Group envelopes by priority (excluding suggested and tracking-only)
+   * Applies sorting within each priority group
    */
   const envelopesByPriority = useMemo(() => {
     const nonTrackingNonSuggested = envelopes.filter(e => !e.is_tracking_only && !e.is_suggested);
     return {
-      essential: nonTrackingNonSuggested.filter(e => e.priority === 'essential'),
-      important: nonTrackingNonSuggested.filter(e => e.priority === 'important'),
-      discretionary: nonTrackingNonSuggested.filter(e => e.priority === 'discretionary'),
+      essential: sortEnvelopes(nonTrackingNonSuggested.filter(e => e.priority === 'essential'), sortColumn, sortDirection),
+      important: sortEnvelopes(nonTrackingNonSuggested.filter(e => e.priority === 'important'), sortColumn, sortDirection),
+      discretionary: sortEnvelopes(nonTrackingNonSuggested.filter(e => e.priority === 'discretionary'), sortColumn, sortDirection),
     };
-  }, [envelopes]);
+  }, [envelopes, sortColumn, sortDirection, sortEnvelopes]);
 
   /**
    * Get suggested envelopes for My Budget Way widget
@@ -737,8 +991,10 @@ export function AllocationClient() {
    * Calculate status counts for filter tabs (enhanced view)
    */
   const statusCounts = useMemo(() => {
+    // Only count non-suggested envelopes to match filtering behavior
+    const nonSuggestedEnvelopes = envelopes.filter(e => !e.is_suggested);
     const counts: Record<StatusFilter, number> = {
-      all: envelopes.length,
+      all: nonSuggestedEnvelopes.length,
       healthy: 0,
       attention: 0,
       surplus: 0,
@@ -746,7 +1002,7 @@ export function AllocationClient() {
       spending: 0,
       tracking: 0,
     };
-    envelopes.forEach(env => {
+    nonSuggestedEnvelopes.forEach(env => {
       const bucket = getStatusBucket({
         is_tracking_only: env.is_tracking_only,
         is_spending: env.subtype === 'spending',
@@ -759,52 +1015,41 @@ export function AllocationClient() {
   }, [envelopes]);
 
   /**
-   * Sort envelopes based on current sort column and direction
+   * Sort envelopes helper - uses the sortColumn and sortDirection state
+   * This is a wrapper around the main sortEnvelopes function for convenience
    */
-  const sortEnvelopes = useCallback((envs: UnifiedEnvelopeData[]): UnifiedEnvelopeData[] => {
-    if (!sortColumn) return envs;
-
-    return [...envs].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortColumn) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'target':
-          comparison = (a.targetAmount || 0) - (b.targetAmount || 0);
-          break;
-        case 'current':
-          comparison = (a.currentAmount || 0) - (b.currentAmount || 0);
-          break;
-        case 'status': {
-          // Sort by status (funded percentage)
-          const aRatio = (a.targetAmount || 0) > 0 ? (a.currentAmount || 0) / (a.targetAmount || 1) : 0;
-          const bRatio = (b.targetAmount || 0) > 0 ? (b.currentAmount || 0) / (b.targetAmount || 1) : 0;
-          comparison = aRatio - bRatio;
-          break;
-        }
-        case 'gap': {
-          const aGap = Math.max(0, (a.targetAmount || 0) - (a.currentAmount || 0));
-          const bGap = Math.max(0, (b.targetAmount || 0) - (b.currentAmount || 0));
-          comparison = aGap - bGap;
-          break;
-        }
-        case 'perPay':
-          comparison = (a.targetAmount || 0) - (b.targetAmount || 0); // Proportional to target
-          break;
-        default:
-          return 0;
-      }
-
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }, [sortColumn, sortDirection]);
+  const sortEnvelopesWithCurrentState = useCallback((envs: UnifiedEnvelopeData[]): UnifiedEnvelopeData[] => {
+    return sortEnvelopes(envs, sortColumn, sortDirection);
+  }, [sortEnvelopes, sortColumn, sortDirection]);
 
   /**
    * Filtered envelopes by priority for enhanced view
+   *
+   * For "tracking" and "spending" filters, we need to work with the full envelope list
+   * since those are excluded from envelopesByPriority. For other filters, we filter
+   * within each priority group.
    */
   const filteredEnvelopesByPriority = useMemo(() => {
+    // For tracking/spending filters, we need to look at ALL envelopes
+    if (activeFilter === "tracking") {
+      const trackingEnvelopes = envelopes.filter(env => env.is_tracking_only && !env.is_suggested);
+      return {
+        essential: sortEnvelopes(trackingEnvelopes.filter(e => e.priority === 'essential'), sortColumn, sortDirection),
+        important: sortEnvelopes(trackingEnvelopes.filter(e => e.priority === 'important'), sortColumn, sortDirection),
+        discretionary: sortEnvelopes(trackingEnvelopes.filter(e => e.priority === 'discretionary' || !e.priority), sortColumn, sortDirection),
+      };
+    }
+
+    if (activeFilter === "spending") {
+      const spendingEnvelopes = envelopes.filter(env => env.subtype === 'spending' && !env.is_tracking_only && !env.is_suggested);
+      return {
+        essential: sortEnvelopes(spendingEnvelopes.filter(e => e.priority === 'essential'), sortColumn, sortDirection),
+        important: sortEnvelopes(spendingEnvelopes.filter(e => e.priority === 'important'), sortColumn, sortDirection),
+        discretionary: sortEnvelopes(spendingEnvelopes.filter(e => e.priority === 'discretionary' || !e.priority), sortColumn, sortDirection),
+      };
+    }
+
+    // For other filters, filter within each priority group
     const filterEnvelopes = (envs: UnifiedEnvelopeData[]) => {
       let filtered = envs;
 
@@ -822,7 +1067,7 @@ export function AllocationClient() {
       }
 
       // Apply sorting
-      return sortEnvelopes(filtered);
+      return sortEnvelopes(filtered, sortColumn, sortDirection);
     };
 
     return {
@@ -830,7 +1075,48 @@ export function AllocationClient() {
       important: filterEnvelopes(envelopesByPriority.important),
       discretionary: filterEnvelopes(envelopesByPriority.discretionary),
     };
-  }, [envelopesByPriority, activeFilter, sortEnvelopes]);
+  }, [envelopes, envelopesByPriority, activeFilter, sortEnvelopes, sortColumn, sortDirection]);
+
+  /**
+   * Filtered envelopes for category and snapshot views
+   * Applies the same filter logic as priority view, plus sorting
+   */
+  const filteredEnvelopes = useMemo(() => {
+    let result: UnifiedEnvelopeData[];
+
+    if (activeFilter === "all") {
+      result = envelopes.filter(e => !e.is_suggested);
+    } else {
+      result = envelopes.filter(env => {
+        if (env.is_suggested) return false;
+
+        const bucket = getStatusBucket({
+          is_tracking_only: env.is_tracking_only,
+          is_spending: env.subtype === 'spending',
+          target_amount: env.targetAmount,
+          current_amount: env.currentAmount,
+        });
+        return bucket === activeFilter;
+      });
+    }
+
+    // Apply sorting
+    return sortEnvelopes(result, sortColumn, sortDirection);
+  }, [envelopes, activeFilter, sortEnvelopes, sortColumn, sortDirection]);
+
+  /**
+   * Check if any envelopes match the current filter (for empty state)
+   */
+  const hasFilteredEnvelopes = useMemo(() => {
+    if (viewMode === 'priority') {
+      return (
+        filteredEnvelopesByPriority.essential.length > 0 ||
+        filteredEnvelopesByPriority.important.length > 0 ||
+        filteredEnvelopesByPriority.discretionary.length > 0
+      );
+    }
+    return filteredEnvelopes.length > 0;
+  }, [viewMode, filteredEnvelopesByPriority, filteredEnvelopes]);
 
   /**
    * Get "Funded By" value for an envelope
@@ -1135,8 +1421,8 @@ export function AllocationClient() {
 
         {/* Table */}
         {isExpanded && (
-          <div className={cn("border rounded-b-md overflow-hidden", config.borderColor)}>
-            <table className="w-full table-fixed">
+          <div className={cn("border rounded-b-md overflow-x-auto", config.borderColor)}>
+            <table className="w-full table-fixed min-w-[900px]">
               <thead className="bg-silver-very-light border-b border-silver-light">
                 <tr>
                   {/* 1. Drag Handle */}
@@ -1146,9 +1432,7 @@ export function AllocationClient() {
                     <Eye className="h-3 w-3 text-text-light mx-auto" />
                   </th>
                   {/* 3. Priority */}
-                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[40px]">Pri</th>
-                  {/* 3. Status Icon */}
-                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[36px]"></th>
+                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[50px]">Priority</th>
                   {/* 4. Envelope Name - Sortable */}
                   <th
                     className="px-2 py-2 text-left text-[10px] font-semibold text-text-medium uppercase tracking-wide cursor-pointer hover:text-text-dark w-[160px]"
@@ -1156,14 +1440,16 @@ export function AllocationClient() {
                   >
                     <span className="flex items-center">Envelope{getSortIcon('name')}</span>
                   </th>
-                  {/* 5. Type */}
+                  {/* 5. Category */}
+                  <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[100px]">Category</th>
+                  {/* 6. Type */}
                   <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[75px]">Type</th>
                   {/* 6. Target - Sortable */}
                   <th
                     className="px-2 py-2 text-right text-[10px] font-semibold text-text-medium uppercase tracking-wide cursor-pointer hover:text-text-dark w-[80px]"
-                    onClick={() => handleSort('target')}
+                    onClick={() => handleSort('targetAmount')}
                   >
-                    <span className="flex items-center justify-end">Target{getSortIcon('target')}</span>
+                    <span className="flex items-center justify-end">Target{getSortIcon('targetAmount')}</span>
                   </th>
                   {/* 7. Frequency */}
                   <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[50px]">Freq</th>
@@ -1171,12 +1457,9 @@ export function AllocationClient() {
                   <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[75px]">Due</th>
                   {/* 9. Funded By */}
                   <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[70px]">Funded</th>
-                  {/* 10. Per Pay - Sortable */}
-                  <th
-                    className="px-2 py-2 text-right text-[10px] font-semibold text-text-medium uppercase tracking-wide cursor-pointer hover:text-text-dark w-[70px]"
-                    onClick={() => handleSort('perPay')}
-                  >
-                    <span className="flex items-center justify-end">Per Pay{getSortIcon('perPay')}</span>
+                  {/* 10. Per Pay (calculated, no sorting) */}
+                  <th className="px-2 py-2 text-right text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[70px]">
+                    Per Pay
                   </th>
                   {/* 11. Annual */}
                   <th className="px-2 py-2 text-right text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[65px]">Annual</th>
@@ -1188,17 +1471,19 @@ export function AllocationClient() {
                       {/* 13. Current Balance - Sortable */}
                       <th
                         className="px-2 py-2 text-right text-[10px] font-semibold text-text-medium uppercase tracking-wide cursor-pointer hover:text-text-dark w-[70px]"
-                        onClick={() => handleSort('current')}
+                        onClick={() => handleSort('currentAmount')}
                       >
-                        <span className="flex items-center justify-end">Current{getSortIcon('current')}</span>
+                        <span className="flex items-center justify-end">Current{getSortIcon('currentAmount')}</span>
                       </th>
                       {/* 14. Due In */}
                       <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[60px]">Due In</th>
                     </>
                   )}
-                  {/* 15. Notes Icon */}
-                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[28px]"></th>
-                  {/* 16. Actions */}
+                  {/* 15. Notes */}
+                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[28px]">Notes</th>
+                  {/* 16. Status */}
+                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[45px]">Status</th>
+                  {/* 17. Actions - last column, always visible */}
                   <th className="px-1 py-2 text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[32px]"></th>
                 </tr>
               </thead>
@@ -1220,6 +1505,7 @@ export function AllocationClient() {
                     onChangeCategoryClick={handleChangeCategoryClick}
                     onArchiveClick={handleArchiveClick}
                     onLevelBillClick={handleLevelBillClick}
+                    onGiftAllocationClick={handleGiftAllocationClick}
                   />
                 ))}
               </tbody>
@@ -1235,6 +1521,90 @@ export function AllocationClient() {
   const totalAllocated = incomeAllocations.reduce((sum, s) => sum + s.allocated, 0);
   const totalSurplus = totalIncome - totalAllocated;
 
+  // Generate smart suggestions for the banner
+  const bannerSuggestions = useMemo(() => {
+    if (totalSurplus <= 0 || envelopes.length === 0) {
+      return [];
+    }
+
+    // Convert envelopes to the format expected by suggestion generator
+    const dbEnvelopes = envelopes.map(env => ({
+      id: env.id,
+      name: env.name,
+      subtype: env.subtype,
+      priority: env.priority,
+      target_amount: env.targetAmount,
+      current_amount: env.currentAmount,
+      monthly_amount: env.payCycleAmount,
+    }));
+
+    const context = {
+      envelopes: dbEnvelopes,
+      surplusAmount: totalSurplus,
+      monthlyIncome: totalIncome,
+      unallocatedIncome: totalSurplus,
+    };
+
+    // Get top 3 suggestions and transform to banner format
+    const suggestions = getTopSuggestions(context, 3);
+
+    return suggestions.map(s => ({
+      envelopeId: s.targetEnvelopeId || s.id,
+      envelopeIcon: s.icon,
+      title: s.title,
+      description: s.description,
+      suggestedAmount: s.amount || 0,
+      currentAmount: 0, // Would need envelope lookup
+      targetAmount: 0, // Would need envelope lookup
+      percentComplete: 0,
+      priority: s.priority === 'high' ? 1 : s.priority === 'medium' ? 2 : 3,
+      type: s.type === 'starter_stash' ? 'starter_stash' as const :
+            s.type === 'debt_payoff' ? 'debt' as const :
+            s.type === 'emergency_fund' ? 'safety_net' as const :
+            'general' as const,
+      reasoning: s.remyTip,
+      iconName: s.type === 'starter_stash' ? 'Shield' as const :
+                s.type === 'debt_payoff' ? 'CreditCard' as const :
+                s.type === 'emergency_fund' ? 'Target' as const :
+                'TrendingUp' as const,
+      color: s.priority === 'high' ? 'sage' as const :
+             s.priority === 'medium' ? 'blue' as const :
+             'gold' as const,
+    }));
+  }, [envelopes, totalSurplus, totalIncome]);
+
+  // Determine banner mode based on allocation state
+  const bannerMode = useMemo(() => {
+    if (totalAllocated > totalIncome) return 'over_allocated' as const;
+    if (totalSurplus > 0.01) return 'unallocated' as const;
+    return 'balanced' as const;
+  }, [totalAllocated, totalIncome, totalSurplus]);
+
+  // Calculate amounts for banner
+  const bannerAmount = useMemo(() => {
+    if (bannerMode === 'over_allocated') return totalAllocated - totalIncome;
+    if (bannerMode === 'unallocated') return totalSurplus;
+    return 0;
+  }, [bannerMode, totalAllocated, totalIncome, totalSurplus]);
+
+  // Handler for allocate button in suggestions
+  const handleSuggestionAllocate = useCallback((envelopeId: string, amount: number) => {
+    setHighlightedEnvelopeId(envelopeId);
+
+    // Scroll to the envelope
+    setTimeout(() => {
+      const envelopeRow = document.querySelector(`[data-envelope-id="${envelopeId}"]`);
+      if (envelopeRow) {
+        envelopeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+
+    // Remove highlight after 3 seconds
+    setTimeout(() => {
+      setHighlightedEnvelopeId(null);
+    }, 3000);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1245,24 +1615,21 @@ export function AllocationClient() {
 
   return (
     <div className="w-full max-w-[1600px] mx-auto px-3 py-4">
-      {/* Mobile Guidance Banner */}
-      <MobileGuidanceBanner />
-
-      {/* Compact Header - Remy widget inline with actions */}
-      <div className="relative flex items-center justify-between mb-4">
-        {/* Compact Remy Banner (left side) */}
-        <ContextualRemyBanner
-          allocationState={totalSurplus < 0 ? "over" : totalSurplus > 0.01 ? "under" : "balanced"}
-          unallocatedAmount={totalSurplus > 0 ? totalSurplus : 0}
-          overAllocatedAmount={totalSurplus < 0 ? Math.abs(totalSurplus) : 0}
-          onTransfer={(envelopeId, amount) => {
-            setTransferOpen(true);
-          }}
-          compact
-        />
-
+      {/* Header actions - at the top of the page */}
+      <div className="relative flex items-start justify-between gap-4 mb-4">
+        {/* Coaching Widget - fills available space */}
+        <div className="flex-1 min-w-0">
+          <CoachingWidget
+            envelopes={envelopes}
+            incomeSources={incomeSources}
+            currentPage="allocation"
+            onOpenTransferDialog={() => setTransferOpen(true)}
+            totalAllocated={totalAllocated}
+            totalIncome={totalIncome}
+          />
+        </div>
         {/* Right side actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2 flex-shrink-0">
           <RemyHelpPanel pageId="allocation" />
           <Button variant="outline" size="sm" onClick={fetchData} disabled={isLoading}>
             <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
@@ -1300,6 +1667,9 @@ export function AllocationClient() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Guidance Banner */}
+      <MobileGuidanceBanner />
 
       {/* The My Budget Way Widget (Enhanced View) - Uses status mode to match envelope-summary */}
       {enhancedView && (
@@ -1365,15 +1735,16 @@ export function AllocationClient() {
             </Button>
 
             {/* View Toggle: Priority / Category / Snapshot */}
-            <div className="flex items-center gap-0.5 bg-silver-very-light rounded-md p-0.5">
+            <div className="flex items-center bg-white rounded-md border border-sage-dark overflow-hidden">
+              <span className="bg-sage text-white text-[11px] font-medium px-2 py-1.5">Page view</span>
               <button
                 type="button"
                 onClick={() => toggleViewMode('priority')}
                 className={cn(
-                  "px-2 py-1 text-[11px] font-medium rounded transition-colors",
+                  "px-2 py-1.5 text-[11px] font-medium transition-colors",
                   viewMode === 'priority'
-                    ? "bg-white text-sage-dark shadow-sm"
-                    : "text-text-medium hover:text-text-dark"
+                    ? "bg-silver-very-light text-sage-dark"
+                    : "bg-white text-text-medium hover:text-text-dark hover:bg-silver-very-light/50"
                 )}
               >
                 Priority
@@ -1382,10 +1753,10 @@ export function AllocationClient() {
                 type="button"
                 onClick={() => toggleViewMode('category')}
                 className={cn(
-                  "px-2 py-1 text-[11px] font-medium rounded transition-colors",
+                  "px-2 py-1.5 text-[11px] font-medium transition-colors",
                   viewMode === 'category'
-                    ? "bg-white text-sage-dark shadow-sm"
-                    : "text-text-medium hover:text-text-dark"
+                    ? "bg-silver-very-light text-sage-dark"
+                    : "bg-white text-text-medium hover:text-text-dark hover:bg-silver-very-light/50"
                 )}
               >
                 Category
@@ -1394,15 +1765,23 @@ export function AllocationClient() {
                 type="button"
                 onClick={() => toggleViewMode('snapshot')}
                 className={cn(
-                  "px-2 py-1 text-[11px] font-medium rounded transition-colors",
+                  "px-2 py-1.5 text-[11px] font-medium transition-colors",
                   viewMode === 'snapshot'
-                    ? "bg-white text-sage-dark shadow-sm"
-                    : "text-text-medium hover:text-text-dark"
+                    ? "bg-silver-very-light text-sage-dark"
+                    : "bg-white text-text-medium hover:text-text-dark hover:bg-silver-very-light/50"
                 )}
               >
                 Snapshot
               </button>
             </div>
+
+            {/* Sort Button - Standalone */}
+            <SortButton
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSortChange={handleSortChange}
+              viewMode={viewMode}
+            />
           </div>
         </div>
       )}
@@ -1421,18 +1800,42 @@ export function AllocationClient() {
       )}
 
       {/* Envelope Groups - Horizontal scroll on mobile */}
-      <div ref={printableAreaRef} className="overflow-x-auto -mx-6 px-6 lg:mx-0 lg:px-0 bg-white">
+      <div ref={printableAreaRef} className="overflow-x-auto -mx-6 px-6 lg:mx-0 lg:px-0 bg-white min-h-[300px]">
         <div className="min-w-[900px] lg:min-w-0">
-          {viewMode === 'priority' && (
+          {/* Empty state when no envelopes match the current filter */}
+          {!hasFilteredEnvelopes && activeFilter !== "all" && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-silver-very-light flex items-center justify-center mb-4">
+                <Target className="h-8 w-8 text-silver" />
+              </div>
+              <h3 className="text-lg font-semibold text-text-dark mb-2">
+                No envelopes match this filter
+              </h3>
+              <p className="text-sm text-text-medium max-w-md">
+                No envelopes are currently in the &ldquo;{FILTER_OPTIONS.find(f => f.key === activeFilter)?.label || activeFilter}&rdquo; category.
+                Try selecting a different filter or &ldquo;All&rdquo; to see all your envelopes.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveFilter("all")}
+                className="mt-4"
+              >
+                Show All Envelopes
+              </Button>
+            </div>
+          )}
+
+          {viewMode === 'priority' && hasFilteredEnvelopes && (
             <>
               {renderPriorityGroup('essential')}
               {renderPriorityGroup('important')}
               {renderPriorityGroup('discretionary')}
             </>
           )}
-          {viewMode === 'category' && (
+          {viewMode === 'category' && hasFilteredEnvelopes && (
             <CategoryGroups
-              envelopes={envelopes.filter(e => !e.is_tracking_only && !e.is_suggested)}
+              envelopes={activeFilter === 'tracking' ? filteredEnvelopes : filteredEnvelopes.filter(e => !e.is_tracking_only)}
               categories={categories}
               incomeSources={incomeSources}
               paySchedule={paySchedule}
@@ -1442,6 +1845,8 @@ export function AllocationClient() {
               calculatePerPay={calculatePerPay}
               onChangeCategoryClick={handleChangeCategoryClick}
               onArchiveClick={handleArchiveClick}
+              onEditCategory={handleEditCategory}
+              preserveOrder={!!sortColumn}
               renderEnvelopeRow={(envelope, options) => (
                 <EnvelopeRow
                   key={envelope.id}
@@ -1456,16 +1861,18 @@ export function AllocationClient() {
                   onEnvelopeChange={handleEnvelopeChange}
                   isHighlighted={highlightedEnvelopeId === envelope.id}
                   enhancedView={enhancedView}
+                  showCategoryColumn={options.showCategoryColumn}
                   onChangeCategoryClick={options.onChangeCategoryClick}
                   onArchiveClick={options.onArchiveClick}
                   onLevelBillClick={handleLevelBillClick}
+                  onGiftAllocationClick={handleGiftAllocationClick}
                 />
               )}
             />
           )}
-          {viewMode === 'snapshot' && (
+          {viewMode === 'snapshot' && hasFilteredEnvelopes && (
             <SnapshotView
-              envelopes={envelopes}
+              envelopes={filteredEnvelopes}
               incomeSources={incomeSources}
               onEnvelopeChange={handleEnvelopeChange}
               onChangeCategoryClick={handleChangeCategoryClick}
@@ -1656,7 +2063,6 @@ export function AllocationClient() {
             }
           }}
           envelopeName={envelopeToLevel.name}
-          suggestedPattern={detectedSeasonalInfo.suggestedPattern}
           onBack={() => setLevelingStep('detection')}
           onSave={handleSaveLevelingData}
         />
@@ -1687,6 +2093,35 @@ export function AllocationClient() {
         onOpenChange={setMilestoneDialogOpen}
         onDismiss={handleDismissMilestone}
       />
+
+      {/* Gift Allocation Dialog for Celebration Envelopes */}
+      {giftEnvelope && (
+        <GiftAllocationDialog
+          open={giftDialogOpen}
+          onOpenChange={(open) => {
+            setGiftDialogOpen(open);
+            if (!open) {
+              setGiftEnvelope(null);
+              setGiftRecipients([]);
+            }
+          }}
+          envelope={{
+            id: giftEnvelope.id,
+            name: giftEnvelope.name,
+            icon: giftEnvelope.icon,
+            is_celebration: true,
+            target_amount: giftEnvelope.targetAmount || 0,
+            current_amount: giftEnvelope.currentAmount || 0,
+            category_id: giftEnvelope.category_id ?? undefined,
+            category_name: giftEnvelope.category_name ?? undefined,
+            priority: giftEnvelope.priority,
+            notes: giftEnvelope.notes,
+          }}
+          existingRecipients={giftRecipients}
+          onSave={handleSaveGiftRecipients}
+          categories={categories}
+        />
+      )}
     </div>
   );
 }
@@ -1809,9 +2244,11 @@ function EnvelopeRow({
   onEnvelopeChange,
   isHighlighted,
   enhancedView = false,
+  showCategoryColumn = true,
   onChangeCategoryClick,
   onArchiveClick,
   onLevelBillClick,
+  onGiftAllocationClick,
 }: {
   envelope: UnifiedEnvelopeData;
   incomeSources: IncomeSource[];
@@ -1824,9 +2261,11 @@ function EnvelopeRow({
   onEnvelopeChange: (envelopeId: string, field: keyof UnifiedEnvelopeData, value: any) => void;
   isHighlighted?: boolean;
   enhancedView?: boolean;
+  showCategoryColumn?: boolean;
   onChangeCategoryClick?: (envelope: UnifiedEnvelopeData) => void;
   onArchiveClick?: (envelope: UnifiedEnvelopeData) => void;
   onLevelBillClick?: (envelope: UnifiedEnvelopeData) => void;
+  onGiftAllocationClick?: (envelope: UnifiedEnvelopeData) => void;
 }) {
   const perPay = calculatePerPay(envelope);
   const annual = calculateAnnual(envelope);
@@ -1884,8 +2323,8 @@ function EnvelopeRow({
 
   const rowClass = cn(
     isSuggestedUnfunded
-      ? "bg-sage-very-light hover:bg-sage-light transition-colors group"
-      : "hover:bg-[#E2EEEC] transition-colors group h-[44px]",
+      ? "bg-sage-very-light transition-colors group"
+      : "transition-colors group h-[44px]",
     highlightClass
   );
 
@@ -1927,7 +2366,7 @@ function EnvelopeRow({
   const editableCellBg = "bg-sage-very-light/50 hover:bg-sage-light/30";
 
   return (
-    <tr ref={rowRef} className={rowClass}>
+    <tr ref={rowRef} data-envelope-id={envelope.id} className={rowClass}>
       {/* 1. Drag Handle */}
       <td className="px-1 py-1.5 text-center">
         <GripVertical className="h-3.5 w-3.5 text-text-light cursor-grab" />
@@ -1961,13 +2400,6 @@ function EnvelopeRow({
         />
       </td>
 
-      {/* 3. Status Icon (with tooltip) */}
-      <td className="px-1 py-1.5 text-center">
-        <div className="inline-flex items-center justify-center" title={statusInfo.tooltip}>
-          {statusInfo.icon}
-        </div>
-      </td>
-
       {/* 4. Envelope Name */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
         <div className="flex items-center gap-1.5">
@@ -1985,10 +2417,28 @@ function EnvelopeRow({
           {envelope.is_leveled && envelope.seasonal_pattern && (
             <LeveledIndicator seasonalPattern={envelope.seasonal_pattern} />
           )}
+          {/* Show gift recipients indicator for celebration envelopes */}
+          {(envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0 && (
+            <span
+              title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''}`}
+              className="flex-shrink-0"
+            >
+              <Gift className="h-3.5 w-3.5 text-gold" />
+            </span>
+          )}
         </div>
       </td>
 
-      {/* 5. Type */}
+      {/* 5. Category (only in priority view) */}
+      {showCategoryColumn && (
+        <td className="px-2 py-1.5">
+          <span className="text-[11px] text-text-medium truncate block">
+            {envelope.category_name || "-"}
+          </span>
+        </td>
+      )}
+
+      {/* 6. Type */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
         <select
           value={envelope.subtype}
@@ -2147,7 +2597,14 @@ function EnvelopeRow({
         )}
       </td>
 
-      {/* 16. Actions (Three-dot menu) */}
+      {/* 16. Status Icon (with tooltip) */}
+      <td className="px-1 py-1.5 text-center">
+        <div className="inline-flex items-center justify-center" title={statusInfo.tooltip}>
+          {statusInfo.icon}
+        </div>
+      </td>
+
+      {/* 17. Actions (Three-dot menu) - last column, always visible */}
       <td className="px-1 py-1.5">
         {envelope.is_suggested ? (
           <span className="text-[8px] text-text-light">—</span>
@@ -2156,7 +2613,7 @@ function EnvelopeRow({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="p-0.5 rounded text-text-light hover:bg-silver-very-light hover:text-text-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                className="p-0.5 rounded text-text-medium hover:bg-silver-very-light hover:text-text-dark"
               >
                 <MoreVertical className="h-3.5 w-3.5" />
               </button>
@@ -2188,6 +2645,16 @@ function EnvelopeRow({
                 <Eye className="h-3.5 w-3.5" />
                 {envelope.is_monitored ? "Remove from Quick Glance" : "Add to Quick Glance"}
               </DropdownMenuItem>
+              {/* Gift Recipients - only show for celebration envelopes (by flag or category) */}
+              {(envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && onGiftAllocationClick && (
+                <DropdownMenuItem
+                  onClick={() => onGiftAllocationClick(envelope)}
+                  className="text-xs gap-2"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  Gift Recipients
+                </DropdownMenuItem>
+              )}
               {/* Level this bill - only show for bill envelopes that aren't already leveled */}
               {envelope.subtype === 'bill' && !envelope.is_leveled && onLevelBillClick && (
                 <DropdownMenuItem

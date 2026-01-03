@@ -127,8 +127,8 @@ export function EnvelopeResolutionDialog({
             Resolve Unbudgeted Envelopes
           </DialogTitle>
           <DialogDescription>
-            Choose how to handle each envelope without budget allocation. You must resolve all
-            envelopes to remove the warning.
+            Choose how to handle each envelope without budget allocation. Let&apos;s resolve each
+            one to remove the warning.
           </DialogDescription>
         </DialogHeader>
 

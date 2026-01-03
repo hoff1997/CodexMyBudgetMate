@@ -14,8 +14,16 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CheckCircle2, AlertTriangle, Trash2, Plus } from "lucide-react";
-import { RemyTip } from "@/components/onboarding/remy-tip";
+import { CheckCircle2, AlertTriangle, Trash2, Plus, Snowflake, X, TrendingUp } from "lucide-react";
+import { RemyTip, RemyAvatar } from "@/components/onboarding/remy-tip";
+import { detectSeasonalBill } from "@/lib/utils/seasonal-bills";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 import type { PersonaType } from "@/lib/onboarding/personas";
 import { PERSONAS } from "@/lib/onboarding/personas";
@@ -58,6 +66,10 @@ export function EnvelopeCreationStep({
   // Two-step process: select then configure envelopes
   const [step, setStep] = useState<'select' | 'configure'>('select');
   const [selectedEnvelopes, setSelectedEnvelopes] = useState<string[]>([]);
+  // Track dismissed seasonal hints (by envelope name)
+  const [dismissedSeasonalHints, setDismissedSeasonalHints] = useState<Set<string>>(new Set());
+  // Leveling info dialog state
+  const [levelingInfoOpen, setLevelingInfoOpen] = useState(false);
 
   // Get primary income source for calculations
   const primaryIncome = incomeSources[0];
@@ -318,34 +330,75 @@ export function EnvelopeCreationStep({
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
           {masterEnvelopes.map((envelope) => {
             const isSelected = selectedEnvelopes.includes(envelope.name);
+            const seasonalDetection = detectSeasonalBill(envelope.name);
+            const showSeasonalHint = seasonalDetection.isLikelySeasonal &&
+              seasonalDetection.suggestedPattern === 'winter-peak' &&
+              !dismissedSeasonalHints.has(envelope.name);
 
             return (
               <div
                 key={envelope.name}
-                onClick={() => handleToggleEnvelope(envelope.name)}
-                className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                  isSelected
-                    ? "border-[#7A9E9A] bg-[#E2EEEC]"
-                    : "border-border bg-background hover:border-[#B8D4D0]"
-                }`}
+                className="space-y-0"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleToggleEnvelope(envelope.name)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="text-2xl">{envelope.icon}</span>
-                    <div>
-                      <p className="font-medium">{envelope.name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {envelope.priority}
-                      </p>
+                <div
+                  onClick={() => handleToggleEnvelope(envelope.name)}
+                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                    isSelected
+                      ? "border-[#7A9E9A] bg-[#E2EEEC]"
+                      : "border-border bg-background hover:border-[#B8D4D0]"
+                  } ${showSeasonalHint ? 'rounded-b-none' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleEnvelope(envelope.name)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className="text-2xl">{envelope.icon}</span>
+                      <div>
+                        <p className="font-medium">{envelope.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {envelope.priority}
+                        </p>
+                      </div>
                     </div>
+                    {isSelected && <CheckCircle2 className="h-5 w-5 text-[#7A9E9A]" />}
                   </div>
-                  {isSelected && <CheckCircle2 className="h-5 w-5 text-[#7A9E9A]" />}
                 </div>
+
+                {/* Seasonal bill hint banner */}
+                {showSeasonalHint && (
+                  <div className="bg-blue-light border border-t-0 border-blue rounded-b-lg px-3 py-2 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-blue">
+                      <Snowflake className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>
+                        This bill appears seasonal and can be leveled.{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLevelingInfoOpen(true);
+                          }}
+                          className="underline hover:text-blue-dark"
+                        >
+                          Learn more
+                        </button>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDismissedSeasonalHints(prev => new Set([...prev, envelope.name]));
+                      }}
+                      className="text-blue hover:text-blue-dark p-0.5"
+                      aria-label="Dismiss hint"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -360,6 +413,51 @@ export function EnvelopeCreationStep({
         >
           Continue with {selectedEnvelopes.length} Envelope{selectedEnvelopes.length !== 1 ? 's' : ''}
         </Button>
+
+        {/* Leveling Info Dialog */}
+        <Dialog open={levelingInfoOpen} onOpenChange={setLevelingInfoOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <RemyAvatar pose="thinking" size="sm" />
+                <div>
+                  <DialogTitle className="text-lg flex items-center gap-2">
+                    <Snowflake className="h-5 w-5 text-blue" />
+                    What is Bill Leveling?
+                  </DialogTitle>
+                </div>
+              </div>
+              <DialogDescription className="text-left space-y-3 pt-2">
+                <p>
+                  Some bills like <strong>power, gas, and heating</strong> vary throughout the year -
+                  higher in winter, lower in summer.
+                </p>
+                <p>
+                  <strong>Leveling</strong> calculates a consistent monthly amount based on your
+                  actual bills over 12 months. This way, you set aside the same amount each pay,
+                  and you&apos;ll never be caught short during the expensive months.
+                </p>
+                <div className="bg-sage-very-light border border-sage-light rounded-lg p-3 mt-4">
+                  <div className="flex items-start gap-2">
+                    <TrendingUp className="h-4 w-4 text-sage flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-text-dark">
+                      After you complete onboarding, you can set up leveling for any seasonal bill
+                      from the Budget Allocation page.
+                    </p>
+                  </div>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end pt-2">
+              <Button
+                onClick={() => setLevelingInfoOpen(false)}
+                className="bg-sage hover:bg-sage-dark"
+              >
+                Got it
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -648,6 +746,51 @@ export function EnvelopeCreationStep({
         <Plus className="mr-2 h-4 w-4" />
         Add Another Envelope
       </Button>
+
+      {/* Leveling Info Dialog */}
+      <Dialog open={levelingInfoOpen} onOpenChange={setLevelingInfoOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <RemyAvatar pose="thinking" size="sm" />
+              <div>
+                <DialogTitle className="text-lg flex items-center gap-2">
+                  <Snowflake className="h-5 w-5 text-blue" />
+                  What is Bill Leveling?
+                </DialogTitle>
+              </div>
+            </div>
+            <DialogDescription className="text-left space-y-3 pt-2">
+              <p>
+                Some bills like <strong>power, gas, and heating</strong> vary throughout the year -
+                higher in winter, lower in summer.
+              </p>
+              <p>
+                <strong>Leveling</strong> calculates a consistent monthly amount based on your
+                actual bills over 12 months. This way, you set aside the same amount each pay,
+                and you&apos;ll never be caught short during the expensive months.
+              </p>
+              <div className="bg-sage-very-light border border-sage-light rounded-lg p-3 mt-4">
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="h-4 w-4 text-sage flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-text-dark">
+                    After you complete onboarding, you can set up leveling for any seasonal bill
+                    from the Budget Allocation page.
+                  </p>
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end pt-2">
+            <Button
+              onClick={() => setLevelingInfoOpen(false)}
+              className="bg-sage hover:bg-sage-dark"
+            >
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

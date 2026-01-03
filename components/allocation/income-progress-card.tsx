@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { CheckCircle2, AlertCircle } from "lucide-react";
 
 interface IncomeProgressCardProps {
   name: string;
@@ -12,30 +11,30 @@ interface IncomeProgressCardProps {
 }
 
 /**
- * Get frequency label for display (shorter version)
+ * Get frequency label with pays per year
  */
 function getFrequencyLabel(frequency: string): string {
   switch (frequency) {
     case 'weekly':
-      return 'Weekly';
+      return 'Weekly · 52 pays/yr';
     case 'fortnightly':
-      return 'Fortnightly';
+      return 'Fortnightly · 26 pays/yr';
     case 'twice_monthly':
-      return 'Twice Monthly';
+      return 'Twice Monthly · 24 pays/yr';
     case 'monthly':
-      return 'Monthly';
+      return 'Monthly · 12 pays/yr';
     default:
       return '';
   }
 }
 
 /**
- * IncomeProgressCard - Compact single-line layout with progress bar in the middle
+ * IncomeProgressCard - Full-width card with progress bar at bottom
  *
  * Terminology:
- * - "Unallocated" = money not assigned to envelopes (should go to Surplus envelope)
- * - "Over Allocated" = committed more than income allows
- * - "Fully Allocated" = ideal state (100% assigned)
+ * - "remaining" = money not assigned to envelopes yet
+ * - "over" = committed more than income allows
+ * - "allocated" = percentage assigned to envelopes
  */
 export function IncomeProgressCard({
   name,
@@ -44,106 +43,79 @@ export function IncomeProgressCard({
   frequency,
   isPrimary = false,
 }: IncomeProgressCardProps) {
-  const unallocated = amount - allocated;
+  const remaining = amount - allocated;
   const percentUsed = amount > 0 ? (allocated / amount) * 100 : 0;
   const isOverAllocated = allocated > amount;
-  const isFullyAllocated = Math.abs(unallocated) < 0.01; // Within 1 cent
 
-  // Use exact hex colors for consistency
-  const accentColor = isPrimary ? '#7A9E9A' : '#B8D4D0'; // sage or sage-light
+  // Progress bar color - sage for normal, blue for over-allocated
+  const progressBgColor = isOverAllocated ? '#6B9ECE' : '#7A9E9A';
 
-  // Progress bar color based on allocation status
-  const progressBgColor = isFullyAllocated ? '#7A9E9A' : // sage for fully allocated
-                          isOverAllocated ? '#6B9ECE' : // blue for over
-                          '#D4A853'; // gold for under-allocated
+  // Status text color
+  const remainingColor = isOverAllocated ? 'text-blue' : 'text-text-medium';
 
   return (
-    <div
-      className="bg-white border border-silver-light rounded-lg px-2 py-1.5"
-      style={{ borderLeftWidth: '2px', borderLeftColor: accentColor }}
-    >
-      {/* Single Row: Name/Frequency | Progress Bar | Stats | Status */}
-      <div className="flex items-center gap-2">
+    <div className="bg-white border border-silver-light rounded-xl px-4 py-3 shadow-sm">
+      {/* Top Row: Icon + Name/Frequency | Per Pay | Allocated */}
+      <div className="flex items-center justify-between mb-3">
         {/* Left: Icon, Name & Frequency */}
-        <div className="flex items-center gap-1.5 min-w-0 flex-shrink-0" style={{ width: '130px' }}>
-          <span className="text-xs">{isPrimary ? "💵" : "💰"}</span>
-          <div className="min-w-0">
-            <div className="font-medium text-xs text-text-dark truncate">
-              {name}
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">{isPrimary ? "💵" : "💰"}</span>
+          <div>
+            <div className="font-semibold text-text-dark">
+              {isPrimary ? "PRIMARY: " : ""}{name}
             </div>
-            <div className="text-[9px] text-text-medium">
+            <div className="text-xs text-text-medium">
               {getFrequencyLabel(frequency)}
             </div>
           </div>
         </div>
 
-        {/* Middle: Progress Bar - fixed width */}
-        <div className="flex-shrink-0" style={{ width: '70px' }}>
-          <div className="h-1 bg-[#E5E7EB] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${Math.min(percentUsed, 100)}%`,
-                backgroundColor: progressBgColor
-              }}
-            />
-          </div>
-          <div className="text-[8px] text-text-medium text-center mt-0.5">
-            {percentUsed.toFixed(0)}%
-          </div>
-        </div>
-
-        {/* Stats & Status - tighter spacing */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Per Pay */}
+        {/* Right: Per Pay & Allocated */}
+        <div className="flex items-center gap-6">
           <div className="text-right">
-            <div className="text-[9px] text-text-medium">Per Pay</div>
-            <div className="text-[10px] font-semibold text-text-dark">
-              ${amount.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <div className="text-xs text-text-medium">Per Pay</div>
+            <div className="text-lg font-semibold text-text-dark">
+              ${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
-
-          {/* Allocated */}
           <div className="text-right">
-            <div className="text-[9px] text-text-medium">Allocated</div>
+            <div className="text-xs text-text-medium">Allocated</div>
             <div className={cn(
-              "text-[10px] font-semibold",
-              isFullyAllocated ? "text-sage" :
-              isOverAllocated ? "text-blue" : "text-gold"
+              "text-lg font-semibold",
+              isOverAllocated ? "text-blue" : "text-sage"
             )}>
-              ${allocated.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              ${allocated.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
-
-          {/* Status indicator */}
-          <div className="text-[9px] text-right" style={{ width: '60px' }}>
-            {isFullyAllocated ? (
-              <div className="text-sage">
-                <div className="flex items-center gap-0.5 justify-end">
-                  <CheckCircle2 className="h-2 w-2" />
-                  <span>Fully</span>
-                </div>
-                <div>allocated</div>
-              </div>
-            ) : isOverAllocated ? (
-              <div className="text-blue">
-                <div className="flex items-center gap-0.5 justify-end">
-                  <AlertCircle className="h-2 w-2" />
-                  <span>${Math.abs(unallocated).toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                </div>
-                <div>over</div>
-              </div>
-            ) : (
-              <div className="text-gold">
-                <div className="flex items-center gap-0.5 justify-end">
-                  <AlertCircle className="h-2 w-2" />
-                  <span>${unallocated.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-                </div>
-                <div>unallocated</div>
-              </div>
-            )}
-          </div>
         </div>
+      </div>
+
+      {/* Progress Bar - full width */}
+      <div className="h-2 bg-[#E5E7EB] rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{
+            width: `${Math.min(percentUsed, 100)}%`,
+            backgroundColor: progressBgColor
+          }}
+        />
+      </div>
+
+      {/* Bottom Row: Percentage | Remaining */}
+      <div className="flex items-center justify-between text-sm">
+        <span className={cn(
+          "font-medium",
+          isOverAllocated ? "text-blue" : "text-sage"
+        )}>
+          {percentUsed.toFixed(0)}% allocated
+        </span>
+        <span className={remainingColor}>
+          {isOverAllocated ? (
+            <>${Math.abs(remaining).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over</>
+          ) : (
+            <>${remaining.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remaining</>
+          )}
+        </span>
       </div>
     </div>
   );

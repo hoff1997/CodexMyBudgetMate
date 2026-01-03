@@ -9,3 +9,4 @@ export { UpcomingNeedsSection, type UpcomingBill } from "./upcoming-needs-sectio
 export { WaterfallPreview, type WaterfallData } from "./waterfall-preview";
 export { QuickActionsV2 } from "./quick-actions-v2";
 export { QuickGlanceWidget } from "./quick-glance-widget";
+export { ReconciliationAlertWidget } from "./reconciliation-alert-widget";

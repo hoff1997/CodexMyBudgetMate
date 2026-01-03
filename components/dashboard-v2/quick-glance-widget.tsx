@@ -29,12 +29,15 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/finance";
+import { format } from "date-fns";
 
 interface QuickGlanceEnvelope {
   id: string;
   name: string;
   icon?: string;
   current_amount: number;
+  target_amount?: number;
+  due_date?: string | null;
   is_monitored?: boolean;
 }
 
@@ -133,45 +136,75 @@ export function QuickGlanceWidget({
           </button>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-3">
+        {/* Table Header */}
+        <div className="grid items-center py-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-light border-b border-[#E5E7EB]"
+          style={{ gridTemplateColumns: "1fr 60px 60px 50px" }}
+        >
+          <div>Envelope</div>
+          <div className="text-right">Target</div>
+          <div className="text-right">Actual</div>
+          <div className="text-right">Due</div>
+        </div>
+
         <div className="divide-y divide-[#E5E7EB]">
-          {watchedEnvelopes.map((envelope) => (
-            <div
-              key={envelope.id}
-              className="flex items-center justify-between py-2.5"
-            >
-              <span className="text-sm text-[#3D3D3D]">{envelope.name}</span>
-              <span
-                className={cn(
-                  "text-sm font-semibold",
-                  envelope.current_amount > 0
-                    ? "text-[#7A9E9A]"
-                    : "text-[#6B9ECE]"
-                )}
+          {watchedEnvelopes.map((envelope) => {
+            const dueDate = envelope.due_date ? new Date(envelope.due_date) : null;
+            const isFunded = envelope.target_amount
+              ? envelope.current_amount >= envelope.target_amount
+              : envelope.current_amount > 0;
+
+            return (
+              <div
+                key={envelope.id}
+                className="grid items-center py-2"
+                style={{ gridTemplateColumns: "1fr 60px 60px 50px" }}
               >
-                {formatCurrency(envelope.current_amount)}
-              </span>
-            </div>
-          ))}
+                <span className="text-xs text-[#3D3D3D] truncate pr-2">{envelope.name}</span>
+                <span className="text-xs text-[#6B6B6B] text-right">
+                  {envelope.target_amount ? formatCurrency(envelope.target_amount) : "—"}
+                </span>
+                <span
+                  className={cn(
+                    "text-xs font-semibold text-right",
+                    isFunded ? "text-[#7A9E9A]" : "text-[#6B9ECE]"
+                  )}
+                >
+                  {formatCurrency(envelope.current_amount)}
+                </span>
+                <span className="text-[10px] text-[#6B6B6B] text-right">
+                  {dueDate ? format(dueDate, "MMM d") : "—"}
+                </span>
+              </div>
+            );
+          })}
 
           {/* Surplus and CC Holding at the bottom */}
-          <div className="flex items-center justify-between py-2.5">
-            <span className="text-sm text-[#6B6B6B]">Surplus</span>
+          <div className="grid items-center py-2"
+            style={{ gridTemplateColumns: "1fr 60px 60px 50px" }}
+          >
+            <span className="text-xs text-[#6B6B6B]">Surplus</span>
+            <span className="text-xs text-[#6B6B6B] text-right">—</span>
             <span className={cn(
-              "text-sm font-semibold",
+              "text-xs font-semibold text-right",
               surplusAmount > 0 ? "text-[#7A9E9A]" : "text-[#9CA3AF]"
             )}>
               {formatCurrency(surplusAmount)}
             </span>
+            <span className="text-[10px] text-[#6B6B6B] text-right">—</span>
           </div>
-          <div className="flex items-center justify-between py-2.5">
-            <span className="text-sm text-[#6B6B6B]">CC Holding</span>
+          <div className="grid items-center py-2"
+            style={{ gridTemplateColumns: "1fr 60px 60px 50px" }}
+          >
+            <span className="text-xs text-[#6B6B6B]">CC Holding</span>
+            <span className="text-xs text-[#6B6B6B] text-right">—</span>
             <span className={cn(
-              "text-sm font-semibold",
+              "text-xs font-semibold text-right",
               ccHoldingAmount > 0 ? "text-[#7A9E9A]" : "text-[#9CA3AF]"
             )}>
               {formatCurrency(ccHoldingAmount)}
             </span>
+            <span className="text-[10px] text-[#6B6B6B] text-right">—</span>
           </div>
         </div>
       </CardContent>

@@ -153,7 +153,7 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
     key: 'zero_budget_achieved',
     category: 'mastery',
     title: 'Zero Budget Hero',
-    description: 'You achieved a zero-based budget! Every dollar has a job.',
+    description: 'You achieved a zero-based budget! Every dollar has a purpose.',
     icon: '🎯',
     points: 30,
     discordEmoji: '🎯',

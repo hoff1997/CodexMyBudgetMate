@@ -5,6 +5,7 @@ import { z } from "zod";
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(100).optional(),
   icon: z.string().max(10).optional(),
+  color: z.string().max(20).optional(),
   display_order: z.number().int().min(0).optional(),
 });
 
@@ -24,7 +25,7 @@ export async function GET(
   // Try with full schema
   const fullResult = await supabase
     .from("envelope_categories")
-    .select("id, name, icon, is_system, display_order, created_at, updated_at")
+    .select("id, name, icon, color, is_system, display_order, created_at, updated_at")
     .eq("id", params.id)
     .eq("user_id", user.id)
     .single();
@@ -49,6 +50,7 @@ export async function GET(
   const category = {
     ...minimalResult.data,
     icon: null,
+    color: null,
     is_system: false,
     display_order: 0,
   };
@@ -119,15 +121,14 @@ export async function PATCH(
   // Build update data based on what's being updated
   const updateData: Record<string, unknown> = {};
 
-  // System categories can only have display_order updated
-  if (existingCategory.is_system) {
-    if (parsed.data.display_order !== undefined) {
-      updateData.display_order = parsed.data.display_order;
-    }
-  } else {
+  // Color can be updated for both system and non-system categories
+  if (parsed.data.color !== undefined) updateData.color = parsed.data.color || null;
+  if (parsed.data.display_order !== undefined) updateData.display_order = parsed.data.display_order;
+
+  // System categories cannot have name or icon updated
+  if (!existingCategory.is_system) {
     if (parsed.data.name !== undefined) updateData.name = parsed.data.name.trim();
     if (parsed.data.icon !== undefined) updateData.icon = parsed.data.icon || null;
-    if (parsed.data.display_order !== undefined) updateData.display_order = parsed.data.display_order;
   }
 
   if (Object.keys(updateData).length === 0) {
@@ -140,7 +141,7 @@ export async function PATCH(
     .update(updateData)
     .eq("id", params.id)
     .eq("user_id", user.id)
-    .select("id, name, icon, is_system, display_order")
+    .select("id, name, icon, color, is_system, display_order")
     .single();
 
   if (!fullUpdate.error) {
@@ -172,6 +173,7 @@ export async function PATCH(
   const category = {
     ...minimalUpdate.data,
     icon: null,
+    color: null,
     is_system: false,
     display_order: 0,
   };

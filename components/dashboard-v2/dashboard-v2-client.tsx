@@ -14,18 +14,23 @@
  * 5. Allocation Flow - full width breakdown
  */
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { DashboardSummaryHeader } from "./dashboard-summary-header";
 import { EnvelopeStatusOverview, type EnvelopeStatusData } from "./envelope-status-overview";
 import { UpcomingNeedsSection, type UpcomingBill } from "./upcoming-needs-section";
 import { WaterfallPreview, type WaterfallData } from "./waterfall-preview";
 import { QuickActionsV2 } from "./quick-actions-v2";
 import { QuickGlanceWidget } from "./quick-glance-widget";
+import { ReconciliationAlertWidget } from "./reconciliation-alert-widget";
+import { SmartSuggestionsWidget } from "@/components/dashboard/smart-suggestions-widget";
+import { CoachingWidget } from "@/components/coaching/coaching-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
+import { CelebrationRemindersWidget } from "./celebration-reminders-widget";
+import type { SmartSuggestion } from "@/lib/utils/smart-suggestion-generator";
 
 export interface DashboardV2Data {
   // User info
@@ -52,6 +57,7 @@ export interface DashboardV2Data {
     is_monitored?: boolean;
     category_id?: string;
     frequency?: string;
+    subtype?: string;
   }>;
 
   // Credit cards
@@ -98,6 +104,13 @@ export interface DashboardV2Data {
 
   // Flags
   onboardingCompleted: boolean;
+
+  // Smart suggestions for unallocated income
+  suggestions?: SmartSuggestion[];
+  unallocatedAmount?: number;
+
+  // Reconciliation
+  pendingReconciliationCount?: number;
 }
 
 interface DashboardV2ClientProps {
@@ -118,36 +131,47 @@ export function DashboardV2Client({
     return initial;
   });
 
-  // Handle toggling monitored status
+  // Ref for debounced toggle - tracks pending toggles by envelope ID
+  const toggleTimeoutRefs = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Handle toggling monitored status with debounce
   const handleToggleMonitored = useCallback(async (envelopeId: string, isMonitored: boolean) => {
-    // Optimistic update
+    // Optimistic update immediately
     setEnvelopeMonitorStates((prev) => ({
       ...prev,
       [envelopeId]: isMonitored,
     }));
 
-    // Persist to database
-    try {
-      const response = await fetch(`/api/envelopes/${envelopeId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_monitored: isMonitored }),
-      });
+    // Clear any existing timeout for this envelope
+    if (toggleTimeoutRefs.current[envelopeId]) {
+      clearTimeout(toggleTimeoutRefs.current[envelopeId]);
+    }
 
-      if (!response.ok) {
-        // Revert on failure
+    // Debounce: wait 500ms before persisting to avoid rapid toggle spam
+    toggleTimeoutRefs.current[envelopeId] = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/envelopes/${envelopeId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_monitored: isMonitored }),
+        });
+
+        if (!response.ok) {
+          // Revert on failure
+          setEnvelopeMonitorStates((prev) => ({
+            ...prev,
+            [envelopeId]: !isMonitored,
+          }));
+        }
+      } catch {
+        // Revert on error
         setEnvelopeMonitorStates((prev) => ({
           ...prev,
           [envelopeId]: !isMonitored,
         }));
       }
-    } catch {
-      // Revert on error
-      setEnvelopeMonitorStates((prev) => ({
-        ...prev,
-        [envelopeId]: !isMonitored,
-      }));
-    }
+      delete toggleTimeoutRefs.current[envelopeId];
+    }, 500);
   }, []);
 
   // Envelopes with current monitored state
@@ -189,8 +213,8 @@ export function DashboardV2Client({
       0
     );
 
-    // Unallocated
-    const unallocated = bankBalance - envelopeBalance;
+    // Unallocated - add back CC holding since it's not truly "allocated" yet
+    const unallocated = bankBalance - envelopeBalance + holdingBalance;
 
     // Funding gap
     const fundingGap = Math.max(0, totalTarget - envelopeBalance);
@@ -258,6 +282,39 @@ export function DashboardV2Client({
     remaining: calculations.unallocated,
   };
 
+  // Calculate total allocated for coaching widget
+  const totalAllocated = useMemo(() => {
+    return (
+      data.allocationData.creditCardHolding +
+      data.allocationData.essentialEnvelopes +
+      data.allocationData.importantEnvelopes +
+      data.allocationData.extrasEnvelopes +
+      data.allocationData.uncategorisedEnvelopes
+    );
+  }, [data.allocationData]);
+
+  // Convert envelopes to coaching widget format
+  const coachingEnvelopes = useMemo(() => {
+    return data.envelopes.map((env) => ({
+      id: env.id,
+      name: env.name,
+      icon: env.icon,
+      priority: env.priority,
+      targetAmount: env.target_amount,
+      currentAmount: env.current_amount,
+      is_tracking_only: env.is_tracking_only,
+    }));
+  }, [data.envelopes]);
+
+  // Convert income sources for coaching widget
+  const coachingIncomeSources = useMemo(() => {
+    return (data.incomeSources || []).map((src) => ({
+      id: src.id,
+      name: src.name,
+      amount: 0, // Dashboard doesn't have per-pay amounts
+    }));
+  }, [data.incomeSources]);
+
   // Empty state for new users
   if (!data.onboardingCompleted && data.envelopes.length === 0) {
     return (
@@ -302,10 +359,13 @@ export function DashboardV2Client({
         </Card>
       )}
 
+      {/* Celebration Reminders (shown when reminders are due) */}
+      <CelebrationRemindersWidget />
+
       {/* Section 1: Summary Header with Remy Help */}
       <DashboardSummaryHeader
         userName={data.userName}
-        availableBalance={calculations.bankBalance}
+        availableBalance={calculations.bankBalance - calculations.holdingBalance}
         incomeThisMonth={data.incomeThisMonth}
         nextPayday={data.nextPayday}
         budgetHealthStatus={calculations.budgetHealthStatus}
@@ -315,8 +375,20 @@ export function DashboardV2Client({
       {/* Section 2: Quick Actions (full width) */}
       <QuickActionsV2 />
 
+      {/* Section 2.5: Coaching Widget (Budget vs Envelope status) */}
+      <CoachingWidget
+        envelopes={coachingEnvelopes}
+        incomeSources={coachingIncomeSources}
+        currentPage="dashboard"
+        totalAllocated={totalAllocated}
+        totalIncome={data.incomeThisMonth}
+      />
+
       {/* Section 3: Envelope Status (full width) */}
       <EnvelopeStatusOverview envelopes={envelopeStatusData} />
+
+      {/* Reconciliation Alert - shows if there are pending items */}
+      <ReconciliationAlertWidget pendingCount={data.pendingReconciliationCount ?? 0} />
 
       {/* Section 4: Quick Glance + Upcoming Bills side-by-side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

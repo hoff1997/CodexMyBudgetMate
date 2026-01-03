@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import DashboardShell from "@/components/layout/dashboard-shell";
 import { addDays, startOfMonth, endOfMonth } from "date-fns";
+import { generateSuggestions, type SuggestionContext } from "@/lib/utils/smart-suggestion-generator";
 
 type PageProps = {
   searchParams?: {
@@ -90,10 +91,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     { data: recurringIncome },
     { data: incomeTransactions },
     { data: incomeSources },
+    { data: incomeAllocations },
     { count: envelopeCount },
     { count: transactionCount },
     { count: goalCount },
     { count: bankConnectionCount },
+    { count: pendingReconciliationCount },
   ] = await Promise.all([
     // Profile
     supabase
@@ -111,7 +114,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     // All envelopes with full details + frequency for bill display
     supabase
       .from("envelopes")
-      .select("id, name, icon, current_amount, target_amount, due_date, priority, is_tracking_only, is_monitored, category_id, frequency")
+      .select("id, name, icon, current_amount, target_amount, due_date, next_payment_due, priority, is_tracking_only, is_monitored, category_id, frequency, subtype")
       .eq("user_id", userId)
       .or("is_goal.is.null,is_goal.eq.false"),
 
@@ -143,9 +146,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     // Income sources for pay schedule calculation
     supabase
       .from("income_sources")
-      .select("id, name, next_pay_date, pay_cycle, is_active")
+      .select("id, name, next_pay_date, pay_cycle, is_active, typical_amount")
       .eq("user_id", userId)
       .eq("is_active", true),
+
+    // Envelope income allocations for calculating unallocated amount
+    supabase
+      .from("envelope_income_allocations")
+      .select("allocation_amount")
+      .eq("user_id", userId),
 
     // Counts for context
     supabase
@@ -164,6 +173,13 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .from("bank_connections")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
+
+    // Pending transactions for reconciliation alert
+    supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "pending"),
   ]);
 
   // Calculate income this month
@@ -234,6 +250,34 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   const showDemoCta = (envelopeCount ?? 0) === 0;
 
+  // Calculate unallocated income for smart suggestions
+  const totalIncome = (incomeSources ?? []).reduce(
+    (sum, s) => sum + Number((s as any).typical_amount || 0),
+    0
+  );
+  const totalAllocated = (incomeAllocations ?? []).reduce(
+    (sum, a) => sum + Number(a.allocation_amount || 0),
+    0
+  );
+  const unallocatedAmount = Math.max(0, totalIncome - totalAllocated);
+
+  // Generate smart suggestions if there's unallocated income
+  const suggestions = unallocatedAmount > 0
+    ? generateSuggestions({
+        envelopes: (envelopes ?? []).map(e => ({
+          id: e.id,
+          name: e.name,
+          subtype: undefined,
+          priority: e.priority || undefined,
+          target_amount: e.target_amount,
+          current_amount: e.current_amount,
+        })),
+        surplusAmount: unallocatedAmount,
+        monthlyIncome: totalIncome,
+        unallocatedIncome: unallocatedAmount,
+      })
+    : [];
+
   return (
     <DashboardShell
       profile={profile}
@@ -262,12 +306,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           icon: e.icon || undefined,
           current_amount: e.current_amount || 0,
           target_amount: e.target_amount || 0,
-          due_date: e.due_date || null,
+          // Use due_date if set, otherwise fallback to next_payment_due
+          due_date: e.due_date || (e as any).next_payment_due || null,
           priority: e.priority || undefined,
           is_tracking_only: e.is_tracking_only || false,
           is_monitored: (e as any).is_monitored || false,
           category_id: e.category_id || undefined,
           frequency: (e as any).frequency || undefined,
+          subtype: (e as any).subtype || undefined,
         })),
         creditCards: creditCardsData,
         incomeThisMonth,
@@ -291,6 +337,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           frequency: s.pay_cycle,
           isActive: s.is_active,
         })),
+        suggestions,
+        unallocatedAmount,
+        pendingReconciliationCount: pendingReconciliationCount ?? 0,
       }}
     />
   );

@@ -99,6 +99,10 @@ export interface UnifiedEnvelopeData {
   leveling_data?: LevelingData; // Stored monthly amounts and calculation data
   seasonal_pattern?: SeasonalPatternType; // 'winter-peak', 'summer-peak', or 'custom'
 
+  // Celebration envelope fields
+  is_celebration?: boolean; // True for celebration envelopes (Birthdays, Christmas, etc.)
+  gift_recipient_count?: number; // Number of gift recipients for this envelope
+
   // Suggested envelope fields ("The My Budget Way")
   is_suggested?: boolean; // True for system-suggested envelopes
   suggestion_type?: SuggestionType; // 'starter-stash', 'cc-holding', or 'safety-net'
@@ -117,6 +121,7 @@ export interface UnifiedEnvelopeData {
   // Metadata
   categoryId?: string; // Legacy camelCase field
   category_id?: string | null; // Database field
+  category_name?: string | null; // Joined category name (for display)
   category_display_order?: number; // Order within category
   createdAt?: string;
   updatedAt?: string;

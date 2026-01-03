@@ -168,6 +168,12 @@ export function IncomeAllocationTab({
                       Name <ArrowUpDown className="h-3 w-3 ml-0.5 opacity-40" />
                     </span>
                   </th>
+                  {/* Category */}
+                  <th className="px-0.5 py-0.5 text-[10px] font-semibold w-20 min-w-[80px] max-w-[80px] text-left">
+                    <span className="inline-flex items-center pl-1">
+                      Category
+                    </span>
+                  </th>
                   {/* Type */}
                   <th className="px-0.5 py-0.5 text-[10px] font-semibold w-11 min-w-[44px] max-w-[44px]">
                     <span className="w-full flex items-center justify-center">
@@ -375,6 +381,13 @@ function EnvelopeRow({
       {/* Name */}
       <td className="w-24 min-w-[96px] max-w-[96px] pl-1 pr-0 py-0.5">
         <span className="font-medium text-[11px]">{envelope.name}</span>
+      </td>
+
+      {/* Category */}
+      <td className="w-20 min-w-[80px] max-w-[80px] pl-1 pr-0 py-0.5">
+        <span className="text-[11px] text-muted-foreground truncate block">
+          {envelope.category_name || "-"}
+        </span>
       </td>
 
       {/* Type */}

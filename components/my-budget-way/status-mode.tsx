@@ -78,7 +78,7 @@ export function StatusMode({
         description={
           creditCardDebt.hasDebt && creditCardDebt.activeDebt
             ? `Pay off smallest first – ${creditCardDebt.activeDebt.name} ($${creditCardDebt.activeDebt.balance.toLocaleString()} left)`
-            : "Debt-free! You're crushing it!"
+            : "Debt-free! You're building real momentum!"
         }
         target={creditCardDebt.startingDebt}
         current={debtPaid}
@@ -175,18 +175,30 @@ export function StatusMode({
 
         <DividerRow />
 
-        {/* Core Goals: Starter Stash, Smash Your Debt, Safety Net, CC Holding */}
-        {suggestedEnvelopes.flatMap((envelope, index) => {
-          const rows: React.ReactNode[] = [];
-          const isStarterStashEnvelope =
-            envelope.suggestion_type === "starter-stash";
-          const isCCHolding = envelope.suggestion_type === "cc-holding";
-          const isLocked = isEnvelopeLocked(envelope.suggestion_type);
-          const target = Number(envelope.target_amount ?? 0);
-          const current = Number(envelope.current_amount ?? 0);
+        {/* Core Goals in fixed order: Starter Stash, Smash Your Debt, Safety Net, CC Holding */}
+        {(() => {
+          // Sort envelopes into fixed order
+          const stepOrder = ["starter-stash", "safety-net", "cc-holding"];
+          const sortedEnvelopes = [...suggestedEnvelopes].sort((a, b) => {
+            const aIndex = stepOrder.indexOf(a.suggestion_type || "");
+            const bIndex = stepOrder.indexOf(b.suggestion_type || "");
+            // Items not in order go to the end
+            const aPos = aIndex === -1 ? 999 : aIndex;
+            const bPos = bIndex === -1 ? 999 : bIndex;
+            return aPos - bPos;
+          });
 
-          // CC Holding when locked - show debt payoff progress
-          if (isCCHolding && isLocked && creditCardDebt) {
+          return sortedEnvelopes.flatMap((envelope, index) => {
+            const rows: React.ReactNode[] = [];
+            const isStarterStashEnvelope =
+              envelope.suggestion_type === "starter-stash";
+            const isCCHolding = envelope.suggestion_type === "cc-holding";
+            const isLocked = isEnvelopeLocked(envelope.suggestion_type);
+            const target = Number(envelope.target_amount ?? 0);
+            const current = Number(envelope.current_amount ?? 0);
+
+            // CC Holding when locked - show debt payoff progress
+            if (isCCHolding && isLocked && creditCardDebt) {
             const debtProgress =
               creditCardDebt.startingDebt > 0
                 ? ((creditCardDebt.startingDebt - creditCardDebt.currentDebt) /
@@ -268,16 +280,17 @@ export function StatusMode({
             );
           }
 
-          // After Starter Stash, add Smash Your Debt row
-          if (isStarterStashEnvelope) {
-            const smashDebtRow = renderSmashYourDebtRow();
-            if (smashDebtRow) {
-              rows.push(smashDebtRow);
+            // After Starter Stash, add Smash Your Debt row
+            if (isStarterStashEnvelope) {
+              const smashDebtRow = renderSmashYourDebtRow();
+              if (smashDebtRow) {
+                rows.push(smashDebtRow);
+              }
             }
-          }
 
-          return rows;
-        })}
+            return rows;
+          });
+        })()}
       </tbody>
     </table>
   );

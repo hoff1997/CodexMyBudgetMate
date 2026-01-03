@@ -1,14 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, ArrowUpDown, ArrowUp, ArrowDown, Eye, Edit } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { UnifiedEnvelopeData, IncomeSource, PaySchedule } from "@/lib/types/unified-envelope";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Category {
   id: string;
   name: string;
   icon?: string | null;
+  color?: string | null;
   is_system: boolean;
   display_order: number;
 }
@@ -24,6 +34,7 @@ interface CategoryGroupsProps {
   calculatePerPay: (envelope: UnifiedEnvelopeData) => number;
   onChangeCategoryClick: (envelope: UnifiedEnvelopeData) => void;
   onArchiveClick: (envelope: UnifiedEnvelopeData) => void;
+  onEditCategory?: (categoryId: string, updates: { name?: string; color?: string }) => void;
   renderEnvelopeRow: (
     envelope: UnifiedEnvelopeData,
     options: {
@@ -32,6 +43,8 @@ interface CategoryGroupsProps {
       onArchiveClick?: (envelope: UnifiedEnvelopeData) => void;
     }
   ) => React.ReactNode;
+  /** If true, preserves the order of envelopes as passed (for external sorting) */
+  preserveOrder?: boolean;
 }
 
 // Category color palette - matching priority view styling
@@ -51,8 +64,13 @@ export function CategoryGroups({
   renderEnvelopeRow,
   onChangeCategoryClick,
   onArchiveClick,
+  onEditCategory,
+  preserveOrder = false,
 }: CategoryGroupsProps) {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editColor, setEditColor] = useState("#3b82f6");
 
   // Group envelopes by category
   const envelopesByCategory = useMemo(() => {
@@ -73,15 +91,17 @@ export function CategoryGroups({
       grouped.get(categoryId)!.push(env);
     });
 
-    // Sort envelopes within each category by category_display_order
-    grouped.forEach((envs) => {
-      envs.sort((a, b) =>
-        (a.category_display_order || 0) - (b.category_display_order || 0)
-      );
-    });
+    // Only sort within categories if not preserving external order
+    if (!preserveOrder) {
+      grouped.forEach((envs) => {
+        envs.sort((a, b) =>
+          (a.category_display_order || 0) - (b.category_display_order || 0)
+        );
+      });
+    }
 
     return grouped;
-  }, [envelopes, categories]);
+  }, [envelopes, categories, preserveOrder]);
 
   const toggleCategory = (categoryId: string) => {
     const newCollapsed = new Set(collapsedCategories);
@@ -103,33 +123,60 @@ export function CategoryGroups({
     return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
   };
 
+  // Handle opening edit dialog
+  const handleEditClick = (category: Category, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCategory(category);
+    setEditName(category.name);
+    setEditColor(category.color || "#3b82f6");
+  };
+
+  // Handle save edit
+  const handleSaveEdit = () => {
+    if (!editingCategory || !onEditCategory) return;
+
+    // For system categories like "Celebrations", only allow color changes
+    const isSystemCategory = editingCategory.is_system ||
+      editingCategory.name.toLowerCase() === "celebrations";
+
+    onEditCategory(editingCategory.id, {
+      name: isSystemCategory ? undefined : editName,
+      color: editColor,
+    });
+    setEditingCategory(null);
+  };
+
   // Render a category group (matches priority group structure exactly)
   const renderCategoryGroup = (
-    categoryId: string,
-    categoryName: string,
-    categoryIcon: string | null | undefined,
+    category: Category | null,
     categoryEnvelopes: UnifiedEnvelopeData[],
     colorIndex: number
   ) => {
     if (categoryEnvelopes.length === 0) return null;
 
+    const categoryId = category?.id || "uncategorized";
+    const categoryName = category?.name || "Uncategorized";
+    const categoryIcon = category?.icon || (category ? null : "📁");
+    const isSystemCategory = category?.is_system || categoryName.toLowerCase() === "celebrations";
     const isExpanded = !collapsedCategories.has(categoryId);
     const colors = getCategoryColors(colorIndex);
 
     return (
       <div key={categoryId} className="mb-5">
         {/* Group Header - matches priority group header */}
-        <button
-          type="button"
-          onClick={() => toggleCategory(categoryId)}
+        <div
           className={cn(
-            "w-full flex items-center justify-between px-4 py-2.5 rounded-t-md cursor-pointer",
+            "w-full flex items-center justify-between px-4 py-2.5 rounded-t-md",
             colors.bgColor,
             "border border-b-0",
             colors.borderColor
           )}
         >
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => toggleCategory(categoryId)}
+            className="flex items-center gap-2 cursor-pointer"
+          >
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             {categoryIcon ? (
               <span className="text-base">{categoryIcon}</span>
@@ -142,13 +189,24 @@ export function CategoryGroups({
             <span className="text-xs text-text-medium font-normal">
               ({categoryEnvelopes.length} {categoryEnvelopes.length === 1 ? 'envelope' : 'envelopes'})
             </span>
-          </div>
-        </button>
+          </button>
+          {/* Edit button - only show for real categories (not uncategorized) */}
+          {category && onEditCategory && (
+            <button
+              type="button"
+              onClick={(e) => handleEditClick(category, e)}
+              className="p-1 rounded hover:bg-black/10 transition-colors"
+              title="Edit category"
+            >
+              <Edit className="h-3.5 w-3.5 text-text-medium" />
+            </button>
+          )}
+        </div>
 
         {/* Table - matches priority group table structure exactly */}
         {isExpanded && (
-          <div className={cn("border rounded-b-md overflow-hidden", colors.borderColor)}>
-            <table className="w-full table-fixed">
+          <div className={cn("border rounded-b-md overflow-x-auto", colors.borderColor)}>
+            <table className="w-full table-fixed min-w-[900px]">
               <thead className="bg-silver-very-light border-b border-silver-light">
                 <tr>
                   {/* 1. Drag Handle */}
@@ -158,9 +216,7 @@ export function CategoryGroups({
                     <Eye className="h-3 w-3 text-text-light mx-auto" />
                   </th>
                   {/* 3. Priority */}
-                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[40px]">Pri</th>
-                  {/* 4. Status Icon */}
-                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[36px]"></th>
+                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[50px]">Priority</th>
                   {/* 4. Envelope Name */}
                   <th className="px-2 py-2 text-left text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[160px]">
                     <span className="flex items-center">Envelope</span>
@@ -196,9 +252,11 @@ export function CategoryGroups({
                       <th className="px-2 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[60px]">Due In</th>
                     </>
                   )}
-                  {/* 15. Notes Icon */}
-                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[28px]"></th>
-                  {/* 16. Actions */}
+                  {/* 15. Notes */}
+                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[28px]">Notes</th>
+                  {/* 16. Status */}
+                  <th className="px-1 py-2 text-center text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[45px]">Status</th>
+                  {/* 17. Actions - last column, always visible */}
                   <th className="px-1 py-2 text-[10px] font-semibold text-text-medium uppercase tracking-wide w-[32px]"></th>
                 </tr>
               </thead>
@@ -218,15 +276,18 @@ export function CategoryGroups({
     );
   };
 
+  // Check if editing a system category
+  const isEditingSystemCategory = editingCategory
+    ? (editingCategory.is_system || editingCategory.name.toLowerCase() === "celebrations")
+    : false;
+
   return (
     <div>
       {/* Render each category */}
       {sortedCategories.map((category, index) => {
         const categoryEnvelopes = envelopesByCategory.get(category.id) || [];
         return renderCategoryGroup(
-          category.id,
-          category.name,
-          category.icon,
+          category,
           categoryEnvelopes,
           index
         );
@@ -238,13 +299,72 @@ export function CategoryGroups({
         if (uncategorizedEnvelopes.length === 0) return null;
 
         return renderCategoryGroup(
-          "uncategorized",
-          "Uncategorized",
-          "📁",
+          null,
           uncategorizedEnvelopes,
           sortedCategories.length // Use next color in sequence
         );
       })()}
+
+      {/* Edit Category Dialog */}
+      <Dialog open={!!editingCategory} onOpenChange={(open) => !open && setEditingCategory(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Name field - disabled for system categories */}
+            <div className="space-y-2">
+              <Label htmlFor="category-name">Name</Label>
+              <Input
+                id="category-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                disabled={isEditingSystemCategory}
+                placeholder="Category name"
+              />
+              {isEditingSystemCategory && (
+                <p className="text-xs text-text-medium">
+                  System category names cannot be changed.
+                </p>
+              )}
+            </div>
+
+            {/* Color picker */}
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <input
+                    type="color"
+                    value={editColor}
+                    onChange={(e) => setEditColor(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div
+                    className="w-10 h-10 rounded-lg border-2 border-gray-200 shadow-sm cursor-pointer"
+                    style={{ backgroundColor: editColor }}
+                  />
+                </div>
+                <Input
+                  type="text"
+                  value={editColor}
+                  onChange={(e) => setEditColor(e.target.value)}
+                  placeholder="#3b82f6"
+                  className="w-28 font-mono text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditingCategory(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} className="bg-sage hover:bg-sage-dark">
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

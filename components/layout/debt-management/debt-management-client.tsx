@@ -144,7 +144,7 @@ export function DebtManagementClient({ liabilities, envelopes, demoMode }: Props
       {
         title: "Add missing debts",
         description: "Keep liability balances up to date for accurate projections.",
-        href: "/net-worth",
+        href: "/financial-position",
         urgent: debts.length === 0,
       },
       {
@@ -192,7 +192,7 @@ export function DebtManagementClient({ liabilities, envelopes, demoMode }: Props
               </Link>
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/net-worth">
+              <Link href="/financial-position">
                 Start investing
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

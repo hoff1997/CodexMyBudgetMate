@@ -115,6 +115,7 @@ export function PriorityGroup({
               <tr>
                 <th className="px-3 py-2 text-left font-medium w-8"></th>
                 <th className="px-3 py-2 text-left font-medium text-[11px] uppercase tracking-wide text-text-medium min-w-[140px]">Envelope</th>
+                <th className="px-3 py-2 text-left font-medium text-[11px] uppercase tracking-wide text-text-medium w-[100px]">Category</th>
                 <th className="px-3 py-2 text-right font-medium text-[11px] uppercase tracking-wide text-text-medium w-24">Per Pay</th>
                 {incomeSources.map((income, index) => (
                   <th key={income.id} className="px-3 py-2 text-center font-medium text-[11px] uppercase tracking-wide text-text-medium w-28">
@@ -143,6 +144,13 @@ export function PriorityGroup({
                     {/* Name */}
                     <td className="px-3 py-2">
                       <span className="font-medium text-text-dark">{envelope.name}</span>
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-3 py-2">
+                      <span className="text-[11px] text-text-medium truncate block">
+                        {envelope.category_name || "-"}
+                      </span>
                     </td>
 
                     {/* Per Pay */}

@@ -43,7 +43,8 @@ export function FinancialHealthSection({
   onCardClick,
 }: FinancialHealthSectionProps) {
   const metrics = useMemo(() => {
-    const unallocated = data.bankBalance - data.envelopeBalance;
+    // Add back holdingBalance since CC holding isn't truly "allocated" - it's waiting to pay off the CC
+    const unallocated = data.bankBalance - data.envelopeBalance + data.holdingBalance;
     const fundingGap = Math.max(0, data.totalTarget - data.totalCurrent);
     const coverageRatio = data.creditCardDebt > 0
       ? (data.holdingBalance / data.creditCardDebt) * 100

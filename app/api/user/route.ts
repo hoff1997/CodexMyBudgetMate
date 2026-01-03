@@ -7,6 +7,7 @@ const updateProfileSchema = z.object({
   preferred_name: z.string().nullable().optional(),
   date_of_birth: z.string().nullable().optional(),
   default_page: z.string().optional(),
+  celebration_reminder_weeks: z.number().min(0).max(4).optional(),
 });
 
 export async function GET() {
@@ -66,6 +67,9 @@ export async function PATCH(request: Request) {
     }
     if (parsed.data.default_page !== undefined) {
       updates.default_page = parsed.data.default_page;
+    }
+    if (parsed.data.celebration_reminder_weeks !== undefined) {
+      updates.celebration_reminder_weeks = parsed.data.celebration_reminder_weeks;
     }
 
     if (Object.keys(updates).length === 0) {

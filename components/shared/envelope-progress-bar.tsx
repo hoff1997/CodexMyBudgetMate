@@ -81,7 +81,7 @@ export function getProgressColor(percentage: number): string {
 
 /**
  * Compact progress indicator for table cells
- * Just shows the bar without percentage
+ * Shows bar with percentage to the right (inline)
  */
 export function CompactProgressBar({
   current,
@@ -94,15 +94,25 @@ export function CompactProgressBar({
 }) {
   const percentage = target > 0 ? Math.min(100, Math.max(0, Math.round((current / target) * 100))) : 0;
 
+  // Show dash if no target
+  if (!target || target === 0) {
+    return <span className="text-[11px] text-text-light">—</span>;
+  }
+
   return (
-    <div className={cn("w-full h-1.5 bg-sage-very-light rounded-full overflow-hidden", className)}>
-      <div
-        className="h-full rounded-full transition-all duration-300"
-        style={{
-          width: `${percentage}%`,
-          backgroundColor: getProgressColor(percentage),
-        }}
-      />
+    <div className={cn("flex items-center gap-1.5", className)}>
+      <div className="flex-1 h-1.5 bg-silver-very-light rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{
+            width: `${percentage}%`,
+            background: "linear-gradient(90deg, #E2EEEC 0%, #B8D4D0 50%, #7A9E9A 100%)",
+          }}
+        />
+      </div>
+      <span className="text-[10px] text-text-medium w-8 text-right">
+        {percentage}%
+      </span>
     </div>
   );
 }

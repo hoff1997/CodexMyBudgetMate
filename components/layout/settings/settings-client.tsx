@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield, Loader2, ChevronRight } from "lucide-react";
+import { Pencil, Archive, Plus, ChevronDown, X, DollarSign, Calendar, Download, Trash2, Info, Link2, Shield, Loader2, ChevronRight, Gift } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
@@ -55,6 +55,7 @@ export type SettingsData = {
     payCycle: string;
     defaultPage: string;
     dateOfBirth: string | null;
+    celebrationReminderWeeks: number;
   };
   incomeSources: IncomeSourceRow[];
   labels: LabelRow[];
@@ -149,6 +150,11 @@ export function SettingsClient({ data, flash = null }: Props) {
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+
+  // Celebration reminder settings
+  const [celebrationReminderWeeks, setCelebrationReminderWeeks] = useState<number>(
+    data.profile.celebrationReminderWeeks ?? 3
+  );
 
   // Separate active and archived income
   const activeIncome = useMemo(() => incomeSources.filter(i => i.is_active), [incomeSources]);
@@ -290,6 +296,30 @@ export function SettingsClient({ data, flash = null }: Props) {
       console.error(error);
       setDefaultPage(previousDefaultPage);
       toast.error(error instanceof Error ? error.message : "Unable to update default page");
+    }
+  }
+
+  async function handleCelebrationReminderChange(weeks: number) {
+    const previousWeeks = celebrationReminderWeeks;
+    setCelebrationReminderWeeks(weeks);
+
+    try {
+      const response = await fetch("/api/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ celebration_reminder_weeks: weeks }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to update reminder settings" }));
+        throw new Error(payload.error ?? "Unable to update reminder settings");
+      }
+
+      toast.success(weeks === 0 ? "Celebration reminders turned off" : `Reminders set to ${weeks} week${weeks > 1 ? "s" : ""} before`);
+    } catch (error) {
+      console.error(error);
+      setCelebrationReminderWeeks(previousWeeks);
+      toast.error(error instanceof Error ? error.message : "Unable to update reminder settings");
     }
   }
 
@@ -607,7 +637,7 @@ export function SettingsClient({ data, flash = null }: Props) {
                 <option value="/budgetallocation">Allocation</option>
                 <option value="/transactions">Transactions</option>
                 <option value="/envelope-summary">Envelope Summary</option>
-                <option value="/net-worth">Net Worth</option>
+                <option value="/financial-position">Financial Position</option>
               </select>
             </div>
             <button
@@ -857,6 +887,39 @@ export function SettingsClient({ data, flash = null }: Props) {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Celebration Reminders Section */}
+      <section className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+        <div className="px-3 py-2 border-b border-[#E5E7EB]">
+          <h2 className="font-semibold text-[#3D3D3D]">Celebration Reminders</h2>
+        </div>
+        <div className="px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Gift className="w-4 h-4 text-[#D4A853]" />
+            <div>
+              <span className="text-sm text-[#3D3D3D]">Birthday & gift reminders</span>
+              <span className="ml-2 text-xs text-[#9CA3AF]">— Get notified before celebrations</span>
+            </div>
+          </div>
+          <select
+            value={celebrationReminderWeeks}
+            onChange={(e) => handleCelebrationReminderChange(parseInt(e.target.value))}
+            className="h-8 px-2 text-sm border border-[#E5E7EB] rounded-lg focus:border-[#7A9E9A] focus:outline-none"
+          >
+            <option value="0">Off</option>
+            <option value="1">1 week before</option>
+            <option value="2">2 weeks before</option>
+            <option value="3">3 weeks before</option>
+            <option value="4">1 month before</option>
+          </select>
+        </div>
+        <div className="px-3 py-2 border-t border-[#E5E7EB] bg-[#F5E6C4]/30">
+          <p className="text-xs text-[#6B6B6B]">
+            Reminders appear on your dashboard when birthdays, Christmas, or other celebrations are approaching.
+            Set up gift recipients in your celebration envelopes to track budgets.
+          </p>
+        </div>
       </section>
 
       {/* Data & Privacy Section */}

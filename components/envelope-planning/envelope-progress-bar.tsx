@@ -30,32 +30,32 @@ export function EnvelopeProgressBar({
   const currentPercent = target_amount > 0 ? Math.min((current_balance / target_amount) * 100, 100) : 0;
   const projectedPercent = target_amount > 0 ? Math.min((projected_balance / target_amount) * 100, 100) : 0;
 
-  // Determine colors based on status
+  // Determine colors based on status - using style guide colors (sage/gold/blue)
   const getStatusColor = (s: EnvelopeStatus) => {
     switch (s) {
       case "on_track":
       case "overfunded":
         return {
-          bg: "bg-green-500",
-          text: "text-green-700",
-          border: "border-green-200",
-          bgLight: "bg-green-50",
+          bg: "bg-sage",
+          text: "text-sage-dark",
+          border: "border-sage-light",
+          bgLight: "bg-sage-very-light",
           icon: Check,
         };
       case "behind":
         return {
-          bg: "bg-yellow-500",
-          text: "text-yellow-700",
-          border: "border-yellow-200",
-          bgLight: "bg-yellow-50",
+          bg: "bg-gold",
+          text: "text-gold-dark",
+          border: "border-gold-light",
+          bgLight: "bg-gold-light/30",
           icon: AlertTriangle,
         };
       case "critical":
         return {
-          bg: "bg-red-500",
-          text: "text-red-700",
-          border: "border-red-200",
-          bgLight: "bg-red-50",
+          bg: "bg-blue",
+          text: "text-blue",
+          border: "border-blue-light",
+          bgLight: "bg-blue-light/30",
           icon: AlertCircle,
         };
     }
@@ -162,7 +162,7 @@ export function EnvelopeProgressBar({
 
           {/* Future income message */}
           {future_income.length > 0 && projected_balance !== current_balance && (
-            <div className={cn("text-xs", gap <= 0 ? "text-green-700" : "text-yellow-700")}>
+            <div className={cn("text-xs", gap <= 0 ? "text-sage-dark" : "text-gold-dark")}>
               {gap <= 0 ? "✅" : "⚠️"} After future income: {formatCurrency(projected_balance)}
               {gap <= 0
                 ? " - Will be ready by due date!"
@@ -172,15 +172,15 @@ export function EnvelopeProgressBar({
 
           {/* Critical warning */}
           {status === "critical" && gap > 0 && (
-            <div className="text-xs text-red-700 font-medium">
-              🔴 SHORT {formatCurrency(Math.abs(gap))}! Even with future income, won't be fully
+            <div className="text-xs text-blue font-medium">
+              ⚠️ SHORT {formatCurrency(Math.abs(gap))}! Even with future income, won't be fully
               funded.
             </div>
           )}
 
           {/* Overfunded message */}
           {status === "overfunded" && (
-            <div className="text-xs text-green-700">
+            <div className="text-xs text-sage-dark">
               💡 Overfunded by {formatCurrency(Math.abs(gap))} - consider reducing allocation
             </div>
           )}

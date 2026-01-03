@@ -44,7 +44,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   let incomeSources: IncomeSourceRecord[] = [];
   let labels: LabelRecord[] = [];
   let bankConnections: BankConnectionRecord[] = [];
-  let profile: { full_name: string | null; preferred_name: string | null; avatar_url: string | null; pay_cycle: string | null; default_page: string | null; date_of_birth: string | null } | null = null;
+  let profile: { full_name: string | null; preferred_name: string | null; avatar_url: string | null; pay_cycle: string | null; default_page: string | null; date_of_birth: string | null; celebration_reminder_weeks: number | null } | null = null;
 
   if (user) {
     const [incomeRes, labelRes, bankRes, profileRes] = await Promise.all([
@@ -64,7 +64,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         .select("id, provider, status, last_synced_at, sync_frequency, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("profiles").select("full_name, preferred_name, avatar_url, pay_cycle, default_page, date_of_birth").eq("id", user.id).maybeSingle(),
+      supabase.from("profiles").select("full_name, preferred_name, avatar_url, pay_cycle, default_page, date_of_birth, celebration_reminder_weeks").eq("id", user.id).maybeSingle(),
     ]);
 
     incomeSources = (incomeRes.data ?? []) as IncomeSourceRecord[];
@@ -83,6 +83,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           payCycle: profile?.pay_cycle ?? "fortnightly",
           defaultPage: profile?.default_page ?? "/reconcile",
           dateOfBirth: profile?.date_of_birth ?? null,
+          celebrationReminderWeeks: profile?.celebration_reminder_weeks ?? 3,
         },
         incomeSources: incomeSources.map((row) => ({
           id: row.id,
@@ -145,6 +146,7 @@ function getDemoSettingsData(): SettingsData {
       payCycle: "fortnightly",
       defaultPage: "/reconcile",
       dateOfBirth: null,
+      celebrationReminderWeeks: 3,
     },
     incomeSources: [
       {

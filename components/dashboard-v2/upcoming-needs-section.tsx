@@ -171,12 +171,12 @@ export function UpcomingNeedsSection({ bills, incomeSources }: UpcomingNeedsSect
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="p-0">
+      <CardContent className="p-0 overflow-x-auto">
         {/* Table Header */}
         <div
-          className="grid items-center px-4 py-2 bg-silver-very-light/70 border-b border-silver-light text-[10px] font-semibold uppercase tracking-wide text-text-light"
+          className="grid items-center px-3 py-2 bg-silver-very-light/70 border-b border-silver-light text-[10px] font-semibold uppercase tracking-wide text-text-light min-w-0"
           style={{
-            gridTemplateColumns: "40px 1fr 100px 80px 70px 70px 80px 70px",
+            gridTemplateColumns: "28px 1fr 70px 65px 50px 50px 70px 55px",
           }}
         >
           <div className="text-center">Pri</div>
@@ -184,7 +184,7 @@ export function UpcomingNeedsSection({ bills, incomeSources }: UpcomingNeedsSect
           <div className="text-center">Progress</div>
           <div className="text-right">Current</div>
           <div className="text-right">Due</div>
-          <div className="text-center">Due In</div>
+          <div className="text-center">In</div>
           <div className="text-center">Status</div>
           <div className="text-right">Gap</div>
         </div>
@@ -230,50 +230,50 @@ function BillRow({ bill }: { bill: ProcessedBill }) {
   const getStatusDisplay = () => {
     if (bill.status === "funded") {
       return (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-sage">
-          <CheckCircle className="h-3.5 w-3.5" />
+        <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-sage">
+          <CheckCircle className="h-3 w-3" />
           Funded
         </span>
       );
     }
     if (bill.status === "on_track") {
       return (
-        <span className="text-xs font-medium text-sage-dark">On Track</span>
+        <span className="text-[10px] font-medium text-sage-dark">On Track</span>
       );
     }
     return (
-      <span className="text-xs font-medium text-blue">Needs Funds</span>
+      <span className="text-[10px] font-medium text-blue">Needs Funds</span>
     );
   };
 
   return (
     <div
-      className="grid items-center px-4 py-2 hover:bg-sage-very-light/30 transition-colors"
+      className="grid items-center px-3 py-2 hover:bg-sage-very-light/30 transition-colors min-w-0"
       style={{
-        gridTemplateColumns: "40px 1fr 100px 80px 70px 70px 80px 70px",
-        minHeight: "44px",
+        gridTemplateColumns: "28px 1fr 70px 65px 50px 50px 70px 55px",
+        minHeight: "40px",
       }}
     >
       {/* Priority Dot */}
       <div className="flex items-center justify-center">
         <span
-          className={cn("w-3 h-3 rounded-full", priorityConfig.dotColor)}
+          className={cn("w-2.5 h-2.5 rounded-full", priorityConfig.dotColor)}
           title={priorityConfig.label}
         />
       </div>
 
       {/* Bill Name + Icon + Target */}
-      <div className="flex items-center gap-2 min-w-0 pr-2">
-        <span className="text-base flex-shrink-0">{bill.icon || "💰"}</span>
+      <div className="flex items-center gap-1.5 min-w-0 pr-1">
+        <span className="text-sm flex-shrink-0">{bill.icon || "💰"}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-text-dark truncate">{bill.name}</p>
-          <p className="text-xs text-text-light">{formatCurrency(bill.targetAmount)}</p>
+          <p className="text-xs font-medium text-text-dark truncate">{bill.name}</p>
+          <p className="text-[10px] text-text-light">{formatCurrency(bill.targetAmount)}</p>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="flex items-center justify-center gap-2">
-        <div className="w-14 h-2 bg-silver-very-light rounded-full overflow-hidden">
+      <div className="flex items-center justify-center gap-1">
+        <div className="w-10 h-1.5 bg-silver-very-light rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
             style={{
@@ -282,26 +282,26 @@ function BillRow({ bill }: { bill: ProcessedBill }) {
             }}
           />
         </div>
-        <span className="text-xs text-text-medium w-8 text-right">
+        <span className="text-[10px] text-text-medium w-6 text-right">
           {bill.fundingPercent.toFixed(0)}%
         </span>
       </div>
 
       {/* Current Amount */}
-      <div className="text-right text-sm text-text-dark">
+      <div className="text-right text-xs text-text-dark">
         {formatCurrency(bill.currentAmount)}
       </div>
 
       {/* Due Date */}
       <div className="text-right">
-        <p className="text-xs text-text-dark">{format(bill.dueDate, "MMM d")}</p>
+        <p className="text-[10px] text-text-dark">{format(bill.dueDate, "MMM d")}</p>
       </div>
 
       {/* Due In (Pays Until Due) */}
       <div className="flex items-center justify-center">
         <span
           className={cn(
-            "px-2 py-0.5 rounded-full text-xs",
+            "px-1 py-0.5 rounded-full text-[10px]",
             getDueInBadgeColor()
           )}
         >
@@ -309,7 +309,7 @@ function BillRow({ bill }: { bill: ProcessedBill }) {
             bill.paysUntilDue <= 0 ? (
               "Now"
             ) : (
-              `${bill.paysUntilDue} pay${bill.paysUntilDue === 1 ? "" : "s"}`
+              `${bill.paysUntilDue}pay`
             )
           ) : (
             daysLabel
@@ -325,11 +325,11 @@ function BillRow({ bill }: { bill: ProcessedBill }) {
       {/* Gap */}
       <div className="text-right">
         {bill.gap > 0 ? (
-          <span className="text-sm font-medium text-blue">
+          <span className="text-xs font-medium text-blue">
             -{formatCurrency(bill.gap)}
           </span>
         ) : (
-          <span className="text-xs text-text-light">—</span>
+          <span className="text-[10px] text-text-light">—</span>
         )}
       </div>
     </div>

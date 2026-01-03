@@ -2563,3 +2563,498 @@ colors: {
     medium: '#4A5E5A',
   }
 }
+
+---
+
+## My Budget Mate Life
+
+My Budget Mate Life is a collection of household management features that extend beyond budgeting. These features help families organize their daily life activities.
+
+### Life Module Overview
+
+| Feature | Route | Description |
+|---------|-------|-------------|
+| Shopping Lists | `/life/shopping` | Smart shopping lists with category organization |
+| To-Do Lists | `/life/todos` | Task management for the household |
+| Recipes | `/life/recipes` | Recipe collection and meal inspiration |
+| Meal Planning | `/life/meal-plan` | Weekly meal planning calendar |
+
+### Shopping Lists Architecture
+
+#### Database Schema
+
+**`shopping_lists`**
+```sql
+CREATE TABLE shopping_lists (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  icon TEXT DEFAULT '🛒',
+  supermarket_id UUID REFERENCES supermarkets(id),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`shopping_items`**
+```sql
+CREATE TABLE shopping_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  shopping_list_id UUID NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+  text TEXT NOT NULL,
+  quantity TEXT,
+  aisle_name TEXT,
+  category_id UUID REFERENCES shopping_categories(id),
+  estimated_price DECIMAL(10, 2),
+  notes TEXT,
+  photo_url TEXT,
+  is_checked BOOLEAN DEFAULT false,
+  checked_at TIMESTAMPTZ,
+  sort_order INTEGER,
+  added_by_id UUID REFERENCES auth.users(id),
+  added_by_type TEXT DEFAULT 'parent',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`shopping_categories`**
+```sql
+CREATE TABLE shopping_categories (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  icon TEXT,
+  default_sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(parent_user_id, name)
+);
+```
+
+**`supermarkets`**
+```sql
+CREATE TABLE supermarkets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  aisle_structure JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`supermarket_category_orders`**
+```sql
+CREATE TABLE supermarket_category_orders (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  supermarket_id UUID NOT NULL REFERENCES supermarkets(id) ON DELETE CASCADE,
+  category_id UUID NOT NULL REFERENCES shopping_categories(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL,
+  UNIQUE(supermarket_id, category_id)
+);
+```
+
+**`saved_products`**
+```sql
+CREATE TABLE saved_products (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  category_id UUID REFERENCES shopping_categories(id),
+  default_quantity TEXT,
+  typical_price DECIMAL(10, 2),
+  price_unit TEXT,
+  photo_url TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(parent_user_id, name)
+);
+```
+
+#### Key Features
+
+**Category-Based Organization**
+- Items are grouped by shopping category (Produce, Dairy, Meat, etc.)
+- Categories can be user-defined or use default set
+- Supermarket filter changes category order based on store layout
+
+**Supermarket Category Ordering**
+- Each supermarket can have custom category order
+- Example: Countdown may have Produce first, PAK'nSAVE may have Frozen first
+- Selecting a supermarket reorders the shopping list accordingly
+
+**Auto-Categorization**
+- New items are automatically categorized based on product name
+- Uses keyword matching (e.g., "milk" → Dairy, "apple" → Produce)
+- Defined in `/app/api/shopping/items/route.ts`
+
+**Saved Products**
+- Users can save frequently purchased items
+- Includes optional typical price and default quantity
+- Supports photo attachments
+
+#### Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/(app)/life/shopping/page.tsx` | Server component - fetches lists/categories |
+| `app/(app)/life/shopping/shopping-client.tsx` | Client component - manages state and UI |
+| `components/shopping/shopping-list-view.tsx` | Individual list view with items |
+| `components/shopping/create-shopping-list-dialog.tsx` | Create new list dialog |
+| `app/api/shopping/lists/route.ts` | CRUD for shopping lists |
+| `app/api/shopping/items/route.ts` | CRUD for shopping items |
+| `app/api/shopping/categories/route.ts` | CRUD for categories |
+| `app/api/shopping/supermarkets/route.ts` | CRUD for supermarkets |
+
+#### Column Name Mapping
+
+The database uses different column names than the client expects:
+
+| Database Column | Client Property |
+|-----------------|-----------------|
+| `text` | `name` |
+| `shopping_list_id` | `list_id` |
+| `is_checked` | `checked` |
+| `aisle_name` | `aisle` |
+| `category_id` | `category_id` |
+| `parent_user_id` | (used for RLS) |
+
+### To-Do Lists Architecture
+
+#### Database Schema
+
+**`todo_lists`**
+```sql
+CREATE TABLE todo_lists (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  icon TEXT DEFAULT '📝',
+  color TEXT DEFAULT 'sage',
+  shared_with_children UUID[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`todo_items`**
+```sql
+CREATE TABLE todo_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  todo_list_id UUID NOT NULL REFERENCES todo_lists(id) ON DELETE CASCADE,
+  text TEXT NOT NULL,
+  is_completed BOOLEAN DEFAULT false,
+  completed_at TIMESTAMPTZ,
+  assigned_to_id UUID,
+  assigned_to_type TEXT DEFAULT 'parent',
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### Column Name Mapping
+
+| Database Column | Client Property |
+|-----------------|-----------------|
+| `todo_list_id` | `list_id` |
+| `is_completed` | `completed` |
+| `assigned_to_id` | `assigned_to` |
+| `parent_user_id` | (used for RLS) |
+
+#### Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/(app)/life/todos/page.tsx` | Server component - fetches lists |
+| `app/(app)/life/todos/todos-client.tsx` | Client component - manages state |
+| `app/api/todos/lists/route.ts` | CRUD for todo lists |
+| `app/api/todos/items/route.ts` | CRUD for todo items |
+| `app/api/todos/items/[id]/route.ts` | Individual item operations |
+
+#### Ownership Verification
+
+Todo items don't have a direct `user_id` column. Ownership is verified via join:
+
+```typescript
+// Verify ownership via list relationship
+const { data: item } = await supabase
+  .from("todo_items")
+  .select(`
+    *,
+    todo_lists!inner(parent_user_id)
+  `)
+  .eq("id", itemId)
+  .eq("todo_lists.parent_user_id", user.id)
+  .single();
+```
+
+---
+
+## My Budget Mate Kids
+
+My Budget Mate Kids provides age-appropriate financial education and household participation features for children.
+
+### Kids Module Overview
+
+| Feature | Route | Description |
+|---------|-------|-------------|
+| Kids Dashboard | `/kids` | Parent view of all children |
+| Child Profile | `/kids/[childId]` | Individual child's dashboard |
+| Allowance | `/kids/[childId]/allowance` | Pocket money management |
+| Chores | `/kids/[childId]/chores` | Task assignments and rewards |
+| Goals | `/kids/[childId]/goals` | Savings goals for children |
+| Screen Time | `/kids/[childId]/screen-time` | Screen time management |
+
+### Database Schema
+
+#### Core Tables
+
+**`children`**
+```sql
+CREATE TABLE children (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  date_of_birth DATE,
+  avatar_url TEXT,
+  pin_code TEXT,
+  allowance_amount DECIMAL(10, 2) DEFAULT 0,
+  allowance_frequency TEXT DEFAULT 'weekly',
+  balance DECIMAL(10, 2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`child_transactions`**
+```sql
+CREATE TABLE child_transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  amount DECIMAL(10, 2) NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('allowance', 'chore', 'gift', 'spend', 'save', 'adjustment')),
+  description TEXT,
+  goal_id UUID REFERENCES child_goals(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`child_goals`**
+```sql
+CREATE TABLE child_goals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  target_amount DECIMAL(10, 2) NOT NULL,
+  current_amount DECIMAL(10, 2) DEFAULT 0,
+  icon TEXT,
+  is_completed BOOLEAN DEFAULT false,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### Chores System
+
+**`chore_templates`**
+```sql
+CREATE TABLE chore_templates (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  default_reward DECIMAL(10, 2),
+  icon TEXT,
+  category TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`chore_assignments`**
+```sql
+CREATE TABLE chore_assignments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  chore_template_id UUID REFERENCES chore_templates(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  reward_amount DECIMAL(10, 2),
+  due_date DATE,
+  frequency TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'verified', 'missed')),
+  completed_at TIMESTAMPTZ,
+  verified_at TIMESTAMPTZ,
+  verified_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`chore_rotations`**
+```sql
+CREATE TABLE chore_rotations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  chore_template_id UUID NOT NULL REFERENCES chore_templates(id) ON DELETE CASCADE,
+  child_ids UUID[] NOT NULL,
+  current_index INTEGER DEFAULT 0,
+  rotation_frequency TEXT DEFAULT 'weekly',
+  last_rotated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### Screen Time System
+
+**`screen_time_rules`**
+```sql
+CREATE TABLE screen_time_rules (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
+  daily_limit_minutes INTEGER NOT NULL,
+  start_time TIME,
+  end_time TIME,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(child_id, day_of_week)
+);
+```
+
+**`screen_time_requests`**
+```sql
+CREATE TABLE screen_time_requests (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  requested_minutes INTEGER NOT NULL,
+  reason TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+  responded_at TIMESTAMPTZ,
+  responded_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Key API Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/api/kids` | List/create children |
+| `/api/kids/[childId]` | Get/update/delete child |
+| `/api/kids/[childId]/transactions` | Child's transaction history |
+| `/api/kids/[childId]/goals` | Child's savings goals |
+| `/api/chores/templates` | Chore template CRUD |
+| `/api/chores/assignments` | Chore assignment CRUD |
+| `/api/chores/assignments/[id]` | Individual assignment |
+| `/api/chores/rotations` | Chore rotation management |
+| `/api/kids/screen-time/requests` | Screen time request handling |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/(app)/kids/page.tsx` | Parent's kids dashboard |
+| `app/(app)/kids/[childId]/page.tsx` | Individual child view |
+| `app/api/kids/route.ts` | Children CRUD |
+| `app/api/chores/templates/route.ts` | Chore templates |
+| `app/api/chores/assignments/route.ts` | Chore assignments |
+
+### Chore Verification Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. Parent creates chore template                                │
+│    → "Make Bed", reward: $0.50                                  │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. Chore assigned to child(ren)                                 │
+│    → Creates chore_assignment record                            │
+│    → Status: 'pending'                                          │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. Child marks chore complete                                   │
+│    → Status: 'completed'                                        │
+│    → completed_at set                                           │
+│    → (No reward yet - needs verification)                       │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. Parent verifies completion                                   │
+│    → Status: 'verified'                                         │
+│    → Creates child_transaction (type: 'chore')                  │
+│    → Child balance updated                                      │
+│    → verified_at and verified_by set                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Beta Access
+
+Both Kids and Life features are gated behind beta access:
+
+```typescript
+// In page.tsx
+const betaAccess = await checkBetaAccess();
+if (!betaAccess.hasAccess) {
+  redirect("/dashboard");
+}
+```
+
+**Beta access utility**: `lib/utils/beta-access.ts`
+
+---
+
+## Common Patterns Across Life & Kids
+
+### Parent User ID Pattern
+
+All Life and Kids tables use `parent_user_id` instead of `user_id`:
+- Ensures RLS policies work correctly
+- Distinguishes parent ownership from child access
+- Consistent naming across the module
+
+### Column Name Mapping
+
+APIs consistently map database columns to client-friendly names:
+
+```typescript
+// Database → Client mapping example
+const mappedItem = {
+  id: dbItem.id,
+  name: dbItem.text,           // text → name
+  completed: dbItem.is_completed,  // is_completed → completed
+  list_id: dbItem.todo_list_id,    // todo_list_id → list_id
+};
+```
+
+### Ownership Verification via Joins
+
+When items don't have direct `parent_user_id`, ownership is verified via relationship:
+
+```typescript
+// Pattern: Verify via parent table
+const { data } = await supabase
+  .from("child_table")
+  .select(`
+    *,
+    parent_table!inner(parent_user_id)
+  `)
+  .eq("id", itemId)
+  .eq("parent_table.parent_user_id", user.id)
+  .single();
+```
+
+### Next.js 14 Async Params
+
+All dynamic routes use the async params pattern:
+
+```typescript
+// Route: /api/items/[id]/route.ts
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  // ... rest of handler
+}
+```

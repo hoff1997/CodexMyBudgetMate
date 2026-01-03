@@ -18,9 +18,7 @@ import { ArrowLeft, Check, TrendingUp, Shield, Info } from "lucide-react";
 import { RemyAvatar } from "@/components/onboarding/remy-tip";
 import { cn } from "@/lib/cn";
 import {
-  getShortMonthName,
-  getNZSeason,
-  SeasonalPattern,
+  getMonthName,
 } from "@/lib/utils/seasonal-bills";
 import {
   createLevelingDataFrom12Months,
@@ -33,13 +31,9 @@ interface TwelveMonthEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   envelopeName: string;
-  suggestedPattern: SeasonalPattern;
   onBack: () => void;
   onSave: (levelingData: LevelingData) => void;
 }
-
-// Get current month as starting point (most recent bills are freshest)
-const getCurrentMonthIndex = () => new Date().getMonth();
 
 /**
  * Dialog for entering 12 months of bill amounts to calculate accurate leveling.
@@ -48,7 +42,6 @@ export function TwelveMonthEntryDialog({
   open,
   onOpenChange,
   envelopeName,
-  suggestedPattern,
   onBack,
   onSave,
 }: TwelveMonthEntryDialogProps) {
@@ -96,14 +89,9 @@ export function TwelveMonthEntryDialog({
       maximumFractionDigits: 2,
     }).format(value);
 
-  // Order months starting from current month going backwards
+  // Order months Jan-Dec (0-11)
   const orderedMonths = useMemo(() => {
-    const currentMonth = getCurrentMonthIndex();
-    const months: number[] = [];
-    for (let i = 0; i < 12; i++) {
-      months.push((currentMonth - i + 12) % 12);
-    }
-    return months;
+    return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   }, []);
 
   return (
@@ -139,51 +127,36 @@ export function TwelveMonthEntryDialog({
 
           {/* Month entry grid */}
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-            {orderedMonths.map((monthIndex, arrayIndex) => {
-              const seasonInfo = getNZSeason(monthIndex);
-              const isHighSeason =
-                (suggestedPattern === "winter-peak" && seasonInfo.isWinterPeakSeason) ||
-                (suggestedPattern === "summer-peak" && seasonInfo.isSummerPeakSeason);
-
-              return (
-                <div key={monthIndex} className="space-y-1">
-                  <Label
-                    htmlFor={`month-${monthIndex}`}
+            {orderedMonths.map((monthIndex) => (
+              <div key={monthIndex} className="space-y-1">
+                <Label
+                  htmlFor={`month-${monthIndex}`}
+                  className="text-xs text-muted-foreground"
+                >
+                  {getMonthName(monthIndex)}
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                    $
+                  </span>
+                  <Input
+                    id={`month-${monthIndex}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={monthlyAmounts[monthIndex]}
+                    onChange={(e) => handleMonthChange(monthIndex, e.target.value)}
                     className={cn(
-                      "text-xs flex items-center gap-1",
-                      isHighSeason ? "text-blue font-medium" : "text-muted-foreground"
+                      "pl-6 h-9 text-sm",
+                      monthlyAmounts[monthIndex] !== "" &&
+                        monthlyAmounts[monthIndex] > 0 &&
+                        "border-sage bg-sage-very-light/30"
                     )}
-                  >
-                    {getShortMonthName(monthIndex)}
-                    {isHighSeason && (
-                      <span className="text-[10px]" title="Peak season">
-                        ⬆️
-                      </span>
-                    )}
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      $
-                    </span>
-                    <Input
-                      id={`month-${monthIndex}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder={arrayIndex === 0 ? "Latest" : "0"}
-                      value={monthlyAmounts[monthIndex]}
-                      onChange={(e) => handleMonthChange(monthIndex, e.target.value)}
-                      className={cn(
-                        "pl-6 h-9 text-sm",
-                        monthlyAmounts[monthIndex] !== "" &&
-                          monthlyAmounts[monthIndex] > 0 &&
-                          "border-sage bg-sage-very-light/30"
-                      )}
-                    />
-                  </div>
+                  />
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
 
           {/* Tip about finding bills */}

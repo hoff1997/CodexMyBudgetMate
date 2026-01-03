@@ -5,7 +5,7 @@ export { allocationCoaching } from "./allocation";
 export { envelopeSummaryCoaching } from "./envelope-summary";
 export { transactionsCoaching } from "./transactions";
 export { reconcileCoaching } from "./reconcile";
-export { netWorthCoaching } from "./net-worth";
+export { financialPositionCoaching } from "./financial-position";
 export { settingsCoaching } from "./settings";
 
 import type { PageCoaching } from "../types";
@@ -14,7 +14,7 @@ import { allocationCoaching } from "./allocation";
 import { envelopeSummaryCoaching } from "./envelope-summary";
 import { transactionsCoaching } from "./transactions";
 import { reconcileCoaching } from "./reconcile";
-import { netWorthCoaching } from "./net-worth";
+import { financialPositionCoaching } from "./financial-position";
 import { settingsCoaching } from "./settings";
 
 export const allCoaching: Record<string, PageCoaching> = {
@@ -23,6 +23,6 @@ export const allCoaching: Record<string, PageCoaching> = {
   "envelope-summary": envelopeSummaryCoaching,
   transactions: transactionsCoaching,
   reconcile: reconcileCoaching,
-  "net-worth": netWorthCoaching,
+  "financial-position": financialPositionCoaching,
   settings: settingsCoaching,
 };

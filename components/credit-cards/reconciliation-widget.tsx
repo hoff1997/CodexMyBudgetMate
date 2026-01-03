@@ -151,7 +151,7 @@ export function ReconciliationWidget({
             </div>
 
             {/* Comparison */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div className="p-2 bg-white rounded-lg border border-border/50">
                 <p className="text-xs text-text-light">Adjusted Envelopes</p>
                 <p className="font-medium text-text-dark">

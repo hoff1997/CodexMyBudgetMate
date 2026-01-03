@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Users, ExternalLink, Heart } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface RecipeCardProps {
   recipe: {
@@ -28,10 +29,11 @@ export function RecipeCard({ recipe, onToggleFavorite }: RecipeCardProps) {
       <Link href={`/life/recipes/${recipe.id}`}>
         <div className="aspect-video bg-silver-very-light relative">
           {recipe.image_url ? (
-            <img
+            <Image
               src={recipe.image_url}
               alt={recipe.title}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
             />
           ) : (
             <div className="flex items-center justify-center h-full text-4xl">

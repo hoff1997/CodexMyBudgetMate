@@ -132,7 +132,7 @@ export function BankConnectionStatusWidget({
         ) : (
           <>
             {/* Summary */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="rounded-lg border bg-muted/10 p-3">
                 <p className="text-xs text-muted-foreground">Connected</p>
                 <p className="text-2xl font-bold text-green-600">

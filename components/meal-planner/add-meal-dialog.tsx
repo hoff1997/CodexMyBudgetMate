@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Loader2, Search, BookOpen, PenLine } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/cn";
+import Image from "next/image";
 
 interface Recipe {
   id: string;
@@ -180,9 +181,11 @@ export function AddMealDialog({
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-lg bg-silver-light overflow-hidden shrink-0">
                         {recipe.image_url ? (
-                          <img
+                          <Image
                             src={recipe.image_url}
                             alt=""
+                            width={48}
+                            height={48}
                             className="w-full h-full object-cover"
                           />
                         ) : (

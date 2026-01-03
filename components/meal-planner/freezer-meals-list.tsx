@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -60,7 +60,7 @@ export function FreezerMealsList() {
   });
 
   // Fetch freezer meals
-  const fetchMeals = async () => {
+  const fetchMeals = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/freezer-meals?show_used=${showUsed}`);
@@ -73,11 +73,11 @@ export function FreezerMealsList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showUsed]);
 
   useEffect(() => {
     fetchMeals();
-  }, [showUsed]);
+  }, [fetchMeals]);
 
   // Add new meal
   const handleAddMeal = async () => {

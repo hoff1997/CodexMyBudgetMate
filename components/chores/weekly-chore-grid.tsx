@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { Check, Clock, Circle, Plus, Star, DollarSign } from "lucide-react";
+import Image from "next/image";
 
 interface ChildProfile {
   id: string;
@@ -130,9 +131,11 @@ export function WeeklyChoreGrid({
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-sage-light flex items-center justify-center text-lg shrink-0">
                       {child.avatar_url ? (
-                        <img
+                        <Image
                           src={child.avatar_url}
                           alt={child.name}
+                          width={32}
+                          height={32}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (

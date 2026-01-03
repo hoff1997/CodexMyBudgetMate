@@ -85,7 +85,7 @@ export function InterestTrackerCard({
 
       <CardContent className="space-y-4">
         {/* Monthly Interest */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-3 bg-amber-50 rounded-lg">
             <p className="text-xs text-amber-600 mb-1">Monthly Interest</p>
             <p className="text-lg font-bold text-amber-700">
@@ -131,7 +131,7 @@ export function InterestTrackerCard({
                 With +{formatCurrency(extraMonthlyPayment)}/month extra
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
               <div>
                 <p className="text-text-light text-xs">Interest Saved</p>
                 <p className="font-semibold text-sage">

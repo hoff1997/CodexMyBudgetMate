@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link2, PenLine, Loader2, Plus, X, Check } from "lucide-react";
 import { cn } from "@/lib/cn";
+import Image from "next/image";
 
 interface AddRecipeDialogProps {
   open: boolean;
@@ -344,9 +345,11 @@ export function AddRecipeDialog({
                               : "border-transparent hover:border-silver"
                           )}
                         >
-                          <img
+                          <Image
                             src={img}
                             alt=""
+                            width={80}
+                            height={80}
                             className="w-full h-full object-cover"
                           />
                         </button>

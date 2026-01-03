@@ -237,8 +237,8 @@ export function OpeningBalanceStep({
 
         {/* Group Envelopes */}
         {isExpanded && (
-          <div className="border-t border-silver-light">
-            <table className="w-full">
+          <div className="border-t border-silver-light overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="text-[10px] font-semibold text-text-medium border-b border-silver-light">
                   <th className="w-8 px-2 py-2"></th>

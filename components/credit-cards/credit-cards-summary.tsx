@@ -135,7 +135,7 @@ export function CreditCardsSummary({
         ) : (
           <div className="space-y-4">
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-silver-light/30 rounded-xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-silver-light/30 rounded-xl">
               <div>
                 <div className="flex items-center gap-1.5 text-xs text-text-light mb-1">
                   <TrendingDown className="w-3.5 h-3.5" />

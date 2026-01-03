@@ -677,8 +677,8 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
             </div>
 
             <div className="rounded-3xl border border-border/40 bg-white shadow-sm">
-              <div className="w-full">
-                <table className="w-full divide-y divide-border/40 text-sm text-secondary">
+              <div className="w-full overflow-x-auto">
+                <table className="w-full divide-y divide-border/40 text-sm text-secondary min-w-[700px]">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 text-left">Name</th>

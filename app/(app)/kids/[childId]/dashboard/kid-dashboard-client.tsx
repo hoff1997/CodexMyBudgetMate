@@ -136,7 +136,7 @@ export function KidDashboardClient({
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           <Link href={`/kids/${child.id}/shop`}>
             <Card className="bg-gold-light border-gold hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="py-4 text-center">
@@ -179,7 +179,7 @@ export function KidDashboardClient({
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {accounts.map((account) => {
                 const config = ENVELOPE_ICONS[account.envelope_type as keyof typeof ENVELOPE_ICONS];
                 const Icon = config?.icon || Wallet;

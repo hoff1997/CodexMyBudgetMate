@@ -85,7 +85,7 @@ export function GoalProgressWidget({ goals }: GoalProgressWidgetProps) {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="text-center p-3 bg-gray-50 rounded-lg">
           <p className="text-2xl font-bold text-gray-900">{activeGoals}</p>
           <p className="text-xs text-gray-500">Active</p>

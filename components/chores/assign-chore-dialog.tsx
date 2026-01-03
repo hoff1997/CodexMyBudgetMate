@@ -161,7 +161,7 @@ export function AssignChoreDialog({
           {/* Select Children */}
           <div className="space-y-2">
             <Label>Assign to</Label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {children.map((child) => (
                 <button
                   key={child.id}
@@ -219,7 +219,7 @@ export function AssignChoreDialog({
           {/* Reward Settings */}
           <div className="space-y-4">
             <Label>Reward</Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select value={currencyType} onValueChange={setCurrencyType}>
                 <SelectTrigger>
                   <SelectValue />

@@ -176,7 +176,7 @@ export function CreditCardDashboardCard({
 
         {/* Statement Breakdown (for pay_in_full and hybrid modes) */}
         {(card.cc_usage_type === 'pay_in_full' || card.cc_still_using) && (
-          <div className="grid grid-cols-2 gap-3 p-3 bg-white rounded-lg border border-border/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-white rounded-lg border border-border/50">
             <div>
               <div className="flex items-center gap-1.5 text-xs text-text-light mb-1">
                 <Calendar className="w-3 h-3" />

@@ -256,7 +256,7 @@ export function SnapshotView({
           )}
 
           {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
             <div>
               <p className="text-xs text-text-medium">Current</p>
               <p className="text-sm font-semibold text-sage">
@@ -313,7 +313,8 @@ export function SnapshotView({
             </div>
           ) : (
             // Desktop: Table layout - flat list without priority group headers
-            <table className="w-full table-fixed">
+            <div className="overflow-x-auto">
+            <table className="w-full table-fixed min-w-[800px]">
               <thead className="bg-silver-very-light border-b border-silver-light">
                 <tr>
                   {/* Quick Glance */}
@@ -611,6 +612,7 @@ export function SnapshotView({
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 

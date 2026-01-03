@@ -298,7 +298,7 @@ export function UnifiedEnvelopeTable({
 
       return sortDirection === 'asc' ? comparison : -comparison;
     });
-  }, [envelopes, sortColumn, sortDirection, categories]);
+  }, [envelopes, sortColumn, sortDirection, categories, paySchedule]);
 
   // Validate envelope and generate warnings
   const validateEnvelope = useCallback((envelope: UnifiedEnvelopeData): ValidationWarning[] => {

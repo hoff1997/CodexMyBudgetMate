@@ -34,7 +34,7 @@ export function BudgetSummaryCards({
 
   if (isLoading) {
     return (
-      <div className={cn("grid grid-cols-3 gap-4", className)}>
+      <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", className)}>
         {[1, 2, 3].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader className="pb-2">
@@ -51,7 +51,7 @@ export function BudgetSummaryCards({
   }
 
   return (
-    <div className={cn("grid grid-cols-3 gap-4", className)}>
+    <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", className)}>
       {/* Total Target */}
       <Card>
         <CardHeader className="pb-2">

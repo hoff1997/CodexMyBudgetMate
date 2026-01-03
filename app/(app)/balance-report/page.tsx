@@ -60,14 +60,15 @@ export default async function BalanceReportPage() {
           </CardContent>
         </Card>
       </section>
-      <section className="overflow-hidden rounded-xl border">
+      <section className="rounded-xl border">
         {error && (
           <div className="border-b border-destructive/30 bg-destructive/10 px-6 py-3 text-sm text-destructive">
             Accounts data is unavailable right now. Add the accounts table or sync from Supabase to
             enable this report.
           </div>
         )}
-        <table className="min-w-full divide-y divide-border">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border">
           <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-6 py-3">Account</th>
@@ -91,7 +92,8 @@ export default async function BalanceReportPage() {
               </tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </div>
       </section>
     </div>
   );

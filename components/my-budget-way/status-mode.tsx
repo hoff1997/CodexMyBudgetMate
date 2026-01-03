@@ -89,7 +89,8 @@ export function StatusMode({
   };
 
   return (
-    <table className="w-full">
+    <div className="overflow-x-auto">
+    <table className="w-full min-w-[500px]">
       <thead className="bg-silver-very-light border-b border-silver-light">
         <tr>
           <th className="px-4 py-1.5 text-left text-[11px] font-semibold text-text-medium uppercase tracking-wide">
@@ -293,5 +294,6 @@ export function StatusMode({
         })()}
       </tbody>
     </table>
+    </div>
   );
 }

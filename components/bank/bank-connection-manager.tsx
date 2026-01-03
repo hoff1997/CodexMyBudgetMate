@@ -873,7 +873,7 @@ export default function BankConnectionManager({
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="text-center p-3 border rounded-lg">
                       <div className="text-lg font-semibold text-green-600">
                         {selectedConnection?.status === "connected" ? "✓" : "✗"}

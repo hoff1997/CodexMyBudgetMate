@@ -127,7 +127,7 @@ export function MultiCardOptimizer({
 
       <CardContent className="space-y-4">
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3 p-3 bg-silver-light/30 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-silver-light/30 rounded-lg">
           <div className="text-center">
             <p className="text-xs text-text-light">Total Debt</p>
             <p className="text-sm font-bold text-text-dark">{formatCurrency(totalDebt)}</p>
@@ -164,7 +164,7 @@ export function MultiCardOptimizer({
                     <span className="text-sm font-medium text-text-dark">Avalanche Strategy</span>
                     <span className="text-xs text-blue font-medium">Lowest Interest</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     <div>
                       <p className="text-text-light text-xs">Debt-free by</p>
                       <p className="font-semibold text-text-dark">
@@ -208,7 +208,7 @@ export function MultiCardOptimizer({
                     <span className="text-sm font-medium text-text-dark">Snowball Strategy</span>
                     <span className="text-xs text-sage font-medium">Quick Wins</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     <div>
                       <p className="text-text-light text-xs">Debt-free by</p>
                       <p className="font-semibold text-text-dark">

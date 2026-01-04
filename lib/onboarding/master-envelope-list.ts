@@ -12,7 +12,7 @@ export interface MasterEnvelope {
   name: string;
   icon: string;
   category: EnvelopeCategory;
-  priority: 'essential' | 'important' | 'flexible' | null; // null for tracking envelopes
+  priority: 'essential' | 'important' | 'discretionary' | null; // null for tracking envelopes
   subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
   description?: string;
   defaultSelected?: boolean; // Pre-selected by default
@@ -254,7 +254,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Christmas',
     icon: '🎄',
     category: 'celebrations',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'savings',
   },
   {
@@ -262,7 +262,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Birthdays',
     icon: '🎂',
     category: 'celebrations',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'savings',
     defaultSelected: true,
   },
@@ -271,7 +271,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Easter',
     icon: '🐰',
     category: 'celebrations',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'savings',
   },
   {
@@ -279,7 +279,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: "Mother & Father's Days",
     icon: '🌸',
     category: 'celebrations',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'savings',
   },
   {
@@ -287,7 +287,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Religious Festivals',
     icon: '🕯️',
     category: 'celebrations',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'savings',
   },
 
@@ -327,7 +327,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Fun Money',
     icon: '🎉',
     category: 'extras',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
     defaultSelected: true,
   },
@@ -336,7 +336,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Name 1 Personal',
     icon: '🛍️',
     category: 'extras',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
     allowMultiple: true,
     multipleLabel: 'person',
@@ -346,7 +346,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Name 2 Personal',
     icon: '🛍️',
     category: 'extras',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
   },
   {
@@ -354,7 +354,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Eyebrows',
     icon: '✨',
     category: 'extras',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
   },
   {
@@ -362,7 +362,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Takeaways/Restaurants',
     icon: '🍽️',
     category: 'extras',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
     defaultSelected: true,
   },
@@ -379,7 +379,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Books/Learning',
     icon: '📚',
     category: 'extras',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
   },
 
@@ -389,7 +389,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Donations',
     icon: '❤️',
     category: 'giving',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
   },
   {
@@ -558,7 +558,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Drycleaning',
     icon: '👔',
     category: 'household',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'spending',
   },
   {
@@ -722,7 +722,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'School Photos',
     icon: '📸',
     category: 'school',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -730,7 +730,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'School Donations',
     icon: '💝',
     category: 'school',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
 
@@ -740,7 +740,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Apple Storage',
     icon: '☁️',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -748,7 +748,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Netflix',
     icon: '📺',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -756,7 +756,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Sky TV',
     icon: '📺',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -764,7 +764,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Spotify',
     icon: '🎵',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -772,7 +772,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Disney',
     icon: '🎬',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -780,7 +780,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Neon',
     icon: '📺',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {
@@ -788,7 +788,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     name: 'Gaming',
     icon: '🎮',
     category: 'subscriptions',
-    priority: 'flexible',
+    priority: 'discretionary',
     subtype: 'bill',
   },
   {

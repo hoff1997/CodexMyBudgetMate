@@ -112,7 +112,7 @@ export function AddEnvelopeDialog({
           name: master.name,
           icon: master.icon,
           type: master.subtype,
-          priority: master.priority,
+          priority: master.priority ?? undefined,
           category: master.category,
           frequency: "monthly",
         });

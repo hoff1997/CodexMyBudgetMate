@@ -45,7 +45,7 @@ export interface EnvelopeData {
   id: string;
   name: string;
   icon: string;
-  type: "bill" | "spending" | "savings";
+  type: "bill" | "spending" | "savings" | "goal" | "tracking";
   // Bill fields
   billAmount?: number;
   frequency?: "monthly" | "quarterly" | "annual" | "custom";

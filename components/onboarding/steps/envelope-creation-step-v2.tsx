@@ -101,7 +101,7 @@ interface CustomEnvelope {
   icon: string;
   category: string;
   priority: Priority;
-  subtype: 'bill' | 'spending' | 'savings';
+  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
   sortOrder: number;
 }
 
@@ -213,7 +213,7 @@ export function EnvelopeCreationStepV2({
 
   // Get effective priority for an envelope (with override support)
   const getEffectivePriority = useCallback((envelope: MasterEnvelope): Priority => {
-    return priorityOverrides.get(envelope.id) || envelope.priority;
+    return priorityOverrides.get(envelope.id) || envelope.priority || 'discretionary';
   }, [priorityOverrides]);
 
   // Pre-selected system envelope IDs (shown separately at top)
@@ -507,7 +507,7 @@ export function EnvelopeCreationStepV2({
     setRenameName(customName?.name || envelope.name);
     setRenameIcon(customName?.icon || envelope.icon);
     setRenameCategory(categoryOverrides.get(envelope.id) || envelope.category);
-    setRenamePriority(priorityOverrides.get(envelope.id) || envelope.priority);
+    setRenamePriority(priorityOverrides.get(envelope.id) || envelope.priority || 'discretionary');
     setRenameDialogOpen(true);
   };
 

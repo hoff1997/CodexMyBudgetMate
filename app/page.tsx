@@ -24,53 +24,33 @@ export default function MarketingPage() {
 
       <main className="mx-auto flex max-w-6xl flex-col gap-12 px-4 sm:px-6 py-8 sm:py-12">
         {/* Hero Section - Side by side on mobile, larger layout on desktop */}
-        <section className="space-y-5">
-          {/* Mobile: Heading with Remy to the side */}
-          <div className="flex items-start gap-4">
-            {/* Left: Heading */}
-            <div className="flex-1 space-y-2">
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-tight text-[#3D3D3D]">
-                Budgeting that actually<br />fits your life.
-              </h1>
-              <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">
-                Tell your money where to go before you wonder where it went.
-              </p>
-            </div>
-            {/* Right: Remy - visible on mobile, hidden on lg (shown larger below) */}
-            <div className="flex-shrink-0 lg:hidden">
-              <Image
-                src="/Images/remy-fullsize.png"
-                alt="Remy, your budgeting guide"
-                width={120}
-                height={150}
-                className="object-contain w-[100px] sm:w-[120px] h-auto"
-                priority
-              />
-            </div>
+        <section className="flex items-start gap-4 lg:gap-8">
+          {/* Left: All text content */}
+          <div className="flex-1 space-y-3">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-tight text-[#3D3D3D]">
+              Budgeting that actually<br />fits your life.
+            </h1>
+            <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">
+              Tell your money where to go before you wonder where it went.
+            </p>
+            <p className="text-base sm:text-lg text-[#6B6B6B] pt-1">
+              Connect your NZ bank accounts and see exactly where you stand.<br />No spreadsheets. Just clarity.
+            </p>
+            <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto mt-2">
+              <Link href="/signup">Get Started Free</Link>
+            </Button>
           </div>
 
-          {/* Description and CTA */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-4 lg:max-w-xl">
-              <p className="text-base sm:text-lg text-[#6B6B6B]">
-                Connect your NZ bank accounts and see exactly where you stand.<br />No spreadsheets. Just clarity.
-              </p>
-              <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto">
-                <Link href="/signup">Get Started Free</Link>
-              </Button>
-            </div>
-
-            {/* Large Remy - only visible on lg screens */}
-            <div className="hidden lg:flex justify-end">
-              <Image
-                src="/Images/remy-fullsize.png"
-                alt="Remy, your budgeting guide, showing the My Budget Mate app"
-                width={300}
-                height={375}
-                className="object-contain max-w-[300px] w-full h-auto"
-                priority
-              />
-            </div>
+          {/* Right: Remy - aligned to top */}
+          <div className="flex-shrink-0">
+            <Image
+              src="/Images/remy-fullsize.png"
+              alt="Remy, your budgeting guide"
+              width={300}
+              height={375}
+              className="object-contain w-[100px] sm:w-[120px] lg:w-[280px] h-auto"
+              priority
+            />
           </div>
         </section>
 

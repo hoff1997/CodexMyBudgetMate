@@ -27,7 +27,7 @@ export default function MarketingPage() {
         <section className="flex items-start gap-4 lg:gap-8">
           {/* Left: All text content */}
           <div className="flex-1 space-y-3">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-loose text-[#3D3D3D]">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-tight sm:leading-snug text-[#3D3D3D]">
               Budgeting that actually<br />fits your life.
             </h1>
             <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">

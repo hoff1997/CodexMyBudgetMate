@@ -30,7 +30,7 @@ export default function MarketingPage() {
             {/* Left: Heading */}
             <div className="flex-1 space-y-2">
               <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-tight text-[#3D3D3D]">
-                Budgeting that actually fits your life.
+                Budgeting that actually<br />fits your life.
               </h1>
               <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">
                 Tell your money where to go before you wonder where it went.
@@ -53,7 +53,7 @@ export default function MarketingPage() {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="space-y-4 lg:max-w-xl">
               <p className="text-base sm:text-lg text-[#6B6B6B]">
-                Connect your NZ bank accounts and see exactly where you stand. No spreadsheets. Just clarity.
+                Connect your NZ bank accounts and see exactly where you stand.<br />No spreadsheets. Just clarity.
               </p>
               <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto">
                 <Link href="/signup">Get Started Free</Link>

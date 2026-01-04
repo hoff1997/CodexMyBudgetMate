@@ -8,51 +8,69 @@ export default function MarketingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
       <header className="border-b bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          {/* Logo - text only, no icon */}
-          <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
-          <div className="flex gap-3">
-            <Button asChild variant="ghost">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+          {/* Logo - text only, no icon - nowrap to stay on one line */}
+          <span className="text-lg sm:text-xl font-semibold text-[#3D3D3D] whitespace-nowrap">My Budget Mate</span>
+          <div className="flex gap-2 sm:gap-3">
+            <Button asChild variant="outline" size="sm" className="border-[#7A9E9A] text-[#5A7E7A] hover:bg-[#E2EEEC] sm:size-default">
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button asChild className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white">
+            <Button asChild size="sm" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white sm:size-default">
               <Link href="/signup">Get Started</Link>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-6xl flex-col gap-12 px-6 py-12">
-        {/* Hero Section - Two Column Layout */}
-        <section className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
-          {/* Left: Text Content (60%) */}
-          <div className="lg:col-span-3 space-y-5">
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold leading-tight text-[#3D3D3D] md:text-5xl">
+      <main className="mx-auto flex max-w-6xl flex-col gap-12 px-4 sm:px-6 py-8 sm:py-12">
+        {/* Hero Section - Side by side on mobile, larger layout on desktop */}
+        <section className="space-y-5">
+          {/* Mobile: Heading with Remy to the side */}
+          <div className="flex items-start gap-4">
+            {/* Left: Heading */}
+            <div className="flex-1 space-y-2">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-tight text-[#3D3D3D]">
                 Budgeting that actually fits your life.
               </h1>
-              <p className="text-xl font-medium text-[#5A7E7A]">
+              <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">
                 Tell your money where to go before you wonder where it went.
               </p>
             </div>
-            <p className="max-w-xl text-lg text-[#6B6B6B]">
-              Connect your NZ bank accounts and see exactly where you stand. No spreadsheets. Just clarity.
-            </p>
-            <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white">
-              <Link href="/signup">Get Started Free</Link>
-            </Button>
+            {/* Right: Remy - visible on mobile, hidden on lg (shown larger below) */}
+            <div className="flex-shrink-0 lg:hidden">
+              <Image
+                src="/Images/remy-fullsize.png"
+                alt="Remy, your budgeting guide"
+                width={120}
+                height={150}
+                className="object-contain w-[100px] sm:w-[120px] h-auto"
+                priority
+              />
+            </div>
           </div>
 
-          {/* Right: Remy Image (40%) */}
-          <div className="lg:col-span-2 flex justify-center lg:justify-end">
-            <Image
-              src="/Images/remy-fullsize.png"
-              alt="Remy, your budgeting guide, showing the My Budget Mate app"
-              width={300}
-              height={375}
-              className="object-contain max-w-[220px] lg:max-w-[300px] w-full h-auto"
-              priority
-            />
+          {/* Description and CTA */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-4 lg:max-w-xl">
+              <p className="text-base sm:text-lg text-[#6B6B6B]">
+                Connect your NZ bank accounts and see exactly where you stand. No spreadsheets. Just clarity.
+              </p>
+              <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto">
+                <Link href="/signup">Get Started Free</Link>
+              </Button>
+            </div>
+
+            {/* Large Remy - only visible on lg screens */}
+            <div className="hidden lg:flex justify-end">
+              <Image
+                src="/Images/remy-fullsize.png"
+                alt="Remy, your budgeting guide, showing the My Budget Mate app"
+                width={300}
+                height={375}
+                className="object-contain max-w-[300px] w-full h-auto"
+                priority
+              />
+            </div>
           </div>
         </section>
 
@@ -131,19 +149,21 @@ export default function MarketingPage() {
         </section>
 
         {/* Final CTA Section */}
-        <section className="rounded-2xl border border-[#E5E7EB] bg-[#E2EEEC] p-8 text-center">
-          <h2 className="text-2xl font-semibold text-[#3D3D3D] md:text-3xl">
+        <section className="rounded-2xl border border-[#E5E7EB] bg-[#E2EEEC] p-6 sm:p-8 text-center">
+          <h2 className="text-xl sm:text-2xl font-semibold text-[#3D3D3D] md:text-3xl">
             Ready to see where your money&apos;s going?
           </h2>
-          <p className="mt-3 text-base text-[#6B6B6B]">
+          <p className="mt-3 text-sm sm:text-base text-[#6B6B6B]">
             Join Kiwi households who budget by pay cycle, not by guesswork.
           </p>
           <div className="mt-5 flex flex-col items-center justify-center gap-3 md:flex-row">
-            <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white">
+            <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto">
               <Link href="/signup">Start your free account</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-[#E5E7EB] hover:border-[#7A9E9A] text-[#6B6B6B] bg-white">
-              <Link href="/login">Already have an account? Sign in</Link>
+            <Button asChild size="lg" variant="outline" className="border-[#7A9E9A] hover:bg-[#E2EEEC] text-[#5A7E7A] bg-white w-full sm:w-auto min-h-[44px] px-4 py-2">
+              <Link href="/login" className="whitespace-normal text-center leading-tight">
+                Already have an account? Sign in
+              </Link>
             </Button>
           </div>
         </section>

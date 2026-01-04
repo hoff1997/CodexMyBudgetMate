@@ -172,7 +172,9 @@ export default function MarketingPage() {
       <footer className="bg-[#3D3D3D] text-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-6 md:flex-row md:items-center md:justify-between">
           <div className="text-sm">
-            <span>&copy; {new Date().getFullYear()} My Budget Mate. Built with aroha in Aotearoa.</span>
+            <span>&copy; {new Date().getFullYear()} My Budget Mate.</span>
+            <br />
+            <span>Built with aroha in Aotearoa (NZ)</span>
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <Link href="#features" className="hover:underline text-[#B8D4D0]">

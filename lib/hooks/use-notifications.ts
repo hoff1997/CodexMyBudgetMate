@@ -151,6 +151,7 @@ export function useNotifications(): UseNotificationsResult {
   // Initial fetch
   useEffect(() => {
     fetchNotifications(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

@@ -12,6 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Check, X, Image as ImageIcon, DollarSign, Flame } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
@@ -62,6 +63,7 @@ export function ChoreReviewDialog({
     if (open && assignmentId) {
       fetchDetails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, assignmentId, childId]);
 
   const fetchDetails = async () => {
@@ -197,11 +199,12 @@ export function ChoreReviewDialog({
                   <ImageIcon className="h-4 w-4" />
                   Photo Proof
                 </Label>
-                <div className="rounded-lg overflow-hidden border border-silver-light">
-                  <img
+                <div className="relative rounded-lg overflow-hidden border border-silver-light h-48">
+                  <Image
                     src={details.assignment.proof_photo_url}
                     alt="Chore proof"
-                    className="w-full h-48 object-cover"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               </div>

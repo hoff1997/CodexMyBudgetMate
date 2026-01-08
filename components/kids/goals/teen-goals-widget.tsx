@@ -70,6 +70,7 @@ export function TeenGoalsWidget({ childId, childName }: TeenGoalsWidgetProps) {
 
   useEffect(() => {
     fetchGoals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId]);
 
   const handleTransfer = (goal: TeenGoal) => {

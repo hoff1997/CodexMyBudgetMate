@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Loader2, Camera, Check, Upload, X, Image as ImageIcon } from "lucide-react";
+import { Loader2, Camera, Check, Upload, X } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 
 interface ChoreCompletionDialogProps {
@@ -162,11 +163,12 @@ export function ChoreCompletionDialog({
             </Label>
 
             {photoPreview ? (
-              <div className="relative rounded-lg overflow-hidden border border-silver-light">
-                <img
+              <div className="relative rounded-lg overflow-hidden border border-silver-light h-48">
+                <Image
                   src={photoPreview}
                   alt="Proof"
-                  className="w-full h-48 object-cover"
+                  fill
+                  className="object-cover"
                 />
                 <button
                   onClick={handleRemovePhoto}

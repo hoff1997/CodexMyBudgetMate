@@ -61,7 +61,7 @@ export default async function KidsSettingsPage() {
     <div className="container max-w-4xl py-6 space-y-6">
       <KidsSettingsHeader />
 
-      <KidsSettingsClient children={childrenWithFeatures || []} />
+      <KidsSettingsClient childProfiles={childrenWithFeatures || []} />
     </div>
   );
 }

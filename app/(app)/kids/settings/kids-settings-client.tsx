@@ -71,7 +71,7 @@ interface ChildProfile {
 }
 
 interface KidsSettingsClientProps {
-  children: ChildProfile[];
+  childProfiles: ChildProfile[];
 }
 
 // Autosave debounce hook
@@ -114,7 +114,7 @@ function SavingIndicator({ saving }: { saving: boolean }) {
   );
 }
 
-export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
+export function KidsSettingsClient({ childProfiles }: KidsSettingsClientProps) {
   const { toast } = useToast();
   const [globalSaving, setGlobalSaving] = useState(false);
   const [savedFields, setSavedFields] = useState<Record<string, boolean>>({});
@@ -122,7 +122,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
   // Local state for all children's settings
   const [localSettings, setLocalSettings] = useState<Record<string, Partial<ChildProfile>>>(() => {
     const initial: Record<string, Partial<ChildProfile>> = {};
-    children.forEach(child => {
+    childProfiles.forEach(child => {
       initial[child.id] = { ...child };
     });
     return initial;
@@ -257,7 +257,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
     return days[day] || "Unknown";
   };
 
-  if (children.length === 0) {
+  if (childProfiles.length === 0) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
@@ -300,7 +300,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <th className="text-left py-3 px-2 font-medium text-muted-foreground w-48">
                     Setting
                   </th>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <th key={child.id} className="text-center py-3 px-4 min-w-[140px]">
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center text-xl overflow-hidden">
@@ -332,7 +332,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
               <tbody>
                 {/* Feature Access Section */}
                 <tr className="bg-sage-very-light">
-                  <td colSpan={children.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
+                  <td colSpan={childProfiles.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
                     <Shield className="h-4 w-4" />
                     Feature Access
                   </td>
@@ -340,7 +340,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">View & Complete Chores</td>
-                  {children.map((child) => {
+                  {childProfiles.map((child) => {
                     const features = child.featureAccess || { can_view_chores: true };
                     return (
                       <td key={child.id} className="text-center py-3 px-4">
@@ -355,7 +355,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">View Money & Balances</td>
-                  {children.map((child) => {
+                  {childProfiles.map((child) => {
                     const features = child.featureAccess || { can_view_money: true };
                     return (
                       <td key={child.id} className="text-center py-3 px-4">
@@ -370,7 +370,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 {/* Life Module Permissions Section */}
                 <tr className="bg-sage-very-light">
-                  <td colSpan={children.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
+                  <td colSpan={childProfiles.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
                     <Home className="h-4 w-4" />
                     Life Module Access
                   </td>
@@ -380,7 +380,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <td className="py-3 px-2 text-muted-foreground flex items-center gap-2">
                     <Home className="h-3 w-3" /> Household Hub
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.hubPermissions?.household_hub || "none"}
@@ -404,7 +404,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <td className="py-3 px-2 text-muted-foreground flex items-center gap-2">
                     <Gift className="h-3 w-3" /> Birthdays
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.hubPermissions?.birthdays || "none"}
@@ -428,7 +428,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <td className="py-3 px-2 text-muted-foreground flex items-center gap-2">
                     <ListTodo className="h-3 w-3" /> To-Do Lists
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.hubPermissions?.todos || "none"}
@@ -452,7 +452,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <td className="py-3 px-2 text-muted-foreground flex items-center gap-2">
                     <ShoppingCart className="h-3 w-3" /> Shopping Lists
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.hubPermissions?.shopping || "none"}
@@ -476,7 +476,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <td className="py-3 px-2 text-muted-foreground flex items-center gap-2">
                     <ChefHat className="h-3 w-3" /> Recipes
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.hubPermissions?.recipes || "none"}
@@ -500,7 +500,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                   <td className="py-3 px-2 text-muted-foreground flex items-center gap-2">
                     <UtensilsCrossed className="h-3 w-3" /> Meal Planner
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.hubPermissions?.meal_planner || "none"}
@@ -522,7 +522,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 {/* Invoice Settings Section */}
                 <tr className="bg-sage-very-light">
-                  <td colSpan={children.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
+                  <td colSpan={childProfiles.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
                     <Receipt className="h-4 w-4" />
                     Invoice Settings
                   </td>
@@ -530,7 +530,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">Invoice Frequency</td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Select
                         value={child.paymentSettings?.invoice_frequency || "weekly"}
@@ -555,7 +555,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">Invoice Day</td>
-                  {children.map((child) => {
+                  {childProfiles.map((child) => {
                     const freq = child.paymentSettings?.invoice_frequency || "weekly";
                     const isMonthly = freq === "monthly";
                     return (
@@ -609,7 +609,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
                     <Bell className="h-4 w-4" />
                     Reminders
                   </td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Switch
                         checked={child.paymentSettings?.reminder_enabled ?? true}
@@ -623,7 +623,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">Auto-submit Invoices</td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Switch
                         checked={child.paymentSettings?.auto_submit ?? false}
@@ -637,7 +637,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 {/* Bank Linking Section */}
                 <tr className="bg-sage-very-light">
-                  <td colSpan={children.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
+                  <td colSpan={childProfiles.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
                     <Landmark className="h-4 w-4" />
                     Bank Account Linking (Akahu)
                   </td>
@@ -645,7 +645,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr className="border-b">
                   <td className="py-3 px-2 text-muted-foreground">Bank Linking Enabled</td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <Switch
                         checked={child.bank_linking_enabled ?? true}
@@ -659,7 +659,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 {/* Family Access Codes */}
                 <tr className="bg-sage-very-light">
-                  <td colSpan={children.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
+                  <td colSpan={childProfiles.length + 1} className="py-2 px-2 font-medium flex items-center gap-2">
                     <User className="h-4 w-4" />
                     Login Details
                   </td>
@@ -667,7 +667,7 @@ export function KidsSettingsClient({ children }: KidsSettingsClientProps) {
 
                 <tr>
                   <td className="py-3 px-2 text-muted-foreground">Family Access Code</td>
-                  {children.map((child) => (
+                  {childProfiles.map((child) => (
                     <td key={child.id} className="text-center py-3 px-4">
                       <code className="bg-gray-100 px-2 py-1 rounded text-xs font-mono">
                         {child.family_access_code || "Not set"}

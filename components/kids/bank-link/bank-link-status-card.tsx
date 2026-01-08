@@ -62,6 +62,7 @@ export function BankLinkStatusCard({ childId, childName }: BankLinkStatusCardPro
 
   useEffect(() => {
     fetchStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [childId]);
 
   const handleSync = async () => {

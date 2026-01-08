@@ -93,7 +93,6 @@ export default async function KidDashboardPage({ params }: Props) {
   return await renderDashboard(supabase, child, childId);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function renderDashboard(supabase: any, child: any, childId: string) {
   // Fetch child's bank accounts
   const { data: accounts } = await supabase

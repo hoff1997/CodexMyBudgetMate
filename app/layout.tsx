@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import AppProviders from "@/components/providers/app-providers";
+import { CookieConsentBanner } from "@/components/layout/cookie-consent-banner";
 
 export const metadata: Metadata = {
   title: "My Budget Mate",
@@ -17,7 +18,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full bg-background" suppressHydrationWarning>
       <body className="h-full font-sans" suppressHydrationWarning>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          {children}
+          <CookieConsentBanner />
+        </AppProviders>
       </body>
     </html>
   );

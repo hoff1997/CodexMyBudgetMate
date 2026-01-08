@@ -99,6 +99,13 @@ export default function PrivacyPage() {
           </a>{" "}
           for anything requiring manual support.
         </p>
+        <p className="mt-4">
+          For information about how we use cookies, see our{" "}
+          <Link href="/privacy/cookies" className="underline underline-offset-4">
+            Cookie Policy
+          </Link>
+          .
+        </p>
       </footer>
     </main>
   );

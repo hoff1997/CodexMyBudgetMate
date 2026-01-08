@@ -15,6 +15,7 @@ export interface GiftRecipient {
   party_amount?: number; // One-off party/food budget
   celebration_date: string | null; // ISO date string, null for non-date celebrations
   notes: string | null;
+  needs_gift: boolean; // If false, just tracking date without budgeting
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +30,7 @@ export interface GiftRecipientInput {
   party_amount?: number; // One-off party/food budget
   celebration_date?: Date | null;
   notes?: string;
+  needs_gift?: boolean; // Default true - tracks whether they give gifts
 }
 
 /**

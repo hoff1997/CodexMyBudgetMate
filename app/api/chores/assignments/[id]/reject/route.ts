@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-interface Params {
-  params: { id: string };
+interface RouteContext {
+  params: Promise<{ id: string }>;
 }
 
 // PATCH /api/chores/assignments/[id]/reject - Parent rejects completed chore
-export async function PATCH(request: Request, { params }: Params) {
+export async function PATCH(request: Request, context: RouteContext) {
+  const { id } = await context.params;
   const supabase = await createClient();
 
   const {
@@ -33,7 +34,7 @@ export async function PATCH(request: Request, { params }: Params) {
       )
     `
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!assignment) {
@@ -46,10 +47,12 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
-  // Can only reject "done" status chores
-  if (assignment.status !== "done") {
+  // Can only reject chores that are "done" or "pending_approval"
+  // - "done" comes from parent-initiated completion
+  // - "pending_approval" comes from kid-initiated completion (with/without photo)
+  if (assignment.status !== "done" && assignment.status !== "pending_approval") {
     return NextResponse.json(
-      { error: `Can only reject chores that are marked done (current: ${assignment.status})` },
+      { error: `Can only reject chores that are done or pending approval (current: ${assignment.status})` },
       { status: 400 }
     );
   }
@@ -62,7 +65,7 @@ export async function PATCH(request: Request, { params }: Params) {
       marked_done_at: null,
       rejection_reason: reason || "Needs more work",
     })
-    .eq("id", params.id)
+    .eq("id", id)
     .select(
       `
       *,

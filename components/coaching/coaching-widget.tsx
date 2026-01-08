@@ -139,10 +139,10 @@ export function CoachingWidget({
     }
   };
 
-  // Top Up Envelopes - opens transfer dialog or navigates to envelope summary
+  // Top Up Envelopes - opens transfer dialog or navigates to budget allocation
   const handleTopUpEnvelopes = () => {
     if (currentPage === "dashboard") {
-      router.push("/envelope-summary?filter=needs-attention");
+      router.push("/budgetallocation?filter=needs-attention");
     } else if (onOpenTransferDialog) {
       onOpenTransferDialog();
     }

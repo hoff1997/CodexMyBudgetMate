@@ -30,8 +30,6 @@ export default async function KidsSetupPage() {
       date_of_birth,
       avatar_url,
       family_access_code,
-      star_balance,
-      screen_time_balance,
       created_at
     `
     )

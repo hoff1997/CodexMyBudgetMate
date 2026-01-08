@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { markUserAsReturning } from "@/components/landing/returning-user-cta";
 
 export function AuthForm() {
   const router = useRouter();
@@ -56,6 +57,21 @@ export function AuthForm() {
       // Success! Cookies are now set by the Route Handler
       toast.success("Successfully signed in!");
 
+      // Try to fetch user profile to get their name for personalization
+      let userName: string | undefined;
+      try {
+        const profileResponse = await fetch("/api/user");
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+          userName = profile.preferred_name || profile.full_name?.split(" ")[0];
+        }
+      } catch {
+        // Ignore errors - name is optional
+      }
+
+      // Mark user as returning for personalized landing page
+      markUserAsReturning(userName);
+
       // Wait a bit for cookies to be stored, then redirect client-side
       setTimeout(() => {
         router.push("/dashboard");
@@ -70,25 +86,27 @@ export function AuthForm() {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit} suppressHydrationWarning>
-      <div className="space-y-1">
+      <div className="space-y-1" suppressHydrationWarning>
         <Input
           placeholder="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
+          suppressHydrationWarning
         />
         {emailError && (
           <p className="text-xs text-[#6B9ECE]">{emailError}</p>
         )}
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1" suppressHydrationWarning>
         <Input
           placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
+          suppressHydrationWarning
         />
         {passwordError && (
           <p className="text-xs text-[#6B9ECE]">{passwordError}</p>

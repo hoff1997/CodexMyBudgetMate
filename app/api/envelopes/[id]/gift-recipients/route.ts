@@ -102,6 +102,7 @@ export async function PUT(
         ? new Date(r.celebration_date).toISOString().split("T")[0]
         : null,
       notes: r.notes?.trim() || null,
+      needs_gift: r.needs_gift ?? true, // Default to true - they're budgeting for gifts
     }));
 
     const { data: inserted, error: insertError } = await supabase
@@ -193,6 +194,7 @@ export async function POST(
         ? new Date(recipient.celebration_date).toISOString().split("T")[0]
         : null,
       notes: recipient.notes?.trim() || null,
+      needs_gift: recipient.needs_gift ?? true, // Default to true - they're budgeting for gifts
     })
     .select()
     .single();

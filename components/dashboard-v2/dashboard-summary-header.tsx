@@ -16,11 +16,13 @@ interface DashboardSummaryHeaderProps {
   incomeThisMonth?: number;
   nextPayday?: Date | null;
   budgetHealthStatus?: "healthy" | "attention" | "critical";
+  notifications?: ReactNode;
   remyHelp?: ReactNode;
 }
 
 export function DashboardSummaryHeader({
   userName,
+  notifications,
   remyHelp,
 }: DashboardSummaryHeaderProps) {
   const greeting = useMemo(() => {
@@ -43,12 +45,11 @@ export function DashboardSummaryHeader({
           </p>
         </div>
 
-        {/* Right: Remy Help */}
-        {remyHelp && (
-          <div className="flex items-center">
-            {remyHelp}
-          </div>
-        )}
+        {/* Right: Notifications + Remy Help */}
+        <div className="flex items-center gap-2">
+          {notifications}
+          {remyHelp}
+        </div>
       </div>
     </header>
   );

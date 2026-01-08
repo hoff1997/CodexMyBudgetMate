@@ -85,7 +85,7 @@ export async function POST(request: Request) {
   // Verify parent ownership
   const { data: child } = await supabase
     .from("child_profiles")
-    .select("id, star_balance, parent_user_id")
+    .select("id, parent_user_id")
     .eq("id", child_id)
     .single();
 
@@ -105,11 +105,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Already unlocked" }, { status: 400 });
   }
 
-  // Get achievement definition
+  // Get achievement definition (only active achievements)
   const { data: achievement } = await supabase
     .from("kid_achievements")
     .select("*")
     .eq("key", achievement_key)
+    .eq("is_active", true)
     .single();
 
   if (!achievement) {
@@ -125,27 +126,11 @@ export async function POST(request: Request) {
     achievement_key: achievement_key,
   });
 
-  // Award bonus stars
-  const newStarBalance = (child.star_balance || 0) + achievement.bonus_stars;
-
-  await supabase
-    .from("child_profiles")
-    .update({ star_balance: newStarBalance })
-    .eq("id", child_id);
-
-  // Create star transaction
-  await supabase.from("star_transactions").insert({
-    child_profile_id: child_id,
-    amount: achievement.bonus_stars,
-    source: "achievement",
-    reference_id: achievement.key,
-    description: `Achievement: ${achievement.name}`,
-  });
+  // Note: We no longer award bonus stars as we've moved to real money focus
+  // Achievements now celebrate real financial milestones
 
   return NextResponse.json({
     success: true,
     achievement,
-    stars_earned: achievement.bonus_stars,
-    new_star_balance: newStarBalance,
   });
 }

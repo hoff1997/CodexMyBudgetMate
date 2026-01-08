@@ -150,13 +150,13 @@ export function DebtManagementClient({ liabilities, envelopes, demoMode }: Props
       {
         title: "Budget debt payments",
         description: "Create envelopes that match each repayment so money is ready.",
-        href: "/envelope-summary?tab=debt",
+        href: "/budgetallocation",
         urgent: debtEnvelopes.length === 0,
       },
       {
         title: "Find extra dollars",
         description: "Review spending to free cash for accelerated paydown.",
-        href: "/envelope-summary?tab=zero-budget",
+        href: "/budgetallocation",
         urgent: extraPaymentCapacity < totalDebt * 0.015,
       },
       {
@@ -186,7 +186,7 @@ export function DebtManagementClient({ liabilities, envelopes, demoMode }: Props
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             <Button asChild>
-              <Link href="/envelope-summary">
+              <Link href="/budgetallocation">
                 Build emergency fund
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

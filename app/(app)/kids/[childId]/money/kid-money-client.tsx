@@ -8,7 +8,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyEnvelopeCard } from "@/components/kids/money-envelope-card";
 import { OpeningBalanceDialog } from "@/components/kids/opening-balance-dialog";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { ArrowLeft, Settings, DollarSign } from "lucide-react";
+
+const HELP_CONTENT = {
+  tips: [
+    "Check your balances regularly to see how much you've saved",
+    "Think before you spend - do you really want it?",
+    "Try to save a bit from every amount you receive",
+  ],
+  features: [
+    "See your money split into Spend, Save, Invest, and Give",
+    "Track your balance in each envelope",
+    "Watch your savings grow over time",
+    "Set up opening balances when you start",
+  ],
+  faqs: [
+    {
+      question: "What are the different envelopes for?",
+      answer: "Spend is for things you want to buy soon. Save is for bigger goals. Invest is for the future. Give is for helping others.",
+    },
+    {
+      question: "How do I get more money in my envelopes?",
+      answer: "Complete chores to earn money! When your parent approves them, the money will be added based on your family's split settings.",
+    },
+    {
+      question: "What are pending earnings?",
+      answer: "These are chores you've completed that are waiting for your parent to transfer the money to your envelopes.",
+    },
+  ],
+};
 
 interface ChildProfile {
   id: string;
@@ -102,14 +131,17 @@ export function KidMoneyClient({
               <p className="text-text-medium">Total: ${total.toFixed(2)}</p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowOpeningBalance(true)}
-          >
-            <Settings className="h-4 w-4 mr-1" />
-            Set Balance
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowOpeningBalance(true)}
+            >
+              <Settings className="h-4 w-4 mr-1" />
+              Set Balance
+            </Button>
+            <RemyHelpButton title="My Money" content={HELP_CONTENT} />
+          </div>
         </div>
 
         {/* Pending Earnings Alert */}

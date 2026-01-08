@@ -5,7 +5,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { RecipeCard, AddRecipeDialog } from "@/components/recipes";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { Plus, Search, Heart, BookOpen, X } from "lucide-react";
+
+const HELP_CONTENT = {
+  tips: [
+    "Add tags to recipes for easy filtering (e.g., 'quick', 'kid-friendly')",
+    "Mark your favourite recipes with a heart for quick access",
+    "Import recipes from websites you love",
+  ],
+  features: [
+    "Save recipes from websites, cookbooks, or family traditions",
+    "Filter by tags, favourites, or search by name",
+    "Link recipes directly to your meal plan",
+    "Store prep time, cook time, and servings",
+  ],
+  faqs: [
+    {
+      question: "How do I add a recipe from a website?",
+      answer: "Click 'Add Recipe' and paste the URL. We'll try to import the recipe details automatically.",
+    },
+    {
+      question: "Can I organise recipes with tags?",
+      answer: "Yes! Add tags like 'dinner', 'vegetarian', or 'under-30-min' when creating or editing a recipe.",
+    },
+    {
+      question: "How do I mark a recipe as a favourite?",
+      answer: "Click the heart icon on any recipe card to add it to your favourites.",
+    },
+  ],
+};
 import { cn } from "@/lib/cn";
 
 interface Recipe {
@@ -125,13 +154,16 @@ export function RecipesClient({
               </p>
             </div>
           </div>
-          <Button
-            onClick={() => setShowAddDialog(true)}
-            className="bg-sage hover:bg-sage-dark"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Recipe
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowAddDialog(true)}
+              className="bg-sage hover:bg-sage-dark"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Recipe
+            </Button>
+            <RemyHelpButton title="Recipes" content={HELP_CONTENT} />
+          </div>
         </div>
 
         {/* Filters */}

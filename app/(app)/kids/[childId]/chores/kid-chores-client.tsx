@@ -8,23 +8,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/cn";
 import {
-  Star,
-  Clock,
   CheckCircle2,
   Circle,
   AlertCircle,
   DollarSign,
   Loader2,
   ArrowLeft,
+  Clock,
+  Flame,
 } from "lucide-react";
 import Link from "next/link";
+import { ChoreCompletionDialog } from "@/components/kids/chores";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
 
 interface ChildProfile {
   id: string;
   name: string;
   avatar_url: string | null;
-  star_balance: number;
-  screen_time_balance: number;
+  // Legacy fields - kept for backwards compatibility but not used
+  star_balance?: number;
+  screen_time_balance?: number;
 }
 
 interface ChoreTemplate {
@@ -33,6 +36,10 @@ interface ChoreTemplate {
   description: string | null;
   icon: string | null;
   estimated_minutes: number | null;
+  is_expected: boolean | null;
+  requires_photo: boolean | null;
+  currency_type: string | null;
+  currency_amount: number | null;
 }
 
 interface ChoreAssignment {
@@ -47,6 +54,34 @@ interface ChoreAssignment {
   chore_template: ChoreTemplate | null;
 }
 
+const HELP_CONTENT = {
+  tips: [
+    "Check your chores each morning to plan your day",
+    "Complete expected chores daily to build your streak",
+    "Extra chores add to your invoice - submit it to get paid!",
+  ],
+  features: [
+    "Expected chores build streaks and are part of your pocket money",
+    "Extra chores can be invoiced for real money",
+    "Track your weekly progress at a glance",
+    "Submit your invoice when ready to get paid",
+  ],
+  faqs: [
+    {
+      question: "What's the difference between Expected and Extra chores?",
+      answer: "Expected chores are part of your regular pocket money - do them to build your streak! Extra chores earn you additional money that you add to your invoice.",
+    },
+    {
+      question: "How do I get paid for Extra chores?",
+      answer: "Complete the chore, add photo proof if needed, then add it to your invoice. When you submit your invoice, your parent will pay you!",
+    },
+    {
+      question: "What are streaks?",
+      answer: "Streaks track how many days in a row you've completed your expected chores. Keep your streak going to build great habits!",
+    },
+  ],
+};
+
 interface KidChoresClientProps {
   child: ChildProfile;
   chores: ChoreAssignment[];
@@ -55,12 +90,6 @@ interface KidChoresClientProps {
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const CURRENCY_ICONS = {
-  stars: { icon: Star, color: "text-gold", label: "stars" },
-  screen_time: { icon: Clock, color: "text-blue", label: "min" },
-  money: { icon: DollarSign, color: "text-sage", label: "" },
-};
-
 export function KidChoresClient({
   child,
   chores,
@@ -68,22 +97,19 @@ export function KidChoresClient({
 }: KidChoresClientProps) {
   const router = useRouter();
   const [markingDone, setMarkingDone] = useState<string | null>(null);
+  const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
+  const [selectedChore, setSelectedChore] = useState<ChoreAssignment | null>(null);
 
   // Calculate stats
   const stats = useMemo(() => {
     const total = chores.length;
     const pending = chores.filter((c) => c.status === "pending").length;
-    const done = chores.filter((c) => c.status === "done").length;
+    // Include both "done" (old flow) and "pending_approval" (kid flow) as waiting for approval
+    const done = chores.filter((c) => c.status === "done" || c.status === "pending_approval").length;
     const approved = chores.filter((c) => c.status === "approved").length;
     const completed = done + approved;
 
-    // Calculate potential rewards
-    const potentialStars = chores
-      .filter((c) => c.currency_type === "stars" && c.status !== "approved")
-      .reduce((sum, c) => sum + c.currency_amount, 0);
-    const potentialScreenTime = chores
-      .filter((c) => c.currency_type === "screen_time" && c.status !== "approved")
-      .reduce((sum, c) => sum + c.currency_amount, 0);
+    // Calculate potential money from Extra chores (only money currency now)
     const potentialMoney = chores
       .filter((c) => c.currency_type === "money" && c.status !== "approved")
       .reduce((sum, c) => sum + c.currency_amount, 0);
@@ -95,8 +121,6 @@ export function KidChoresClient({
       approved,
       completed,
       progressPercent: total > 0 ? (completed / total) * 100 : 0,
-      potentialStars,
-      potentialScreenTime,
       potentialMoney,
     };
   }, [chores]);
@@ -122,11 +146,24 @@ export function KidChoresClient({
     return grouped;
   }, [chores]);
 
-  const handleMarkDone = async (choreId: string) => {
+  const handleOpenCompletionDialog = (chore: ChoreAssignment) => {
+    setSelectedChore(chore);
+    setCompletionDialogOpen(true);
+  };
+
+  const handleChoreCompleted = () => {
+    router.refresh();
+  };
+
+  const handleQuickComplete = async (choreId: string) => {
     setMarkingDone(choreId);
     try {
-      const res = await fetch(`/api/chores/assignments/${choreId}/complete`, {
-        method: "PATCH",
+      // Use the kid-specific endpoint which sets status to "pending_approval"
+      // This ensures proper approval workflow
+      const res = await fetch(`/api/kids/${child.id}/chores/${choreId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
       if (res.ok) {
         router.refresh();
@@ -155,26 +192,29 @@ export function KidChoresClient({
         </Link>
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl border-4 border-sage">
-            {child.avatar_url ? (
-              <Image
-                src={child.avatar_url}
-                alt={child.name}
-                width={64}
-                height={64}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              "👤"
-            )}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl border-4 border-sage">
+              {child.avatar_url ? (
+                <Image
+                  src={child.avatar_url}
+                  alt={child.name}
+                  width={64}
+                  height={64}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                "👤"
+              )}
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-text-dark">
+                {child.name}'s Chores
+              </h1>
+              <p className="text-text-medium">This week's tasks</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-text-dark">
-              {child.name}'s Chores
-            </h1>
-            <p className="text-text-medium">This week's tasks</p>
-          </div>
+          <RemyHelpButton title="Chores" content={HELP_CONTENT} />
         </div>
 
         {/* Progress Card */}
@@ -188,27 +228,13 @@ export function KidChoresClient({
             </div>
             <Progress value={stats.progressPercent} className="h-3 mb-4" />
 
-            {/* Potential Rewards */}
-            <div className="flex flex-wrap gap-4 text-sm">
-              {stats.potentialStars > 0 && (
-                <div className="flex items-center gap-1 text-gold">
-                  <Star className="h-4 w-4" />
-                  <span>{stats.potentialStars} stars to earn</span>
-                </div>
-              )}
-              {stats.potentialScreenTime > 0 && (
-                <div className="flex items-center gap-1 text-blue">
-                  <Clock className="h-4 w-4" />
-                  <span>{stats.potentialScreenTime}m screen time to earn</span>
-                </div>
-              )}
-              {stats.potentialMoney > 0 && (
-                <div className="flex items-center gap-1 text-sage">
-                  <DollarSign className="h-4 w-4" />
-                  <span>${stats.potentialMoney.toFixed(2)} to earn</span>
-                </div>
-              )}
-            </div>
+            {/* Potential Earnings from Extra Chores */}
+            {stats.potentialMoney > 0 && (
+              <div className="flex items-center gap-2 text-sm text-sage">
+                <DollarSign className="h-4 w-4" />
+                <span className="font-medium">${stats.potentialMoney.toFixed(2)} to earn from Extra chores</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -240,7 +266,8 @@ export function KidChoresClient({
                       <ChoreItem
                         key={chore.id}
                         chore={chore}
-                        onMarkDone={handleMarkDone}
+                        onMarkDone={(c) => handleOpenCompletionDialog(c)}
+                        onQuickComplete={handleQuickComplete}
                         isMarking={markingDone === chore.id}
                       />
                     ))}
@@ -264,7 +291,8 @@ export function KidChoresClient({
                       <ChoreItem
                         key={chore.id}
                         chore={chore}
-                        onMarkDone={handleMarkDone}
+                        onMarkDone={(c) => handleOpenCompletionDialog(c)}
+                        onQuickComplete={handleQuickComplete}
                         isMarking={markingDone === chore.id}
                       />
                     ))}
@@ -299,7 +327,8 @@ export function KidChoresClient({
                         <ChoreItem
                           key={chore.id}
                           chore={chore}
-                          onMarkDone={handleMarkDone}
+                          onMarkDone={(c) => handleOpenCompletionDialog(c)}
+                          onQuickComplete={handleQuickComplete}
                           isMarking={markingDone === chore.id}
                         />
                       ))}
@@ -311,6 +340,20 @@ export function KidChoresClient({
           </div>
         )}
       </div>
+
+      {/* Chore Completion Dialog */}
+      {selectedChore && (
+        <ChoreCompletionDialog
+          open={completionDialogOpen}
+          onOpenChange={setCompletionDialogOpen}
+          childId={child.id}
+          assignmentId={selectedChore.id}
+          choreName={selectedChore.chore_template?.name || "Chore"}
+          choreIcon={selectedChore.chore_template?.icon || "📋"}
+          requiresPhoto={selectedChore.chore_template?.requires_photo || false}
+          onCompleted={handleChoreCompleted}
+        />
+      )}
     </div>
   );
 }
@@ -318,20 +361,36 @@ export function KidChoresClient({
 function ChoreItem({
   chore,
   onMarkDone,
+  onQuickComplete,
   isMarking,
 }: {
   chore: ChoreAssignment;
-  onMarkDone: (id: string) => void;
+  onMarkDone: (chore: ChoreAssignment) => void;
+  onQuickComplete: (id: string) => void;
   isMarking: boolean;
 }) {
   const template = chore.chore_template;
-  const currency = CURRENCY_ICONS[chore.currency_type as keyof typeof CURRENCY_ICONS];
-  const CurrencyIcon = currency?.icon || Star;
+  // Use is_expected from template as authoritative source
+  const isExpectedChore = template?.is_expected === true;
+  const isExtraChore = !isExpectedChore && chore.currency_type === "money" && chore.currency_amount > 0;
 
   const isPending = chore.status === "pending";
-  const isDone = chore.status === "done";
+  // "done" is from old parent flow, "pending_approval" is from kid flow - treat both as waiting for approval
+  const isDone = chore.status === "done" || chore.status === "pending_approval";
   const isApproved = chore.status === "approved";
   const hasRejection = !!chore.rejection_reason;
+  // Get requires_photo from the template (that's where it's stored in the database)
+  const needsPhoto = template?.requires_photo || false;
+
+  const handleComplete = () => {
+    if (needsPhoto) {
+      // Open dialog for photo upload
+      onMarkDone(chore);
+    } else {
+      // Quick complete without dialog
+      onQuickComplete(chore.id);
+    }
+  };
 
   return (
     <div
@@ -371,6 +430,22 @@ function ChoreItem({
           >
             {template?.name || "Unknown Chore"}
           </span>
+          {/* Chore type badge */}
+          {isExpectedChore && (
+            <span className="text-xs bg-sage-very-light text-sage-dark px-1.5 py-0.5 rounded">
+              Expected
+            </span>
+          )}
+          {isExtraChore && (
+            <span className="text-xs bg-gold-light text-gold-dark px-1.5 py-0.5 rounded">
+              Extra
+            </span>
+          )}
+          {needsPhoto && isPending && (
+            <span className="text-xs bg-blue-light text-blue px-1.5 py-0.5 rounded">
+              📷 Photo
+            </span>
+          )}
         </div>
         {template?.description && (
           <p className="text-xs text-text-light mt-0.5">{template.description}</p>
@@ -382,23 +457,26 @@ function ChoreItem({
         )}
       </div>
 
-      {/* Reward */}
-      <div className={cn("shrink-0 flex items-center gap-1", currency?.color)}>
-        <CurrencyIcon className="h-4 w-4" />
-        <span className="font-bold">
-          {chore.currency_type === "money" && "$"}
-          {chore.currency_amount}
-          {currency?.label && chore.currency_type !== "money" && (
-            <span className="text-xs font-normal ml-0.5">{currency.label}</span>
-          )}
-        </span>
-      </div>
+      {/* Reward - only show for Extra chores with money */}
+      {isExtraChore && (
+        <div className="shrink-0 flex items-center gap-1 text-sage">
+          <DollarSign className="h-4 w-4" />
+          <span className="font-bold">${chore.currency_amount.toFixed(2)}</span>
+        </div>
+      )}
+
+      {/* Streak indicator for Expected chores */}
+      {isExpectedChore && !isApproved && (
+        <div className="shrink-0 flex items-center gap-1 text-gold">
+          <Flame className="h-4 w-4" />
+        </div>
+      )}
 
       {/* Action */}
       {isPending && (
         <Button
           size="sm"
-          onClick={() => onMarkDone(chore.id)}
+          onClick={handleComplete}
           disabled={isMarking}
           className="shrink-0"
         >

@@ -91,7 +91,7 @@ export function EnvelopeStatusOverview({
   const totalEnvelopes = envelopes.length;
 
   const handleStatClick = (filter: string) => {
-    router.push(`/envelope-summary?filter=${filter}`);
+    router.push(`/budgetallocation?filter=${filter}`);
   };
 
   if (envelopes.length === 0) {
@@ -101,7 +101,7 @@ export function EnvelopeStatusOverview({
           <CardTitle className="text-base font-semibold text-text-dark flex items-center justify-between">
             Envelope Status
             <Link
-              href="/envelope-summary"
+              href="/budgetallocation"
               className="flex items-center text-sm font-normal text-sage hover:text-sage-dark"
             >
               View All <ChevronRight className="h-4 w-4 ml-0.5" />
@@ -130,7 +130,7 @@ export function EnvelopeStatusOverview({
         <CardTitle className="text-sm font-semibold text-text-dark flex items-center justify-between">
           <span>Envelope Status</span>
           <Link
-            href="/envelope-summary"
+            href="/budgetallocation"
             className="flex items-center text-xs font-normal text-sage hover:text-sage-dark"
           >
             View All <ChevronRight className="h-3.5 w-3.5 ml-0.5" />

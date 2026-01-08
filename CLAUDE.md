@@ -171,40 +171,41 @@ This ensures database consistency with the `is_tracking_only` boolean column.
 
 | Page | Route | Purpose |
 |------|-------|---------|
-| **Allocation** | `/allocation` | Primary budget management - editing, allocating income, all envelope features |
-| **Envelope Summary** | `/envelope-summary` | Overview, progress checking, quick transfers |
+| **Budget Allocation** | `/budgetallocation` | Primary budget management - editing, allocating income, all envelope features |
 | **Dashboard** | `/dashboard` | High-level financial overview, upcoming bills, quick actions |
+| **Reconcile** | `/reconcile` | Transaction approval and assignment |
+| **Transactions** | `/transactions` | Transaction history and search |
+| **Financial Position** | `/financial-position` | Net worth tracking, assets, liabilities |
 
 ### Deprecated Pages (DO NOT ADD FEATURES)
 
 | Page | Route | Status |
 |------|-------|--------|
+| **Envelope Summary** | `/envelope-summary` | ⛔ DEPRECATED - Removed from navigation (Jan 2026). Use Budget Allocation instead. |
 | **Budget Manager** | `/budget-manager` | ⛔ DEPRECATED - Legacy reference only |
 
 ### Feature Ownership
 
-| Feature | Allocation | Envelope Summary | Dashboard |
-|---------|------------|------------------|-----------|
-| Envelope table with inline editing | ✅ | ❌ | ❌ |
-| Income cards / allocation controls | ✅ | ❌ | ❌ |
-| Priority column (traffic lights) | ✅ | ✅ | ❌ |
-| Category grouping | ✅ | ✅ | ❌ |
-| Drag-and-drop reordering | ✅ | ✅ | ❌ |
-| "Pays Until Due" column | ✅ | ✅ | ❌ |
-| Progress bars (sage gradient) | ✅ | ✅ | ✅ |
-| Transfer Funds dialog | ❌ | ✅ | ❌ |
-| Summary cards | ❌ | ✅ | ✅ |
-| Filter tabs | ❌ | ✅ | ❌ |
-| Quick Actions | ❌ | ❌ | ✅ |
-| Upcoming Bills | ❌ | ❌ | ✅ |
-| Credit Card Cards | ❌ | ❌ | ✅ |
+| Feature | Budget Allocation | Dashboard |
+|---------|-------------------|-----------|
+| Envelope table with inline editing | ✅ | ❌ |
+| Income cards / allocation controls | ✅ | ❌ |
+| Priority column (traffic lights) | ✅ | ❌ |
+| Category grouping | ✅ | ❌ |
+| Drag-and-drop reordering | ✅ | ❌ |
+| "Pays Until Due" column | ✅ | ❌ |
+| Progress bars (sage gradient) | ✅ | ✅ |
+| Transfer Funds dialog | ✅ | ❌ |
+| Summary cards | ✅ | ✅ |
+| Quick Actions | ❌ | ✅ |
+| Upcoming Bills | ❌ | ✅ |
+| Credit Card Cards | ❌ | ✅ |
 
 ### When Adding New Features
 
 1. Check the Feature Ownership table above
-2. If feature applies to multiple pages, implement on ALL listed pages
-3. NEVER add features to deprecated pages
-4. If unsure, ask before implementing
+2. NEVER add features to deprecated pages
+3. If unsure, ask before implementing
 
 ## 📅 Pays Until Due Feature
 
@@ -220,7 +221,7 @@ The "Pays Until Due" feature helps users understand bill urgency in terms of pay
 
 - **Core utilities**: `lib/utils/pays-until-due.ts`
 - **Badge component**: `components/shared/pays-until-due-badge.tsx`
-- **Used in**: Allocation page, Envelope Summary page, Budget Manager table
+- **Used in**: Budget Allocation page
 
 ### Color Scheme (Style Guide Compliant)
 
@@ -309,7 +310,21 @@ import { RemyAvatar } from "@/components/onboarding/remy-tip";
 | `remy-encouraging.png` | Supportive | Tips, guidance, motivation |
 | `remy-thinking.png` | Contemplative | Explanations, education |
 | `remy-celebrating.png` | Excited | Completion, achievements |
-| `remy-small.png` | Compact | Headers, inline usage |
+| `remy-small.png` | Compact | Headers, inline usage, **help buttons** |
+
+### Help Button Avatar
+
+**IMPORTANT**: All help buttons across the app must use `pose="small"` for consistency.
+
+```tsx
+// Correct - use RemyAvatar with pose="small"
+<RemyAvatar pose="small" size="sm" className="!w-8 !h-8 !border-0 !shadow-none" />
+
+// Incorrect - do not use other poses or direct image paths for help buttons
+<Image src="/Images/remy-encouraging.png" ... />  // Wrong!
+```
+
+The shared `RemyHelpButton` component (`components/shared/remy-help-button.tsx`) already uses the correct pose. Use this component for page-level help buttons.
 
 ### Onboarding Steps with Remy
 
@@ -608,19 +623,14 @@ function calculatePayCycleAmount(targetAmount, billFrequency, payFrequency) {
 
 ### Shared Component Pattern
 
-The `EnvelopeCreateDialog` is used by both pages:
-- **Allocation Page**: Opens directly via Add button
-- **Envelope Summary Page**: Navigates to allocation with `?openCreateEnvelope=true`
+The `EnvelopeCreateDialog` is used on the Budget Allocation page, opened directly via the Add button.
 
 ```typescript
-// envelope-summary-client.tsx
-onClick={() => router.push("/allocation?openCreateEnvelope=true")}
-
 // allocation-client.tsx
 useEffect(() => {
   if (searchParams.get("openCreateEnvelope") === "true") {
     setCreateOpen(true);
-    router.replace("/allocation", { scroll: false });
+    router.replace("/budgetallocation", { scroll: false });
   }
 }, [searchParams, router]);
 ```
@@ -633,7 +643,7 @@ useEffect(() => {
   const highlightId = searchParams.get("highlight");
   if (highlightId && highlightId !== "new") {
     setHighlightedEnvelopeId(highlightId);
-    router.replace("/allocation", { scroll: false });
+    router.replace("/budgetallocation", { scroll: false });
 
     // Remove highlight after 3 seconds
     const timer = setTimeout(() => {
@@ -668,4 +678,110 @@ const highlightClass = isHighlighted
   totalSurplus: number;
   totalCommittedPerPay: number;
   surplusEnvelopeBalance: number | null;
+}
+```
+
+## 👶 Kids Module (Updated Jan 2026)
+
+### Overview
+
+The Kids Module teaches teens with bank accounts real money management, preparing them to become full My Budget Mate users when they get a job.
+
+**Core Philosophy**: Kids = My Budget Way (lite version) + Household Hub access + Invoice-based earning system
+
+### Two Chore Types
+
+| Type | Description | Can Invoice? | Tracking |
+|------|-------------|--------------|----------|
+| **Expected Chores** | Included in pocket money (clean room, dishes) | No | Streak tracking, badges only |
+| **Extra Chores** | One-off earning opportunities (wash car, mow lawn) | Yes | Adds to invoice |
+
+**Key Field**: `chore_templates.is_expected` (boolean) - Determines chore type
+
+### Invoice System
+
+Extra chores approved by parents automatically add to the child's draft invoice. When the parent pays, the system can auto-reconcile via Akahu.
+
+**Flow:**
+1. Child marks extra chore as done
+2. Parent approves via `/api/chores/assignments/[id]/approve`
+3. System creates/gets draft invoice and adds invoice item (only if `is_expected === false`)
+4. Parent pays invoice
+5. Money distributed to child's envelopes
+
+### Four Envelope Types (Kids)
+
+| Envelope | Purpose | Bank Account Type |
+|----------|---------|-------------------|
+| **Spend** | Daily spending | Transaction/Debit |
+| **Save** | Short-term savings goals | Savings (earns interest) |
+| **Invest** | Long-term wealth building | Savings (earns interest) |
+| **Give** | Charitable giving | Savings (earns interest) |
+
+### Key Database Tables
+
+```sql
+-- Child profiles
+child_profiles (id, parent_user_id, name, avatar_url, distribution_spend_pct, distribution_save_pct, ...)
+
+-- Chore templates
+chore_templates (id, parent_user_id, name, is_expected, currency_type, currency_amount, ...)
+
+-- Chore assignments
+chore_assignments (id, child_profile_id, chore_template_id, status, week_starting, ...)
+
+-- Invoices
+kid_invoices (id, child_profile_id, status, total_amount, ...)
+kid_invoice_items (id, invoice_id, chore_assignment_id, chore_name, amount, ...)
+
+-- Streaks
+expected_chore_streaks (id, child_profile_id, chore_template_id, current_streak, ...)
+```
+
+### Key API Routes
+
+| Route | Purpose |
+|-------|---------|
+| `GET/POST /api/kids/profiles` | Manage child profiles |
+| `GET/POST /api/kids/[childId]/chores` | Child's chore assignments |
+| `PATCH /api/chores/assignments/[id]/approve` | Parent approves chore → creates invoice item |
+| `GET /api/kids/invoices` | Parent views all children's invoices |
+| `POST /api/kids/[childId]/invoices/[id]/pay` | Mark invoice as paid |
+
+### Key Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `KidDashboardClient` | `app/(app)/kids/[childId]/dashboard/` | Child's main dashboard |
+| `ChoresClient` | `app/(app)/kids/chores/` | Parent's chores manager |
+| `InvoicesClient` | `app/(app)/kids/invoices/` | Parent's invoice view |
+| `ParentOnboardingTutorial` | `components/kids/` | New parent onboarding |
+
+### Chore Approval Logic
+
+**IMPORTANT**: When a parent approves a chore:
+
+1. The route checks `is_expected` from the chore template
+2. Only **extra chores** (`is_expected === false` AND `currency_type === "money"`) create invoice items
+3. Expected chores are part of pocket money and don't get invoiced separately
+
+```typescript
+// In /api/chores/assignments/[id]/approve/route.ts
+if (assignment.currency_type === "money" && !template?.is_expected) {
+  // Create invoice item for EXTRA chores only
+  // Get or create draft invoice
+  // Add item to kid_invoice_items table
+}
+```
+
+### Beta Access
+
+Kids Module is currently behind beta access. Check `lib/utils/beta-access.ts`:
+
+```typescript
+import { checkBetaAccess } from "@/lib/utils/beta-access";
+
+const betaAccess = await checkBetaAccess();
+if (!betaAccess.hasAccess) {
+  redirect("/dashboard");
 }

@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CalendarConnectionCard } from "@/components/calendar/calendar-connection-card";
 import { TodayWidget, QuickLinksWidget } from "@/components/hub/today-widget";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
+import { CelebrationRemindersWidget } from "@/components/dashboard-v2/celebration-reminders-widget";
 import {
   Home,
   Calendar,
@@ -13,7 +16,37 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
+  Settings,
 } from "lucide-react";
+import Link from "next/link";
+
+const HELP_CONTENT = {
+  tips: [
+    "Connect your Google Calendar to see events here",
+    "Check the Today widget each morning",
+    "Use Quick Links to jump to what you need",
+  ],
+  features: [
+    "See today's events, meals, and tasks at a glance",
+    "Connect and sync multiple Google calendars",
+    "Quick links to shopping, recipes, and meal planning",
+    "Birthday countdown and celebration planning",
+  ],
+  faqs: [
+    {
+      question: "How do I connect my calendar?",
+      answer: "Click 'Connect Calendar' and sign in with your Google account. You can connect multiple calendars.",
+    },
+    {
+      question: "Can my partner see the same view?",
+      answer: "Yes! Partner sharing is enabled in Life Settings. Both of you see the same calendar events, shopping lists, and meal plans.",
+    },
+    {
+      question: "What's shown in the Today widget?",
+      answer: "Today's events from connected calendars, planned meals, and due chores for the kids.",
+    },
+  ],
+};
 
 interface CalendarConnection {
   id: string;
@@ -157,6 +190,22 @@ export function HouseholdHubClient({
     }
   }, [searchParams, handleSync]);
 
+  const handleChoreStatusChange = async (choreId: string, childId: string, newStatus: string) => {
+    const res = await fetch(`/api/kids/${childId}/chores/${choreId}/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || "Failed to update chore");
+    }
+
+    // Refresh dashboard to get updated data
+    await refreshDashboard();
+  };
+
   const refreshConnections = async () => {
     try {
       const res = await fetch("/api/calendar/connections");
@@ -260,8 +309,19 @@ export function HouseholdHubClient({
               )}
               Connect Google Calendar
             </Button>
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/life/settings">
+                <Settings className="h-5 w-5" />
+                <span className="sr-only">Settings</span>
+              </Link>
+            </Button>
+            <NotificationBell />
+            <RemyHelpButton title="Household Hub" content={HELP_CONTENT} />
           </div>
         </div>
+
+        {/* Celebration Reminders */}
+        <CelebrationRemindersWidget />
 
         {/* Notification */}
         {notification && (
@@ -292,7 +352,12 @@ export function HouseholdHubClient({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Today's Overview - Main Column */}
           <div className="lg:col-span-2">
-            {dashboard?.today && <TodayWidget data={dashboard.today} />}
+            {dashboard?.today && (
+              <TodayWidget
+                data={dashboard.today}
+                onChoreStatusChange={handleChoreStatusChange}
+              />
+            )}
           </div>
 
           {/* Sidebar */}

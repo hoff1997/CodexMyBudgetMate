@@ -1677,8 +1677,8 @@ function MobileNav() {
         <Link href="/dashboard" className="text-[#6B6B6B] transition hover:text-[#7A9E9A]">
           Dashboard
         </Link>
-        <Link href="/envelope-summary" className="text-[#6B6B6B] transition hover:text-[#7A9E9A]">
-          Summary
+        <Link href="/budgetallocation" className="text-[#6B6B6B] transition hover:text-[#7A9E9A]">
+          Budget
         </Link>
         <Link href="/reconcile" className="text-[#7A9E9A] font-semibold">
           Reconcile

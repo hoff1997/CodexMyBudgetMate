@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -13,10 +14,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   ShoppingListView,
   CreateShoppingListDialog,
+  LinkEnvelopeDialog,
+  CompleteListDialog,
+  EditCategoriesDialog,
 } from "@/components/shopping";
-import { Plus, ShoppingCart, ArrowUpDown, Store } from "lucide-react";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+import { Plus, ShoppingCart, ArrowUpDown, Store, Search, Filter, MoreVertical, Settings2, Printer, Share2, Trash2 } from "lucide-react";
 
 interface ShoppingItem {
   id: string;
@@ -44,7 +56,39 @@ interface ShoppingList {
   totalItems: number;
   checkedItems: number;
   estimatedTotal: number;
+  linked_envelope_id: string | null;
+  linked_envelope_name: string | null;
+  is_completed: boolean;
 }
+
+const HELP_CONTENT = {
+  tips: [
+    "Create separate lists for different shops or meal plans",
+    "Add estimated prices to stay within budget",
+    "Link your list to a budget envelope to track spending",
+    "Check items off as you shop to stay organised",
+  ],
+  features: [
+    "Auto-sort items by category or aisle",
+    "Generate shopping lists from meal plans",
+    "Link lists to budget envelopes for spending tracking",
+    "Mark lists complete and record actual spending",
+  ],
+  faqs: [
+    {
+      question: "How do I link a list to my budget?",
+      answer: "Click the wallet icon on any list to link it to a budget envelope. When you complete shopping, the amount is automatically deducted from that envelope.",
+    },
+    {
+      question: "Can I generate lists from recipes?",
+      answer: "Yes! In the Meal Planner, click 'Generate Shopping List' to create a list with all ingredients from your planned meals.",
+    },
+    {
+      question: "What happens when I complete a list?",
+      answer: "Enter your actual total spent. If linked to an envelope, the amount will be deducted from your budget automatically.",
+    },
+  ],
+};
 
 interface Supermarket {
   id: string;
@@ -78,6 +122,39 @@ export function ShoppingClient({
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedSupermarket, setSelectedSupermarket] = useState<string | null>(null);
   const [categoryOrder, setCategoryOrder] = useState<string[]>(defaultAisleOrder);
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Edit categories dialog state
+  const [showEditCategoriesDialog, setShowEditCategoriesDialog] = useState(false);
+
+  // Envelope linking state
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [selectedListForLink, setSelectedListForLink] = useState<ShoppingList | null>(null);
+
+  // Complete list state
+  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
+  const [selectedListForComplete, setSelectedListForComplete] = useState<ShoppingList | null>(null);
+
+  // Filter lists by search query
+  const filteredLists = useMemo(() => {
+    if (!searchQuery.trim()) return lists;
+    const query = searchQuery.toLowerCase();
+    return lists.filter((list) => {
+      // Match list name
+      if (list.name.toLowerCase().includes(query)) return true;
+      // Match any item in the list
+      return list.items.some((item) => item.name.toLowerCase().includes(query));
+    });
+  }, [lists, searchQuery]);
+
+  // Handle category updates from dialog
+  const handleCategoriesChange = useCallback((updatedCategories: Category[]) => {
+    setLocalCategories(updatedCategories);
+    setCategoryOrder(updatedCategories.map((c) => c.name));
+  }, []);
 
   // Fetch category order when supermarket changes
   const handleSupermarketChange = useCallback(async (supermarketId: string | null) => {
@@ -268,6 +345,43 @@ export function ShoppingClient({
     }
   };
 
+  // Envelope linking handlers
+  const handleOpenLinkDialog = (list: ShoppingList) => {
+    setSelectedListForLink(list);
+    setShowLinkDialog(true);
+  };
+
+  const handleEnvelopeLinked = (envelopeId: string | null, envelopeName: string | null) => {
+    if (selectedListForLink) {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === selectedListForLink.id
+            ? { ...list, linked_envelope_id: envelopeId, linked_envelope_name: envelopeName }
+            : list
+        )
+      );
+    }
+  };
+
+  // Complete list handlers
+  const handleOpenCompleteDialog = (list: ShoppingList) => {
+    setSelectedListForComplete(list);
+    setShowCompleteDialog(true);
+  };
+
+  const handleListCompleted = () => {
+    if (selectedListForComplete) {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === selectedListForComplete.id
+            ? { ...list, is_completed: true }
+            : list
+        )
+      );
+    }
+    refreshLists();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="w-full max-w-4xl mx-auto px-4 py-6">
@@ -282,62 +396,111 @@ export function ShoppingClient({
               <p className="text-text-medium">Smart lists sorted by aisle</p>
             </div>
           </div>
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            className="bg-sage hover:bg-sage-dark"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New List
-          </Button>
+          <div className="flex items-center gap-2">
+            <RemyHelpButton title="Shopping Lists" content={HELP_CONTENT} />
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              className="bg-sage hover:bg-sage-dark"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New List
+            </Button>
+          </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          {/* Supermarket filter */}
-          {supermarkets.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Store className="h-4 w-4 text-text-medium" />
-              <Select
-                value={selectedSupermarket || "default"}
-                onValueChange={(value) => handleSupermarketChange(value === "default" ? null : value)}
-              >
-                <SelectTrigger className="w-40 h-8">
-                  <SelectValue placeholder="Default order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default order</SelectItem>
-                  {supermarkets.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        {/* Controls Bar */}
+        <div className="bg-white border border-silver-light rounded-lg p-3 mb-6 space-y-3">
+          {/* Search Row */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-medium" />
+              <Input
+                placeholder="Search lists and items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
             </div>
-          )}
-          <div className="flex items-center gap-2">
-            <Switch
-              id="sort-by-aisle"
-              checked={sortByAisle}
-              onCheckedChange={setSortByAisle}
-            />
-            <Label htmlFor="sort-by-aisle" className="text-sm text-text-medium flex items-center gap-1">
-              <ArrowUpDown className="h-3 w-3" />
-              Sort by category
-            </Label>
           </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-checked"
-              checked={showChecked}
-              onCheckedChange={(checked) => {
-                setShowChecked(checked);
-                refreshLists();
-              }}
-            />
-            <Label htmlFor="show-checked" className="text-sm text-text-medium">
-              Show checked items
-            </Label>
+
+          {/* Filter Controls Row */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Supermarket filter */}
+            {supermarkets.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Store className="h-4 w-4 text-text-medium" />
+                <Select
+                  value={selectedSupermarket || "default"}
+                  onValueChange={(value) => handleSupermarketChange(value === "default" ? null : value)}
+                >
+                  <SelectTrigger className="w-36 h-8">
+                    <SelectValue placeholder="Default order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default order</SelectItem>
+                    {supermarkets.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Sort by category toggle */}
+            <div className="flex items-center gap-2 border-l border-silver-light pl-3">
+              <Switch
+                id="sort-by-aisle"
+                checked={sortByAisle}
+                onCheckedChange={setSortByAisle}
+              />
+              <Label htmlFor="sort-by-aisle" className="text-sm text-text-medium flex items-center gap-1 cursor-pointer">
+                <ArrowUpDown className="h-3 w-3" />
+                Sort by category
+              </Label>
+            </div>
+
+            {/* Show checked toggle */}
+            <div className="flex items-center gap-2 border-l border-silver-light pl-3">
+              <Switch
+                id="show-checked"
+                checked={showChecked}
+                onCheckedChange={(checked) => {
+                  setShowChecked(checked);
+                  refreshLists();
+                }}
+              />
+              <Label htmlFor="show-checked" className="text-sm text-text-medium cursor-pointer">
+                Show checked
+              </Label>
+            </div>
+
+            {/* More options menu */}
+            <div className="ml-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowEditCategoriesDialog(true)}>
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Edit Categories
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share List (coming soon)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print List (coming soon)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -359,20 +522,38 @@ export function ShoppingClient({
               Create List
             </Button>
           </div>
+        ) : filteredLists.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">🔍</div>
+            <h2 className="text-xl font-semibold text-text-dark mb-2">
+              No results found
+            </h2>
+            <p className="text-text-medium mb-6">
+              No lists or items match "{searchQuery}"
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => setSearchQuery("")}
+            >
+              Clear search
+            </Button>
+          </div>
         ) : (
           <div className="space-y-4">
-            {lists.map((list) => (
+            {filteredLists.map((list) => (
               <ShoppingListView
                 key={list.id}
                 list={list}
                 sortByAisle={sortByAisle}
                 aisleOrder={categoryOrder}
-                categories={categories}
+                categories={localCategories}
                 onAddItem={handleAddItem}
                 onToggleItem={handleToggleItem}
                 onDeleteItem={handleDeleteItem}
                 onUpdateItem={handleUpdateItem}
                 onDeleteList={handleDeleteList}
+                onLinkEnvelope={() => handleOpenLinkDialog(list)}
+                onCompleteList={() => handleOpenCompleteDialog(list)}
                 showChecked={showChecked}
               />
             ))}
@@ -385,6 +566,40 @@ export function ShoppingClient({
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onCreateList={handleCreateList}
+      />
+
+      {/* Link Envelope Dialog */}
+      {selectedListForLink && (
+        <LinkEnvelopeDialog
+          open={showLinkDialog}
+          onOpenChange={setShowLinkDialog}
+          listId={selectedListForLink.id}
+          listName={selectedListForLink.name}
+          currentEnvelopeId={selectedListForLink.linked_envelope_id}
+          onLinked={handleEnvelopeLinked}
+        />
+      )}
+
+      {/* Complete List Dialog */}
+      {selectedListForComplete && (
+        <CompleteListDialog
+          open={showCompleteDialog}
+          onOpenChange={setShowCompleteDialog}
+          listId={selectedListForComplete.id}
+          listName={selectedListForComplete.name}
+          estimatedTotal={selectedListForComplete.estimatedTotal}
+          linkedEnvelopeId={selectedListForComplete.linked_envelope_id}
+          linkedEnvelopeName={selectedListForComplete.linked_envelope_name}
+          onCompleted={handleListCompleted}
+        />
+      )}
+
+      {/* Edit Categories Dialog */}
+      <EditCategoriesDialog
+        open={showEditCategoriesDialog}
+        onOpenChange={setShowEditCategoriesDialog}
+        categories={localCategories}
+        onCategoriesChange={handleCategoriesChange}
       />
     </div>
   );

@@ -4,5 +4,11 @@
       "source": "/((?!api/|_next/).*)",
       "destination": "/"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/jobs/run",
+      "schedule": "0 5 * * *"
+    }
   ]
 }

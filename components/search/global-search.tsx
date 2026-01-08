@@ -29,8 +29,7 @@ const QUICK_PAGES = [
   { id: "dashboard", title: "Dashboard", href: "/dashboard", icon: Home },
   { id: "reconcile", title: "Reconciliation Centre", href: "/reconcile", icon: Receipt },
   { id: "transactions", title: "Transactions", href: "/transactions", icon: DollarSign },
-  { id: "envelope-summary", title: "Envelope Summary", href: "/envelope-summary", icon: Wallet },
-  { id: "allocation", title: "Allocation", href: "/budgetallocation", icon: Layers },
+  { id: "allocation", title: "Budget Allocation", href: "/budgetallocation", icon: Layers },
   { id: "accounts", title: "Accounts", href: "/accounts", icon: FileText },
   { id: "settings", title: "Settings", href: "/settings", icon: Settings },
 ];
@@ -111,10 +110,7 @@ export function GlobalSearch() {
         className="h-9 w-full justify-start gap-2 border-[#E5E7EB] bg-white text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B6B6B]"
       >
         <Search className="h-4 w-4" />
-        <span className="flex-1 text-left text-xs">Search...</span>
-        <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-[#E5E7EB] bg-[#F9FAFB] px-1.5 font-mono text-[10px] font-medium text-[#9CA3AF]">
-          <span className="text-xs">⌘</span>K
-        </kbd>
+        <span className="text-left text-xs">Search</span>
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>

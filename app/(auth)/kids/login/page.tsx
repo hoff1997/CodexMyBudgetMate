@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, AlertTriangle } from "lucide-react";
 
 type LoginStep = "family-code" | "select-child" | "enter-pin";
 
@@ -27,6 +27,62 @@ export default function KidsLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // CSRF token state
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+
+  // Rate limiting state
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number | null>(
+    null
+  );
+
+  // Fetch CSRF token on mount
+  useEffect(() => {
+    async function fetchCsrfToken() {
+      try {
+        const res = await fetch("/api/kids/auth/csrf", {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCsrfToken(data.csrfToken);
+        }
+      } catch (err) {
+        console.error("Failed to fetch CSRF token:", err);
+      }
+    }
+    fetchCsrfToken();
+  }, []);
+
+  // Countdown timer for lockout
+  useEffect(() => {
+    if (lockoutSeconds <= 0) {
+      setIsLocked(false);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          setIsLocked(false);
+          setError("");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [lockoutSeconds]);
+
+  // Format lockout time as mm:ss
+  const formatLockoutTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
   // Step 1: Look up family code
   const handleFamilyCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,18 +93,41 @@ export default function KidsLoginPage() {
       const res = await fetch("/api/kids/auth/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ familyCode: familyCode.toUpperCase() }),
+        body: JSON.stringify({
+          familyCode: familyCode.toUpperCase(),
+          csrfToken,
+        }),
+        credentials: "include",
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle rate limiting
+        if (res.status === 429) {
+          setIsLocked(true);
+          setLockoutSeconds(data.remainingSeconds || 60);
+        }
+        // Handle CSRF error - refresh token
+        if (res.status === 403) {
+          const tokenRes = await fetch("/api/kids/auth/csrf", {
+            credentials: "include",
+          });
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            setCsrfToken(tokenData.csrfToken);
+          }
+        }
         setError(data.error || "Invalid family code");
         return;
       }
 
       setChildren(data.data);
       setStep("select-child");
+      // Reset rate limit state when moving to next step
+      setIsLocked(false);
+      setLockoutSeconds(0);
+      setAttemptsRemaining(null);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -61,12 +140,40 @@ export default function KidsLoginPage() {
     setSelectedChild(child);
     setStep("enter-pin");
     setPin("");
+    setError("");
+    // Reset rate limit state for new child
+    setIsLocked(false);
+    setLockoutSeconds(0);
+    setAttemptsRemaining(null);
   };
 
-  // Step 3: Enter PIN
-  const handlePinSubmit = async (e: React.FormEvent) => {
+  // Handle form submit (keyboard Enter key)
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedChild || pin.length !== 4) return;
+    if (pin.length === 4) {
+      submitPin(pin);
+    }
+  };
+
+  // Handle PIN digit press
+  const handlePinDigit = (digit: string) => {
+    if (isLocked || isLoading || pin.length >= 4) return;
+
+    const newPin = pin + digit;
+    setPin(newPin);
+
+    // Auto-submit when 4 digits entered
+    if (newPin.length === 4 && selectedChild) {
+      // Use a small delay to let the UI update, then submit
+      setTimeout(() => {
+        submitPin(newPin);
+      }, 150);
+    }
+  };
+
+  // Direct PIN submission function (avoids stale closure issues)
+  const submitPin = async (submittedPin: string) => {
+    if (!selectedChild || submittedPin.length !== 4 || isLoading) return;
 
     setError("");
     setIsLoading(true);
@@ -75,43 +182,50 @@ export default function KidsLoginPage() {
       const res = await fetch("/api/kids/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ childId: selectedChild.id, pin }),
+        body: JSON.stringify({
+          childId: selectedChild.id,
+          pin: submittedPin,
+          csrfToken,
+        }),
+        credentials: "include",
       });
 
       const data = await res.json();
 
       if (!res.ok) {
+        // Handle rate limiting / lockout
+        if (res.status === 429 || data.locked) {
+          setIsLocked(true);
+          setLockoutSeconds(data.remainingSeconds || 60);
+          setAttemptsRemaining(0);
+        } else if (data.attemptsRemaining !== undefined) {
+          setAttemptsRemaining(data.attemptsRemaining);
+        }
+
+        // Handle CSRF error - refresh token
+        if (res.status === 403) {
+          const tokenRes = await fetch("/api/kids/auth/csrf", {
+            credentials: "include",
+          });
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            setCsrfToken(tokenData.csrfToken);
+          }
+        }
+
         setError(data.error || "Incorrect PIN");
         setPin("");
         return;
       }
 
-      // Store kid session in localStorage
-      localStorage.setItem("kidSession", JSON.stringify(data.data.session));
-
-      // Redirect to kid dashboard
-      router.push(`/kids/${selectedChild.id}/dashboard`);
+      // Session is now stored in HttpOnly cookie automatically
+      // Hard redirect to kid dashboard (ensures cookie is sent with new request)
+      window.location.href = `/kids/${selectedChild.id}/dashboard`;
+      return; // Don't setIsLoading(false) - we're navigating away
     } catch {
       setError("Something went wrong. Please try again.");
       setPin("");
-    } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Handle PIN digit press
-  const handlePinDigit = (digit: string) => {
-    if (pin.length < 4) {
-      const newPin = pin + digit;
-      setPin(newPin);
-
-      // Auto-submit when 4 digits entered
-      if (newPin.length === 4) {
-        setTimeout(() => {
-          const form = document.getElementById("pin-form") as HTMLFormElement;
-          form?.requestSubmit();
-        }, 100);
-      }
     }
   };
 
@@ -122,6 +236,10 @@ export default function KidsLoginPage() {
 
   const goBack = () => {
     setError("");
+    setIsLocked(false);
+    setLockoutSeconds(0);
+    setAttemptsRemaining(null);
+
     if (step === "enter-pin") {
       setStep("select-child");
       setPin("");
@@ -154,12 +272,47 @@ export default function KidsLoginPage() {
           <p className="text-text-medium mt-2">
             {step === "family-code" && "Enter your family code to get started"}
             {step === "select-child" && "Tap your picture to continue"}
-            {step === "enter-pin" && "Enter your 4-digit PIN"}
+            {step === "enter-pin" &&
+              (isLocked
+                ? "Too many tries - please wait"
+                : "Enter your 4-digit PIN")}
           </p>
         </CardHeader>
 
         <CardContent>
-          {error && (
+          {/* Lockout Warning */}
+          {isLocked && (
+            <div className="mb-4 p-4 bg-gold-light rounded-lg flex items-center gap-3">
+              <Lock className="h-6 w-6 text-gold-dark flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-gold-dark">Account Locked</p>
+                <p className="text-sm text-gold-dark">
+                  Try again in{" "}
+                  <span className="font-mono font-bold">
+                    {formatLockoutTime(lockoutSeconds)}
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Low Attempts Warning */}
+          {!isLocked &&
+            attemptsRemaining !== null &&
+            attemptsRemaining <= 2 &&
+            attemptsRemaining > 0 && (
+              <div className="mb-4 p-3 bg-gold-light rounded-lg flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-gold-dark flex-shrink-0" />
+                <p className="text-sm text-gold-dark">
+                  {attemptsRemaining === 1
+                    ? "Last attempt before lockout!"
+                    : `${attemptsRemaining} attempts remaining`}
+                </p>
+              </div>
+            )}
+
+          {/* Regular Error */}
+          {error && !isLocked && (
             <div className="mb-4 p-3 bg-gold-light text-gold-dark rounded-lg text-center text-sm">
               {error}
             </div>
@@ -170,17 +323,32 @@ export default function KidsLoginPage() {
             <form onSubmit={handleFamilyCodeSubmit} className="space-y-4">
               <Input
                 type="text"
-                placeholder="XXXX-2026"
+                placeholder="XXXX-XXXX"
                 value={familyCode}
-                onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  let value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+                  // Auto-insert hyphen after 4 characters
+                  if (value.length === 4 && !value.includes("-")) {
+                    value = value + "-";
+                  }
+                  // Remove extra hyphens if user types one manually at wrong position
+                  if (value.length > 0 && value[4] !== "-" && value.includes("-")) {
+                    value = value.replace(/-/g, "");
+                    if (value.length >= 4) {
+                      value = value.slice(0, 4) + "-" + value.slice(4);
+                    }
+                  }
+                  setFamilyCode(value);
+                }}
                 className="text-center text-2xl font-mono tracking-wider h-14"
-                maxLength={13}
+                maxLength={9}
                 autoFocus
+                disabled={isLocked}
               />
               <Button
                 type="submit"
                 className="w-full h-12 text-lg bg-sage hover:bg-sage-dark"
-                disabled={isLoading || familyCode.length < 9}
+                disabled={isLoading || familyCode.length < 9 || isLocked}
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -232,7 +400,11 @@ export default function KidsLoginPage() {
 
           {/* Step 3: Enter PIN */}
           {step === "enter-pin" && (
-            <form id="pin-form" onSubmit={handlePinSubmit} className="space-y-6">
+            <form
+              id="pin-form"
+              onSubmit={handleFormSubmit}
+              className="space-y-6"
+            >
               {/* PIN Display */}
               <div className="flex justify-center gap-3">
                 {[0, 1, 2, 3].map((i) => (
@@ -240,9 +412,11 @@ export default function KidsLoginPage() {
                     key={i}
                     className={cn(
                       "w-14 h-14 rounded-xl border-2 flex items-center justify-center text-2xl font-bold",
-                      pin.length > i
-                        ? "border-sage bg-sage-very-light text-sage-dark"
-                        : "border-silver-light bg-white text-transparent"
+                      isLocked
+                        ? "border-silver-light bg-silver-very-light text-silver"
+                        : pin.length > i
+                          ? "border-sage bg-sage-very-light text-sage-dark"
+                          : "border-silver-light bg-white text-transparent"
                     )}
                   >
                     {pin[i] ? "●" : "○"}
@@ -257,12 +431,13 @@ export default function KidsLoginPage() {
                     key={digit}
                     type="button"
                     onClick={() => handlePinDigit(String(digit))}
-                    disabled={isLoading}
+                    disabled={isLoading || isLocked}
                     className={cn(
                       "h-16 rounded-xl text-2xl font-semibold transition-all",
                       "bg-white border border-silver-light",
-                      "hover:bg-sage-very-light hover:border-sage",
-                      "active:scale-95"
+                      isLocked
+                        ? "opacity-50 cursor-not-allowed"
+                        : "hover:bg-sage-very-light hover:border-sage active:scale-95"
                     )}
                   >
                     {digit}
@@ -272,12 +447,13 @@ export default function KidsLoginPage() {
                 <button
                   type="button"
                   onClick={() => handlePinDigit("0")}
-                  disabled={isLoading}
+                  disabled={isLoading || isLocked}
                   className={cn(
                     "h-16 rounded-xl text-2xl font-semibold transition-all",
                     "bg-white border border-silver-light",
-                    "hover:bg-sage-very-light hover:border-sage",
-                    "active:scale-95"
+                    isLocked
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-sage-very-light hover:border-sage active:scale-95"
                   )}
                 >
                   0
@@ -285,12 +461,13 @@ export default function KidsLoginPage() {
                 <button
                   type="button"
                   onClick={handlePinBackspace}
-                  disabled={isLoading || pin.length === 0}
+                  disabled={isLoading || pin.length === 0 || isLocked}
                   className={cn(
                     "h-16 rounded-xl text-xl font-semibold transition-all",
                     "bg-silver-very-light border border-silver-light",
-                    "hover:bg-silver-light",
-                    "active:scale-95",
+                    isLocked
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-silver-light active:scale-95",
                     pin.length === 0 && "opacity-50"
                   )}
                 >
@@ -306,7 +483,9 @@ export default function KidsLoginPage() {
 
               <p className="text-center text-sm text-text-light">
                 Forgot your PIN?{" "}
-                <span className="text-sage-dark">Ask your parent to reset it!</span>
+                <span className="text-sage-dark">
+                  Ask your parent to reset it!
+                </span>
               </p>
             </form>
           )}

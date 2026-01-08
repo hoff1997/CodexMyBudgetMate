@@ -4,30 +4,33 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import {
-  Star,
-  Clock,
   CheckCircle2,
   Circle,
-  Trophy,
   Wallet,
   PiggyBank,
   TrendingUp,
   Heart,
-  ShoppingBag,
   ChevronRight,
+  Flame,
+  Receipt,
+  Clock,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+import { SavingsGoalsSection } from "@/components/kids/savings-goals-section";
 
 interface ChildProfile {
   id: string;
   name: string;
   avatar_url: string | null;
-  star_balance: number;
-  screen_time_balance: number;
+  // Legacy fields (archived features - not displayed)
+  star_balance?: number;
+  screen_time_balance?: number;
   distribution_spend_pct: number;
   distribution_save_pct: number;
   distribution_invest_pct: number;
@@ -47,8 +50,9 @@ interface ChoreTemplate {
   name: string;
   description: string | null;
   icon: string | null;
-  currency_type: string;
-  currency_amount: number;
+  is_expected: boolean;
+  currency_type: string | null;
+  currency_amount: number | null;
 }
 
 interface ChoreAssignment {
@@ -71,11 +75,45 @@ interface Achievement {
   } | null;
 }
 
+interface ChoreStreak {
+  id: string;
+  chore_template_id: string;
+  current_streak: number;
+  longest_streak: number;
+  completed_days: boolean[];
+  chore_template?: {
+    id: string;
+    name: string;
+    icon: string | null;
+  };
+}
+
+interface DraftInvoice {
+  id: string;
+  invoice_number: string;
+  total_amount: number;
+  status: string;
+  item_count: number;
+}
+
+interface SavingsGoal {
+  id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  icon: string | null;
+  description: string | null;
+  status: string;
+}
+
 interface KidDashboardClientProps {
   child: ChildProfile;
   accounts: BankAccount[];
   chores: ChoreAssignment[];
   achievements: Achievement[];
+  streaks?: ChoreStreak[];
+  draftInvoice?: DraftInvoice | null;
+  goals?: SavingsGoal[];
 }
 
 const ENVELOPE_ICONS = {
@@ -85,18 +123,79 @@ const ENVELOPE_ICONS = {
   give: { icon: Heart, color: "text-pink-500", bg: "bg-pink-50" },
 };
 
+const HELP_CONTENT = {
+  tips: [
+    "Check your chores each morning to plan your day",
+    "Build streaks by completing expected chores daily",
+    "Extra chores add to your invoice - submit it to get paid!",
+    "Create savings goals for things you really want!",
+  ],
+  features: [
+    "See your money across Spend, Save, Invest, and Give",
+    "Create and track savings goals from your Save balance",
+    "Track expected chores with streak indicators",
+    "Complete extra chores to earn more money",
+    "View and submit your invoice when ready",
+  ],
+  faqs: [
+    {
+      question: "What are expected vs extra chores?",
+      answer: "Expected chores are part of your pocket money - do them to keep your streaks and build habits. Extra chores earn you additional money that goes on your invoice.",
+    },
+    {
+      question: "How do savings goals work?",
+      answer: "Goals let you save for specific things you want. The money comes from your Save balance - just add funds to each goal as you save up!",
+    },
+    {
+      question: "How do invoices work?",
+      answer: "When you complete extra chores, they get added to your invoice. Submit it when you're ready and your parent will pay you!",
+    },
+  ],
+};
+
 export function KidDashboardClient({
   child,
   accounts,
   chores,
   achievements,
+  streaks = [],
+  draftInvoice,
+  goals = [],
 }: KidDashboardClientProps) {
   const router = useRouter();
   const [isMarkingDone, setIsMarkingDone] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const completedChores = chores.filter((c) => c.status === "done" || c.status === "approved").length;
-  const totalChores = chores.length;
-  const progressPercent = totalChores > 0 ? (completedChores / totalChores) * 100 : 0;
+  // Handle logout
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch("/api/kids/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      // Redirect to kids login page
+      router.push("/kids/login");
+    } catch (err) {
+      console.error("Failed to logout:", err);
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Split chores into expected and extra
+  const expectedChores = chores.filter((c) => c.chore_template?.is_expected);
+  const extraChores = chores.filter((c) => !c.chore_template?.is_expected);
+
+  // Get save account for goals section
+  const saveAccount = accounts.find((a) => a.envelope_type === "save") || null;
+
+  const completedExpected = expectedChores.filter((c) => c.status === "done" || c.status === "approved").length;
+  const completedExtra = extraChores.filter((c) => c.status === "done" || c.status === "approved").length;
+
+  // Get streak info for a chore
+  const getStreakForChore = (choreTemplateId: string) => {
+    return streaks.find((s) => s.chore_template_id === choreTemplateId);
+  };
 
   const handleMarkDone = async (choreId: string) => {
     setIsMarkingDone(choreId);
@@ -116,128 +215,252 @@ export function KidDashboardClient({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-sage-very-light to-white">
-      <div className="w-full max-w-4xl mx-auto px-4 py-6">
-        {/* Header with Avatar and Stats */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-20 h-20 rounded-full bg-sage-light flex items-center justify-center text-4xl border-4 border-sage">
-            {child.avatar_url ? (
-              <Image
-                src={child.avatar_url}
-                alt={child.name}
-                width={80}
-                height={80}
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              "👤"
-            )}
+      <div className="w-full max-w-4xl mx-auto px-4 py-4">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-sage-light flex items-center justify-center text-2xl border-2 border-sage shrink-0">
+              {child.avatar_url ? (
+                <Image
+                  src={child.avatar_url}
+                  alt={child.name}
+                  width={56}
+                  height={56}
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                "👤"
+              )}
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-text-dark">Hi {child.name}! 👋</h1>
+              <p className="text-sm text-text-medium">Your money dashboard</p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-text-dark">Hi {child.name}! 👋</h1>
-            <p className="text-text-medium">Ready to earn some stars today?</p>
+          <div className="flex items-center gap-2">
+            <RemyHelpButton title="Dashboard" content={HELP_CONTENT} variant="compact" />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="gap-1 h-8 text-text-medium hover:text-text-dark hover:bg-silver-very-light"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <LogOut className="h-3 w-3" />
+              )}
+              <span className="hidden sm:inline text-xs">Finish</span>
+            </Button>
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-          <Link href={`/kids/${child.id}/shop`}>
-            <Card className="bg-gold-light border-gold hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="py-4 text-center">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Star className="h-5 w-5 text-gold" />
-                  <span className="text-sm font-medium text-gold-dark">Stars</span>
+        {/* Invoice Status - Only show if there's a draft */}
+        {draftInvoice && draftInvoice.item_count > 0 && (
+          <Link href={`/kids/${child.id}/invoices`}>
+            <div className="flex items-center justify-between p-3 mb-3 bg-sage-very-light border border-sage rounded-lg hover:shadow-sm transition-shadow cursor-pointer">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-sage rounded-full">
+                  <Receipt className="h-4 w-4 text-white" />
                 </div>
-                <p className="text-3xl font-bold text-gold-dark">{child.star_balance}</p>
-                <p className="text-xs text-gold-dark mt-1 flex items-center justify-center gap-1">
-                  <ShoppingBag className="h-3 w-3" /> Shop
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-          <Card className="bg-blue-light border-blue">
-            <CardContent className="py-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Clock className="h-5 w-5 text-blue" />
-                <span className="text-sm font-medium text-blue">Screen Time</span>
+                <div>
+                  <p className="text-sm font-medium text-text-dark">Invoice Ready</p>
+                  <p className="text-xs text-text-medium">
+                    {draftInvoice.item_count} item{draftInvoice.item_count !== 1 ? "s" : ""} • ${draftInvoice.total_amount.toFixed(2)}
+                  </p>
+                </div>
               </div>
-              <p className="text-3xl font-bold text-blue">{child.screen_time_balance}m</p>
-            </CardContent>
-          </Card>
-        </div>
+              <Button size="sm" className="bg-sage hover:bg-sage-dark h-7 text-xs">
+                View
+              </Button>
+            </div>
+          </Link>
+        )}
 
-        {/* Money Envelopes */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <span className="text-2xl">💰</span>
-                My Money
-              </CardTitle>
+        {/* Money Envelopes - Compact Horizontal Grid */}
+        <Card className="mb-3">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">💰</span>
+                <span className="font-semibold text-text-dark">My Money</span>
+              </div>
               <Link
                 href={`/kids/${child.id}/money`}
-                className="text-sm text-sage hover:text-sage-dark flex items-center gap-1"
+                className="text-xs text-sage hover:text-sage-dark flex items-center gap-0.5"
               >
-                View All <ChevronRight className="h-4 w-4" />
+                Details <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {accounts.map((account) => {
-                const config = ENVELOPE_ICONS[account.envelope_type as keyof typeof ENVELOPE_ICONS];
-                const Icon = config?.icon || Wallet;
+            {/* Top row: Spend, Invest, Give (3 columns) */}
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {accounts
+                .filter((a) => a.envelope_type !== "save")
+                .map((account) => {
+                  const config = ENVELOPE_ICONS[account.envelope_type as keyof typeof ENVELOPE_ICONS];
+                  const Icon = config?.icon || Wallet;
+
+                  return (
+                    <div
+                      key={account.id}
+                      className={cn("p-2 rounded-lg text-center", config?.bg || "bg-silver-very-light")}
+                    >
+                      <Icon className={cn("h-4 w-4 mx-auto mb-1", config?.color || "text-text-medium")} />
+                      <p className={cn("text-sm font-bold", config?.color || "text-text-dark")}>
+                        ${account.current_balance.toFixed(0)}
+                      </p>
+                      <p className="text-xs sm:text-[10px] text-text-light capitalize">{account.envelope_type}</p>
+                    </div>
+                  );
+                })}
+            </div>
+            {/* Bottom row: Save (full width with allocation breakdown) */}
+            {accounts
+              .filter((a) => a.envelope_type === "save")
+              .map((account) => {
+                const config = ENVELOPE_ICONS.save;
+                const Icon = config.icon;
+                const totalAllocatedToGoals = goals.reduce((sum, g) => sum + g.current_amount, 0);
+                const unallocated = Math.max(0, account.current_balance - totalAllocatedToGoals);
+
                 return (
                   <div
                     key={account.id}
-                    className={cn("p-3 rounded-lg", config?.bg || "bg-silver-very-light")}
+                    className={cn("p-3 rounded-lg", config.bg)}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className={cn("h-4 w-4", config?.color || "text-text-medium")} />
-                      <span className="text-xs font-medium text-text-medium capitalize">
-                        {account.envelope_type}
-                      </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className={cn("h-5 w-5", config.color)} />
+                        <div>
+                          <p className="text-xs text-text-light capitalize">{account.envelope_type}</p>
+                          <p className={cn("text-lg font-bold", config.color)}>
+                            ${account.current_balance.toFixed(0)}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Allocation breakdown */}
+                      {goals.length > 0 && (
+                        <div className="text-right text-xs text-text-light">
+                          <div className="flex items-center justify-end gap-1">
+                            <span>In goals:</span>
+                            <span className="tabular-nums font-medium text-text-medium">${totalAllocatedToGoals.toFixed(0)}</span>
+                          </div>
+                          <div className="flex items-center justify-end gap-1">
+                            <span>Unallocated:</span>
+                            <span className="tabular-nums font-medium text-sage">${unallocated.toFixed(0)}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className={cn("text-xl font-bold", config?.color || "text-text-dark")}>
-                      ${account.current_balance.toFixed(2)}
-                    </p>
                   </div>
                 );
               })}
-            </div>
           </CardContent>
         </Card>
 
-        {/* This Week's Chores */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <span className="text-2xl">📋</span>
-                This Week's Chores
-              </CardTitle>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-text-medium">
-                  {completedChores}/{totalChores} done
-                </span>
-                <Link
-                  href={`/kids/${child.id}/chores`}
-                  className="text-sm text-sage hover:text-sage-dark flex items-center gap-1"
-                >
-                  All <ChevronRight className="h-4 w-4" />
-                </Link>
+        {/* Savings Goals - Connected to Save envelope */}
+        <SavingsGoalsSection
+          childId={child.id}
+          childName={child.name}
+          goals={goals}
+          saveAccount={saveAccount}
+        />
+
+        {/* Expected Chores - Compact */}
+        <Card className="mb-3">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-gold" />
+                <span className="font-semibold text-text-dark">Expected Chores</span>
+                <span className="text-xs text-text-light">({completedExpected}/{expectedChores.length})</span>
+              </div>
+              <Link
+                href={`/kids/${child.id}/chores`}
+                className="text-xs text-sage hover:text-sage-dark flex items-center gap-0.5"
+              >
+                All <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {expectedChores.length === 0 ? (
+              <p className="text-xs text-text-medium text-center py-2">No expected chores set up yet</p>
+            ) : (
+              <div className="space-y-1.5">
+                {expectedChores.slice(0, 4).map((chore) => {
+                  const template = chore.chore_template;
+                  const isDone = chore.status === "done" || chore.status === "approved";
+                  const isApproved = chore.status === "approved";
+                  const isPending = chore.status === "pending";
+                  const streak = template ? getStreakForChore(template.id) : null;
+
+                  return (
+                    <div
+                      key={chore.id}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg transition-colors",
+                        isDone ? "bg-sage-very-light" : "bg-white border border-silver-light"
+                      )}
+                    >
+                      <div className="shrink-0">
+                        {isApproved ? (
+                          <CheckCircle2 className="h-4 w-4 text-sage" />
+                        ) : isDone ? (
+                          <Clock className="h-4 w-4 text-gold" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-silver-light" />
+                        )}
+                      </div>
+                      <span className="text-sm">{template?.icon || "📌"}</span>
+                      <span className={cn("flex-1 text-sm truncate", isDone && "line-through text-text-light")}>
+                        {template?.name || "Chore"}
+                      </span>
+                      {streak && streak.current_streak > 0 && (
+                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-gold-light rounded-full">
+                          <Flame className="h-2.5 w-2.5 text-gold" />
+                          <span className="text-xs sm:text-[10px] font-bold text-gold-dark">{streak.current_streak}</span>
+                        </div>
+                      )}
+                      {isPending && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleMarkDone(chore.id)}
+                          disabled={isMarkingDone === chore.id}
+                          className="shrink-0 h-6 text-xs px-2"
+                        >
+                          Done
+                        </Button>
+                      )}
+                      {chore.status === "done" && (
+                        <span className="text-xs sm:text-[10px] text-gold shrink-0">Pending</span>
+                      )}
+                    </div>
+                  );
+                })}
+                {expectedChores.length > 4 && (
+                  <p className="text-xs text-center text-text-light">+{expectedChores.length - 4} more</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Extra Chores - Compact */}
+        <Card className="mb-3">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-sage" />
+                <span className="font-semibold text-text-dark">Extra Chores</span>
+                <span className="text-xs text-text-light">({completedExtra}/{extraChores.length})</span>
               </div>
             </div>
-            <Progress value={progressPercent} className="mt-2 h-2" />
-          </CardHeader>
-          <CardContent>
-            {chores.length === 0 ? (
-              <div className="text-center py-6 text-text-medium">
-                <span className="text-4xl mb-2 block">🎉</span>
-                No chores this week! Enjoy your free time.
-              </div>
+            {extraChores.length === 0 ? (
+              <p className="text-xs text-text-medium text-center py-2">No extra chores available right now</p>
             ) : (
-              <div className="space-y-2">
-                {chores.map((chore) => {
+              <div className="space-y-1.5">
+                {extraChores.slice(0, 3).map((chore) => {
                   const template = chore.chore_template;
                   const isDone = chore.status === "done" || chore.status === "approved";
                   const isApproved = chore.status === "approved";
@@ -247,116 +470,98 @@ export function KidDashboardClient({
                     <div
                       key={chore.id}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-lg transition-colors",
+                        "flex items-center gap-2 p-2 rounded-lg transition-colors",
                         isDone ? "bg-sage-very-light" : "bg-white border border-silver-light"
                       )}
                     >
-                      {/* Status Icon */}
                       <div className="shrink-0">
                         {isApproved ? (
-                          <CheckCircle2 className="h-6 w-6 text-sage" />
+                          <CheckCircle2 className="h-4 w-4 text-sage" />
                         ) : isDone ? (
-                          <Clock className="h-6 w-6 text-gold" />
+                          <Clock className="h-4 w-4 text-gold" />
                         ) : (
-                          <Circle className="h-6 w-6 text-silver-light" />
+                          <Circle className="h-4 w-4 text-silver-light" />
                         )}
                       </div>
-
-                      {/* Chore Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{template?.icon || "📌"}</span>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              isDone ? "text-text-medium line-through" : "text-text-dark"
-                            )}
-                          >
-                            {template?.name || "Unknown Chore"}
-                          </span>
-                        </div>
-                        {template?.description && (
-                          <p className="text-xs text-text-light truncate">
-                            {template.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Reward */}
-                      <div className="shrink-0 text-right">
-                        {template?.currency_type === "stars" && (
-                          <div className="flex items-center gap-1 text-gold">
-                            <Star className="h-4 w-4" />
-                            <span className="font-bold">{template.currency_amount}</span>
-                          </div>
-                        )}
-                        {template?.currency_type === "screen_time" && (
-                          <div className="flex items-center gap-1 text-blue">
-                            <Clock className="h-4 w-4" />
-                            <span className="font-bold">{template.currency_amount}m</span>
-                          </div>
-                        )}
-                        {template?.currency_type === "money" && (
-                          <div className="text-sage font-bold">
-                            ${template.currency_amount}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Action Button */}
+                      <span className="text-sm">{template?.icon || "📌"}</span>
+                      <span className={cn("flex-1 text-sm truncate", isDone && "line-through text-text-light")}>
+                        {template?.name || "Chore"}
+                      </span>
+                      {template?.currency_amount && (
+                        <span className="text-xs font-bold text-sage">${template.currency_amount.toFixed(0)}</span>
+                      )}
                       {isPending && (
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleMarkDone(chore.id)}
                           disabled={isMarkingDone === chore.id}
-                          className="shrink-0"
+                          className="shrink-0 h-6 text-xs px-2"
                         >
-                          {isMarkingDone === chore.id ? "..." : "Done!"}
+                          Done
                         </Button>
                       )}
                       {chore.status === "done" && (
-                        <span className="text-xs text-gold shrink-0">Waiting approval</span>
+                        <span className="text-xs sm:text-[10px] text-gold shrink-0">Pending</span>
                       )}
                     </div>
                   );
                 })}
+                {extraChores.length > 3 && (
+                  <p className="text-xs text-center text-text-light">+{extraChores.length - 3} more</p>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Recent Achievements */}
-        {achievements.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-gold" />
-                Recent Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {achievements.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center gap-3 p-2 bg-gold-light rounded-lg"
-                  >
-                    <span className="text-2xl">{a.achievement?.icon || "🏆"}</span>
-                    <div className="flex-1">
-                      <p className="font-medium text-text-dark">{a.achievement?.name}</p>
-                      <p className="text-xs text-text-medium">{a.achievement?.description}</p>
+        {/* Invoice Section */}
+        <Card className="mb-3">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-sage" />
+                <span className="font-semibold text-text-dark">My Invoice</span>
+              </div>
+              <Link
+                href={`/kids/${child.id}/invoices`}
+                className="text-xs text-sage hover:text-sage-dark flex items-center gap-0.5"
+              >
+                View <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            {draftInvoice && draftInvoice.item_count > 0 ? (
+              <Link href={`/kids/${child.id}/invoices`}>
+                <div className="flex items-center justify-between p-3 bg-sage-very-light border border-sage rounded-lg hover:shadow-sm transition-shadow cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-sage rounded-full">
+                      <Receipt className="h-4 w-4 text-white" />
                     </div>
-                    <div className="flex items-center gap-1 text-gold">
-                      <Star className="h-4 w-4" />
-                      <span className="font-bold">+{a.achievement?.bonus_stars}</span>
+                    <div>
+                      <p className="text-sm font-medium text-text-dark">Invoice Ready</p>
+                      <p className="text-xs text-text-medium">
+                        {draftInvoice.item_count} item{draftInvoice.item_count !== 1 ? "s" : ""} • ${draftInvoice.total_amount.toFixed(2)}
+                      </p>
                     </div>
                   </div>
-                ))}
+                  <Button size="sm" className="bg-sage hover:bg-sage-dark h-7 text-xs">
+                    Submit
+                  </Button>
+                </div>
+              </Link>
+            ) : (
+              <div className="text-center py-4">
+                <div className="p-2 bg-silver-very-light rounded-full w-10 h-10 mx-auto mb-2 flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-silver" />
+                </div>
+                <p className="text-sm text-text-medium">No items on your invoice yet</p>
+                <p className="text-xs text-text-light mt-1">Complete extra chores to earn money!</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Note: Achievements section removed - streaks are shown inline with chores */}
       </div>
     </div>
   );

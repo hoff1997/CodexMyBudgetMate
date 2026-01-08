@@ -17,6 +17,7 @@ export async function GET(request: Request) {
   const category = searchParams.get("category");
   const ageMin = searchParams.get("age_min");
   const ageMax = searchParams.get("age_max");
+  const choreType = searchParams.get("type"); // "expected" or "extra"
   const includeSystem = searchParams.get("include_system") !== "false"; // default true
 
   let query = supabase
@@ -24,16 +25,23 @@ export async function GET(request: Request) {
     .select("*")
     .order("name");
 
-  // Filter: system templates OR user's custom templates
+  // Filter: preset templates OR user's custom templates
   if (includeSystem) {
-    query = query.or(`is_system.eq.true,created_by.eq.${user.id}`);
+    query = query.or(`is_preset.eq.true,parent_user_id.eq.${user.id}`);
   } else {
-    query = query.eq("created_by", user.id);
+    query = query.eq("parent_user_id", user.id);
   }
 
   // Optional category filter
   if (category) {
     query = query.eq("category", category);
+  }
+
+  // Optional chore type filter (expected vs extra)
+  if (choreType === "expected") {
+    query = query.eq("is_expected", true);
+  } else if (choreType === "extra") {
+    query = query.or("is_expected.eq.false,is_expected.is.null");
   }
 
   // Optional age range filter
@@ -73,16 +81,23 @@ export async function POST(request: Request) {
     description,
     icon,
     category,
+    is_expected,
     recommended_age_min,
     recommended_age_max,
-    default_currency_type,
-    default_currency_amount,
+    currency_type,
+    currency_amount,
     estimated_minutes,
+    max_per_week,
+    allowed_days,
+    auto_approve,
   } = body;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
+
+  // Expected chores don't have monetary rewards
+  const isExpectedChore = is_expected === true;
 
   const { data: template, error } = await supabase
     .from("chore_templates")
@@ -91,13 +106,18 @@ export async function POST(request: Request) {
       description: description || null,
       icon: icon || "📋",
       category: category || "custom",
+      is_expected: isExpectedChore,
       recommended_age_min: recommended_age_min || null,
       recommended_age_max: recommended_age_max || null,
-      default_currency_type: default_currency_type || "stars",
-      default_currency_amount: default_currency_amount || 1,
+      // Expected chores have no currency/amount (part of pocket money)
+      currency_type: isExpectedChore ? null : (currency_type || "money"),
+      currency_amount: isExpectedChore ? null : (currency_amount || 5),
       estimated_minutes: estimated_minutes || null,
-      is_system: false,
-      created_by: user.id,
+      max_per_week: max_per_week || null,
+      allowed_days: allowed_days || null,
+      auto_approve: auto_approve || false,
+      is_preset: false,
+      parent_user_id: user.id,
     })
     .select()
     .single();

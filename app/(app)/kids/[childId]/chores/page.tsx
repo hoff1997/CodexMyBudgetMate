@@ -31,9 +31,7 @@ export default async function KidChoresPage({ params }: Props) {
       `
       id,
       name,
-      avatar_url,
-      star_balance,
-      screen_time_balance
+      avatar_url
     `
     )
     .eq("id", params.childId)
@@ -70,7 +68,11 @@ export default async function KidChoresPage({ params }: Props) {
         name,
         description,
         icon,
-        estimated_minutes
+        estimated_minutes,
+        is_expected,
+        requires_photo,
+        currency_type,
+        currency_amount
       )
     `
     )

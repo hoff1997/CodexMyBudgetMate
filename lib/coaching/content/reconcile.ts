@@ -15,6 +15,8 @@ export const reconcileCoaching: PageCoaching = {
     "The formula is: Bank Balance - Envelope Balances = Surplus",
     "If something's off, check for uncategorised transactions first",
     "Small rounding differences are normal and okay",
+    "Use smart suggestions to speed up categorisation",
+    "Split transactions when one purchase covers multiple envelopes",
   ],
 
   features: [
@@ -39,6 +41,48 @@ export const reconcileCoaching: PageCoaching = {
       why: "Shows money that's in your accounts but not yet allocated to envelopes.",
       how: "A positive surplus is fine, even good. A negative surplus means you've over-allocated.",
     },
+    {
+      id: "smart-suggestions",
+      name: "Smart Suggestions",
+      what: "AI-powered suggestions for categorising transactions.",
+      why: "Speeds up reconciliation by learning from your patterns.",
+      how: "Accept suggestions with one click, or override if the system got it wrong. It learns from your choices.",
+    },
+    {
+      id: "csv-import",
+      name: "CSV Import",
+      what: "Import transactions from a CSV file downloaded from your bank.",
+      why: "Useful if your bank isn't connected via Akahu or for older transactions.",
+      how: "Click Import CSV, upload your file, and map the columns to match your bank's format.",
+    },
+    {
+      id: "receipt-upload",
+      name: "Receipt Upload",
+      what: "Attach receipt photos to transactions for record-keeping.",
+      why: "Keep proof of purchase organised with the transaction it belongs to.",
+      how: "Click the camera icon on any transaction and upload a photo of the receipt.",
+    },
+    {
+      id: "split-transactions",
+      name: "Split Transactions",
+      what: "Divide a single transaction across multiple envelopes.",
+      why: "Perfect for supermarket shops or other purchases that cover multiple categories.",
+      how: "Click the split icon, enter amounts for each envelope, and save. The total must match the original transaction.",
+    },
+    {
+      id: "duplicate-detection",
+      name: "Duplicate Detection",
+      what: "Flags transactions that might be duplicates.",
+      why: "Prevents double-counting when importing from multiple sources.",
+      how: "Review flagged items and mark as duplicate to ignore, or keep as separate if they're genuine.",
+    },
+    {
+      id: "date-filters",
+      name: "Date Filters",
+      what: "Quick filters for common date ranges.",
+      why: "Focus on recent transactions or review a specific period.",
+      how: "Use presets like 'This Month' or 'Last 3 Months', or set a custom date range.",
+    },
   ],
 
   faqs: [
@@ -61,6 +105,16 @@ export const reconcileCoaching: PageCoaching = {
       question: "What about credit card balances?",
       answer:
         "Credit card debt shows as a liability. The holding envelope tracks money set aside to pay the card. The actual card balance is separate from your envelope system.",
+    },
+    {
+      question: "How do smart suggestions learn?",
+      answer:
+        "The system looks at your past categorisation patterns. If you always assign 'Countdown' to Groceries, it will suggest that. The more you use it, the smarter it gets.",
+    },
+    {
+      question: "Can I undo a split transaction?",
+      answer:
+        "Yes. Find the split transaction and click the split icon again. You can unsplit it back to a single transaction and recategorise.",
     },
   ],
 

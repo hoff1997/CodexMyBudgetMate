@@ -29,7 +29,7 @@ import { SidebarBadges } from "@/components/achievements/SidebarBadges";
 import { useSidebar } from "@/components/layout/sidebar-context";
 
 const STORAGE_KEY = "mbm-nav-order";
-const NAV_VERSION = "v18"; // Increment this when adding new menu items - v18: removed Reports and Future Features
+const NAV_VERSION = "v20"; // Increment this when adding new menu items - v20: added Wishlist (beta)
 
 type NavItem = {
   id: string;
@@ -38,6 +38,7 @@ type NavItem = {
   icon: string;
   isOnboardingSubmenu?: boolean;
   isRetired?: boolean; // For items that still exist but are hidden from nav
+  isBetaOnly?: boolean; // For beta-only features
 };
 
 // Onboarding step labels for the submenu
@@ -61,9 +62,9 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "onboarding-resume", label: "Resume Setup", href: "/onboarding", icon: "▶️", isOnboardingSubmenu: true },
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: "📊" },
   { id: "allocation", label: "Budget Allocation", href: "/budgetallocation", icon: "💰" },
-  { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾" },
   { id: "reconcile", label: "Reconcile", href: "/reconcile", icon: "⚖️" },
   { id: "transactions", label: "Transactions", href: "/transactions", icon: "💵" },
+  { id: "wishlist", label: "Wishlist", href: "/wishlist", icon: "⭐", isBetaOnly: true },
   { id: "financial-position", label: "Financial Position", href: "/financial-position", icon: "📈" },
   { id: "settings", label: "Settings", href: "/settings", icon: "⚙️" },
 
@@ -76,6 +77,7 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
   { id: "goals", label: "Goals", href: "/goals", icon: "🎯", isRetired: true },
   { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isRetired: true },
   { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isRetired: true },
+  { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾", isRetired: true },
 ];
 
 interface OnboardingDraft {
@@ -155,14 +157,17 @@ export default function Sidebar({
     checkDraft();
   }, [showOnboardingMenu]);
 
-  // Filter out onboarding if user has completed it, and always filter out retired items
+  // Filter out onboarding if user has completed it, retired items, and beta-only items for non-beta users
   const filteredNavItems = useMemo(() => {
     let items = navItems.filter(item => !item.isRetired); // Always hide retired items
     if (!showOnboardingMenu) {
       items = items.filter(item => item.id !== 'onboarding' && !item.isOnboardingSubmenu);
     }
+    if (!hasBetaAccess) {
+      items = items.filter(item => !item.isBetaOnly); // Hide beta-only items for non-beta users
+    }
     return items;
-  }, [navItems, showOnboardingMenu]);
+  }, [navItems, showOnboardingMenu, hasBetaAccess]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -303,7 +308,7 @@ export default function Sidebar({
               )}
             >
               <span>👨‍👩‍👧‍👦</span>
-              <span>Kids Dashboard</span>
+              <span>Parents Dashboard</span>
             </Link>
             <Link
               href="/kids/chores"
@@ -517,7 +522,7 @@ export default function Sidebar({
                       ? "bg-white text-text-dark border border-sage"
                       : "text-text-medium hover:bg-silver-light hover:text-text-dark"
                   )}
-                  title="Kids Dashboard"
+                  title="Parents Dashboard"
                 >
                   <span className="text-lg">👨‍👩‍👧‍👦</span>
                 </Link>
@@ -545,14 +550,14 @@ export default function Sidebar({
         )}>
           {isDesktopCollapsed ? (
             <>
-              {/* Mobile: full button */}
-              <div className="lg:hidden">
-                <Button asChild variant="outline" className="w-full text-xs h-8">
+              {/* Mobile: sign out only */}
+              <div className="lg:hidden flex items-center gap-2">
+                <Button asChild variant="outline" className="flex-1 text-xs h-8">
                   <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
                 </Button>
               </div>
-              {/* Desktop collapsed: icon only */}
-              <div className="hidden lg:flex justify-center">
+              {/* Desktop collapsed: sign out icon only */}
+              <div className="hidden lg:flex flex-col items-center gap-2">
                 <Link
                   href="/api/auth/sign-out"
                   prefetch={false}
@@ -564,9 +569,11 @@ export default function Sidebar({
               </div>
             </>
           ) : (
-            <Button asChild variant="outline" className="w-full text-xs h-8">
-              <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="flex-1 text-xs h-8">
+                <Link href="/api/auth/sign-out" prefetch={false}>Sign out</Link>
+              </Button>
+            </div>
           )}
         </div>
       </aside>

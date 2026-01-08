@@ -111,8 +111,8 @@ function CommandPalette({
   const navigationLinks = useMemo(
     () => [
       { label: "Dashboard", href: "/dashboard", description: "Overview snapshot", icon: <Home className="h-4 w-4" /> },
+      { label: "Budget Allocation", href: "/budgetallocation", description: "Manage your envelopes & allocations", icon: <Wallet className="h-4 w-4" /> },
       { label: "Reconcile", href: "/reconcile", description: "Approve & assign transactions", icon: <AlignLeft className="h-4 w-4" /> },
-      { label: "Envelope summary", href: "/envelope-summary", description: "Zero budget manager & history", icon: <Wallet className="h-4 w-4" /> },
       { label: "Envelope planning", href: "/envelope-planning", description: "Adjust targets and contributions", icon: <ListChecks className="h-4 w-4" /> },
       { label: "Recurring income", href: "/recurring-income", description: "Manage automated pay splits", icon: <Repeat2 className="h-4 w-4" /> },
       { label: "Reports", href: "/reports", description: "Spending, income, debt", icon: <BarChart3 className="h-4 w-4" /> },
@@ -228,7 +228,7 @@ function CommandPalette({
               title={env.name}
               description={`Balance ${formatCurrency(env.current_amount)} of ${formatCurrency(env.target_amount)}`}
               icon={<Wallet2 className="h-4 w-4" />}
-              onSelect={() => handleNavigate(`/envelope-summary?highlight=${env.id}`)}
+              onSelect={() => handleNavigate(`/budgetallocation?highlight=${env.id}`)}
             />
           ))}
         </CommandSection>

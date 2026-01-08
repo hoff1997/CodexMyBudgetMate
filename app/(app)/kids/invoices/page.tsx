@@ -23,7 +23,7 @@ export default async function InvoicesPage() {
   // Fetch all children for this parent
   const { data: children } = await supabase
     .from("child_profiles")
-    .select("id, name, avatar_url, star_balance, screen_time_balance")
+    .select("id, name, avatar_url")
     .eq("parent_user_id", user.id)
     .order("name");
 
@@ -31,43 +31,51 @@ export default async function InvoicesPage() {
     redirect("/kids/setup");
   }
 
-  // Get the last 4 weeks of approved chores for each child
-  const fourWeeksAgo = new Date();
-  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-  const fourWeeksAgoStr = fourWeeksAgo.toISOString().split("T")[0];
-
-  // Fetch approved chores with money rewards
-  const { data: moneyChores } = await supabase
-    .from("chore_assignments")
-    .select(
-      `
+  // Fetch invoices (draft, submitted, and paid) with their items for each child
+  const { data: invoices } = await supabase
+    .from("kid_invoices")
+    .select(`
       id,
       child_profile_id,
-      week_starting,
-      currency_type,
-      currency_amount,
-      approved_at,
-      chore_template:chore_templates (
+      invoice_number,
+      status,
+      total_amount,
+      created_at,
+      submitted_at,
+      paid_at,
+      payment_notes,
+      kid_invoice_items (
         id,
-        name,
-        icon
+        chore_name,
+        amount,
+        completed_at,
+        approved_at,
+        chore_assignment:chore_assignments (
+          id,
+          week_starting,
+          chore_template:chore_templates (
+            icon
+          )
+        )
       )
-    `
-    )
-    .eq("status", "approved")
-    .eq("currency_type", "money")
+    `)
+    .in("status", ["draft", "submitted", "paid"])
     .in(
       "child_profile_id",
       children.map((c) => c.id)
     )
-    .gte("week_starting", fourWeeksAgoStr)
-    .order("approved_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
-  // Group by child and calculate totals
+  // Group by child and calculate totals from invoice items
   const childEarnings: Record<
     string,
     {
       total: number;
+      invoiceId: string | null;
+      invoiceNumber: string | null;
+      status: string;
+      submittedAt: string | null;
+      paidAt: string | null;
       chores: Array<{
         id: string;
         name: string;
@@ -80,24 +88,40 @@ export default async function InvoicesPage() {
   > = {};
 
   for (const child of children) {
-    childEarnings[child.id] = { total: 0, chores: [] };
+    childEarnings[child.id] = { total: 0, invoiceId: null, invoiceNumber: null, status: "none", submittedAt: null, paidAt: null, chores: [] };
   }
 
-  for (const chore of moneyChores || []) {
-    if (childEarnings[chore.child_profile_id]) {
-      // Handle chore_template being an array from Supabase join
-      const template = Array.isArray(chore.chore_template)
-        ? chore.chore_template[0]
-        : chore.chore_template;
-      childEarnings[chore.child_profile_id].total += chore.currency_amount;
-      childEarnings[chore.child_profile_id].chores.push({
-        id: chore.id,
-        name: template?.name || "Unknown",
-        icon: template?.icon || "📋",
-        amount: chore.currency_amount,
-        approvedAt: chore.approved_at,
-        weekStarting: chore.week_starting,
-      });
+  for (const invoice of invoices || []) {
+    const childId = invoice.child_profile_id;
+    if (childEarnings[childId]) {
+      childEarnings[childId].invoiceId = invoice.id;
+      childEarnings[childId].invoiceNumber = invoice.invoice_number;
+      childEarnings[childId].status = invoice.status;
+      childEarnings[childId].submittedAt = invoice.submitted_at;
+      childEarnings[childId].paidAt = invoice.paid_at;
+
+      const items = invoice.kid_invoice_items || [];
+      for (const item of items) {
+        // Handle nested Supabase array joins
+        const assignment = Array.isArray(item.chore_assignment)
+          ? item.chore_assignment[0]
+          : item.chore_assignment;
+        const template = assignment?.chore_template
+          ? (Array.isArray(assignment.chore_template)
+              ? assignment.chore_template[0]
+              : assignment.chore_template)
+          : null;
+
+        childEarnings[childId].total += Number(item.amount);
+        childEarnings[childId].chores.push({
+          id: item.id,
+          name: item.chore_name,
+          icon: template?.icon || "💰",
+          amount: Number(item.amount),
+          approvedAt: item.approved_at || item.completed_at,
+          weekStarting: assignment?.week_starting || new Date().toISOString().split("T")[0],
+        });
+      }
     }
   }
 

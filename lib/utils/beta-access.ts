@@ -11,6 +11,8 @@ export type BetaAccessResult = {
 // Hardcoded beta users - these get access even if DB table doesn't exist yet
 const HARDCODED_BETA_USERS = [
   "hoff1997@gmail.com",
+  "futureproperty97@gmail.com", // Demo user
+  "test@mybudgetmate.co.nz", // Test user for seed script
 ];
 
 /**

@@ -10,7 +10,36 @@ import {
   TemplatePicker,
   CreateListDialog,
 } from "@/components/todos";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { Plus, FileText, ListTodo } from "lucide-react";
+
+const HELP_CONTENT = {
+  tips: [
+    "Create separate lists for different areas (home, garden, errands)",
+    "Use templates for recurring tasks like weekly cleaning",
+    "Assign tasks to family members to share the load",
+  ],
+  features: [
+    "Create multiple to-do lists for different purposes",
+    "Check off items as you complete them",
+    "Use templates for common task lists",
+    "Share lists with children for their chores",
+  ],
+  faqs: [
+    {
+      question: "How do templates work?",
+      answer: "Templates are pre-made task lists. Click 'From Template' to start with a template like 'Weekly Cleaning' or 'Moving House'.",
+    },
+    {
+      question: "Can I share a list with my kids?",
+      answer: "Yes! When editing a list, you can choose which children can see it. Their tasks will appear in their dashboard.",
+    },
+    {
+      question: "How do I see completed tasks?",
+      answer: "Toggle 'Show completed' at the top of the page to see tasks you've already checked off.",
+    },
+  ],
+};
 
 interface TodoItem {
   id: string;
@@ -315,6 +344,7 @@ export function TodosClient({ initialLists, childProfiles }: TodosClientProps) {
               <Plus className="h-4 w-4 mr-2" />
               New List
             </Button>
+            <RemyHelpButton title="To-Do Lists" content={HELP_CONTENT} />
           </div>
         </div>
 

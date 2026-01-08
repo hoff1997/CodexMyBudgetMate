@@ -50,7 +50,7 @@ export function EnvelopeBalancesClient({ envelopes, categories }: Props) {
   };
 
   const handleBackClick = () => {
-    router.push(`/envelope-summary`);
+    router.push(`/budgetallocation`);
   };
 
   // Group envelopes by category

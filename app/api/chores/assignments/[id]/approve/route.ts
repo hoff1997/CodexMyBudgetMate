@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-interface Params {
-  params: { id: string };
+interface RouteContext {
+  params: Promise<{ id: string }>;
 }
 
 // PATCH /api/chores/assignments/[id]/approve - Parent approves completed chore
-export async function PATCH(request: Request, { params }: Params) {
+export async function PATCH(request: Request, context: RouteContext) {
+  const { id } = await context.params;
   const supabase = await createClient();
 
   const {
@@ -17,7 +18,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get the assignment with child info
+  // Get the assignment with child info and template details (including is_expected)
   const { data: assignment } = await supabase
     .from("chore_assignments")
     .select(
@@ -27,6 +28,13 @@ export async function PATCH(request: Request, { params }: Params) {
       currency_type,
       currency_amount,
       child_profile_id,
+      chore_template_id,
+      chore_template:chore_templates (
+        id,
+        name,
+        icon,
+        is_expected
+      ),
       child:child_profiles!inner (
         id,
         parent_user_id,
@@ -35,7 +43,7 @@ export async function PATCH(request: Request, { params }: Params) {
       )
     `
     )
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!assignment) {
@@ -53,13 +61,20 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
-  // Can only approve "done" status chores
-  if (assignment.status !== "done") {
+  // Can only approve chores that are "done" or "pending_approval"
+  // - "done" comes from parent-initiated completion
+  // - "pending_approval" comes from kid-initiated completion (with/without photo)
+  if (assignment.status !== "done" && assignment.status !== "pending_approval") {
     return NextResponse.json(
-      { error: `Can only approve chores that are marked done (current: ${assignment.status})` },
+      { error: `Can only approve chores that are done or pending approval (current: ${assignment.status})` },
       { status: 400 }
     );
   }
+
+  // Get template details
+  const template = Array.isArray(assignment.chore_template)
+    ? assignment.chore_template[0]
+    : assignment.chore_template;
 
   // Update assignment status
   const { data: updated, error: updateError } = await supabase
@@ -69,7 +84,7 @@ export async function PATCH(request: Request, { params }: Params) {
       approved_at: new Date().toISOString(),
       approved_by: user.id,
     })
-    .eq("id", params.id)
+    .eq("id", id)
     .select(
       `
       *,
@@ -87,6 +102,8 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  let rewardMessage = "";
+
   // Award the reward based on currency type
   if (assignment.currency_type === "stars") {
     const { error: balanceError } = await supabase
@@ -98,8 +115,8 @@ export async function PATCH(request: Request, { params }: Params) {
 
     if (balanceError) {
       console.error("Error updating star balance:", balanceError);
-      // Don't fail the whole request, just log it
     }
+    rewardMessage = `+${assignment.currency_amount} stars`;
   } else if (assignment.currency_type === "screen_time") {
     const { error: balanceError } = await supabase
       .from("child_profiles")
@@ -112,27 +129,58 @@ export async function PATCH(request: Request, { params }: Params) {
     if (balanceError) {
       console.error("Error updating screen time balance:", balanceError);
     }
-  } else if (assignment.currency_type === "money") {
-    // Credit the "spend" bank account
-    const { data: spendAccount } = await supabase
-      .from("child_bank_accounts")
-      .select("id, current_balance")
+    rewardMessage = `+${assignment.currency_amount} minutes screen time`;
+  } else if (assignment.currency_type === "money" && !template?.is_expected) {
+    // Only add EXTRA chores (not expected chores) to the invoice
+    // Expected chores are covered by pocket money - they don't get invoiced separately
+
+    // Get or create draft invoice for this child
+    let { data: draftInvoice } = await supabase
+      .from("kid_invoices")
+      .select("id")
       .eq("child_profile_id", assignment.child_profile_id)
-      .eq("envelope_type", "spend")
-      .single();
+      .eq("status", "draft")
+      .maybeSingle();
 
-    if (spendAccount) {
-      const { error: accountError } = await supabase
-        .from("child_bank_accounts")
-        .update({
-          current_balance: spendAccount.current_balance + assignment.currency_amount,
+    if (!draftInvoice) {
+      // Create new draft invoice
+      const { data: newInvoice, error: createError } = await supabase
+        .from("kid_invoices")
+        .insert({
+          child_profile_id: assignment.child_profile_id,
+          status: "draft",
+          total_amount: 0,
         })
-        .eq("id", spendAccount.id);
+        .select("id")
+        .single();
 
-      if (accountError) {
-        console.error("Error updating money balance:", accountError);
+      if (createError) {
+        console.error("Error creating draft invoice:", createError);
+      } else {
+        draftInvoice = newInvoice;
       }
     }
+
+    if (draftInvoice) {
+      // Add item to draft invoice
+      const { error: itemError } = await supabase
+        .from("kid_invoice_items")
+        .insert({
+          invoice_id: draftInvoice.id,
+          chore_assignment_id: id,
+          chore_name: template?.name || "Unknown Chore",
+          amount: assignment.currency_amount,
+          completed_at: new Date().toISOString(),
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+        });
+
+      if (itemError) {
+        console.error("Error adding invoice item:", itemError);
+      }
+    }
+
+    rewardMessage = `+$${assignment.currency_amount} (added to invoice)`;
   }
 
   return NextResponse.json({
@@ -141,5 +189,6 @@ export async function PATCH(request: Request, { params }: Params) {
       type: assignment.currency_type,
       amount: assignment.currency_amount,
     },
+    reward_message: rewardMessage,
   });
 }

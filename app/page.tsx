@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Layers, TrendingUp, Shield } from "lucide-react";
+import { ReturningUserCTA } from "@/components/landing/returning-user-cta";
 
 export default function MarketingPage() {
   return (
@@ -11,46 +12,52 @@ export default function MarketingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
           {/* Logo - text only, no icon - nowrap to stay on one line */}
           <span className="text-lg sm:text-xl font-semibold text-[#3D3D3D] whitespace-nowrap">My Budget Mate</span>
-          <div className="flex gap-2 sm:gap-3">
-            <Button asChild variant="outline" size="sm" className="border-[#7A9E9A] text-[#5A7E7A] hover:bg-[#E2EEEC] sm:size-default">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild size="sm" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white sm:size-default">
-              <Link href="/signup">Get Started</Link>
-            </Button>
-          </div>
+          <ReturningUserCTA variant="header" />
         </div>
       </header>
 
       <main className="mx-auto flex max-w-6xl flex-col gap-12 px-4 sm:px-6 py-8 sm:py-12">
         {/* Hero Section - Side by side on mobile, larger layout on desktop */}
-        <section className="flex items-start gap-4 lg:gap-8">
-          {/* Left: All text content */}
-          <div className="flex-1 space-y-3">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold leading-tight sm:leading-snug text-[#3D3D3D]">
-              Budgeting that actually<br />fits your life.
-            </h1>
-            <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">
-              Tell your money where to go before you wonder where it went.
-            </p>
-            <p className="text-base sm:text-lg text-[#6B6B6B] pt-1">
-              Connect your NZ bank accounts and see exactly where you stand.<br />No spreadsheets. Just clarity.
-            </p>
-            <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto mt-2">
-              <Link href="/signup">Get Started Free</Link>
-            </Button>
-          </div>
+        <section className="flex flex-col">
+          <div className="flex items-start justify-center gap-2 sm:gap-4 lg:gap-6">
+            {/* Left: All text content */}
+            <div className="flex-1 max-w-xl space-y-3">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-[#3D3D3D]">
+                <span className="block sm:hidden">Budgeting that</span>
+                <span className="block sm:hidden mt-1 whitespace-nowrap">actually fits your life</span>
+                <span className="hidden sm:block">Budgeting that actually</span>
+                <span className="hidden sm:block mt-2">fits your life</span>
+              </h1>
+              <p className="text-base sm:text-xl font-medium text-[#5A7E7A]">
+                <span className="sm:hidden">Tell your money where to go before you wonder where it&nbsp;went.</span>
+                <span className="hidden sm:inline">Tell your money where to go before you wonder where it went.</span>
+              </p>
+              <p className="text-base sm:text-lg text-[#6B6B6B] pt-1">
+                <span className="block sm:hidden">Connect your NZ bank accounts and&nbsp;see&nbsp;exactly&nbsp;where&nbsp;you&nbsp;stand.</span>
+                <span className="hidden sm:block">Connect your NZ bank accounts and see exactly where you stand.<br />No spreadsheets. Just clarity.</span>
+                <span className="block sm:hidden mt-1">No spreadsheets. Just&nbsp;clarity.</span>
+              </p>
+              {/* Button on desktop - left aligned */}
+              <div className="hidden sm:block mt-2">
+                <ReturningUserCTA variant="hero" />
+              </div>
+            </div>
 
-          {/* Right: Remy - aligned to top */}
-          <div className="flex-shrink-0">
-            <Image
-              src="/Images/remy-fullsize.png"
-              alt="Remy, your budgeting guide"
-              width={300}
-              height={375}
-              className="object-contain w-[100px] sm:w-[120px] lg:w-[280px] h-auto"
-              priority
-            />
+            {/* Right: Remy - aligned to top, pushed to right margin on mobile */}
+            <div className="flex-shrink-0 -mr-4 sm:mr-0 sm:ml-0">
+              <Image
+                src="/Images/remy-fullsize.png"
+                alt="Remy, your budgeting guide"
+                width={300}
+                height={375}
+                className="object-contain w-[140px] sm:w-[120px] lg:w-[240px] h-auto"
+                priority
+              />
+            </div>
+          </div>
+          {/* Button on mobile - centered to full width */}
+          <div className="flex sm:hidden justify-center mt-4">
+            <ReturningUserCTA variant="hero" />
           </div>
         </section>
 
@@ -136,15 +143,8 @@ export default function MarketingPage() {
           <p className="mt-3 text-sm sm:text-base text-[#6B6B6B]">
             Join Kiwi households who budget by pay cycle, not by guesswork.
           </p>
-          <div className="mt-5 flex flex-col items-center justify-center gap-3 md:flex-row">
-            <Button asChild size="lg" className="bg-[#7A9E9A] hover:bg-[#6B8E8A] text-white w-full sm:w-auto">
-              <Link href="/signup">Start your free account</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-[#7A9E9A] hover:bg-[#E2EEEC] text-[#5A7E7A] bg-white w-full sm:w-auto min-h-[44px] px-4 py-2">
-              <Link href="/login" className="whitespace-normal text-center leading-tight">
-                Already have an account? Sign in
-              </Link>
-            </Button>
+          <div className="mt-5">
+            <ReturningUserCTA variant="footer" />
           </div>
         </section>
       </main>

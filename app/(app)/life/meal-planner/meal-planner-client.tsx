@@ -23,7 +23,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { MealCalendar, AddMealDialog, FreezerMealsList } from "@/components/meal-planner";
+import { MealCalendar, AddMealDialog, FreezerMealsList, GenerateShoppingListDialog, TemplateManager, TemplatePreviewDialog } from "@/components/meal-planner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import {
   Calendar,
   Copy,
@@ -35,6 +37,9 @@ import {
   Eye,
   Trash2,
   Check,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from "date-fns";
 
@@ -68,6 +73,35 @@ interface MealTemplate {
   }[];
   created_at: string;
 }
+
+const HELP_CONTENT = {
+  tips: [
+    "Plan meals around what's on sale at the supermarket",
+    "Use the same ingredients across multiple meals to reduce waste",
+    "Keep a few freezer meals ready for busy nights",
+  ],
+  features: [
+    "Plan breakfast, lunch, dinner, and snacks for the week",
+    "Link meals to your recipe collection",
+    "Generate shopping lists from your meal plan",
+    "Save meal templates for easy future planning",
+    "Copy your meal plan to the next week",
+  ],
+  faqs: [
+    {
+      question: "How do I add a meal?",
+      answer: "Click on any day in the calendar to add a meal. You can choose from your recipes or type a custom meal name.",
+    },
+    {
+      question: "Can I generate a shopping list from my meals?",
+      answer: "Yes! Click 'Shopping List' in the header to create a shopping list based on your planned meals and their ingredients.",
+    },
+    {
+      question: "What are meal templates?",
+      answer: "Templates save your weekly meal plan so you can reuse it. Great for families who rotate the same meals.",
+    },
+  ],
+};
 
 type MealTypeKey = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -103,6 +137,9 @@ export function MealPlannerClient({
   const [visibleMealTypes, setVisibleMealTypes] = useState<Set<MealTypeKey>>(
     new Set(["breakfast", "lunch", "dinner", "snack"])
   );
+
+  // Shopping list generation
+  const [shoppingDialogOpen, setShoppingDialogOpen] = useState(false);
 
   // Template management
   const [templates, setTemplates] = useState<MealTemplate[]>([]);
@@ -214,30 +251,8 @@ export function MealPlannerClient({
     }
   };
 
-  const handleGenerateShoppingList = async () => {
-    try {
-      const weekEnd = addDays(currentWeekStart, 6);
-
-      const res = await fetch("/api/meal-plan/shopping-list", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          start_date: format(currentWeekStart, "yyyy-MM-dd"),
-          end_date: format(weekEnd, "yyyy-MM-dd"),
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        alert(
-          `Found ${data.count} ingredients:\n\n${data.ingredients
-            .slice(0, 10)
-            .join("\n")}${data.count > 10 ? "\n..." : ""}`
-        );
-      }
-    } catch (error) {
-      console.error("Failed to generate shopping list:", error);
-    }
+  const handleGenerateShoppingList = () => {
+    setShoppingDialogOpen(true);
   };
 
   // Toggle meal type visibility
@@ -276,6 +291,9 @@ export function MealPlannerClient({
       fetchTemplates();
     }
   }, [templatesLoaded]);
+
+  // Family calendar collapsed state
+  const [calendarCollapsed, setCalendarCollapsed] = useState(false);
 
   // Save current week as template
   const handleSaveAsTemplate = async () => {
@@ -482,48 +500,175 @@ export function MealPlannerClient({
                 </DropdownMenuSub>
               </DropdownMenuContent>
             </DropdownMenu>
+            <RemyHelpButton title="Meal Planner" content={HELP_CONTENT} />
           </div>
         </div>
 
-        {/* Calendar */}
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-sage" />
-          </div>
-        ) : (
-          <MealCalendar
-            meals={meals}
-            currentWeekStart={currentWeekStart}
-            onWeekChange={handleWeekChange}
-            onAddMeal={handleAddMeal}
-            onRemoveMeal={handleRemoveMeal}
-            onMealClick={handleMealClick}
-            visibleMealTypes={visibleMealTypes}
-          />
-        )}
+        {/* Family Calendar - Weekly View */}
+        <Card className="mb-6 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setCalendarCollapsed(!calendarCollapsed)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-blue-light/30 hover:bg-blue-light/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-blue" />
+              <span className="font-medium text-text-dark">Family Calendar</span>
+              <span className="text-xs text-text-medium">
+                {format(currentWeekStart, "MMM d")} - {format(addDays(currentWeekStart, 6), "MMM d, yyyy")}
+              </span>
+            </div>
+            {calendarCollapsed ? (
+              <ChevronDown className="h-4 w-4 text-text-medium" />
+            ) : (
+              <ChevronUp className="h-4 w-4 text-text-medium" />
+            )}
+          </button>
 
-        {/* Freezer Meals Section */}
-        <div className="mt-6">
-          <FreezerMealsList />
-        </div>
+          {!calendarCollapsed && (
+            <div className="p-4">
+              {/* Weekly Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {Array.from({ length: 7 }).map((_, index) => {
+                  const day = addDays(currentWeekStart, index);
+                  const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
-        {/* Quick stats */}
-        {meals.length > 0 && (
-          <div className="mt-6 p-4 bg-sage-very-light rounded-lg">
-            <div className="flex items-center gap-6 text-sm">
-              <div>
-                <span className="font-medium text-text-dark">{meals.length}</span>
-                <span className="text-text-medium ml-1">meals planned</span>
+                  return (
+                    <div
+                      key={index}
+                      className={`min-h-[100px] rounded-lg border ${
+                        isToday
+                          ? "border-blue bg-blue-light/20"
+                          : "border-silver-light bg-white"
+                      }`}
+                    >
+                      {/* Day Header */}
+                      <div className={`px-2 py-1.5 border-b ${
+                        isToday ? "border-blue/30" : "border-silver-light"
+                      }`}>
+                        <div className="text-[10px] font-medium text-text-medium uppercase">
+                          {format(day, "EEE")}
+                        </div>
+                        <div className={`text-sm font-semibold ${
+                          isToday ? "text-blue" : "text-text-dark"
+                        }`}>
+                          {format(day, "d")}
+                        </div>
+                      </div>
+
+                      {/* Events Placeholder */}
+                      <div className="p-1.5 space-y-1">
+                        {/* Placeholder for calendar events */}
+                        <div className="text-[10px] text-text-light italic text-center py-2">
+                          No events
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div>
-                <span className="font-medium text-text-dark">
-                  {meals.filter((m) => m.recipe_id).length}
-                </span>
-                <span className="text-text-medium ml-1">from recipes</span>
+
+              {/* Coming Soon Notice */}
+              <div className="mt-4 p-3 bg-silver-very-light rounded-lg flex items-start gap-3">
+                <CalendarDays className="h-5 w-5 text-text-medium flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-text-dark">
+                    Family Calendar Coming Soon
+                  </p>
+                  <p className="text-xs text-text-medium mt-0.5">
+                    See everyone&apos;s commitments at a glance while planning meals.
+                    Connect your family&apos;s calendars to see sports practice, work events,
+                    and activities here.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </Card>
+
+        {/* Tabs for Planner and Templates */}
+        <Tabs defaultValue="planner" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="planner" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Meal Planner
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Templates
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="planner">
+            {/* Meal Calendar */}
+            {loading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-sage" />
+              </div>
+            ) : (
+              <MealCalendar
+                meals={meals}
+                currentWeekStart={currentWeekStart}
+                onWeekChange={handleWeekChange}
+                onAddMeal={handleAddMeal}
+                onRemoveMeal={handleRemoveMeal}
+                onMealClick={handleMealClick}
+                visibleMealTypes={visibleMealTypes}
+              />
+            )}
+
+            {/* Freezer Meals Section */}
+            <div className="mt-6">
+              <FreezerMealsList />
+            </div>
+
+            {/* Quick stats */}
+            {meals.length > 0 && (
+              <div className="mt-6 p-4 bg-sage-very-light rounded-lg">
+                <div className="flex items-center gap-6 text-sm">
+                  <div>
+                    <span className="font-medium text-text-dark">{meals.length}</span>
+                    <span className="text-text-medium ml-1">meals planned</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-text-dark">
+                      {meals.filter((m) => m.recipe_id).length}
+                    </span>
+                    <span className="text-text-medium ml-1">from recipes</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-text-dark">Meal Templates</h2>
+                  <p className="text-sm text-text-medium">
+                    Save and reuse weekly meal plans. Create Week 1, 2, 3 rotations.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setSaveTemplateOpen(true)}
+                  disabled={meals.length === 0}
+                  className="bg-sage hover:bg-sage-dark"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Current Week
+                </Button>
+              </div>
+
+              <TemplateManager
+                templates={templates}
+                recipes={recipes}
+                onTemplateApplied={() => fetchMealsForWeek(currentWeekStart)}
+                onTemplatesChanged={fetchTemplates}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Add meal dialog */}
@@ -606,6 +751,15 @@ export function MealPlannerClient({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Generate Shopping List Dialog */}
+      <GenerateShoppingListDialog
+        open={shoppingDialogOpen}
+        onOpenChange={setShoppingDialogOpen}
+        weekStart={currentWeekStart}
+        weekEnd={addDays(currentWeekStart, 6)}
+        mealsCount={meals.length}
+      />
     </div>
   );
 }

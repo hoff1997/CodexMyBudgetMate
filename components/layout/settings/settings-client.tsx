@@ -14,6 +14,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { AchievementGallery } from "@/components/achievements/AchievementGallery";
 import { SubscriptionCard } from "@/components/subscription";
+import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 
 // Types
 type IncomeSourceRow = {
@@ -150,6 +151,9 @@ export function SettingsClient({ data, flash = null }: Props) {
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
+
+  // Delete account dialog state
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
   // Celebration reminder settings
   const [celebrationReminderWeeks, setCelebrationReminderWeeks] = useState<number>(
@@ -519,8 +523,11 @@ export function SettingsClient({ data, flash = null }: Props) {
   }
 
   function handleDeleteAccount() {
-    // Show info toast instead of error - feature coming soon
-    toast.info("Account deletion is coming soon. Contact support@mybudgetmate.co.nz if you need to delete your account now.");
+    if (data.demoMode) {
+      toast.error("Cannot delete account in demo mode");
+      return;
+    }
+    setDeleteAccountOpen(true);
   }
 
   return (
@@ -634,9 +641,8 @@ export function SettingsClient({ data, flash = null }: Props) {
               >
                 <option value="/dashboard">Dashboard</option>
                 <option value="/reconcile">Reconcile</option>
-                <option value="/budgetallocation">Allocation</option>
+                <option value="/budgetallocation">Budget Allocation</option>
                 <option value="/transactions">Transactions</option>
-                <option value="/envelope-summary">Envelope Summary</option>
                 <option value="/financial-position">Financial Position</option>
               </select>
             </div>
@@ -702,7 +708,7 @@ export function SettingsClient({ data, flash = null }: Props) {
                 {formatFrequency(income.pay_cycle)} · {formatCurrency(income.typical_amount ?? 0)}
               </div>
               <div className="text-sm text-[#6B6B6B]">
-                {income.next_pay_date ? formatDate(income.next_pay_date) : "—"}
+                {income.next_pay_date ? formatDate(income.next_pay_date) : "-"}
               </div>
               <div className="flex items-center justify-end gap-0.5">
                 <button
@@ -899,7 +905,7 @@ export function SettingsClient({ data, flash = null }: Props) {
             <Gift className="w-4 h-4 text-[#D4A853]" />
             <div>
               <span className="text-sm text-[#3D3D3D]">Birthday & gift reminders</span>
-              <span className="ml-2 text-xs text-[#9CA3AF]">— Get notified before celebrations</span>
+              <span className="ml-2 text-xs text-[#9CA3AF]">- Get notified before celebrations</span>
             </div>
           </div>
           <select
@@ -936,7 +942,7 @@ export function SettingsClient({ data, flash = null }: Props) {
             <Archive className="w-4 h-4 text-[#6B9ECE]" />
             <div>
               <span className="text-sm text-[#3D3D3D]">Archived envelopes</span>
-              <span className="ml-2 text-xs text-[#9CA3AF]">— View and restore archived envelopes</span>
+              <span className="ml-2 text-xs text-[#9CA3AF]">- View and restore archived envelopes</span>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
@@ -945,7 +951,7 @@ export function SettingsClient({ data, flash = null }: Props) {
         <div className="px-3 py-2 flex items-center justify-between border-b border-[#E5E7EB]">
           <div className="flex items-center gap-2">
             <span className="text-sm text-[#3D3D3D]">Export your data</span>
-            <span className="text-xs text-[#9CA3AF]">— Download all data as ZIP</span>
+            <span className="text-xs text-[#9CA3AF]">- Download all data as ZIP</span>
           </div>
           <button
             onClick={handleExportData}
@@ -968,22 +974,21 @@ export function SettingsClient({ data, flash = null }: Props) {
         {/* Delete Row */}
         <div className="px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-[#9CA3AF]">Delete account</span>
-            <span className="text-xs text-[#9CA3AF]">— Permanently remove account and data</span>
+            <Trash2 className="w-4 h-4 text-red-400" />
+            <div>
+              <span className="text-sm text-[#3D3D3D]">Delete account</span>
+              <span className="ml-2 text-xs text-[#9CA3AF]">- Permanently remove account and data</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[#9CA3AF] bg-[#F3F4F6] px-2 py-0.5 rounded">
-              Coming soon
-            </span>
-            <button
-              onClick={handleDeleteAccount}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-[#9CA3AF] border border-[#E5E7EB] rounded-lg cursor-not-allowed opacity-60"
-              title="Account deletion is coming soon"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
-            </button>
-          </div>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={data.demoMode}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={data.demoMode ? "Cannot delete in demo mode" : "Delete your account"}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete account
+          </button>
         </div>
       </section>
 
@@ -1034,6 +1039,14 @@ export function SettingsClient({ data, flash = null }: Props) {
         onEnd={(endDate, addReplacement) =>
           selectedIncome && handleArchiveIncome(selectedIncome.id, endDate, addReplacement)
         }
+      />
+
+      {/* Delete Account Dialog */}
+      <DeleteAccountDialog
+        open={deleteAccountOpen}
+        onClose={() => setDeleteAccountOpen(false)}
+        userEmail={data.profile.email}
+        onExportData={handleExportData}
       />
     </div>
   );
@@ -1597,7 +1610,7 @@ function SecuritySection({ userEmail, demoMode }: { userEmail: string | null; de
           <Shield className="w-4 h-4 text-[#9CA3AF]" />
           <div>
             <span className="text-sm text-[#3D3D3D]">Password</span>
-            <span className="ml-2 text-xs text-[#9CA3AF]">— Manage your login credentials</span>
+            <span className="ml-2 text-xs text-[#9CA3AF]">- Manage your login credentials</span>
           </div>
         </div>
         <button

@@ -1,83 +1,180 @@
-# My Budget Mate - Style Guide
+# My Budget Mate — Style Guide
 
-## Color Palette
-
-### Primary Colors (Sage)
-The sage color palette is used for positive actions, success states, and primary UI elements.
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| Sage | `#7A9E9A` | Primary buttons, checkmarks, positive indicators |
-| Sage Dark | `#5A7E7A` | Button hover states, dark accents |
-| Sage Light | `#B8D4D0` | Borders, subtle highlights |
-| Sage Very Light | `#E2EEEC` | Backgrounds, selected states |
-
-### Secondary Colors (Blue)
-Blue is used for informational content, secondary actions, and neutral states.
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| Blue | `#6B9ECE` | Info icons, secondary indicators |
-| Blue Light | `#DDEAF5` | Info backgrounds, alert backgrounds |
-
-### Accent Colors (Gold)
-Gold is used for warnings, celebrations, and attention-grabbing elements.
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| Gold | `#D4A853` | Warning icons, celebration accents |
-| Gold Light | `#F5E6C4` | Warning backgrounds |
-| Gold Dark | `#8B7035` | Warning text |
-
-### Neutral Colors (Silver)
-Silver is used for neutral states and secondary importance indicators.
-
-| Name | Hex | Usage |
-|------|-----|-------|
-| Silver | `#9CA3AF` | Neutral indicators, secondary importance |
-| Silver Light | `#E5E7EB` | Neutral borders |
-| Silver Very Light | `#F3F4F6` | Neutral backgrounds |
-
-### Text Colors
-| Name | Class | Usage |
-|------|-------|-------|
-| Text Dark | `text-text-dark` | Headlines, important text |
-| Text Medium | `text-text-medium` | Body text, descriptions |
-| Muted | `text-muted-foreground` | Secondary text, labels |
+A calm, empowering design system for a budget app that reduces anxiety and encourages positive financial behavior.
 
 ---
 
-## Button Styles
+## Color Philosophy
 
-### Primary Action Buttons
-Used for: **Save**, **Continue**, **Accept**, **Submit**, **Confirm**, **Create**, **Add**, **Update**, **Finish**, **Complete**, **Done**, **Apply**, **Next**
+The color system is built on behavioral psychology principles:
+
+| Color Family | Meaning | When to Use |
+|--------------|---------|-------------|
+| **Sage** | Positive | Surplus, on track, under budget, funded, primary actions |
+| **Blue** | Negative/Info | Debt, over budget, under funded, review items (informational, not punishing) |
+| **Silver** | UI Structure | Borders, backgrounds, disabled states, neutral elements |
+| **Gold** | Celebration | Major milestones, achievements, debt paid off |
+
+---
+
+## Color Palette
+
+### Sage — Positives
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Sage | `#7A9E9A` | `--sage` | Primary buttons, active states, positive values, progress bar (100%) |
+| Sage Dark | `#5A7E7A` | `--sage-dark` | Text links, badge text, button hover |
+| Sage Light | `#B8D4D0` | `--sage-light` | Status badges bg, progress bar (50%), success indicators |
+| Sage Very Light | `#E2EEEC` | `--sage-very-light` | Progress bar bg, row hover, positive card backgrounds |
+
+### Blue — Negatives / Info
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Blue | `#6B9ECE` | `--blue` | Debt values (even $0), over budget amounts, info icons |
+| Blue Light | `#DDEAF5` | `--blue-light` | Review badges bg, negative status bg, info alerts |
+
+### Silver — UI Structure
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Silver | `#9CA3AF` | `--silver` | Borders, disabled text, placeholder text, icons |
+| Silver Light | `#E5E7EB` | `--silver-light` | Card borders, dividers, sidebar hover |
+| Silver Very Light | `#F3F4F6` | `--silver-very-light` | Sidebar bg, table headers, input backgrounds |
+
+### Gold — Celebrations
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Gold | `#D4A853` | `--gold` | Achievement icons, milestone markers |
+| Gold Light | `#F5E6C4` | `--gold-light` | Celebration badges, achievement cards, success toasts |
+| Gold Dark | `#8B7035` | `--gold-dark` | Warning text |
+
+### Text
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| Text Dark | `#3D3D3D` | `--text-dark` | Headings, primary text, important labels |
+| Text Medium | `#6B6B6B` | `--text-medium` | Body text, sidebar text, secondary labels |
+| Text Light | `#9CA3AF` | `--text-light` | Placeholders, disabled text, meta info |
+
+### Backgrounds
+
+| Name | Hex | CSS Variable | Usage |
+|------|-----|--------------|-------|
+| White | `#FFFFFF` | `--bg-white` | Main background, cards |
+
+---
+
+## CSS Variables
+
+Add to `globals.css`:
+
+```css
+:root {
+  /* Sage - Positives */
+  --sage: #7A9E9A;
+  --sage-dark: #5A7E7A;
+  --sage-light: #B8D4D0;
+  --sage-very-light: #E2EEEC;
+
+  /* Blue - Negatives / Info */
+  --blue: #6B9ECE;
+  --blue-light: #DDEAF5;
+
+  /* Silver - UI Structure */
+  --silver: #9CA3AF;
+  --silver-light: #E5E7EB;
+  --silver-very-light: #F3F4F6;
+
+  /* Gold - Celebrations */
+  --gold: #D4A853;
+  --gold-light: #F5E6C4;
+  --gold-dark: #8B7035;
+
+  /* Text */
+  --text-dark: #3D3D3D;
+  --text-medium: #6B6B6B;
+  --text-light: #9CA3AF;
+
+  /* Background */
+  --bg-white: #FFFFFF;
+}
+```
+
+---
+
+## Tailwind Config
+
+Add to `tailwind.config.js` under `theme.extend.colors`:
+
+```js
+colors: {
+  sage: {
+    DEFAULT: '#7A9E9A',
+    dark: '#5A7E7A',
+    light: '#B8D4D0',
+    'very-light': '#E2EEEC',
+  },
+  blue: {
+    DEFAULT: '#6B9ECE',
+    light: '#DDEAF5',
+  },
+  silver: {
+    DEFAULT: '#9CA3AF',
+    light: '#E5E7EB',
+    'very-light': '#F3F4F6',
+  },
+  gold: {
+    DEFAULT: '#D4A853',
+    light: '#F5E6C4',
+    dark: '#8B7035',
+  },
+  text: {
+    dark: '#3D3D3D',
+    medium: '#6B6B6B',
+    light: '#9CA3AF',
+  },
+}
+```
+
+---
+
+## Components
+
+### Buttons
+
+**Primary Button**
+- Background: `--sage` (`#7A9E9A`)
+- Text: white
+- Hover: `--sage-dark` (`#5A7E7A`)
+- Border radius: 8px
 
 ```tsx
-<Button className="bg-[#7A9E9A] hover:bg-[#5A7E7A]">
+<Button className="bg-sage hover:bg-sage-dark">
   Save Changes
 </Button>
 ```
 
-### Full Width Primary Button
+**Full Width Primary Button**
 ```tsx
-<Button className="w-full bg-[#7A9E9A] hover:bg-[#5A7E7A]">
+<Button className="w-full bg-sage hover:bg-sage-dark">
   Continue
 </Button>
 ```
 
-### Outline Button with Sage Accent
-Used for secondary actions that still need sage styling.
-
+**Outline Button with Sage Accent**
 ```tsx
 <Button
   variant="outline"
-  className="border-[#7A9E9A] text-[#5A7E7A] hover:bg-[#E2EEEC]"
+  className="border-sage text-sage-dark hover:bg-sage-very-light"
 >
   Add Surplus Envelope
 </Button>
 ```
 
-### Destructive Button
+**Destructive Button**
 Keep default destructive styling for delete actions.
 
 ```tsx
@@ -86,7 +183,7 @@ Keep default destructive styling for delete actions.
 </Button>
 ```
 
-### Ghost Button
+**Ghost Button**
 Keep default ghost styling for cancel and secondary actions.
 
 ```tsx
@@ -95,69 +192,226 @@ Keep default ghost styling for cancel and secondary actions.
 </Button>
 ```
 
+**Text Link**
+- Color: `--sage-dark` (`#5A7E7A`)
+- Hover: underline
+
+```tsx
+<a className="text-sage-dark hover:underline font-medium">+ Add Income</a>
+```
+
 ---
 
-## Card & Selection States
+### Badges
 
-### Selected Card
+**Positive Badge** (surplus, on track)
+- Background: `--sage-very-light`
+- Border: `--sage-light`
+- Text: `--sage-dark`
+
 ```tsx
-<Card className="border-2 border-[#7A9E9A] bg-[#E2EEEC]">
+<span className="bg-sage-very-light border border-sage-light text-sage-dark px-3 py-1 rounded-full text-sm font-medium">
+  + Surplus: $500
+</span>
+```
+
+**Negative Badge** (review, over budget)
+- Background: `--blue-light`
+- Border: `--blue`
+- Text: `#4A7BA8`
+
+```tsx
+<span className="bg-blue-light border border-blue text-[#4A7BA8] px-3 py-1 rounded-full text-sm font-medium">
+  To review (15)
+</span>
+```
+
+**Celebration Badge** (milestones)
+- Background: `--gold-light`
+- Border: `--gold`
+- Text: `--gold-dark`
+
+```tsx
+<span className="bg-gold-light border border-gold text-gold-dark px-3 py-1 rounded-full text-sm font-medium">
+  Goal reached!
+</span>
+```
+
+---
+
+### Status Pills
+
+**On Track**
+- Background: `--sage-light`
+- Text: `--sage-dark`
+
+```tsx
+<span className="bg-sage-light text-sage-dark px-2 py-1 rounded-full text-xs font-medium">
+  On track
+</span>
+```
+
+**Needs Review / Over / Under**
+- Background: `--blue-light`
+- Text: `#4A7BA8`
+
+```tsx
+<span className="bg-blue-light text-[#4A7BA8] px-2 py-1 rounded-full text-xs font-medium">
+  Over $60
+</span>
+```
+
+---
+
+### Progress Bar
+
+The progress bar uses a light-to-dark sage gradient. Always positive — just showing intensity of progress.
+
+- Background: `--sage-very-light`
+- Fill: gradient from `--sage-very-light` → `--sage-light` → `--sage`
+
+```tsx
+<div className="h-2 bg-sage-very-light rounded-full overflow-hidden">
+  <div
+    className="h-full rounded-full"
+    style={{
+      width: '75%',
+      background: 'linear-gradient(90deg, #E2EEEC 0%, #B8D4D0 50%, #7A9E9A 100%)'
+    }}
+  />
+</div>
+```
+
+**Default Progress Bar (Sage)**
+```tsx
+<Progress
+  value={progress}
+  className="h-3 [&>div]:bg-sage"
+/>
+```
+
+**Over-budget Progress Bar (Blue)**
+```tsx
+<Progress
+  value={progress}
+  className="h-3 [&>div]:bg-blue"
+/>
+```
+
+---
+
+### Sidebar
+
+- Background: `--silver-very-light` (`#F3F4F6`)
+- Text: `--text-medium` (`#6B6B6B`)
+- Hover: `--silver-light` (`#E5E7EB`)
+- Active: white background, left border `--sage`, font-medium
+
+```tsx
+<aside className="bg-silver-very-light w-56 border-r border-silver-light">
+  <nav>
+    <a className="block px-5 py-3 text-text-medium hover:bg-silver-light">
+      Dashboard
+    </a>
+    <a className="block px-5 py-3 bg-white text-text-dark font-medium border-l-3 border-sage">
+      Budget Manager
+    </a>
+  </nav>
+</aside>
+```
+
+---
+
+### Cards
+
+- Background: white
+- Border: `--silver-light`
+- Border radius: 12px
+- Shadow: subtle (`shadow-sm`)
+
+```tsx
+<div className="bg-white border border-silver-light rounded-xl p-5 shadow-sm">
+  <div className="text-text-medium text-sm">Balance</div>
+  <div className="text-sage text-2xl font-semibold">$500.00</div>
+</div>
+```
+
+**Selected Card**
+```tsx
+<Card className="border-2 border-sage bg-sage-very-light">
   {/* Card content */}
 </Card>
 ```
 
-### Hover State for Cards
+**Hover State for Cards**
 ```tsx
-<Card className="hover:border-[#B8D4D0] hover:shadow-lg">
+<Card className="hover:border-sage-light hover:shadow-lg">
   {/* Card content */}
 </Card>
 ```
 
-### Info Card
+**Info Card**
 ```tsx
-<div className="bg-[#DDEAF5] border border-[#6B9ECE] rounded-lg p-4">
-  <Info className="h-5 w-5 text-[#6B9ECE]" />
+<div className="bg-blue-light border border-blue rounded-lg p-4">
+  <Info className="h-5 w-5 text-blue" />
   {/* Info content */}
 </div>
 ```
 
-### Warning Card
+**Warning Card**
 ```tsx
-<div className="bg-[#F5E6C4] border border-[#D4A853] rounded-lg p-4">
-  <AlertTriangle className="h-5 w-5 text-[#D4A853]" />
+<div className="bg-gold-light border border-gold rounded-lg p-4">
+  <AlertTriangle className="h-5 w-5 text-gold" />
   {/* Warning content */}
 </div>
 ```
 
-### Success Card
+**Success Card**
 ```tsx
-<div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg p-4">
-  <Check className="h-5 w-5 text-[#7A9E9A]" />
+<div className="bg-sage-very-light border border-sage-light rounded-lg p-4">
+  <Check className="h-5 w-5 text-sage" />
   {/* Success content */}
 </div>
 ```
 
 ---
 
-## Icons & Indicators
+### Values
 
-### Success Check Icon
+**Positive Values** (surplus, funded, under budget)
+- Color: `--sage`
+- Font weight: 600
+
+**Negative Values** (debt, over budget)
+- Color: `--blue`
+- Font weight: 600
+
+**Neutral Values** (zero, no data)
+- Color: `--text-light`
+
 ```tsx
-<Check className="h-5 w-5 text-[#7A9E9A]" />
-<CheckCircle2 className="h-5 w-5 text-[#7A9E9A]" />
+<span className="text-sage font-semibold">$250.00</span>    {/* funded */}
+<span className="text-blue font-semibold">$0.00</span>      {/* debt */}
+<span className="text-text-light">$0.00</span>              {/* empty */}
 ```
 
-### Info Icon
-```tsx
-<Info className="h-5 w-5 text-[#6B9ECE]" />
-```
+---
 
-### Warning Icon
-```tsx
-<AlertTriangle className="h-5 w-5 text-[#D4A853]" />
-```
+### Table Headers
 
-### Priority Colors
+- Background: `--silver-very-light`
+- Text: `--text-medium`
+- Border bottom: `--silver-light`
+
+---
+
+### Row Hover
+
+- Background: `--sage-very-light`
+
+---
+
+## Priority Colors
 
 Used for categorising envelopes by importance level.
 
@@ -167,68 +421,48 @@ Used for categorising envelopes by importance level.
 | 2 | **Important** | `silver` (#9CA3AF) | `silver-very-light` (#F3F4F6) | `silver-light` (#E5E7EB) | Should-pay items: insurance, savings, debt |
 | 3 | **Extras** | `blue` (#6B9ECE) | `blue-light` (#DDEAF5) | `blue` (#6B9ECE) | Nice-to-have: fun money, hobbies, treats |
 
-#### Priority Color Psychology
+### Priority Color Psychology
 
 - **Sage (Essential)** — Positive, secure. Communicates "these are covered, you're safe."
 - **Silver (Important)** — Neutral, stable. Communicates "steady progress, keep going."
 - **Blue (Extras)** — Informational, flexible. Communicates "adjust freely, no guilt."
 
-#### Usage Examples
+### Usage Examples
 
 **Group Headers:**
 ```tsx
 {/* Essential */}
-<div className="bg-[#E2EEEC] border border-[#B8D4D0]">...</div>
+<div className="bg-sage-very-light border border-sage-light">...</div>
 
 {/* Important */}
-<div className="bg-[#F3F4F6] border border-[#E5E7EB]">...</div>
+<div className="bg-silver-very-light border border-silver-light">...</div>
 
 {/* Extras */}
-<div className="bg-[#DDEAF5] border border-[#6B9ECE]">...</div>
+<div className="bg-blue-light border border-blue">...</div>
 ```
 
 **Priority Dots:**
 ```tsx
 {/* Essential */}
-<span className="w-3 h-3 rounded-full bg-[#5A7E7A]" />
+<span className="w-3 h-3 rounded-full bg-sage-dark" />
 
 {/* Important */}
-<span className="w-3 h-3 rounded-full bg-[#9CA3AF]" />
+<span className="w-3 h-3 rounded-full bg-silver" />
 
 {/* Extras */}
-<span className="w-3 h-3 rounded-full bg-[#6B9ECE]" />
+<span className="w-3 h-3 rounded-full bg-blue" />
 ```
 
 **Row Icons:**
 ```tsx
 {/* Essential */}
-<div className="bg-[#E2EEEC] rounded-lg p-2">...</div>
+<div className="bg-sage-very-light rounded-lg p-2">...</div>
 
 {/* Important */}
-<div className="bg-[#F3F4F6] rounded-lg p-2">...</div>
+<div className="bg-silver-very-light rounded-lg p-2">...</div>
 
 {/* Extras */}
-<div className="bg-[#DDEAF5] rounded-lg p-2">...</div>
-```
-
----
-
-## Progress Indicators
-
-### Default Progress Bar (Sage)
-```tsx
-<Progress
-  value={progress}
-  className="h-3 [&>div]:bg-[#7A9E9A]"
-/>
-```
-
-### Over-budget Progress Bar (Blue)
-```tsx
-<Progress
-  value={progress}
-  className="h-3 [&>div]:bg-[#6B9ECE]"
-/>
+<div className="bg-blue-light rounded-lg p-2">...</div>
 ```
 
 ---
@@ -241,18 +475,7 @@ Use default shadcn/ui Input styling.
 ### Focus States
 Inputs should use sage accent on focus:
 ```tsx
-<Input className="focus:ring-[#7A9E9A] focus:border-[#7A9E9A]" />
-```
-
----
-
-## Checkbox Selection
-
-### Selected Checkbox Badge
-```tsx
-<div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#7A9E9A] flex items-center justify-center shadow">
-  <Check className="h-4 w-4 text-white" />
-</div>
+<Input className="focus:ring-sage focus:border-sage" />
 ```
 
 ---
@@ -278,24 +501,245 @@ Inputs should use sage accent on focus:
 
 ---
 
-## Status Indicators
+## Highlight & Focus States
 
-### Budget Status Colors
+### Newly Created Item Highlight
+Used to draw attention to newly created items (e.g., after creating an envelope):
 
-| Status | Background | Border | Text |
-|--------|------------|--------|------|
-| On Track | `bg-[#E2EEEC]` | `border-[#B8D4D0]` | `text-[#5A7E7A]` |
-| Under Budget | `bg-[#F5E6C4]` | `border-[#D4A853]` | `text-[#8B7035]` |
-| Over Budget | `bg-[#DDEAF5]` | `border-[#6B9ECE]` | `text-[#6B9ECE]` |
+- Ring: `ring-2 ring-sage ring-offset-1`
+- Background: `bg-sage-very-light`
+- Animation: `animate-pulse` (auto-removes after 3 seconds)
+
+```tsx
+<tr className={cn(
+  "hover:bg-sage-very-light",
+  isHighlighted && "ring-2 ring-sage ring-offset-1 bg-sage-very-light animate-pulse"
+)}>
+  {/* Row content */}
+</tr>
+```
+
+### Scroll Into View
+Highlighted items should auto-scroll:
+
+```tsx
+useEffect(() => {
+  if (isHighlighted && rowRef.current) {
+    rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}, [isHighlighted]);
+
+// Auto-remove after 3 seconds
+useEffect(() => {
+  if (highlightId) {
+    const timer = setTimeout(() => setHighlightedId(null), 3000);
+    return () => clearTimeout(timer);
+  }
+}, [highlightId]);
+```
 
 ---
 
-## Recommended Badge
+## Income & Budget Impact Patterns
+
+### Income Reality Banner
+Shows income surplus/commitment information in dialogs:
+
+- Background: `bg-blue-light/30` (`#DDEAF5` at 30% opacity)
+- Border: `border-blue-light`
+- Text: `text-blue` for values, `text-text-medium` for labels
+
 ```tsx
-<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#7A9E9A] text-white text-xs font-medium px-3 py-1 rounded-full">
-  Recommended
+<div className="rounded-xl border border-blue-light bg-blue-light/30 p-4">
+  <div className="text-xs uppercase tracking-wide text-text-medium mb-2">
+    Your new pay cycle commitment
+  </div>
+  <div className="flex items-center justify-between">
+    <span className="text-sm text-text-dark">Income Name:</span>
+    <span className="font-semibold text-blue">$XX.XX per pay</span>
+  </div>
 </div>
 ```
+
+### Budget Shortfall Warning
+Used when user's surplus can't cover a new commitment:
+
+- Background: `bg-gold-light/30` (`#F5E6C4` at 30% opacity)
+- Border: `border-gold`
+- Icon: `AlertCircle` with `text-gold`
+
+```tsx
+<div className="rounded-xl border border-gold bg-gold-light/30 p-4">
+  <div className="flex items-start gap-3">
+    <AlertCircle className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
+    <div>
+      <h4 className="font-semibold text-text-dark">Budget Needs Balancing</h4>
+      <p className="text-sm text-text-dark">
+        Still to find <strong>$XX.XX</strong>
+      </p>
+    </div>
+  </div>
+</div>
+```
+
+### Success Confirmation
+Used when budget action succeeds:
+
+- Background: `bg-sage-very-light`
+- Border: `border-sage-light`
+- Icon: `CheckCircle2` with `text-sage`
+
+```tsx
+<div className="rounded-xl border border-sage-light bg-sage-very-light p-4">
+  <div className="flex items-center gap-3">
+    <CheckCircle2 className="h-6 w-6 text-sage" />
+    <div>
+      <h3 className="font-semibold text-text-dark">Envelope Created!</h3>
+      <p className="text-sm text-text-medium">Now let's balance your budget</p>
+    </div>
+  </div>
+</div>
+```
+
+---
+
+## Dialog & Popover Patterns
+
+### Modal Date Picker
+For date pickers inside dialogs, use modal mode to prevent overflow:
+
+```tsx
+<Popover modal={true}>
+  <PopoverTrigger asChild>
+    <Button variant="outline" className="justify-between">
+      {date ? format(date, 'PPP') : 'Pick a date'}
+      <CalendarIcon className="h-4 w-4" />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent
+    className="p-0 z-[100]"
+    sideOffset={8}
+    align="start"
+    side="bottom"
+    avoidCollisions={true}
+    collisionPadding={16}
+  >
+    <Calendar mode="single" selected={date} onSelect={setDate} />
+  </PopoverContent>
+</Popover>
+```
+
+Key props:
+- `modal={true}` - Keeps popover within dialog stacking context
+- `z-[100]` - Ensures popover appears above dialog content
+- `avoidCollisions={true}` - Prevents calendar from appearing outside viewport
+- `collisionPadding={16}` - Adds safe margin from viewport edges
+
+---
+
+## Envelope Type Badges
+
+### Priority Traffic Light System
+Compact visual priority indicators:
+
+| Priority | Dot Color | CSS |
+|----------|-----------|-----|
+| Essential | Sage Dark | `bg-sage-dark` or `bg-[#5A7E7A]` |
+| Important | Silver | `bg-silver` or `bg-[#9CA3AF]` |
+| Discretionary | Blue | `bg-blue` or `bg-[#6B9ECE]` |
+
+```tsx
+// Compact dot (in table)
+<span className={cn(
+  "w-2.5 h-2.5 rounded-full",
+  priority === "essential" && "bg-sage-dark",
+  priority === "important" && "bg-silver",
+  priority === "discretionary" && "bg-blue"
+)} />
+```
+
+---
+
+## Remy Components
+
+### RemyTip Background
+Remy's coaching tips use a distinct sage-tinted style:
+
+| Property | Value | Hex |
+|----------|-------|-----|
+| Background | `bg-sage-very-light` | `#E2EEEC` |
+| Border | `border-sage-light` | `#B8D4D0` |
+| Text | `text-sage-dark` | `#5A7E7A` |
+| Signature | `text-sage` | `#7A9E9A` |
+
+```tsx
+<div className="flex gap-3 rounded-2xl border border-sage-light bg-sage-very-light p-4">
+  <img src="/Images/remy-encouraging.png" className="w-12 h-12" />
+  <div className="flex-1">
+    <p className="text-sm text-sage-dark">Remy's tip message...</p>
+    <p className="text-xs text-sage mt-1 italic">— Remy</p>
+  </div>
+</div>
+```
+
+---
+
+## Kids Module Styles
+
+### Child Profile Cards
+```tsx
+<div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center text-2xl">
+  {/* Avatar emoji or image */}
+</div>
+```
+
+### Streak Badges (Kids)
+```tsx
+<span className="flex items-center gap-1 text-gold">
+  <Flame className="h-3.5 w-3.5" />
+  {currentStreak} day streak
+</span>
+```
+
+### Invoice Summary (Kids)
+```tsx
+<div className="border-t-2 border-sage pt-4 mt-4">
+  <span className="font-bold text-text-dark">Total</span>
+  <span className="text-2xl font-bold text-sage-dark">
+    ${total.toFixed(2)}
+  </span>
+</div>
+```
+
+### Envelope Money Display (Kids)
+The four envelope types for kids use the same color scheme:
+
+| Envelope | Icon | Color Accent |
+|----------|------|--------------|
+| Spend | 💳 | `sage` |
+| Save | 💰 | `sage-light` |
+| Invest | 📈 | `blue` |
+| Give | 💝 | `gold` |
+
+---
+
+## Quick Reference
+
+| Element | Color | Hex |
+|---------|-------|-----|
+| Primary button | Sage | `#7A9E9A` |
+| Action links | Sage Dark | `#5A7E7A` |
+| Positive values | Sage | `#7A9E9A` |
+| Positive badges bg | Sage Very Light | `#E2EEEC` |
+| Debt / negative values | Blue | `#6B9ECE` |
+| Negative badges bg | Blue Light | `#DDEAF5` |
+| Sidebar background | Silver Very Light | `#F3F4F6` |
+| Card borders | Silver Light | `#E5E7EB` |
+| Main background | White | `#FFFFFF` |
+| Headings | Text Dark | `#3D3D3D` |
+| Body text | Text Medium | `#6B6B6B` |
+| Placeholders | Text Light | `#9CA3AF` |
+| Celebrations | Gold Light | `#F5E6C4` |
 
 ---
 
@@ -324,140 +768,4 @@ Inputs should use sage accent on focus:
 
 ---
 
-## Highlight & Focus States (Updated Dec 2025)
-
-### Newly Created Item Highlight
-Used to draw attention to newly created items (e.g., after creating an envelope):
-
-```tsx
-// Ring + background + animation
-const highlightClass = isHighlighted
-  ? "ring-2 ring-sage ring-offset-1 bg-sage-very-light animate-pulse"
-  : "";
-
-// Auto-scroll into view
-useEffect(() => {
-  if (isHighlighted && rowRef.current) {
-    rowRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-}, [isHighlighted]);
-
-// Auto-remove after 3 seconds
-useEffect(() => {
-  if (highlightId) {
-    const timer = setTimeout(() => setHighlightedId(null), 3000);
-    return () => clearTimeout(timer);
-  }
-}, [highlightId]);
-```
-
----
-
-## Income & Budget Impact Patterns (Updated Dec 2025)
-
-### Income Reality Banner
-Shows income surplus/commitment information in dialogs:
-
-```tsx
-<div className="rounded-xl border border-blue-light bg-blue-light/30 p-4">
-  <div className="text-xs uppercase tracking-wide text-text-medium mb-2">
-    Your new pay cycle commitment
-  </div>
-  <div className="flex items-center justify-between">
-    <span className="text-sm text-text-dark">Income Name:</span>
-    <span className="font-semibold text-blue">$XX.XX per pay</span>
-  </div>
-</div>
-```
-
-### Budget Shortfall Warning
-Used when user's surplus can't cover a new commitment:
-
-```tsx
-<div className="rounded-xl border border-gold bg-gold-light/30 p-4">
-  <div className="flex items-start gap-3">
-    <AlertCircle className="h-5 w-5 text-gold flex-shrink-0 mt-0.5" />
-    <div>
-      <h4 className="font-semibold text-text-dark">Budget Needs Balancing</h4>
-      <p className="text-sm text-text-dark">
-        Still to find <strong>$XX.XX</strong>
-      </p>
-    </div>
-  </div>
-</div>
-```
-
-### Success Confirmation
-```tsx
-<div className="rounded-xl border border-sage-light bg-sage-very-light p-4">
-  <div className="flex items-center gap-3">
-    <CheckCircle2 className="h-6 w-6 text-sage" />
-    <div>
-      <h3 className="font-semibold text-text-dark">Envelope Created!</h3>
-      <p className="text-sm text-text-medium">Now let's balance your budget</p>
-    </div>
-  </div>
-</div>
-```
-
----
-
-## Dialog & Popover Patterns (Updated Dec 2025)
-
-### Modal Date Picker
-For date pickers inside dialogs, use modal mode to prevent overflow:
-
-```tsx
-<Popover modal={true}>
-  <PopoverTrigger asChild>
-    <Button variant="outline" className="justify-between">
-      {date ? format(date, 'PPP') : 'Pick a date'}
-      <CalendarIcon className="h-4 w-4" />
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent
-    className="p-0 z-[100]"
-    sideOffset={8}
-    align="start"
-    side="bottom"
-    avoidCollisions={true}
-    collisionPadding={16}
-  >
-    <Calendar mode="single" selected={date} onSelect={setDate} />
-  </PopoverContent>
-</Popover>
-```
-
-**Key props:**
-- `modal={true}` - Keeps popover within dialog stacking context
-- `z-[100]` - Ensures popover appears above dialog content
-- `avoidCollisions={true}` - Prevents calendar from appearing outside viewport
-- `collisionPadding={16}` - Adds safe margin from viewport edges
-
----
-
-## Remy Component Styling
-
-### RemyTip Background
-Remy's coaching tips use a distinct sage-tinted style:
-
-| Property | Value | Hex |
-|----------|-------|-----|
-| Background | `bg-sage-very-light` | `#E2EEEC` |
-| Border | `border-sage-light` | `#B8D4D0` |
-| Text | `text-sage-dark` | `#5A7E7A` |
-| Signature | `text-sage` | `#7A9E9A` |
-
-```tsx
-<div className="flex gap-3 rounded-2xl border border-sage-light bg-sage-very-light p-4">
-  <img src="/Images/remy-encouraging.png" className="w-12 h-12" />
-  <div className="flex-1">
-    <p className="text-sm text-sage-dark">Remy's tip message...</p>
-    <p className="text-xs text-sage mt-1 italic">— Remy</p>
-  </div>
-</div>
-```
-
----
-
-*Last updated: December 2025*
+*Last updated: January 2026*

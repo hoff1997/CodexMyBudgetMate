@@ -28,6 +28,8 @@ import {
   Edit2,
   Store,
   DollarSign,
+  Wallet,
+  CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -64,6 +66,9 @@ interface ShoppingList {
   totalItems: number;
   checkedItems: number;
   estimatedTotal: number;
+  linked_envelope_id?: string | null;
+  linked_envelope_name?: string | null;
+  is_completed?: boolean;
 }
 
 interface ShoppingListViewProps {
@@ -76,6 +81,8 @@ interface ShoppingListViewProps {
   onDeleteItem: (itemId: string) => Promise<void>;
   onUpdateItem: (itemId: string, updates: Partial<ShoppingItem>) => Promise<void>;
   onDeleteList: (listId: string) => Promise<void>;
+  onLinkEnvelope?: () => void;
+  onCompleteList?: () => void;
   showChecked: boolean;
 }
 
@@ -89,6 +96,8 @@ export function ShoppingListView({
   onDeleteItem,
   onUpdateItem,
   onDeleteList,
+  onLinkEnvelope,
+  onCompleteList,
   showChecked,
 }: ShoppingListViewProps) {
   // Build a map of category_id -> category name for quick lookups
@@ -164,18 +173,46 @@ export function ShoppingListView({
     return item.aisle;
   };
 
+  // Get category icon for display
+  const getCategoryIcon = (categoryName: string): string => {
+    const category = categories.find((c) => c.name === categoryName);
+    if (category?.icon) return category.icon;
+    // Fallback icons based on common category names
+    const fallbackIcons: Record<string, string> = {
+      "Produce": "🥬",
+      "Dairy": "🥛",
+      "Meat": "🥩",
+      "Seafood": "🐟",
+      "Bakery": "🥖",
+      "Frozen": "🧊",
+      "Deli": "🧀",
+      "Beverages": "🥤",
+      "Snacks": "🍿",
+      "Pantry": "🥫",
+      "Household": "🧹",
+      "Personal Care": "🧴",
+      "Baby": "👶",
+      "Pet": "🐾",
+      "Other": "📦",
+    };
+    return fallbackIcons[categoryName] || "📦";
+  };
+
   const renderItem = (item: ShoppingItem, showAisle = false) => (
     <div
       key={item.id}
       className={cn(
-        "flex items-start gap-3 p-2 rounded-lg hover:bg-silver-light/50 group",
-        item.checked && "opacity-50"
+        "flex items-start gap-3 p-2 rounded-lg hover:bg-silver-light/50 group transition-all duration-200",
+        item.checked && "opacity-60 bg-silver-light/30"
       )}
     >
       <Checkbox
         checked={item.checked}
         onCheckedChange={(checked) => onToggleItem(item.id, checked as boolean)}
-        className="mt-0.5"
+        className={cn(
+          "mt-0.5 transition-colors",
+          item.checked && "data-[state=checked]:bg-sage data-[state=checked]:border-sage"
+        )}
       />
       <div className="flex-1 min-w-0">
         {editingId === item.id ? (
@@ -193,8 +230,8 @@ export function ShoppingListView({
         ) : (
           <div
             className={cn(
-              "text-sm cursor-pointer",
-              item.checked && "line-through"
+              "text-sm cursor-pointer transition-all duration-200",
+              item.checked && "line-through text-text-medium decoration-sage decoration-2"
             )}
             onClick={() => !item.checked && startEditing(item)}
           >
@@ -225,12 +262,12 @@ export function ShoppingListView({
           )}
         </div>
       </div>
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+      <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         {!item.checked && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0"
+            className="h-6 w-6 p-0 text-text-medium hover:text-sage-dark"
             onClick={() => startEditing(item)}
           >
             <Edit2 className="h-3 w-3" />
@@ -239,7 +276,7 @@ export function ShoppingListView({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 text-red-500"
+          className="h-6 w-6 p-0 text-text-medium hover:text-red-500"
           onClick={() => onDeleteItem(item.id)}
         >
           <Trash2 className="h-3 w-3" />
@@ -296,22 +333,77 @@ export function ShoppingListView({
               </div>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="text-red-600"
-                onClick={() => onDeleteList(list.id)}
+          <div className="flex items-center gap-1">
+            {/* Link to Envelope button */}
+            {onLinkEnvelope && !list.is_completed && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLinkEnvelope}
+                className={cn(
+                  "gap-1",
+                  list.linked_envelope_id ? "text-sage" : "text-text-medium"
+                )}
+                title={list.linked_envelope_name ? `Linked to ${list.linked_envelope_name}` : "Link to budget envelope"}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete List
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <Wallet className="h-4 w-4" />
+                {list.linked_envelope_name && (
+                  <span className="text-xs max-w-20 truncate hidden sm:inline">
+                    {list.linked_envelope_name}
+                  </span>
+                )}
+              </Button>
+            )}
+
+            {/* Complete shopping button */}
+            {onCompleteList && !list.is_completed && list.checkedItems > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCompleteList}
+                className="text-sage hover:text-sage-dark gap-1"
+                title="Complete shopping"
+              >
+                <CheckCircle className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs">Done</span>
+              </Button>
+            )}
+
+            {list.is_completed && (
+              <Badge variant="outline" className="text-xs bg-sage-very-light text-sage border-sage-light">
+                Completed
+              </Badge>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onLinkEnvelope && !list.is_completed && (
+                  <DropdownMenuItem onClick={onLinkEnvelope}>
+                    <Wallet className="h-4 w-4 mr-2" />
+                    {list.linked_envelope_id ? "Change Envelope" : "Link to Envelope"}
+                  </DropdownMenuItem>
+                )}
+                {onCompleteList && !list.is_completed && (
+                  <DropdownMenuItem onClick={onCompleteList}>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Complete Shopping
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={() => onDeleteList(list.id)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete List
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
 
@@ -339,16 +431,20 @@ export function ShoppingListView({
 
           {/* Items */}
           {sortByAisle ? (
-            // Grouped by aisle
+            // Grouped by aisle/category with styled headers
             <div className="space-y-4">
               {aisleOrder
                 .filter((aisle) => groupedItems[aisle]?.length > 0)
                 .map((aisle) => (
                   <div key={aisle}>
-                    <div className="text-xs font-medium text-text-medium mb-2 uppercase tracking-wide">
-                      {aisle}
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-sage-light/40 to-sage-very-light/60 rounded-lg mb-2">
+                      <span className="text-lg">{getCategoryIcon(aisle)}</span>
+                      <span className="font-medium text-sage-dark">{aisle}</span>
+                      <span className="ml-auto text-xs text-sage bg-white/60 px-2 py-0.5 rounded-full">
+                        {groupedItems[aisle].length} {groupedItems[aisle].length === 1 ? "item" : "items"}
+                      </span>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 pl-2">
                       {groupedItems[aisle].map((item) => renderItem(item, false))}
                     </div>
                   </div>
@@ -356,10 +452,14 @@ export function ShoppingListView({
               {groupedItems["Other"]?.length > 0 &&
                 !aisleOrder.includes("Other") && (
                   <div>
-                    <div className="text-xs font-medium text-text-medium mb-2 uppercase tracking-wide">
-                      Other
+                    <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-sage-light/40 to-sage-very-light/60 rounded-lg mb-2">
+                      <span className="text-lg">{getCategoryIcon("Other")}</span>
+                      <span className="font-medium text-sage-dark">Other</span>
+                      <span className="ml-auto text-xs text-sage bg-white/60 px-2 py-0.5 rounded-full">
+                        {groupedItems["Other"].length} {groupedItems["Other"].length === 1 ? "item" : "items"}
+                      </span>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 pl-2">
                       {groupedItems["Other"].map((item) => renderItem(item, false))}
                     </div>
                   </div>

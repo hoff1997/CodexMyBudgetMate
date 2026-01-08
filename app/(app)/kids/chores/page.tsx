@@ -23,15 +23,15 @@ export default async function ChoresPage() {
   // Fetch children for this parent
   const { data: children } = await supabase
     .from("child_profiles")
-    .select("id, name, avatar_url, star_balance, screen_time_balance")
+    .select("id, name, avatar_url")
     .eq("parent_user_id", user.id)
     .order("name");
 
-  // Fetch chore templates (system + custom)
+  // Fetch chore templates (presets + user's custom)
   const { data: templates } = await supabase
     .from("chore_templates")
     .select("*")
-    .or(`is_system.eq.true,created_by.eq.${user.id}`)
+    .or(`is_preset.eq.true,parent_user_id.eq.${user.id}`)
     .order("category")
     .order("name");
 
@@ -58,7 +58,10 @@ export default async function ChoresPage() {
           name,
           description,
           icon,
-          category
+          category,
+          is_expected,
+          currency_type,
+          currency_amount
         ),
         child:child_profiles (
           id,
@@ -74,38 +77,11 @@ export default async function ChoresPage() {
     assignments = data || [];
   }
 
-  // Fetch rotations
-  const { data: rotations } = await supabase
-    .from("chore_rotations")
-    .select(
-      `
-      *,
-      chore_template:chore_templates (
-        id,
-        name,
-        icon
-      ),
-      rotation_members:chore_rotation_members (
-        id,
-        child_profile_id,
-        order_position,
-        child:child_profiles (
-          id,
-          name,
-          avatar_url
-        )
-      )
-    `
-    )
-    .eq("parent_user_id", user.id)
-    .order("created_at", { ascending: false });
-
   return (
     <ChoresClient
       childProfiles={children || []}
       templates={templates || []}
       assignments={assignments}
-      rotations={rotations || []}
       weekStarting={weekStartingStr}
     />
   );

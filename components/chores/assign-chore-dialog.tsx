@@ -11,15 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Star, Clock, DollarSign, Loader2 } from "lucide-react";
+import { DollarSign, Loader2, Flame } from "lucide-react";
 import { cn } from "@/lib/cn";
 import Image from "next/image";
 
@@ -28,8 +20,9 @@ interface ChoreTemplate {
   name: string;
   description: string | null;
   icon: string | null;
-  default_currency_type: string;
-  default_currency_amount: number;
+  is_expected?: boolean;
+  currency_type: string | null;
+  currency_amount: number | null;
 }
 
 interface ChildProfile {
@@ -57,11 +50,6 @@ const DAYS_OF_WEEK = [
   { value: "6", label: "Sunday" },
 ];
 
-const CURRENCY_OPTIONS = [
-  { value: "stars", label: "Stars", icon: Star, color: "text-gold" },
-  { value: "screen_time", label: "Screen Time (min)", icon: Clock, color: "text-blue" },
-  { value: "money", label: "Money ($)", icon: DollarSign, color: "text-sage" },
-];
 
 export function AssignChoreDialog({
   open,
@@ -73,11 +61,13 @@ export function AssignChoreDialog({
 }: AssignChoreDialogProps) {
   const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [currencyType, setCurrencyType] = useState(template.default_currency_type);
+  const [currencyType, setCurrencyType] = useState(template.currency_type || "money");
   const [currencyAmount, setCurrencyAmount] = useState(
-    template.default_currency_amount.toString()
+    (template.currency_amount ?? 5).toString()
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isExpected = template.is_expected === true;
 
   const toggleChild = (childId: string) => {
     setSelectedChildren((prev) =>
@@ -110,8 +100,9 @@ export function AssignChoreDialog({
             chore_template_id: template.id,
             week_starting: weekStarting,
             day_of_week: null,
-            currency_type: currencyType,
-            currency_amount: parseFloat(currencyAmount),
+            // Expected chores don't have currency rewards
+            currency_type: isExpected ? null : currencyType,
+            currency_amount: isExpected ? null : parseFloat(currencyAmount),
           });
         } else {
           // Create assignment for each selected day
@@ -121,8 +112,9 @@ export function AssignChoreDialog({
               chore_template_id: template.id,
               week_starting: weekStarting,
               day_of_week: parseInt(day),
-              currency_type: currencyType,
-              currency_amount: parseFloat(currencyAmount),
+              // Expected chores don't have currency rewards
+              currency_type: isExpected ? null : currencyType,
+              currency_amount: isExpected ? null : parseFloat(currencyAmount),
             });
           }
         }
@@ -144,9 +136,6 @@ export function AssignChoreDialog({
       setIsSubmitting(false);
     }
   };
-
-  const SelectedCurrencyIcon =
-    CURRENCY_OPTIONS.find((c) => c.value === currencyType)?.icon || Star;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -219,46 +208,36 @@ export function AssignChoreDialog({
             </p>
           </div>
 
-          {/* Reward Settings */}
-          <div className="space-y-4">
-            <Label>Reward</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select value={currencyType} onValueChange={setCurrencyType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCY_OPTIONS.map((option) => {
-                    const Icon = option.icon;
-                    return (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className={cn("h-4 w-4", option.color)} />
-                          {option.label}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+          {/* Reward Settings - Only for Extra chores */}
+          {isExpected ? (
+            <div className="flex items-start gap-2 p-3 rounded-md bg-gold-light">
+              <Flame className="h-4 w-4 text-gold mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-gold-dark">Expected Chore</p>
+                <p className="text-xs text-gold-dark/80">
+                  This chore is part of pocket money - no separate payment. Streaks will be tracked.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Label>Earnable Amount</Label>
               <div className="relative">
-                <SelectedCurrencyIcon
-                  className={cn(
-                    "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
-                    CURRENCY_OPTIONS.find((c) => c.value === currencyType)?.color
-                  )}
-                />
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-sage" />
                 <Input
                   type="number"
                   min="0"
-                  step={currencyType === "money" ? "0.50" : "1"}
+                  step="0.50"
                   value={currencyAmount}
                   onChange={(e) => setCurrencyAmount(e.target.value)}
                   className="pl-9"
                 />
               </div>
+              <p className="text-xs text-text-light">
+                This amount will be added to the child's invoice when approved.
+              </p>
             </div>
-          </div>
+          )}
         </div>
 
         <DialogFooter>

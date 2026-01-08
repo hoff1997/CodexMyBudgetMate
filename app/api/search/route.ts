@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         type: "envelope",
         title: env.name,
         subtitle: env.target_amount ? `Target: $${env.target_amount}` : undefined,
-        href: `/envelope-summary`,
+        href: `/budgetallocation`,
         amount: Number(env.current_amount ?? 0),
       });
     }

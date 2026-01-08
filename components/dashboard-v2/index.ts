@@ -10,3 +10,4 @@ export { WaterfallPreview, type WaterfallData } from "./waterfall-preview";
 export { QuickActionsV2 } from "./quick-actions-v2";
 export { QuickGlanceWidget } from "./quick-glance-widget";
 export { ReconciliationAlertWidget } from "./reconciliation-alert-widget";
+export { KidsChoresWidget, type ChildChoreProgress } from "./kids-chores-widget";

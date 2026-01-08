@@ -1,14 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { AddChildDialog } from "@/components/kids/add-child-dialog";
-import { Plus, Star, Clock, Copy, Check, ExternalLink } from "lucide-react";
+import { EditChildDialog } from "@/components/kids/edit-child-dialog";
+import { ParentOnboardingTutorial } from "@/components/kids/parent-onboarding-tutorial";
+import {
+  Plus,
+  Copy,
+  Check,
+  ExternalLink,
+  Settings,
+  Wallet,
+  PiggyBank,
+  TrendingUp,
+  Heart,
+  Receipt,
+  Flame,
+  ChevronRight,
+  Pencil,
+  HelpCircle,
+} from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+import { kidsParentDashboardHelp } from "@/lib/coaching/content/kids";
 import { cn } from "@/lib/cn";
+import Link from "next/link";
+
+interface BankAccount {
+  envelope_type: string;
+  current_balance: number;
+}
 
 interface ChildProfile {
   id: string;
@@ -16,23 +41,86 @@ interface ChildProfile {
   date_of_birth: string | null;
   avatar_url: string | null;
   family_access_code: string;
-  star_balance: number;
-  screen_time_balance: number;
   created_at: string;
+}
+
+interface ChildWithData extends ChildProfile {
+  accounts?: BankAccount[];
+  pendingInvoiceTotal?: number;
+  pendingInvoiceCount?: number;
+  choreStreakMax?: number;
 }
 
 interface KidsSetupClientProps {
   initialChildren: ChildProfile[];
 }
 
+const ENVELOPE_ICONS = {
+  spend: { icon: Wallet, color: "text-blue", label: "Spend" },
+  save: { icon: PiggyBank, color: "text-sage", label: "Save" },
+  invest: { icon: TrendingUp, color: "text-gold", label: "Invest" },
+  give: { icon: Heart, color: "text-pink-500", label: "Give" },
+};
+
 export function KidsSetupClient({ initialChildren }: KidsSetupClientProps) {
   const router = useRouter();
-  const [children, setChildren] = useState<ChildProfile[]>(initialChildren);
+  const [children, setChildren] = useState<ChildWithData[]>(initialChildren);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Fetch additional data for each child
+  useEffect(() => {
+    async function fetchChildData() {
+      const enrichedChildren = await Promise.all(
+        initialChildren.map(async (child) => {
+          try {
+            // Fetch accounts - now returns { accounts, totalBalance, isLinked }
+            const accountsRes = await fetch(`/api/kids/${child.id}/bank-accounts`);
+            const accountsData = accountsRes.ok ? await accountsRes.json() : { accounts: [], totalBalance: 0 };
+
+            // Fetch pending invoice - returns { invoices: [...] }
+            const invoiceRes = await fetch(`/api/kids/${child.id}/invoices?status=draft`);
+            const invoiceData = invoiceRes.ok ? await invoiceRes.json() : { invoices: [] };
+
+            // Calculate pending invoice stats from draft invoices
+            const draftInvoices = invoiceData.invoices || [];
+            const pendingTotal = draftInvoices.reduce((sum: number, inv: { total_amount: number }) => sum + (inv.total_amount || 0), 0);
+            const pendingCount = draftInvoices.reduce((sum: number, inv: { items?: unknown[] }) => sum + (inv.items?.length || 0), 0);
+
+            // Fetch streaks - returns { streaks: [...], stats: { longestCurrentStreak, ... } }
+            const streaksRes = await fetch(`/api/kids/${child.id}/streaks`);
+            const streaksData = streaksRes.ok ? await streaksRes.json() : { stats: { longestCurrentStreak: 0 } };
+
+            const maxStreak = streaksData.stats?.longestCurrentStreak || 0;
+
+            return {
+              ...child,
+              accounts: accountsData.accounts || [],
+              pendingInvoiceTotal: pendingTotal,
+              pendingInvoiceCount: pendingCount,
+              choreStreakMax: maxStreak,
+            };
+          } catch {
+            return { ...child, accounts: [], pendingInvoiceTotal: 0, pendingInvoiceCount: 0, choreStreakMax: 0 };
+          }
+        })
+      );
+      setChildren(enrichedChildren);
+      setLoading(false);
+    }
+
+    if (initialChildren.length > 0) {
+      fetchChildData();
+    } else {
+      setLoading(false);
+    }
+  }, [initialChildren]);
 
   const handleAddSuccess = () => {
-    // Refresh the page to get updated children list
     router.refresh();
   };
 
@@ -54,153 +142,245 @@ export function KidsSetupClient({ initialChildren }: KidsSetupClientProps) {
     return age;
   };
 
+  const getTotalBalance = (accounts: BankAccount[]) => {
+    return accounts.reduce((sum, acc) => sum + (acc.current_balance || 0), 0);
+  };
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="w-full max-w-5xl mx-auto px-4 py-4">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-text-dark">My Budget Mate Kids</h1>
-          <p className="text-text-medium">Manage your children's profiles and settings</p>
+          <h1 className="text-xl font-bold text-text-dark">Parent&apos;s Dashboard</h1>
+          <p className="text-sm text-text-medium">Manage your children&apos;s financial learning</p>
         </div>
-        <Button
-          onClick={() => setAddDialogOpen(true)}
-          className="bg-sage hover:bg-sage-dark"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Child
-        </Button>
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem("kids_parent_tutorial_completed");
+              setShowTutorial(true);
+            }}
+          >
+            <HelpCircle className="h-4 w-4 mr-1" />
+            Tutorial
+          </Button>
+          <Link href="/kids/settings">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-1" />
+              Settings
+            </Button>
+          </Link>
+          <Button
+            onClick={() => setAddDialogOpen(true)}
+            className="bg-sage hover:bg-sage-dark"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add Child
+          </Button>
+          <RemyHelpButton title="Parent Dashboard" content={kidsParentDashboardHelp} variant="compact" />
+        </div>
       </div>
 
       {/* Empty State */}
       {children.length === 0 && (
-        <Card className="mb-6">
-          <CardContent className="py-6 md:py-12 text-center">
-            <div className="text-6xl mb-4">👨‍👩‍👧‍👦</div>
-            <h2 className="text-xl font-semibold text-text-dark mb-2">
+        <Card className="mb-4">
+          <CardContent className="py-8 text-center">
+            <div className="text-5xl mb-3">👨‍👩‍👧‍👦</div>
+            <h2 className="text-lg font-semibold text-text-dark mb-2">
               No children added yet
             </h2>
-            <p className="text-text-medium mb-6 max-w-md mx-auto">
-              Add your first child to start teaching them about money management through
-              chores and rewards.
+            <p className="text-sm text-text-medium mb-4 max-w-md mx-auto">
+              Add your teen to help them learn real money management with chores and invoices.
             </p>
             <Button
               onClick={() => setAddDialogOpen(true)}
               className="bg-sage hover:bg-sage-dark"
+              size="sm"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-1" />
               Add Your First Child
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Children Grid */}
+      {/* Children Grid - Compact Cards */}
       {children.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className={cn(
+          "grid gap-3 mb-4",
+          children.length === 1 ? "grid-cols-1" :
+          children.length === 2 ? "grid-cols-1 md:grid-cols-2" :
+          "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+        )}>
           {children.map((child) => (
-            <Card key={child.id} className="overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-4">
-                  {/* Avatar */}
-                  <div className="w-16 h-16 rounded-full bg-sage-light flex items-center justify-center text-3xl shrink-0">
+            <Card key={child.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                {/* Header Row */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-sage-light flex items-center justify-center text-2xl shrink-0 border-2 border-sage">
                     {child.avatar_url ? (
                       <Image
                         src={child.avatar_url}
                         alt={child.name}
-                        width={64}
-                        height={64}
+                        width={48}
+                        height={48}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
                       "👤"
                     )}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg mb-1">{child.name}</CardTitle>
-                    {child.date_of_birth && (
-                      <p className="text-sm text-text-medium">
-                        Age: {formatAge(child.date_of_birth)}
-                      </p>
+                    <div className="flex items-center gap-1">
+                      <h3 className="font-semibold text-text-dark truncate">{child.name}</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 text-text-light hover:text-sage"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedChild(child);
+                          setEditDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-text-medium">
+                      {formatAge(child.date_of_birth) !== null
+                        ? `${formatAge(child.date_of_birth)} years old`
+                        : "Age not set"}
+                    </p>
+                  </div>
+                  {/* Streak Badge */}
+                  {child.choreStreakMax && child.choreStreakMax > 0 && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-gold-light rounded-full shrink-0">
+                      <Flame className="h-3 w-3 text-gold" />
+                      <span className="text-xs font-bold text-gold-dark">{child.choreStreakMax}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Balance Grid - Compact */}
+                {loading ? (
+                  <div className="grid grid-cols-4 gap-1 mb-3 p-2 bg-silver-very-light rounded-lg animate-pulse">
+                    {["spend", "save", "invest", "give"].map((type) => {
+                      const config = ENVELOPE_ICONS[type as keyof typeof ENVELOPE_ICONS];
+                      const Icon = config.icon;
+                      return (
+                        <div key={type} className="text-center">
+                          <Icon className={cn("h-3 w-3 mx-auto mb-0.5", config.color, "opacity-50")} />
+                          <div className="h-3 bg-gray-200 rounded w-6 mx-auto" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : child.accounts && child.accounts.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-1 mb-3 p-2 bg-silver-very-light rounded-lg">
+                    {["spend", "save", "invest", "give"].map((type) => {
+                      const account = child.accounts?.find((a) => a.envelope_type === type);
+                      const config = ENVELOPE_ICONS[type as keyof typeof ENVELOPE_ICONS];
+                      const Icon = config.icon;
+                      return (
+                        <div key={type} className="text-center">
+                          <Icon className={cn("h-3 w-3 mx-auto mb-0.5", config.color)} />
+                          <p className="text-xs font-bold text-text-dark">
+                            ${(account?.current_balance || 0).toFixed(0)}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+
+                {/* Total Balance */}
+                {loading ? (
+                  <div className="flex items-center justify-between mb-3 px-2 animate-pulse">
+                    <span className="text-xs text-text-medium">Total Balance</span>
+                    <div className="h-4 bg-gray-200 rounded w-12" />
+                  </div>
+                ) : child.accounts && child.accounts.length > 0 ? (
+                  <div className="flex items-center justify-between mb-3 px-2">
+                    <span className="text-xs text-text-medium">Total Balance</span>
+                    <span className="font-bold text-sage">
+                      ${getTotalBalance(child.accounts).toFixed(2)}
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* Invoice Status */}
+                {loading ? (
+                  <div className="flex items-center gap-2 p-2 bg-silver-very-light rounded-lg mb-3 animate-pulse">
+                    <Receipt className="h-4 w-4 text-text-light opacity-50" />
+                    <div className="h-3 bg-gray-200 rounded w-24" />
+                  </div>
+                ) : child.pendingInvoiceCount && child.pendingInvoiceCount > 0 ? (
+                  <div className="flex items-center gap-2 p-2 bg-sage-very-light rounded-lg mb-3">
+                    <Receipt className="h-4 w-4 text-sage" />
+                    <span className="text-xs text-sage-dark flex-1">
+                      Invoice: {child.pendingInvoiceCount} items
+                    </span>
+                    <span className="text-xs font-bold text-sage">
+                      ${(child.pendingInvoiceTotal || 0).toFixed(2)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 p-2 bg-silver-very-light rounded-lg mb-3">
+                    <Receipt className="h-4 w-4 text-text-light" />
+                    <span className="text-xs text-text-medium">No pending invoice</span>
+                  </div>
+                )}
+
+                {/* Family Code - Inline */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-text-light">Code:</span>
+                    <code className="font-mono text-xs font-bold text-text-dark bg-white px-1.5 py-0.5 rounded">
+                      {child.family_access_code}
+                    </code>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => copyFamilyCode(child.family_access_code)}
+                  >
+                    {copiedCode === child.family_access_code ? (
+                      <Check className="h-3 w-3 text-sage" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
                     )}
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Balances */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="p-3 bg-gold-light rounded-lg">
-                    <div className="flex items-center gap-2 text-gold-dark mb-1">
-                      <Star className="h-4 w-4" />
-                      <span className="text-xs font-medium">Stars</span>
-                    </div>
-                    <p className="text-xl font-bold text-gold-dark">
-                      {child.star_balance}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-blue-light rounded-lg">
-                    <div className="flex items-center gap-2 text-blue mb-1">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-xs font-medium">Screen Time</span>
-                    </div>
-                    <p className="text-xl font-bold text-blue">
-                      {child.screen_time_balance}m
-                    </p>
-                  </div>
-                </div>
-
-                {/* Family Code */}
-                <div className="p-3 bg-silver-very-light rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-text-light mb-1">Family Code</p>
-                      <code className="font-mono font-bold text-text-dark">
-                        {child.family_access_code}
-                      </code>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyFamilyCode(child.family_access_code)}
-                    >
-                      {copiedCode === child.family_access_code ? (
-                        <Check className="h-4 w-4 text-sage" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
+                  </Button>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => router.push(`/kids/${child.id}/dashboard`)}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Dashboard
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => router.push(`/kids/${child.id}/dashboard`)}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  View Dashboard
+                  <ChevronRight className="h-3 w-3 ml-auto" />
+                </Button>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Remy Tip */}
+      {/* Compact Remy Tip */}
       {children.length > 0 && (
-        <RemyTip pose="encouraging">
-          Your kids can log in at{" "}
-          <code className="px-1 py-0.5 bg-white rounded text-sage-dark font-mono text-sm">
+        <RemyTip pose="small">
+          Kids log in at{" "}
+          <code className="px-1 py-0.5 bg-white rounded text-sage-dark font-mono text-xs">
             /kids/login
           </code>{" "}
-          using their family code and PIN. They'll be able to see their chores, earn stars,
-          and learn to manage their money!
+          with their family code and PIN. They complete chores, submit invoices, and learn real money management!
         </RemyTip>
       )}
 
@@ -209,6 +389,20 @@ export function KidsSetupClient({ initialChildren }: KidsSetupClientProps) {
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}
         onSuccess={handleAddSuccess}
+      />
+
+      {/* Edit Child Dialog */}
+      <EditChildDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        child={selectedChild}
+        onSuccess={handleAddSuccess}
+      />
+
+      {/* Parent Onboarding Tutorial */}
+      <ParentOnboardingTutorial
+        onComplete={() => setShowTutorial(false)}
+        forceOpen={showTutorial}
       />
     </div>
   );

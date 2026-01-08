@@ -27,13 +27,14 @@ export default async function BirthdaysPage() {
     envelopeId: string;
     envelopeName: string;
     envelopeIcon: string;
+    needsGift: boolean;
   }> = [];
 
   try {
     // First check if gift_recipients table exists by doing a simple query
     const { data: recipients, error } = await supabase
       .from("gift_recipients")
-      .select("id, recipient_name, gift_amount, party_amount, celebration_date, notes, envelope_id")
+      .select("id, recipient_name, gift_amount, party_amount, celebration_date, notes, envelope_id, needs_gift")
       .eq("user_id", user.id)
       .not("celebration_date", "is", null)
       .order("celebration_date", { ascending: true });
@@ -66,6 +67,7 @@ export default async function BirthdaysPage() {
           envelopeId: r.envelope_id,
           envelopeName: envelope?.name || "Unknown",
           envelopeIcon: envelope?.icon || "🎁",
+          needsGift: (r as any).needs_gift ?? true, // Default to true for existing records
         };
       });
     }

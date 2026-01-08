@@ -385,8 +385,8 @@ function MobileNav() {
         <Link href="/dashboard" className="text-muted-foreground transition hover:text-primary">
           Dashboard
         </Link>
-        <Link href="/envelope-summary" className="text-muted-foreground transition hover:text-primary">
-          Summary
+        <Link href="/budgetallocation" className="text-muted-foreground transition hover:text-primary">
+          Budget
         </Link>
         <Link href="/accounts" className="text-primary font-semibold">
           Accounts

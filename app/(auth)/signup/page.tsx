@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { markUserAsReturning } from "@/components/landing/returning-user-cta";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -61,6 +62,9 @@ export default function SignupPage() {
         setIsLoading(false);
         return;
       }
+
+      // Mark user as returning for personalized landing page
+      markUserAsReturning();
 
       if (data.needsEmailConfirmation) {
         setSuccess(true);

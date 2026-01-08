@@ -7,6 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Cake,
   CalendarIcon,
@@ -18,11 +28,43 @@ import {
   Gift,
   Clock,
   PartyPopper,
+  Loader2,
+  Wallet,
+  AlertCircle,
 } from "lucide-react";
 import { format, differenceInDays, setYear } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
 import { formatCurrency } from "@/lib/finance";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+
+const HELP_CONTENT = {
+  tips: [
+    "Set up birthday envelopes with monthly contributions",
+    "Add notes for gift ideas as you think of them",
+    "Check the countdown to plan shopping trips",
+  ],
+  features: [
+    "See all upcoming birthdays at a glance",
+    "Track gift and party budgets for each person",
+    "Countdown shows days until each birthday",
+    "Linked to your celebration budget envelopes",
+  ],
+  faqs: [
+    {
+      question: "How do I add a birthday?",
+      answer: "Birthdays are added through your celebration envelopes. Create a 'Birthday' or 'Celebrations' envelope and add gift recipients with their dates.",
+    },
+    {
+      question: "How do gift budgets work?",
+      answer: "When you set up a birthday in your envelope, you can specify the gift amount and party amount. We'll help you save for it throughout the year.",
+    },
+    {
+      question: "Can I set reminders?",
+      answer: "The birthday list automatically shows you upcoming celebrations. Plan to check it at the start of each month!",
+    },
+  ],
+};
 
 interface Birthday {
   id: string;
@@ -34,11 +76,30 @@ interface Birthday {
   envelopeId: string;
   envelopeName: string;
   envelopeIcon: string;
+  needsGift?: boolean;
 }
 
 interface BirthdaysClientProps {
   initialBirthdays: Birthday[];
 }
+
+interface AddBirthdayForm {
+  name: string;
+  date: Date | null;
+  needsGift: boolean;
+  giftAmount: number;
+  partyAmount: number;
+  notes: string;
+}
+
+const DEFAULT_ADD_FORM: AddBirthdayForm = {
+  name: "",
+  date: null,
+  needsGift: true,
+  giftAmount: 50,
+  partyAmount: 0,
+  notes: "",
+};
 
 export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
   const router = useRouter();
@@ -51,6 +112,12 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
     partyAmount: number;
     notes: string;
   } | null>(null);
+
+  // Add birthday dialog state
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addForm, setAddForm] = useState<AddBirthdayForm>(DEFAULT_ADD_FORM);
+  const [isAdding, setIsAdding] = useState(false);
+  const [showEnvelopeCreatedMessage, setShowEnvelopeCreatedMessage] = useState(false);
 
   // Calculate days until each birthday
   const birthdaysWithDaysUntil = useMemo(() => {
@@ -180,6 +247,78 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
     return "text-text-medium bg-silver-light";
   };
 
+  const handleOpenAddDialog = () => {
+    setAddForm(DEFAULT_ADD_FORM);
+    setShowEnvelopeCreatedMessage(false);
+    setAddDialogOpen(true);
+  };
+
+  const handleAddBirthday = async () => {
+    if (!addForm.name.trim() || !addForm.date) {
+      toast.error("Name and date are required");
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      const res = await fetch("/api/birthdays", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient_name: addForm.name.trim(),
+          celebration_date: addForm.date.toISOString().split("T")[0],
+          gift_amount: addForm.needsGift ? addForm.giftAmount : 0,
+          party_amount: addForm.needsGift ? addForm.partyAmount : 0,
+          notes: addForm.notes.trim() || null,
+          needs_gift: addForm.needsGift,
+          create_envelope: addForm.needsGift, // Auto-create envelope when celebrating
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to add birthday");
+      }
+
+      const data = await res.json();
+
+      // Add to local state
+      const newBirthday: Birthday = {
+        id: data.birthday.id,
+        name: data.birthday.recipient_name,
+        date: data.birthday.celebration_date,
+        giftAmount: data.birthday.gift_amount,
+        partyAmount: data.birthday.party_amount,
+        notes: data.birthday.notes,
+        envelopeId: data.birthday.envelope_id,
+        envelopeName: data.birthday.envelopes?.name || "Birthdays",
+        envelopeIcon: data.birthday.envelopes?.icon || "🎂",
+        needsGift: data.birthday.needs_gift,
+      };
+
+      setBirthdays((prev) => [...prev, newBirthday]);
+
+      if (data.envelope_created) {
+        setShowEnvelopeCreatedMessage(true);
+        toast.success("Birthday added and Birthdays envelope created!");
+      } else {
+        toast.success("Birthday added!");
+        setAddDialogOpen(false);
+        setAddForm(DEFAULT_ADD_FORM);
+      }
+    } catch (error) {
+      console.error("Failed to add birthday:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to add birthday");
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleGoToBudget = () => {
+    setAddDialogOpen(false);
+    router.push("/budgetallocation?highlight=new");
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
@@ -195,24 +334,18 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
             </p>
           </div>
         </div>
-        <Button
-          onClick={() => router.push("/budgetallocation")}
-          variant="outline"
-          size="sm"
-          className="text-xs"
-        >
-          <Gift className="h-3.5 w-3.5 mr-1.5" />
-          Manage via Envelopes
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleOpenAddDialog}
+            size="sm"
+            className="bg-sage hover:bg-sage-dark"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1.5" />
+            Add Birthday
+          </Button>
+          <RemyHelpButton title="Birthdays" content={HELP_CONTENT} />
+        </div>
       </div>
-
-      {/* Info card */}
-      <Card className="p-4 mb-6 bg-sage-very-light border-sage-light">
-        <p className="text-sm text-text-dark">
-          Birthdays are managed through your celebration envelopes. Add gift recipients
-          with dates in your Birthdays or Celebrations envelope to see them here.
-        </p>
-      </Card>
 
       {/* Birthday list */}
       {birthdaysWithDaysUntil.length === 0 ? (
@@ -220,14 +353,14 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
           <Cake className="h-12 w-12 text-silver mx-auto mb-4" />
           <h3 className="text-lg font-medium text-text-dark mb-2">No birthdays yet</h3>
           <p className="text-sm text-text-medium mb-4">
-            Add gift recipients with dates in your celebration envelopes to track birthdays.
+            Track birthdays for friends and family. You can choose whether to budget for gifts.
           </p>
           <Button
-            onClick={() => router.push("/budgetallocation")}
+            onClick={handleOpenAddDialog}
             className="bg-sage hover:bg-sage-dark"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Go to Budget Allocation
+            Add Your First Birthday
           </Button>
         </Card>
       ) : (
@@ -463,6 +596,211 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
           </div>
         </div>
       )}
+
+      {/* Add Birthday Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Cake className="h-5 w-5 text-sage" />
+              {showEnvelopeCreatedMessage ? "Birthday Added!" : "Add Birthday"}
+            </DialogTitle>
+            {!showEnvelopeCreatedMessage && (
+              <DialogDescription>
+                Track birthdays for friends and family
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {showEnvelopeCreatedMessage ? (
+            // Success message after envelope creation
+            <div className="py-4 space-y-4">
+              <div className="p-4 rounded-lg bg-sage-very-light border border-sage-light">
+                <div className="flex items-start gap-3">
+                  <Check className="h-5 w-5 text-sage mt-0.5" />
+                  <div>
+                    <p className="font-medium text-text-dark">Birthdays envelope created</p>
+                    <p className="text-sm text-text-medium mt-1">
+                      A new "Birthdays" envelope has been added to your Celebrations category.
+                      Head to Budget Allocation to set up how much you want to save each pay.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-gold-light/50 border border-gold">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-gold mt-0.5" />
+                  <p className="text-sm text-text-dark">
+                    <strong>Reminder:</strong> Don't forget to allocate funds to your new birthday envelope!
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setAddDialogOpen(false);
+                    setAddForm(DEFAULT_ADD_FORM);
+                    setShowEnvelopeCreatedMessage(false);
+                  }}
+                >
+                  Done
+                </Button>
+                <Button
+                  onClick={handleGoToBudget}
+                  className="bg-sage hover:bg-sage-dark"
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Adjust Budget Now
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            // Add birthday form
+            <div className="space-y-4 py-2">
+              {/* Name */}
+              <div className="space-y-2">
+                <Label htmlFor="birthday-name">Name</Label>
+                <Input
+                  id="birthday-name"
+                  value={addForm.name}
+                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  placeholder="e.g., Mum, Dad, Sarah"
+                />
+              </div>
+
+              {/* Date */}
+              <div className="space-y-2">
+                <Label>Birthday</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start",
+                        !addForm.date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {addForm.date ? format(addForm.date, "d MMMM") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={addForm.date || undefined}
+                      onSelect={(date) => setAddForm({ ...addForm, date: date || null })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Celebrate Toggle */}
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-silver-very-light">
+                <Checkbox
+                  id="needs-gift"
+                  checked={addForm.needsGift}
+                  onCheckedChange={(checked) =>
+                    setAddForm({ ...addForm, needsGift: checked as boolean })
+                  }
+                />
+                <Label htmlFor="needs-gift" className="flex-1 cursor-pointer">
+                  <span className="font-medium">I give a gift or celebrate this birthday</span>
+                  <p className="text-xs text-text-medium mt-0.5">
+                    Uncheck to just track the date
+                  </p>
+                </Label>
+              </div>
+
+              {/* Gift amounts - only show if celebrating */}
+              {addForm.needsGift && (
+                <div className="space-y-3 p-3 rounded-lg border border-sage-light bg-sage-very-light/30">
+                  <div className="flex gap-3">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs flex items-center gap-1">
+                        <Gift className="h-3 w-3" /> Gift Budget
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-medium">
+                          $
+                        </span>
+                        <Input
+                          type="number"
+                          value={addForm.giftAmount || ""}
+                          onChange={(e) =>
+                            setAddForm({
+                              ...addForm,
+                              giftAmount: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs flex items-center gap-1">
+                        <PartyPopper className="h-3 w-3" /> Party Budget
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-medium">
+                          $
+                        </span>
+                        <Input
+                          type="number"
+                          value={addForm.partyAmount || ""}
+                          onChange={(e) =>
+                            setAddForm({
+                              ...addForm,
+                              partyAmount: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="birthday-notes">Notes (optional)</Label>
+                <Input
+                  id="birthday-notes"
+                  value={addForm.notes}
+                  onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })}
+                  placeholder="Gift ideas, interests, etc."
+                />
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setAddDialogOpen(false)}
+                  disabled={isAdding}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleAddBirthday}
+                  disabled={isAdding || !addForm.name.trim() || !addForm.date}
+                  className="bg-sage hover:bg-sage-dark"
+                >
+                  {isAdding ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
+                  Add Birthday
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

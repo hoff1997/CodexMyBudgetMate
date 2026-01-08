@@ -77,13 +77,19 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
+  // Only update provided fields
+  const updateData: Record<string, unknown> = {};
+  if (body.name !== undefined) updateData.name = body.name;
+  if (body.cycle_type !== undefined) updateData.cycle_type = body.cycle_type;
+  if (body.template_data !== undefined) updateData.template_data = body.template_data;
+
+  if (Object.keys(updateData).length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("meal_plan_templates")
-    .update({
-      name: body.name,
-      cycle_type: body.cycle_type,
-      template_data: body.template_data,
-    })
+    .update(updateData)
     .eq("id", id)
     .eq("parent_user_id", user.id)
     .select()

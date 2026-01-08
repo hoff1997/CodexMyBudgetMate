@@ -211,7 +211,7 @@ export function EnvelopeDetailClient({
       }
 
       toast.success("Envelope deleted");
-      router.push("/envelope-summary");
+      router.push("/budgetallocation");
       router.refresh();
     } catch (error) {
       console.error("Delete error:", error);
@@ -231,11 +231,11 @@ export function EnvelopeDetailClient({
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Back Button */}
       <Link
-        href="/envelope-summary"
+        href="/budgetallocation"
         className="inline-flex items-center gap-2 text-sage-dark hover:text-sage transition-colors text-sm"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Envelope Summary
+        Back to Budget Allocation
       </Link>
 
       {/* Header */}

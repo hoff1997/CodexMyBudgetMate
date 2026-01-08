@@ -485,7 +485,7 @@ export function PlannerClient({ initialPayFrequency, envelopes, readOnly = false
               size="sm"
               className="w-fit px-0 text-sm font-medium text-muted-foreground hover:text-secondary"
             >
-              <Link href="/envelope-summary" className="flex items-center gap-2">
+              <Link href="/budgetallocation" className="flex items-center gap-2">
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </Link>

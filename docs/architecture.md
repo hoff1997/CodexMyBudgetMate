@@ -2788,66 +2788,68 @@ const { data: item } = await supabase
 
 ---
 
-## My Budget Mate Kids
+## My Budget Mate Kids (Updated Jan 2026)
 
-My Budget Mate Kids provides age-appropriate financial education and household participation features for children.
+My Budget Mate Kids teaches teens with bank accounts real money management, preparing them to become full My Budget Mate users when they get a job.
+
+**Core Philosophy**: Kids = My Budget Way (lite version) + Household Hub access + Invoice-based earning system
 
 ### Kids Module Overview
 
 | Feature | Route | Description |
 |---------|-------|-------------|
-| Kids Dashboard | `/kids` | Parent view of all children |
-| Child Profile | `/kids/[childId]` | Individual child's dashboard |
-| Allowance | `/kids/[childId]/allowance` | Pocket money management |
-| Chores | `/kids/[childId]/chores` | Task assignments and rewards |
-| Goals | `/kids/[childId]/goals` | Savings goals for children |
-| Screen Time | `/kids/[childId]/screen-time` | Screen time management |
+| Parent Dashboard | `/kids` | Parent view of all children |
+| Child Dashboard | `/kids/[childId]/dashboard` | Individual child's main view |
+| Child Chores | `/kids/[childId]/chores` | Child's assigned chores |
+| Avatar Shop | `/kids/[childId]/shop` | Star-based rewards shop |
+| Chores Manager | `/kids/chores` | Parent's chore management |
+| Invoices | `/kids/invoices` | Parent's invoice tracking |
+| Kids Setup | `/kids/setup` | New child profile creation |
+
+### Two Chore Types (Critical Concept)
+
+| Type | Description | Creates Invoice? | Tracking |
+|------|-------------|------------------|----------|
+| **Expected Chores** | Part of pocket money (clean room, dishes) | No | Streak tracking, badges only |
+| **Extra Chores** | One-off earning opportunities (wash car, mow lawn) | Yes | Adds to draft invoice |
+
+**Key Field**: `chore_templates.is_expected` (boolean) - Determines which type
+
+**Philosophy**: Being part of a family means pitching in. Expected chores teach responsibility - pocket money covers these. Extra chores teach the direct link between hard work and being paid.
 
 ### Database Schema
 
 #### Core Tables
 
-**`children`**
+**`child_profiles`**
 ```sql
-CREATE TABLE children (
+CREATE TABLE child_profiles (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  date_of_birth DATE,
   avatar_url TEXT,
-  pin_code TEXT,
-  allowance_amount DECIMAL(10, 2) DEFAULT 0,
-  allowance_frequency TEXT DEFAULT 'weekly',
-  balance DECIMAL(10, 2) DEFAULT 0,
+  date_of_birth DATE,
+  star_balance INTEGER DEFAULT 0,
+  screen_time_balance INTEGER DEFAULT 0,
+  distribution_spend_pct INTEGER DEFAULT 50,
+  distribution_save_pct INTEGER DEFAULT 30,
+  distribution_invest_pct INTEGER DEFAULT 10,
+  distribution_give_pct INTEGER DEFAULT 10,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
-**`child_transactions`**
+**`child_bank_accounts`**
 ```sql
-CREATE TABLE child_transactions (
+CREATE TABLE child_bank_accounts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
-  amount DECIMAL(10, 2) NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('allowance', 'chore', 'gift', 'spend', 'save', 'adjustment')),
-  description TEXT,
-  goal_id UUID REFERENCES child_goals(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-**`child_goals`**
-```sql
-CREATE TABLE child_goals (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  target_amount DECIMAL(10, 2) NOT NULL,
-  current_amount DECIMAL(10, 2) DEFAULT 0,
-  icon TEXT,
-  is_completed BOOLEAN DEFAULT false,
-  completed_at TIMESTAMPTZ,
+  child_profile_id UUID NOT NULL REFERENCES child_profiles(id) ON DELETE CASCADE,
+  akahu_account_id TEXT,
+  account_name TEXT NOT NULL,
+  envelope_type TEXT CHECK (envelope_type IN ('spend', 'save', 'invest', 'give')),
+  current_balance DECIMAL(10, 2) DEFAULT 0,
+  show_in_parent_budget BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
@@ -2861,9 +2863,12 @@ CREATE TABLE chore_templates (
   parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   description TEXT,
-  default_reward DECIMAL(10, 2),
   icon TEXT,
   category TEXT,
+  is_expected BOOLEAN DEFAULT false,  -- CRITICAL: Determines chore type
+  currency_type TEXT CHECK (currency_type IN ('money', 'stars', 'screen_time')),
+  currency_amount DECIMAL(10, 2),
+  estimated_minutes INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
@@ -2872,62 +2877,66 @@ CREATE TABLE chore_templates (
 ```sql
 CREATE TABLE chore_assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+  child_profile_id UUID NOT NULL REFERENCES child_profiles(id) ON DELETE CASCADE,
   chore_template_id UUID REFERENCES chore_templates(id),
-  name TEXT NOT NULL,
-  description TEXT,
-  reward_amount DECIMAL(10, 2),
-  due_date DATE,
-  frequency TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'verified', 'missed')),
+  week_starting DATE NOT NULL,
+  day_of_week INTEGER,
+  currency_type TEXT,
+  currency_amount DECIMAL(10, 2),
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'approved', 'rejected')),
+  marked_done_at TIMESTAMPTZ,
+  approved_at TIMESTAMPTZ,
+  approved_by UUID REFERENCES auth.users(id),
+  rejection_reason TEXT,
+  proof_photo_url TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### Invoice System
+
+**`kid_invoices`**
+```sql
+CREATE TABLE kid_invoices (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  child_profile_id UUID NOT NULL REFERENCES child_profiles(id) ON DELETE CASCADE,
+  invoice_number TEXT,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'pending', 'paid', 'cancelled')),
+  total_amount DECIMAL(10, 2) DEFAULT 0,
+  paid_at TIMESTAMPTZ,
+  paid_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**`kid_invoice_items`**
+```sql
+CREATE TABLE kid_invoice_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  invoice_id UUID NOT NULL REFERENCES kid_invoices(id) ON DELETE CASCADE,
+  chore_assignment_id UUID REFERENCES chore_assignments(id),
+  chore_name TEXT NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
   completed_at TIMESTAMPTZ,
-  verified_at TIMESTAMPTZ,
-  verified_by UUID REFERENCES auth.users(id),
+  approved_at TIMESTAMPTZ,
+  approved_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
-**`chore_rotations`**
+#### Streaks & Achievements
+
+**`expected_chore_streaks`**
 ```sql
-CREATE TABLE chore_rotations (
+CREATE TABLE expected_chore_streaks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  parent_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  child_profile_id UUID NOT NULL REFERENCES child_profiles(id) ON DELETE CASCADE,
   chore_template_id UUID NOT NULL REFERENCES chore_templates(id) ON DELETE CASCADE,
-  child_ids UUID[] NOT NULL,
-  current_index INTEGER DEFAULT 0,
-  rotation_frequency TEXT DEFAULT 'weekly',
-  last_rotated_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-#### Screen Time System
-
-**`screen_time_rules`**
-```sql
-CREATE TABLE screen_time_rules (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
-  day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
-  daily_limit_minutes INTEGER NOT NULL,
-  start_time TIME,
-  end_time TIME,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(child_id, day_of_week)
-);
-```
-
-**`screen_time_requests`**
-```sql
-CREATE TABLE screen_time_requests (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  child_id UUID NOT NULL REFERENCES children(id) ON DELETE CASCADE,
-  requested_minutes INTEGER NOT NULL,
-  reason TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
-  responded_at TIMESTAMPTZ,
-  responded_by UUID REFERENCES auth.users(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  current_streak INTEGER DEFAULT 0,
+  longest_streak INTEGER DEFAULT 0,
+  last_completed_at TIMESTAMPTZ,
+  UNIQUE(child_profile_id, chore_template_id)
 );
 ```
 
@@ -2935,62 +2944,78 @@ CREATE TABLE screen_time_requests (
 
 | Route | Purpose |
 |-------|---------|
-| `/api/kids` | List/create children |
-| `/api/kids/[childId]` | Get/update/delete child |
-| `/api/kids/[childId]/transactions` | Child's transaction history |
-| `/api/kids/[childId]/goals` | Child's savings goals |
-| `/api/chores/templates` | Chore template CRUD |
-| `/api/chores/assignments` | Chore assignment CRUD |
-| `/api/chores/assignments/[id]` | Individual assignment |
-| `/api/chores/rotations` | Chore rotation management |
-| `/api/kids/screen-time/requests` | Screen time request handling |
+| `GET/POST /api/kids/profiles` | Manage child profiles |
+| `GET /api/kids/[childId]/chores` | Child's chore assignments |
+| `PATCH /api/chores/assignments/[id]/approve` | Parent approves chore → creates invoice item |
+| `GET /api/kids/invoices` | Parent views all children's invoices |
+| `GET/POST /api/chores/templates` | Chore template CRUD |
 
-### Key Files
+### Key Components
 
-| File | Purpose |
-|------|---------|
-| `app/(app)/kids/page.tsx` | Parent's kids dashboard |
-| `app/(app)/kids/[childId]/page.tsx` | Individual child view |
-| `app/api/kids/route.ts` | Children CRUD |
-| `app/api/chores/templates/route.ts` | Chore templates |
-| `app/api/chores/assignments/route.ts` | Chore assignments |
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `KidDashboardClient` | `app/(app)/kids/[childId]/dashboard/` | Child's main dashboard |
+| `KidChoresClient` | `app/(app)/kids/[childId]/chores/` | Child's chore view |
+| `ChoresClient` | `app/(app)/kids/chores/` | Parent's chores manager |
+| `InvoicesClient` | `app/(app)/kids/invoices/` | Parent's invoice view |
+| `ParentOnboardingTutorial` | `components/kids/` | New parent onboarding |
 
-### Chore Verification Flow
+### Chore Approval Flow (Critical)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ 1. Parent creates chore template                                │
-│    → "Make Bed", reward: $0.50                                  │
+│    → Sets is_expected=true (Expected) or false (Extra)          │
+│    → Sets currency_type: 'money', 'stars', or 'screen_time'     │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 2. Chore assigned to child(ren)                                 │
+│ 2. Chore assigned to child                                      │
 │    → Creates chore_assignment record                            │
 │    → Status: 'pending'                                          │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 3. Child marks chore complete                                   │
-│    → Status: 'completed'                                        │
-│    → completed_at set                                           │
-│    → (No reward yet - needs verification)                       │
+│ 3. Child marks chore as done                                    │
+│    → Status: 'done'                                             │
+│    → marked_done_at set                                         │
+│    → Optional: proof_photo_url uploaded                         │
 └─────────────────────────┬───────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ 4. Parent verifies completion                                   │
-│    → Status: 'verified'                                         │
-│    → Creates child_transaction (type: 'chore')                  │
-│    → Child balance updated                                      │
-│    → verified_at and verified_by set                            │
+│ 4. Parent approves via /api/chores/assignments/[id]/approve     │
+│    → Status: 'approved'                                         │
+│    → approved_at and approved_by set                            │
+│    → CRITICAL: Check template.is_expected                       │
+│                                                                 │
+│    IF currency_type === 'money' AND is_expected === false:      │
+│      → Get or create draft invoice for child                    │
+│      → Add item to kid_invoice_items table                      │
+│      → rewardMessage: "+$X.XX (added to invoice)"               │
+│                                                                 │
+│    IF currency_type === 'stars':                                │
+│      → Directly credit child_profiles.star_balance              │
+│                                                                 │
+│    IF currency_type === 'screen_time':                          │
+│      → Directly credit child_profiles.screen_time_balance       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+### Four Envelope Types (Kids)
+
+| Envelope | Purpose | Bank Account Type |
+|----------|---------|-------------------|
+| **Spend** | Daily spending | Transaction/Debit |
+| **Save** | Short-term savings goals | Savings (earns interest) |
+| **Invest** | Long-term wealth building | Savings (earns interest) |
+| **Give** | Charitable giving | Savings (earns interest) |
+
 ### Beta Access
 
-Both Kids and Life features are gated behind beta access:
+Kids Module is currently behind beta access:
 
 ```typescript
 // In page.tsx

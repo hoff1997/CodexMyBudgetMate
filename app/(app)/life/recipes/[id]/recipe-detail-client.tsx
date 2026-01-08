@@ -24,6 +24,34 @@ import {
   Edit,
   Calendar,
 } from "lucide-react";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+
+const RECIPE_HELP_CONTENT = {
+  tips: [
+    "Add recipes from URLs or enter them manually",
+    "Use tags to organize by cuisine, dietary needs, or occasion",
+    "Favourite recipes you make regularly for quick access",
+  ],
+  features: [
+    "Save recipes from any website with the URL import",
+    "Add to meal plan directly from a recipe",
+    "Track prep and cook times to plan your week",
+  ],
+  faqs: [
+    {
+      question: "How do I add a recipe to my meal plan?",
+      answer: "Click the menu (three dots) and select 'Add to Meal Plan'. Choose the day and meal type.",
+    },
+    {
+      question: "Can I edit imported recipes?",
+      answer: "Yes! Imported recipes can be edited to fix any issues or add your own notes and modifications.",
+    },
+    {
+      question: "How do I share recipes with my family?",
+      answer: "If you have partner sharing enabled in Life Settings, your recipes are automatically shared with your partner.",
+    },
+  ],
+};
 
 interface Recipe {
   id: string;
@@ -153,6 +181,7 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <RemyHelpButton title="Recipe" content={RECIPE_HELP_CONTENT} variant="compact" />
           </div>
         </div>
 

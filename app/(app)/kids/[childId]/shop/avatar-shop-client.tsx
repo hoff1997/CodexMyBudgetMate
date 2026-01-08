@@ -6,8 +6,37 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ShopItemCard } from "@/components/avatar-shop/shop-item-card";
 import { PurchaseCelebration } from "@/components/avatar-shop/purchase-celebration";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { ArrowLeft, Star } from "lucide-react";
 import { cn } from "@/lib/cn";
+
+const HELP_CONTENT = {
+  tips: [
+    "Check out the different tiers - legendary items cost more but are super cool",
+    "Filter by category to find exactly what you want",
+    "Save your stars if you're eyeing something special",
+  ],
+  features: [
+    "Browse avatars, clothing, room items, pets, and accessories",
+    "See how many stars each item costs",
+    "Filter by category to find what you want",
+    "Items you own are marked so you know what you have",
+  ],
+  faqs: [
+    {
+      question: "How do I earn more stars?",
+      answer: "Complete chores and get them approved by your parent! Each chore can earn you stars.",
+    },
+    {
+      question: "What are the different tiers?",
+      answer: "Items are grouped by rarity: Starter, Cool, Rare, Epic, and Legendary. The rarer the item, the more stars it costs!",
+    },
+    {
+      question: "Can I get a refund?",
+      answer: "Once you buy an item, it's yours forever! Make sure you really want it before purchasing.",
+    },
+  ],
+};
 
 interface ChildProfile {
   id: string;
@@ -141,11 +170,14 @@ export function AvatarShopClient({
               <p className="text-text-medium">Spend your stars on cool stuff!</p>
             </div>
           </div>
-          <div className="bg-gold rounded-xl px-4 py-2">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-white fill-white" />
-              <span className="text-xl font-bold text-white">{starBalance}</span>
+          <div className="flex items-center gap-2">
+            <div className="bg-gold rounded-xl px-4 py-2">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-white fill-white" />
+                <span className="text-xl font-bold text-white">{starBalance}</span>
+              </div>
             </div>
+            <RemyHelpButton title="Star Shop" content={HELP_CONTENT} />
           </div>
         </div>
 

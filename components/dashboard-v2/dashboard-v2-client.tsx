@@ -30,6 +30,7 @@ import { Sparkles, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { CelebrationRemindersWidget } from "./celebration-reminders-widget";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { SmartSuggestion } from "@/lib/utils/smart-suggestion-generator";
 
 export interface DashboardV2Data {
@@ -362,13 +363,14 @@ export function DashboardV2Client({
       {/* Celebration Reminders (shown when reminders are due) */}
       <CelebrationRemindersWidget />
 
-      {/* Section 1: Summary Header with Remy Help */}
+      {/* Section 1: Summary Header with Notifications + Remy Help */}
       <DashboardSummaryHeader
         userName={data.userName}
         availableBalance={calculations.bankBalance - calculations.holdingBalance}
         incomeThisMonth={data.incomeThisMonth}
         nextPayday={data.nextPayday}
         budgetHealthStatus={calculations.budgetHealthStatus}
+        notifications={<NotificationBell />}
         remyHelp={<RemyHelpPanel pageId="dashboard" />}
       />
 

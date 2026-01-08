@@ -170,7 +170,7 @@ export function StatusMode({
             message="All envelopes on track"
             subtext={`(${milestoneProgress.totalCount} envelopes, ${milestoneProgress.overallProgress.toFixed(0)}% funded)`}
             linkText="View Details →"
-            linkHref="/envelope-summary"
+            linkHref="/budgetallocation"
           />
         )}
 

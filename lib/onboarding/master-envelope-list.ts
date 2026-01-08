@@ -60,6 +60,7 @@ export type BuiltInCategory =
   | 'clothing'
   | 'extras'
   | 'giving'
+  | 'goals'
   | 'hair'
   | 'health'
   | 'hobbies'
@@ -86,6 +87,7 @@ export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
   clothing: { label: 'Clothing', icon: '👔' },
   extras: { label: 'Extras', icon: '🛍️' },
   giving: { label: 'Giving', icon: '❤️' },
+  goals: { label: 'Goals', icon: '🎯' },
   hair: { label: 'Hair', icon: '💇' },
   health: { label: 'Health', icon: '🏥' },
   hobbies: { label: 'Hobbies', icon: '🏉' },
@@ -858,6 +860,7 @@ export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelop
     clothing: [],
     extras: [],
     giving: [],
+    goals: [],
     hair: [],
     health: [],
     hobbies: [],
@@ -894,6 +897,7 @@ export const CATEGORY_ORDER: EnvelopeCategory[] = [
   'extras',
   'hobbies',
   'celebrations',
+  'goals',
   'giving',
   'subscriptions',
 ];

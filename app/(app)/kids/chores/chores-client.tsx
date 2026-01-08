@@ -1,40 +1,67 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import {
   Plus,
-  Search,
   ChevronLeft,
   ChevronRight,
   Check,
-  X,
-  Star,
-  Clock,
-  DollarSign,
-  Users,
   Calendar,
-  ListTodo,
-  LayoutGrid,
+  Settings,
+  ChevronRight as ArrowRight,
 } from "lucide-react";
-import { ChoreTemplateCard } from "@/components/chores/chore-template-card";
-import { AssignChoreDialog } from "@/components/chores/assign-chore-dialog";
-import { CreateTemplateDialog } from "@/components/chores/create-template-dialog";
 import { WeeklyChoreGrid } from "@/components/chores/weekly-chore-grid";
-import { ApprovalQueue } from "@/components/chores/approval-queue";
+import { RemyHelpButton } from "@/components/shared/remy-help-button";
+import { ChoreSettingsTab } from "@/components/chores/chore-settings-tab";
+import { QuickAssignPanel } from "@/components/chores/quick-assign-panel";
+import { toast } from "sonner";
+
+const HELP_CONTENT = {
+  tips: [
+    "Click any cell in the grid to quickly assign a chore",
+    "Chores waiting for approval show a gold glow - click to approve",
+    "Set up recurring schedules so chores auto-assign weekly",
+    "Use rotation to share chores fairly between kids",
+  ],
+  features: [
+    "Weekly grid view - see all chores at a glance",
+    "Inline approvals - approve chores without switching tabs",
+    "Quick assign - pick a chore and set the schedule in seconds",
+    "Rotations - automatically alternate chores between kids",
+    "Streak tracking for expected chores",
+  ],
+  faqs: [
+    {
+      question: "What's the difference between Expected and Extra chores?",
+      answer: "Expected chores are part of pocket money - they build habits and track streaks. Extra chores earn additional money that gets added to the child's invoice.",
+    },
+    {
+      question: "How do I set up a weekly schedule?",
+      answer: "Click any [+] cell in the grid, pick a chore, select the days, and click 'Save Schedule'. The chores will automatically appear each week.",
+    },
+    {
+      question: "How does rotation work?",
+      answer: "When assigning a chore, choose 'Rotate between kids'. You can rotate weekly (one kid owns it all week) or per-occurrence (alternates each time).",
+    },
+    {
+      question: "How do I approve chores?",
+      answer: "Chores waiting for approval have a gold glow. Click them to see details and approve or send back for redo.",
+    },
+  ],
+};
 
 interface ChildProfile {
   id: string;
   name: string;
+  first_name?: string;
   avatar_url: string | null;
-  star_balance: number;
-  screen_time_balance: number;
+  avatar_emoji?: string | null;
 }
 
 interface ChoreTemplate {
@@ -43,13 +70,18 @@ interface ChoreTemplate {
   description: string | null;
   icon: string | null;
   category: string;
+  is_expected: boolean;
   recommended_age_min: number | null;
   recommended_age_max: number | null;
-  default_currency_type: string;
-  default_currency_amount: number;
+  currency_type: string | null;
+  currency_amount: number | null;
   estimated_minutes: number | null;
-  is_system: boolean;
-  created_by: string | null;
+  is_preset: boolean;
+  parent_user_id: string | null;
+  max_per_week: number | null;
+  allowed_days: number[] | null;
+  auto_approve: boolean;
+  requires_photo?: boolean;
 }
 
 interface ChoreAssignment {
@@ -64,12 +96,17 @@ interface ChoreAssignment {
   marked_done_at: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
+  proof_photo_url?: string | null;
+  completion_notes?: string | null;
   chore_template: {
     id: string;
     name: string;
     description: string | null;
     icon: string | null;
     category: string;
+    is_expected: boolean;
+    currency_type: string | null;
+    currency_amount: number | null;
   } | null;
   child: {
     id: string;
@@ -78,65 +115,27 @@ interface ChoreAssignment {
   } | null;
 }
 
-interface ChoreRotation {
-  id: string;
-  name: string;
-  frequency: string;
-  is_active: boolean;
-  chore_template: {
-    id: string;
-    name: string;
-    icon: string | null;
-  } | null;
-  rotation_members: Array<{
-    id: string;
-    child_profile_id: string;
-    order_position: number;
-    child: {
-      id: string;
-      name: string;
-      avatar_url: string | null;
-    } | null;
-  }>;
-}
-
 interface ChoresClientProps {
   childProfiles: ChildProfile[];
   templates: ChoreTemplate[];
   assignments: unknown[];
-  rotations: ChoreRotation[];
   weekStarting: string;
 }
-
-const CATEGORY_LABELS: Record<string, string> = {
-  bedroom: "Bedroom",
-  bathroom: "Bathroom",
-  kitchen: "Kitchen",
-  living_areas: "Living Areas",
-  outdoor: "Outdoor",
-  pets: "Pets",
-  self_care: "Self Care",
-  helpful: "Helpful Tasks",
-  custom: "Custom",
-};
-
-const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function ChoresClient({
   childProfiles,
   templates,
   assignments: initialAssignments,
-  rotations,
   weekStarting: initialWeekStarting,
 }: ChoresClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("weekly");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<ChoreTemplate | null>(null);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("week");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [isQuickAssignOpen, setIsQuickAssignOpen] = useState(false);
+  const [quickAssignContext, setQuickAssignContext] = useState<{
+    childId?: string;
+    dayOfWeek?: number | null;
+  } | null>(null);
 
   const assignments = initialAssignments as ChoreAssignment[];
 
@@ -147,45 +146,6 @@ export function ChoresClient({
     return date.toISOString().split("T")[0];
   }, [initialWeekStarting, weekOffset]);
 
-  // Filter templates
-  const filteredTemplates = useMemo(() => {
-    let filtered = templates;
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (t) =>
-          t.name.toLowerCase().includes(query) ||
-          t.description?.toLowerCase().includes(query)
-      );
-    }
-
-    if (selectedCategory) {
-      filtered = filtered.filter((t) => t.category === selectedCategory);
-    }
-
-    return filtered;
-  }, [templates, searchQuery, selectedCategory]);
-
-  // Group templates by category
-  const templatesByCategory = useMemo(() => {
-    const grouped: Record<string, ChoreTemplate[]> = {};
-    for (const template of filteredTemplates) {
-      const cat = template.category || "custom";
-      if (!grouped[cat]) {
-        grouped[cat] = [];
-      }
-      grouped[cat].push(template);
-    }
-    return grouped;
-  }, [filteredTemplates]);
-
-  // Get unique categories
-  const categories = useMemo(() => {
-    const cats = new Set(templates.map((t) => t.category || "custom"));
-    return Array.from(cats).sort();
-  }, [templates]);
-
   // Filter assignments for current week
   const weekAssignments = useMemo(() => {
     return assignments.filter((a) => a.week_starting === currentWeekStart);
@@ -193,33 +153,8 @@ export function ChoresClient({
 
   // Get pending approvals
   const pendingApprovals = useMemo(() => {
-    return assignments.filter((a) => a.status === "done");
+    return assignments.filter((a) => a.status === "done" || a.status === "pending_approval");
   }, [assignments]);
-
-  const handleTemplateClick = (template: ChoreTemplate) => {
-    setSelectedTemplate(template);
-    setIsAssignDialogOpen(true);
-  };
-
-  const handleAssignmentCreated = () => {
-    setIsAssignDialogOpen(false);
-    setSelectedTemplate(null);
-    router.refresh();
-  };
-
-  const handleApproval = async (assignmentId: string, approved: boolean, reason?: string) => {
-    const endpoint = approved
-      ? `/api/chores/assignments/${assignmentId}/approve`
-      : `/api/chores/assignments/${assignmentId}/reject`;
-
-    await fetch(endpoint, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
-    });
-
-    router.refresh();
-  };
 
   const formatWeekRange = (startDate: string) => {
     const start = new Date(startDate);
@@ -230,6 +165,64 @@ export function ChoresClient({
       d.toLocaleDateString("en-NZ", { day: "numeric", month: "short" });
 
     return `${formatDate(start)} - ${formatDate(end)}`;
+  };
+
+  // Handle approval
+  const handleApproval = async (assignmentId: string) => {
+    try {
+      const res = await fetch(`/api/chores/assignments/${assignmentId}/approve`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        toast.success("Chore approved!");
+        router.refresh();
+      } else {
+        toast.error("Failed to approve chore");
+      }
+    } catch (error) {
+      toast.error("Failed to approve chore");
+    }
+  };
+
+  // Handle rejection
+  const handleRejection = async (assignmentId: string, reason?: string) => {
+    try {
+      const res = await fetch(`/api/chores/assignments/${assignmentId}/reject`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (res.ok) {
+        toast.success("Sent back for redo");
+        router.refresh();
+      } else {
+        toast.error("Failed to reject chore");
+      }
+    } catch (error) {
+      toast.error("Failed to reject chore");
+    }
+  };
+
+  // Handle assign chore (opens quick assign panel)
+  const handleAssignChore = (childId: string, dayOfWeek: number | null) => {
+    setQuickAssignContext({ childId, dayOfWeek });
+    setIsQuickAssignOpen(true);
+  };
+
+  // Handle quick add button
+  const handleQuickAdd = () => {
+    setQuickAssignContext(null);
+    setIsQuickAssignOpen(true);
+  };
+
+  // Handle assignment created
+  const handleAssignmentCreated = () => {
+    setIsQuickAssignOpen(false);
+    setQuickAssignContext(null);
+    router.refresh();
   };
 
   if (childProfiles.length === 0) {
@@ -259,18 +252,21 @@ export function ChoresClient({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-dark">Chores Manager</h1>
+          <h1 className="text-2xl font-bold text-text-dark">Chores</h1>
           <p className="text-text-medium">
-            Assign and track chores for your kids
+            Manage your family's weekly chores
           </p>
         </div>
-        <Button onClick={() => setIsCreateTemplateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Chore
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleQuickAdd}>
+            <Plus className="h-4 w-4 mr-2" />
+            Quick Add
+          </Button>
+          <RemyHelpButton title="Chores" content={HELP_CONTENT} />
+        </div>
       </div>
 
-      {/* Approval Alert */}
+      {/* Approval Banner */}
       {pendingApprovals.length > 0 && (
         <Card className="mb-6 border-gold bg-gold-light">
           <CardContent className="py-4">
@@ -284,45 +280,33 @@ export function ChoresClient({
                     {pendingApprovals.length} chore{pendingApprovals.length > 1 ? "s" : ""} waiting for approval
                   </p>
                   <p className="text-sm text-text-medium">
-                    Review and approve completed chores
+                    Click on glowing chores in the grid to approve
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setActiveTab("approvals")}
-              >
-                Review Now
-              </Button>
+              <Badge variant="outline" className="border-gold text-gold-dark">
+                {pendingApprovals.length} pending
+              </Badge>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Tabs */}
+      {/* Tabs - Now just 2! */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6">
-          <TabsTrigger value="weekly" className="gap-2">
+          <TabsTrigger value="week" className="gap-2">
             <Calendar className="h-4 w-4" />
-            Weekly View
+            Week
           </TabsTrigger>
-          <TabsTrigger value="library" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Chore Library
-          </TabsTrigger>
-          <TabsTrigger value="approvals" className="gap-2">
-            <ListTodo className="h-4 w-4" />
-            Approvals
-            {pendingApprovals.length > 0 && (
-              <Badge variant="secondary" className="ml-1 bg-gold text-white">
-                {pendingApprovals.length}
-              </Badge>
-            )}
+          <TabsTrigger value="settings" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Settings
           </TabsTrigger>
         </TabsList>
 
-        {/* Weekly View Tab */}
-        <TabsContent value="weekly">
+        {/* Week Tab - The Primary View */}
+        <TabsContent value="week">
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
@@ -361,107 +345,34 @@ export function ChoresClient({
                 childProfiles={childProfiles}
                 assignments={weekAssignments}
                 weekStarting={currentWeekStart}
-                onAssignChore={(childId, dayOfWeek) => {
-                  setActiveTab("library");
-                }}
+                onAssignChore={handleAssignChore}
+                onApprove={handleApproval}
+                onReject={handleRejection}
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Chore Library Tab */}
-        <TabsContent value="library">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-light" />
-                  <Input
-                    placeholder="Search chores..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
-                  <Button
-                    variant={selectedCategory === null ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(null)}
-                  >
-                    All
-                  </Button>
-                  {categories.map((cat) => (
-                    <Button
-                      key={cat}
-                      variant={selectedCategory === cat ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(cat)}
-                    >
-                      {CATEGORY_LABELS[cat] || cat}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {Object.keys(templatesByCategory).length === 0 ? (
-                <div className="text-center py-12 text-text-medium">
-                  No chores found matching your search.
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {Object.entries(templatesByCategory).map(([category, categoryTemplates]) => (
-                    <div key={category}>
-                      <h3 className="text-lg font-semibold text-text-dark mb-4">
-                        {CATEGORY_LABELS[category] || category}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {categoryTemplates.map((template) => (
-                          <ChoreTemplateCard
-                            key={template.id}
-                            template={template}
-                            onClick={() => handleTemplateClick(template)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Approvals Tab */}
-        <TabsContent value="approvals">
-          <ApprovalQueue
-            assignments={pendingApprovals}
-            onApprove={(id) => handleApproval(id, true)}
-            onReject={(id, reason) => handleApproval(id, false, reason)}
+        {/* Settings Tab - For Power Users */}
+        <TabsContent value="settings">
+          <ChoreSettingsTab
+            templates={templates}
+            childProfiles={childProfiles}
+            onRefresh={() => router.refresh()}
           />
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs */}
-      {selectedTemplate && (
-        <AssignChoreDialog
-          open={isAssignDialogOpen}
-          onOpenChange={setIsAssignDialogOpen}
-          template={selectedTemplate}
-          childProfiles={childProfiles}
-          weekStarting={currentWeekStart}
-          onCreated={handleAssignmentCreated}
-        />
-      )}
-
-      <CreateTemplateDialog
-        open={isCreateTemplateOpen}
-        onOpenChange={setIsCreateTemplateOpen}
-        onCreated={() => {
-          setIsCreateTemplateOpen(false);
-          router.refresh();
-        }}
+      {/* Quick Assign Panel */}
+      <QuickAssignPanel
+        open={isQuickAssignOpen}
+        onOpenChange={setIsQuickAssignOpen}
+        templates={templates}
+        childProfiles={childProfiles}
+        weekStarting={currentWeekStart}
+        preselectedChildId={quickAssignContext?.childId}
+        preselectedDayOfWeek={quickAssignContext?.dayOfWeek}
+        onCreated={handleAssignmentCreated}
       />
     </div>
   );

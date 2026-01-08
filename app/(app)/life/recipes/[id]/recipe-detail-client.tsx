@@ -25,6 +25,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
+import { FullEditRecipeDialog } from "@/components/recipes";
 
 const RECIPE_HELP_CONTENT = {
   tips: [
@@ -59,8 +60,8 @@ interface Recipe {
   description?: string;
   source_type: string;
   source_url?: string;
-  ingredients?: string[];
-  instructions?: string[];
+  ingredients?: (string | { item?: string; amount?: string; name?: string })[];
+  instructions?: string[] | string;
   prep_time?: string;
   cook_time?: string;
   servings?: string;
@@ -74,10 +75,12 @@ interface RecipeDetailClientProps {
   recipe: Recipe;
 }
 
-export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
+export function RecipeDetailClient({ recipe: initialRecipe }: RecipeDetailClientProps) {
   const router = useRouter();
-  const [isFavorite, setIsFavorite] = useState(recipe.is_favorite);
+  const [recipe, setRecipe] = useState<Recipe>(initialRecipe);
+  const [isFavorite, setIsFavorite] = useState(initialRecipe.is_favorite);
   const [deleting, setDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const handleToggleFavorite = async () => {
     try {
@@ -112,6 +115,11 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleRecipeUpdated = (updatedRecipe: Recipe) => {
+    setRecipe(updatedRecipe);
+    setIsFavorite(updatedRecipe.is_favorite);
   };
 
   return (
@@ -155,6 +163,10 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Recipe
+                </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Calendar className="h-4 w-4 mr-2" />
                   Add to Meal Plan
@@ -243,12 +255,27 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
             <CardContent>
               {recipe.ingredients && recipe.ingredients.length > 0 ? (
                 <ul className="space-y-2">
-                  {recipe.ingredients.map((ingredient, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-sage mt-1">•</span>
-                      <span className="text-sm">{ingredient}</span>
-                    </li>
-                  ))}
+                  {recipe.ingredients.map((ingredient: string | { item?: string; amount?: string; name?: string }, i: number) => {
+                    // Handle both string and object formats
+                    let displayText: string;
+                    if (typeof ingredient === "string") {
+                      displayText = ingredient;
+                    } else if (typeof ingredient === "object" && ingredient !== null) {
+                      // Handle {item, amount} or {name, amount} format
+                      const name = ingredient.item || ingredient.name || "";
+                      const amount = ingredient.amount || "";
+                      displayText = amount ? `${amount} ${name}`.trim() : name;
+                    } else {
+                      displayText = String(ingredient);
+                    }
+
+                    return (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-sage mt-1">•</span>
+                        <span className="text-sm">{displayText}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
                 <p className="text-text-medium text-sm">
@@ -264,22 +291,31 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
               <CardTitle className="text-lg">Instructions</CardTitle>
             </CardHeader>
             <CardContent>
-              {recipe.instructions && recipe.instructions.length > 0 ? (
-                <ol className="space-y-4">
-                  {recipe.instructions.map((step, i) => (
-                    <li key={i} className="flex gap-3">
-                      <span className="flex items-center justify-center w-6 h-6 rounded-full bg-sage text-white text-sm font-medium shrink-0">
-                        {i + 1}
-                      </span>
-                      <p className="text-sm pt-0.5">{step}</p>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="text-text-medium text-sm">
-                  No instructions listed
-                </p>
-              )}
+              {(() => {
+                // Handle instructions that may be string or array
+                const instructions = Array.isArray(recipe.instructions)
+                  ? recipe.instructions
+                  : typeof recipe.instructions === "string" && recipe.instructions.trim()
+                  ? recipe.instructions.split("\n").filter((s: string) => s.trim())
+                  : [];
+
+                return instructions.length > 0 ? (
+                  <ol className="space-y-4">
+                    {instructions.map((step: string, i: number) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-sage text-white text-sm font-medium shrink-0">
+                          {i + 1}
+                        </span>
+                        <p className="text-sm pt-0.5">{step}</p>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-text-medium text-sm">
+                    No instructions listed
+                  </p>
+                );
+              })()}
             </CardContent>
           </Card>
         </div>
@@ -299,6 +335,14 @@ export function RecipeDetailClient({ recipe }: RecipeDetailClientProps) {
           </div>
         )}
       </div>
+
+      {/* Edit Recipe Dialog */}
+      <FullEditRecipeDialog
+        recipe={recipe}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onUpdate={handleRecipeUpdated}
+      />
     </div>
   );
 }

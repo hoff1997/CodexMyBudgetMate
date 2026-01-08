@@ -40,7 +40,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ recipes: data });
+  // Get category mappings for all recipes
+  const recipeIds = data?.map((r) => r.id) || [];
+  let recipeCategoryMap: Record<string, string[]> = {};
+
+  if (recipeIds.length > 0) {
+    const { data: categoryTags } = await supabase
+      .from("recipe_category_tags")
+      .select("recipe_id, category_id")
+      .in("recipe_id", recipeIds);
+
+    if (categoryTags) {
+      categoryTags.forEach((tag) => {
+        if (!recipeCategoryMap[tag.recipe_id]) {
+          recipeCategoryMap[tag.recipe_id] = [];
+        }
+        recipeCategoryMap[tag.recipe_id].push(tag.category_id);
+      });
+    }
+  }
+
+  // Add category_ids to each recipe
+  const recipesWithCategories = data?.map((recipe) => ({
+    ...recipe,
+    category_ids: recipeCategoryMap[recipe.id] || [],
+  }));
+
+  return NextResponse.json({ recipes: recipesWithCategories });
 }
 
 // Helper to parse time strings like "15 min", "30 minutes", "1 hour" to minutes

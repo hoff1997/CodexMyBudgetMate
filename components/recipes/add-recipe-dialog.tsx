@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link2, PenLine, Loader2, Plus, X, Check } from "lucide-react";
+import { Link2, PenLine, Loader2, Plus, X, Check, StickyNote } from "lucide-react";
 import { cn } from "@/lib/cn";
 import Image from "next/image";
 
@@ -58,6 +58,7 @@ export function AddRecipeDialog({
     ingredients: [""],
     instructions: [""],
     tags: [] as string[],
+    notes: "",
   });
   const [newTag, setNewTag] = useState("");
 
@@ -142,6 +143,7 @@ export function AddRecipeDialog({
           servings: formData.servings,
           image_url: formData.image_url,
           tags: formData.tags,
+          notes: formData.notes,
         }),
       });
 
@@ -171,6 +173,7 @@ export function AddRecipeDialog({
       ingredients: [""],
       instructions: [""],
       tags: [],
+      notes: "",
     });
     setNewTag("");
   };
@@ -358,16 +361,26 @@ export function AddRecipeDialog({
                   </div>
                 )}
 
-                <Button
-                  onClick={handleSaveScraped}
-                  disabled={saving}
-                  className="w-full bg-sage hover:bg-sage-dark"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : null}
-                  Save Recipe
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={saving}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveScraped}
+                    disabled={saving}
+                    className="flex-1 bg-sage hover:bg-sage-dark"
+                  >
+                    {saving ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Save Recipe
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -460,18 +473,7 @@ export function AddRecipeDialog({
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Ingredients</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addIngredient}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add
-                </Button>
-              </div>
+              <Label>Ingredients</Label>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {formData.ingredients.map((ingredient, index) => (
                   <div key={index} className="flex gap-2">
@@ -490,24 +492,25 @@ export function AddRecipeDialog({
                         <X className="h-4 w-4" />
                       </Button>
                     )}
+                    {/* Add button on the last row */}
+                    {index === formData.ingredients.length - 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={addIngredient}
+                        className="text-sage hover:text-sage-dark hover:bg-sage-very-light"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Instructions</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addInstruction}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Step
-                </Button>
-              </div>
+              <Label>Instructions</Label>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {formData.instructions.map((instruction, index) => (
                   <div key={index} className="flex gap-2">
@@ -529,6 +532,18 @@ export function AddRecipeDialog({
                         onClick={() => removeInstruction(index)}
                       >
                         <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {/* Add button on the last row */}
+                    {index === formData.instructions.length - 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={addInstruction}
+                        className="text-sage hover:text-sage-dark hover:bg-sage-very-light"
+                      >
+                        <Plus className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
@@ -575,16 +590,42 @@ export function AddRecipeDialog({
               )}
             </div>
 
-            <Button
-              onClick={handleSaveTyped}
-              disabled={!formData.title.trim() || saving}
-              className="w-full bg-sage hover:bg-sage-dark"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Save Recipe
-            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="flex items-center gap-2">
+                <StickyNote className="h-4 w-4" />
+                Notes
+              </Label>
+              <Textarea
+                id="notes"
+                placeholder="Add any personal notes, tips, or modifications..."
+                rows={3}
+                value={formData.notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, notes: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={saving}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveTyped}
+                disabled={!formData.title.trim() || saving}
+                className="flex-1 bg-sage hover:bg-sage-dark"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : null}
+                Save Recipe
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

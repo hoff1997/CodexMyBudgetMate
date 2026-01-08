@@ -2,7 +2,13 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, ExternalLink, Heart } from "lucide-react";
+import { Clock, Users, ExternalLink, Heart, MoreVertical, Tag } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -21,9 +27,10 @@ interface RecipeCardProps {
     source_url?: string;
   };
   onToggleFavorite?: (id: string, favorite: boolean) => void;
+  onEdit?: (recipe: RecipeCardProps["recipe"]) => void;
 }
 
-export function RecipeCard({ recipe, onToggleFavorite }: RecipeCardProps) {
+export function RecipeCard({ recipe, onToggleFavorite, onEdit }: RecipeCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <Link href={`/life/recipes/${recipe.id}`}>
@@ -55,23 +62,42 @@ export function RecipeCard({ recipe, onToggleFavorite }: RecipeCardProps) {
               {recipe.title}
             </h3>
           </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.preventDefault();
-              onToggleFavorite?.(recipe.id, !recipe.is_favorite);
-            }}
-            className="shrink-0"
-          >
-            <Heart
-              className={`h-4 w-4 ${
-                recipe.is_favorite
-                  ? "fill-red-500 text-red-500"
-                  : "text-text-light"
-              }`}
-            />
-          </Button>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onToggleFavorite?.(recipe.id, !recipe.is_favorite);
+              }}
+            >
+              <Heart
+                className={`h-4 w-4 ${
+                  recipe.is_favorite
+                    ? "fill-red-500 text-red-500"
+                    : "text-text-light"
+                }`}
+              />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4 text-text-light" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onEdit?.(recipe);
+                  }}
+                >
+                  <Tag className="h-4 w-4 mr-2" />
+                  Edit Tags & Categories
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {recipe.description && (

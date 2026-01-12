@@ -117,12 +117,13 @@ export default async function HouseholdHubPage() {
     }))
     .filter((c) => c.chore_template && c.child_profile);
 
-  // Get active shopping lists with counts
+  // Get active shopping lists with counts (only those shown on hub)
   const { data: shoppingListsRaw } = await supabase
     .from("shopping_lists")
     .select("id, name, icon")
     .eq("parent_user_id", user.id)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .neq("show_on_hub", false);
 
   const shoppingLists = await Promise.all(
     (shoppingListsRaw || []).map(async (list) => {

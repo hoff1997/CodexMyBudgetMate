@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyEnvelopeCard } from "@/components/kids/money-envelope-card";
 import { OpeningBalanceDialog } from "@/components/kids/opening-balance-dialog";
+import { TransferRequestDialog } from "@/components/kids/transfer-request-dialog";
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
-import { ArrowLeft, Settings, DollarSign } from "lucide-react";
+import { ArrowLeft, Settings, DollarSign, ArrowRightLeft } from "lucide-react";
 
 const HELP_CONTENT = {
   tips: [
@@ -70,6 +71,7 @@ export function KidMoneyClient({
 }: KidMoneyClientProps) {
   const router = useRouter();
   const [showOpeningBalance, setShowOpeningBalance] = useState(false);
+  const [showTransferRequest, setShowTransferRequest] = useState(false);
 
   // Build envelope balances from data
   const envelopeBalances = {
@@ -132,6 +134,15 @@ export function KidMoneyClient({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTransferRequest(true)}
+              className="border-sage text-sage hover:bg-sage-very-light"
+            >
+              <ArrowRightLeft className="h-4 w-4 mr-1" />
+              Request Transfer
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -267,6 +278,15 @@ export function KidMoneyClient({
           open={showOpeningBalance}
           onOpenChange={setShowOpeningBalance}
           onSaved={handleOpeningBalanceSaved}
+        />
+
+        {/* Transfer Request Dialog */}
+        <TransferRequestDialog
+          open={showTransferRequest}
+          onOpenChange={setShowTransferRequest}
+          childId={child.id}
+          childName={child.name}
+          envelopeBalances={envelopeBalances}
         />
       </div>
     </div>

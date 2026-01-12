@@ -70,14 +70,11 @@ const DEFAULT_NAV_ITEMS: NavItem[] = [
 
   // Retired items (pages still exist but hidden from nav)
   { id: "accounts", label: "Accounts", href: "/accounts", icon: "🏦", isRetired: true },
-  { id: "recurring-income", label: "Recurring Income", href: "/recurring-income", icon: "🔄", isRetired: true },
   { id: "reports", label: "Reports", href: "/reports", icon: "📑", isRetired: true },
   { id: "envelope-balances", label: "Envelope Balances", href: "/envelope-balances", icon: "💰", isRetired: true },
-  { id: "scenario-planner", label: "Scenario Planner", href: "/scenario-planner", icon: "🔮", isRetired: true },
   { id: "goals", label: "Goals", href: "/goals", icon: "🎯", isRetired: true },
   { id: "timeline", label: "Timeline", href: "/timeline", icon: "📅", isRetired: true },
   { id: "debt-management", label: "Debt Management", href: "/debt-management", icon: "💳", isRetired: true },
-  { id: "envelope-summary", label: "Envelope Summary", href: "/envelope-summary", icon: "🧾", isRetired: true },
 ];
 
 interface OnboardingDraft {
@@ -321,6 +318,30 @@ export default function Sidebar({
             >
               <span>📋</span>
               <span>Chores</span>
+            </Link>
+            <Link
+              href="/kids/invoices"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/kids/invoices"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>🧾</span>
+              <span>Invoices</span>
+            </Link>
+            <Link
+              href="/kids/transfer-requests"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/kids/transfer-requests"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>🔄</span>
+              <span>Transfers</span>
             </Link>
           </nav>
 

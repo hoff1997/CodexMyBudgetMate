@@ -3,3 +3,7 @@ export { CreateShoppingListDialog } from "./create-shopping-list-dialog";
 export { LinkEnvelopeDialog } from "./link-envelope-dialog";
 export { CompleteListDialog } from "./complete-list-dialog";
 export { EditCategoriesDialog } from "./edit-categories-dialog";
+export { ShoppingMode } from "./shopping-mode";
+export { ManageTemplatesDialog } from "./manage-templates-dialog";
+export { ManageSupermarketsDialog } from "./manage-supermarkets-dialog";
+export { EditItemDialog } from "./edit-item-dialog";

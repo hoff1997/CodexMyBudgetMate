@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { KidInvoice, ReconcileInvoiceRequest } from "@/lib/types/kids-invoice";
+import { KidsNotifications } from "@/lib/services/notifications";
 
 interface RouteContext {
   params: Promise<{ childId: string; invoiceId: string }>;
@@ -77,7 +78,15 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // TODO: Notify child that invoice was paid
+  // Notify that invoice was paid (parent sees this, indicates child's earnings)
+  await KidsNotifications.invoicePaid(
+    supabase,
+    user.id,
+    childId,
+    child.name,
+    invoice.total_amount || 0
+  );
+
   // TODO: Trigger auto-distribution to child's envelopes if configured
 
   return NextResponse.json({

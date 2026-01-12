@@ -4,6 +4,7 @@ import type {
   KidTransferRequest,
   RespondToTransferRequestRequest,
 } from "@/lib/types/kids-invoice";
+import { KidsNotifications } from "@/lib/services/notifications";
 
 interface RouteContext {
   params: Promise<{ childId: string; requestId: string }>;
@@ -134,8 +135,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // TODO: If approved, remind parent to make the bank transfer
-  // TODO: Notify child about the decision
+  // Notify about the decision
+  await KidsNotifications.transferDecision(
+    supabase,
+    user.id,
+    child.name,
+    childId,
+    body.status === "approved",
+    transferRequest.amount
+  );
 
   const message =
     body.status === "approved"

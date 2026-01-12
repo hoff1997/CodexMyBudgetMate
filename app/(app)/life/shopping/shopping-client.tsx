@@ -1,18 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,12 +13,14 @@ import {
 import {
   ShoppingListView,
   CreateShoppingListDialog,
-  LinkEnvelopeDialog,
-  CompleteListDialog,
   EditCategoriesDialog,
+  ManageTemplatesDialog,
+  ManageSupermarketsDialog,
 } from "@/components/shopping";
+import type { ListType } from "@/components/shopping/create-shopping-list-dialog";
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
-import { Plus, ShoppingCart, ArrowUpDown, Store, Search, Filter, MoreVertical, Settings2, Printer, Share2, Trash2 } from "lucide-react";
+import { Plus, ShoppingCart, Store, Search, MoreVertical, Settings2, Printer, Share2, FileText } from "lucide-react";
+import { useToast } from "@/lib/hooks/use-toast";
 
 interface ShoppingItem {
   id: string;
@@ -49,6 +41,7 @@ interface ShoppingList {
   id: string;
   name: string;
   icon: string;
+  list_type: ListType;
   store: string | null;
   budget: number | null;
   items: ShoppingItem[];
@@ -59,6 +52,7 @@ interface ShoppingList {
   linked_envelope_id: string | null;
   linked_envelope_name: string | null;
   is_completed: boolean;
+  show_on_hub: boolean;
 }
 
 const HELP_CONTENT = {
@@ -115,13 +109,8 @@ export function ShoppingClient({
   defaultAisleOrder,
   categories,
 }: ShoppingClientProps) {
-  const router = useRouter();
   const [lists, setLists] = useState<ShoppingList[]>(initialLists);
-  const [showChecked, setShowChecked] = useState(false);
-  const [sortByAisle, setSortByAisle] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedSupermarket, setSelectedSupermarket] = useState<string | null>(null);
-  const [categoryOrder, setCategoryOrder] = useState<string[]>(defaultAisleOrder);
   const [localCategories, setLocalCategories] = useState<Category[]>(categories);
 
   // Search state
@@ -130,13 +119,12 @@ export function ShoppingClient({
   // Edit categories dialog state
   const [showEditCategoriesDialog, setShowEditCategoriesDialog] = useState(false);
 
-  // Envelope linking state
-  const [showLinkDialog, setShowLinkDialog] = useState(false);
-  const [selectedListForLink, setSelectedListForLink] = useState<ShoppingList | null>(null);
-
-  // Complete list state
-  const [showCompleteDialog, setShowCompleteDialog] = useState(false);
-  const [selectedListForComplete, setSelectedListForComplete] = useState<ShoppingList | null>(null);
+  // Template management state
+  const [showManageTemplatesDialog, setShowManageTemplatesDialog] = useState(false);
+  // Supermarket management state
+  const [showManageSupermarketsDialog, setShowManageSupermarketsDialog] = useState(false);
+  const [localSupermarkets, setLocalSupermarkets] = useState<Supermarket[]>(supermarkets);
+  const { toast } = useToast();
 
   // Filter lists by search query
   const filteredLists = useMemo(() => {
@@ -150,35 +138,20 @@ export function ShoppingClient({
     });
   }, [lists, searchQuery]);
 
+  // Check if any grocery lists exist (for showing supermarket controls)
+  const hasGroceryLists = useMemo(() => {
+    return lists.some((list) => list.list_type === "grocery");
+  }, [lists]);
+
   // Handle category updates from dialog
   const handleCategoriesChange = useCallback((updatedCategories: Category[]) => {
     setLocalCategories(updatedCategories);
-    setCategoryOrder(updatedCategories.map((c) => c.name));
   }, []);
-
-  // Fetch category order when supermarket changes
-  const handleSupermarketChange = useCallback(async (supermarketId: string | null) => {
-    setSelectedSupermarket(supermarketId);
-
-    if (!supermarketId || supermarketId === "default") {
-      setCategoryOrder(defaultAisleOrder);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/shopping/categories?supermarket=${supermarketId}`);
-      if (res.ok) {
-        const orderedCategories = await res.json();
-        setCategoryOrder(orderedCategories.map((c: { name: string }) => c.name));
-      }
-    } catch (error) {
-      console.error("Error fetching category order:", error);
-    }
-  }, [defaultAisleOrder]);
 
   const refreshLists = useCallback(async () => {
     try {
-      const res = await fetch(`/api/shopping/lists?includeCompleted=${showChecked}`);
+      // Always include checked items - per-list show/hide is handled locally
+      const res = await fetch("/api/shopping/lists?includeCompleted=true");
       if (res.ok) {
         const data = await res.json();
         setLists(data);
@@ -186,11 +159,25 @@ export function ShoppingClient({
     } catch (error) {
       console.error("Error refreshing lists:", error);
     }
-  }, [showChecked]);
+  }, []);
+
+  const refreshSupermarkets = useCallback(async () => {
+    try {
+      const res = await fetch("/api/shopping/supermarkets");
+      if (res.ok) {
+        const data = await res.json();
+        setLocalSupermarkets(data);
+      }
+    } catch (error) {
+      console.error("Error refreshing supermarkets:", error);
+    }
+  }, []);
 
   const handleCreateList = async (data: {
     name: string;
     icon: string;
+    list_type: ListType;
+    from_template_id?: string;
   }) => {
     try {
       const res = await fetch("/api/shopping/lists", {
@@ -201,17 +188,27 @@ export function ShoppingClient({
 
       if (res.ok) {
         const newList = await res.json();
-        setLists((prev) => [
-          {
-            ...newList,
-            items: [],
-            itemsByAisle: null,
-            totalItems: 0,
-            checkedItems: 0,
-            estimatedTotal: 0,
-          },
-          ...prev,
-        ]);
+        // If created from template, refresh to get the items
+        if (data.from_template_id) {
+          await refreshLists();
+        } else {
+          setLists((prev) => [
+            {
+              ...newList,
+              list_type: data.list_type,
+              items: [],
+              itemsByAisle: null,
+              totalItems: 0,
+              checkedItems: 0,
+              estimatedTotal: 0,
+              linked_envelope_id: null,
+              linked_envelope_name: null,
+              is_completed: false,
+              show_on_hub: newList.show_on_hub ?? true,
+            },
+            ...prev,
+          ]);
+        }
       }
     } catch (error) {
       console.error("Error creating list:", error);
@@ -345,41 +342,77 @@ export function ShoppingClient({
     }
   };
 
-  // Envelope linking handlers
-  const handleOpenLinkDialog = (list: ShoppingList) => {
-    setSelectedListForLink(list);
-    setShowLinkDialog(true);
-  };
+  const handleToggleHubVisibility = async (listId: string, showOnHub: boolean) => {
+    try {
+      const res = await fetch(`/api/shopping/lists/${listId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show_on_hub: showOnHub }),
+      });
 
-  const handleEnvelopeLinked = (envelopeId: string | null, envelopeName: string | null) => {
-    if (selectedListForLink) {
-      setLists((prev) =>
-        prev.map((list) =>
-          list.id === selectedListForLink.id
-            ? { ...list, linked_envelope_id: envelopeId, linked_envelope_name: envelopeName }
-            : list
-        )
-      );
+      if (res.ok) {
+        setLists((prev) =>
+          prev.map((list) =>
+            list.id === listId ? { ...list, show_on_hub: showOnHub } : list
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling hub visibility:", error);
     }
   };
 
-  // Complete list handlers
-  const handleOpenCompleteDialog = (list: ShoppingList) => {
-    setSelectedListForComplete(list);
-    setShowCompleteDialog(true);
+  // Category update handler (for inline editing from category headers)
+  const handleUpdateCategory = async (categoryId: string, updates: { name?: string; icon?: string }) => {
+    try {
+      const res = await fetch(`/api/shopping/categories/${categoryId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (res.ok) {
+        const updatedCategory = await res.json();
+        setLocalCategories((prev) =>
+          prev.map((cat) =>
+            cat.id === categoryId ? { ...cat, ...updatedCategory } : cat
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error updating category:", error);
+    }
   };
 
-  const handleListCompleted = () => {
-    if (selectedListForComplete) {
-      setLists((prev) =>
-        prev.map((list) =>
-          list.id === selectedListForComplete.id
-            ? { ...list, is_completed: true }
-            : list
-        )
-      );
+  // Template handlers
+  const handleSaveAsTemplate = async (listId: string, listName: string, listIcon: string) => {
+    try {
+      const res = await fetch("/api/shopping/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: listName,
+          icon: listIcon,
+          from_list_id: listId,
+        }),
+      });
+
+      if (res.ok) {
+        toast({
+          title: "Template saved",
+          description: `"${listName}" saved as a template`,
+        });
+      } else {
+        throw new Error("Failed to save template");
+      }
+    } catch (error) {
+      console.error("Error saving template:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save template",
+        variant: "destructive",
+      });
     }
-    refreshLists();
   };
 
   return (
@@ -409,9 +442,9 @@ export function ShoppingClient({
         </div>
 
         {/* Controls Bar */}
-        <div className="bg-white border border-silver-light rounded-lg p-3 mb-6 space-y-3">
-          {/* Search Row */}
+        <div className="bg-white border border-silver-light rounded-lg p-3 mb-6">
           <div className="flex items-center gap-2">
+            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-medium" />
               <Input
@@ -421,86 +454,40 @@ export function ShoppingClient({
                 className="pl-9 h-9"
               />
             </div>
-          </div>
-
-          {/* Filter Controls Row */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Supermarket filter */}
-            {supermarkets.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Store className="h-4 w-4 text-text-medium" />
-                <Select
-                  value={selectedSupermarket || "default"}
-                  onValueChange={(value) => handleSupermarketChange(value === "default" ? null : value)}
-                >
-                  <SelectTrigger className="w-36 h-8">
-                    <SelectValue placeholder="Default order" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default order</SelectItem>
-                    {supermarkets.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Sort by category toggle */}
-            <div className="flex items-center gap-2 border-l border-silver-light pl-3">
-              <Switch
-                id="sort-by-aisle"
-                checked={sortByAisle}
-                onCheckedChange={setSortByAisle}
-              />
-              <Label htmlFor="sort-by-aisle" className="text-sm text-text-medium flex items-center gap-1 cursor-pointer">
-                <ArrowUpDown className="h-3 w-3" />
-                Sort by category
-              </Label>
-            </div>
-
-            {/* Show checked toggle */}
-            <div className="flex items-center gap-2 border-l border-silver-light pl-3">
-              <Switch
-                id="show-checked"
-                checked={showChecked}
-                onCheckedChange={(checked) => {
-                  setShowChecked(checked);
-                  refreshLists();
-                }}
-              />
-              <Label htmlFor="show-checked" className="text-sm text-text-medium cursor-pointer">
-                Show checked
-              </Label>
-            </div>
 
             {/* More options menu */}
-            <div className="ml-auto">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setShowEditCategoriesDialog(true)}>
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Edit Categories
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {hasGroceryLists && (
+                  <DropdownMenuItem onClick={() => setShowManageSupermarketsDialog(true)}>
+                    <Store className="h-4 w-4 mr-2" />
+                    Manage Supermarkets
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled>
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share List (coming soon)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print List (coming soon)
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                )}
+                <DropdownMenuItem onClick={() => setShowManageTemplatesDialog(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Manage Templates
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowEditCategoriesDialog(true)}>
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Edit Categories
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share List (coming soon)
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print List (coming soon)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -544,17 +531,18 @@ export function ShoppingClient({
               <ShoppingListView
                 key={list.id}
                 list={list}
-                sortByAisle={sortByAisle}
-                aisleOrder={categoryOrder}
+                defaultAisleOrder={defaultAisleOrder}
                 categories={localCategories}
+                supermarkets={localSupermarkets}
                 onAddItem={handleAddItem}
                 onToggleItem={handleToggleItem}
                 onDeleteItem={handleDeleteItem}
                 onUpdateItem={handleUpdateItem}
                 onDeleteList={handleDeleteList}
-                onLinkEnvelope={() => handleOpenLinkDialog(list)}
-                onCompleteList={() => handleOpenCompleteDialog(list)}
-                showChecked={showChecked}
+                onToggleHubVisibility={handleToggleHubVisibility}
+                onSaveAsTemplate={handleSaveAsTemplate}
+                onEditCategories={() => setShowEditCategoriesDialog(true)}
+                onUpdateCategory={handleUpdateCategory}
               />
             ))}
           </div>
@@ -568,38 +556,25 @@ export function ShoppingClient({
         onCreateList={handleCreateList}
       />
 
-      {/* Link Envelope Dialog */}
-      {selectedListForLink && (
-        <LinkEnvelopeDialog
-          open={showLinkDialog}
-          onOpenChange={setShowLinkDialog}
-          listId={selectedListForLink.id}
-          listName={selectedListForLink.name}
-          currentEnvelopeId={selectedListForLink.linked_envelope_id}
-          onLinked={handleEnvelopeLinked}
-        />
-      )}
-
-      {/* Complete List Dialog */}
-      {selectedListForComplete && (
-        <CompleteListDialog
-          open={showCompleteDialog}
-          onOpenChange={setShowCompleteDialog}
-          listId={selectedListForComplete.id}
-          listName={selectedListForComplete.name}
-          estimatedTotal={selectedListForComplete.estimatedTotal}
-          linkedEnvelopeId={selectedListForComplete.linked_envelope_id}
-          linkedEnvelopeName={selectedListForComplete.linked_envelope_name}
-          onCompleted={handleListCompleted}
-        />
-      )}
-
       {/* Edit Categories Dialog */}
       <EditCategoriesDialog
         open={showEditCategoriesDialog}
         onOpenChange={setShowEditCategoriesDialog}
         categories={localCategories}
         onCategoriesChange={handleCategoriesChange}
+      />
+
+      {/* Manage Templates Dialog */}
+      <ManageTemplatesDialog
+        open={showManageTemplatesDialog}
+        onOpenChange={setShowManageTemplatesDialog}
+      />
+
+      {/* Manage Supermarkets Dialog */}
+      <ManageSupermarketsDialog
+        open={showManageSupermarketsDialog}
+        onOpenChange={setShowManageSupermarketsDialog}
+        onSupermarketsChange={refreshSupermarkets}
       />
     </div>
   );

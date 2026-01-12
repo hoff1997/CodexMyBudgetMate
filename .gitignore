@@ -32,3 +32,8 @@ supabase/.branches
 
 # TypeScript build
 *.tsbuildinfo
+
+# Archived/Legacy code
+_archived/
+Source Replit/
+Previous replit pages/

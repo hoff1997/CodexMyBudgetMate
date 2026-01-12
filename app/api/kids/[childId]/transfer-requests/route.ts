@@ -4,6 +4,7 @@ import type {
   KidTransferRequest,
   CreateTransferRequestRequest,
 } from "@/lib/types/kids-invoice";
+import { KidsNotifications } from "@/lib/services/notifications";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -136,7 +137,17 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // TODO: Notify parent about new transfer request
+  // Notify parent about new transfer request
+  await KidsNotifications.transferRequested(
+    supabase,
+    user.id,
+    child.name,
+    childId,
+    transferRequest.id,
+    body.amount,
+    body.from_envelope,
+    "Spend"
+  );
 
   return NextResponse.json({
     success: true,

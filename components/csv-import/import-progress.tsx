@@ -18,6 +18,8 @@ import {
   Loader2,
   FileText,
   X,
+  Tag,
+  Wallet,
 } from "lucide-react";
 import type { CSVImportCommitResponse } from "@/lib/csv";
 
@@ -98,7 +100,7 @@ export function ImportProgress({
 
   // Success state
   if (result?.success && result.data) {
-    const { imported, skipped, errors, transfersDetected } = result.data;
+    const { imported, skipped, errors, transfersDetected, rulesApplied, incomeDetected } = result.data;
     const hasErrors = errors.length > 0;
 
     return (
@@ -148,24 +150,57 @@ export function ImportProgress({
           )}
         </div>
 
-        {/* Transfer Detection Notice */}
-        {transfersDetected > 0 && (
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-700">
-                <ArrowRightLeft className="h-4 w-4" />
-                Potential Transfers Detected
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-blue-700">
-                We found {transfersDetected} transaction{transfersDetected !== 1 ? "s" : ""} that
-                may be transfers between your accounts. You can review and link them in the
-                Reconciliation page.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Smart Processing Summary */}
+        {(rulesApplied && rulesApplied > 0) || (incomeDetected && incomeDetected > 0) || (transfersDetected > 0) ? (
+          <div className="space-y-3">
+            {/* Rules Applied Notice */}
+            {rulesApplied && rulesApplied > 0 && (
+              <Card className="border-sage-light bg-sage-very-light">
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-sage-dark" />
+                    <span className="text-sm text-sage-dark">
+                      <strong>{rulesApplied}</strong> transaction{rulesApplied !== 1 ? "s" : ""} auto-categorised using your merchant rules
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Income Detected Notice */}
+            {incomeDetected && incomeDetected > 0 && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-blue-700" />
+                    <span className="text-sm text-blue-700">
+                      <strong>{incomeDetected}</strong> income transaction{incomeDetected !== 1 ? "s" : ""} detected - pay cycle dates updated
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Transfer Detection Notice */}
+            {transfersDetected > 0 && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="py-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-700">
+                    <ArrowRightLeft className="h-4 w-4" />
+                    Potential Transfers Detected
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-sm text-blue-700">
+                    We found {transfersDetected} transaction{transfersDetected !== 1 ? "s" : ""} that
+                    may be transfers between your accounts. You can review and link them in the
+                    Reconciliation page.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        ) : null}
 
         {/* Errors Detail */}
         {hasErrors && (

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { EnvelopeCreateDialog } from "@/components/layout/envelopes/envelope-create-dialog";
 import {
   Dialog,
   DialogContent,
@@ -90,6 +91,7 @@ export default function NewTransactionDialog({
   const [merchantSuggestion, setMerchantSuggestion] =
     useState<MerchantSuggestion["suggestion"]>(null);
   const [envelopeOpen, setEnvelopeOpen] = useState(false);
+  const [createEnvelopeOpen, setCreateEnvelopeOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: envelopesData } = useQuery({
@@ -398,10 +400,7 @@ export default function NewTransactionDialog({
                                 size="sm"
                                 onClick={() => {
                                   setEnvelopeOpen(false);
-                                  // TODO: Implement create envelope dialog
-                                  toast.info(
-                                    "Create envelope functionality coming soon",
-                                  );
+                                  setCreateEnvelopeOpen(true);
                                 }}
                                 className="w-full"
                               >
@@ -449,10 +448,7 @@ export default function NewTransactionDialog({
                             <CommandItem
                               onSelect={() => {
                                 setEnvelopeOpen(false);
-                                // TODO: Implement create envelope dialog
-                                toast.info(
-                                  "Create envelope functionality coming soon",
-                                );
+                                setCreateEnvelopeOpen(true);
                               }}
                               className="flex items-center gap-2 px-3 py-3 bg-blue-50 hover:bg-blue-100 font-medium text-blue-700 cursor-pointer"
                             >
@@ -551,6 +547,16 @@ export default function NewTransactionDialog({
           </form>
         </Form>
       </DialogContent>
+
+      {/* Create Envelope Dialog */}
+      <EnvelopeCreateDialog
+        open={createEnvelopeOpen}
+        onOpenChange={setCreateEnvelopeOpen}
+        onCreated={() => {
+          // Refresh envelopes list after creating a new one
+          queryClient.invalidateQueries({ queryKey: ["envelopes"] });
+        }}
+      />
     </Dialog>
   );
 }

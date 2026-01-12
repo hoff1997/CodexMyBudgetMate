@@ -64,8 +64,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     estimated_price: fullItem.estimated_price || null,
     notes: fullItem.notes || null,
     checked: fullItem.is_checked,
-    checked_at: fullItem.checked_at || null,
-    sort_order: fullItem.sort_order || 0,
+    checked_at: null,
+    sort_order: 0,
     photo_url: fullItem.photo_url || null,
   });
 }
@@ -90,7 +90,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json();
-  const { name, quantity, aisle, category_id, checked, estimated_price, notes, photo_url } = body;
+  const { name, quantity, aisle, category_id, checked, photo_url, estimated_price, notes } = body;
 
   // Build update object with only provided fields (mapped to DB columns)
   const updates: Record<string, unknown> = {};
@@ -99,9 +99,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (aisle !== undefined) updates.aisle_name = aisle;
   if (category_id !== undefined) updates.category_id = category_id;
   if (checked !== undefined) updates.is_checked = checked;
+  if (photo_url !== undefined) updates.photo_url = photo_url;
   if (estimated_price !== undefined) updates.estimated_price = estimated_price;
   if (notes !== undefined) updates.notes = notes;
-  if (photo_url !== undefined) updates.photo_url = photo_url;
 
   const { data: item, error } = await supabase
     .from("shopping_items")
@@ -127,8 +127,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     estimated_price: item.estimated_price || null,
     notes: item.notes || null,
     checked: item.is_checked,
-    checked_at: item.checked_at || null,
-    sort_order: item.sort_order || 0,
+    checked_at: null,
+    sort_order: 0,
     photo_url: item.photo_url || null,
   });
 }

@@ -19,7 +19,7 @@ const DEFAULT_AISLE_ORDER = [
   "Cleaning",
   "Baby",
   "Pet",
-  "Other",
+  "Uncategorised",
 ];
 
 export default async function ShoppingPage() {

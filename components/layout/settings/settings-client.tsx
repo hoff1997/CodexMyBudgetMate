@@ -895,6 +895,34 @@ export function SettingsClient({ data, flash = null }: Props) {
         )}
       </section>
 
+      {/* Merchant Rules Section */}
+      <section className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+        <div className="px-3 py-2 border-b border-[#E5E7EB] flex items-center justify-between">
+          <h2 className="font-semibold text-[#3D3D3D]">Merchant Rules</h2>
+          <Link
+            href="/rules"
+            className="px-2.5 py-1 text-sm bg-[#7A9E9A] text-white rounded-lg hover:bg-[#5A7E7A] flex items-center gap-1"
+          >
+            Manage Rules
+          </Link>
+        </div>
+        <div className="px-3 py-3">
+          <p className="text-sm text-[#6B6B6B]">
+            Create rules to automatically categorise transactions based on merchant names.
+            When you import transactions, rules will suggest which envelope each transaction should go to.
+          </p>
+        </div>
+        <Link
+          href="/rules"
+          className="px-3 py-2 border-t border-[#E5E7EB] flex items-center justify-between hover:bg-[#F3F4F6] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[#3D3D3D]">View and edit merchant memory rules</span>
+          </div>
+          <ChevronRight className="w-4 h-4 text-[#9CA3AF]" />
+        </Link>
+      </section>
+
       {/* Celebration Reminders Section */}
       <section className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
         <div className="px-3 py-2 border-b border-[#E5E7EB]">

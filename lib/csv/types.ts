@@ -306,6 +306,10 @@ export interface CSVImportCommitResponse {
     }>;
     /** Transfer detection results */
     transfersDetected: number;
+    /** Merchant rules auto-applied */
+    rulesApplied?: number;
+    /** Income transactions detected and pay cycles advanced */
+    incomeDetected?: number;
   };
 }
 

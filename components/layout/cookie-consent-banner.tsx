@@ -113,17 +113,17 @@ export function CookieConsentBanner({ className }: CookieConsentBannerProps) {
               </div>
               <div className="space-y-1">
                 <h3 className="font-semibold text-text-dark">
-                  We value your privacy
+                  Your privacy matters to us
                 </h3>
                 <p className="text-sm text-text-medium">
-                  We use cookies to enhance your browsing experience and analyze
-                  site traffic. By clicking &quot;Accept All&quot;, you consent
-                  to our use of cookies.{" "}
+                  We use cookies to make your experience better and understand
+                  how the site is used. By clicking &quot;Accept All&quot;, you
+                  agree to our use of cookies.{" "}
                   <Link
                     href="/privacy/cookies"
                     className="text-sage hover:text-sage-dark underline"
                   >
-                    Learn more
+                    Find out more
                   </Link>
                 </p>
               </div>
@@ -138,7 +138,7 @@ export function CookieConsentBanner({ className }: CookieConsentBannerProps) {
                 className="order-3 sm:order-1"
               >
                 <Settings className="w-4 h-4 mr-2" />
-                Customize
+                Customise
               </Button>
               <Button
                 variant="outline"

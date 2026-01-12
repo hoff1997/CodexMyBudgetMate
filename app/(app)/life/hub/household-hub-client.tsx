@@ -399,6 +399,7 @@ export function HouseholdHubClient({
                   <QuickLinksWidget
                     shopping={dashboard.shopping}
                     todos={dashboard.todos}
+                    onShoppingListUpdate={refreshDashboard}
                   />
                 </Card>
               </div>

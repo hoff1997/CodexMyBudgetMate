@@ -59,11 +59,31 @@ const CATEGORY_ICONS = [
   "🥤", "🧃", "☕", "🍺", // Beverages
   "🍿", "🍪", "🍫", "🧁", // Snacks
   "🥫", "🍝", "🍚", "🥜", // Pantry
-  "🧹", "🧽", "🧴", "🧻", // Household
+  "🧹", "🧽", "🧴", "🧻", // Household/Cleaning
   "👶", "🍼", // Baby
   "🐾", "🦴", // Pet
   "📦", "🛒", "🏠", "💊", // Other
 ];
+
+// Default icons for standard categories
+const DEFAULT_CATEGORY_ICONS: Record<string, string> = {
+  "Produce": "🥬",
+  "Bakery": "🥖",
+  "Deli": "🧀",
+  "Meat": "🥩",
+  "Seafood": "🐟",
+  "Dairy": "🥛",
+  "Frozen": "🧊",
+  "Pantry": "🥫",
+  "Snacks": "🍿",
+  "Beverages": "🥤",
+  "Health & Beauty": "🧴",
+  "Cleaning": "🧹",
+  "Household": "🧹",
+  "Baby": "👶",
+  "Pet": "🐾",
+  "Uncategorised": "📦",
+};
 
 function EmojiPicker({
   currentIcon,
@@ -184,7 +204,7 @@ export function EditCategoriesDialog({
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm("Delete this category? Items using it will move to 'Other'.")) return;
+    if (!confirm("Delete this category? Items using it will move to 'Uncategorised'.")) return;
 
     try {
       const res = await fetch(`/api/shopping/categories/${id}`, {
@@ -413,12 +433,12 @@ function SortableCategoryItem({
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-lg hover:bg-sage-very-light">
-            {category.icon || "📦"}
+            {category.icon || DEFAULT_CATEGORY_ICONS[category.name] || "📦"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <EmojiPicker
-            currentIcon={category.icon || "📦"}
+            currentIcon={category.icon || DEFAULT_CATEGORY_ICONS[category.name] || "📦"}
             onSelect={onIconChange}
           />
         </PopoverContent>

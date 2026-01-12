@@ -466,7 +466,10 @@ async function handleApprove(tx: TransactionRow) {
   }
 }
 
-function handleEnvelopeAssigned(transactionId: string, envelopeId: string, envelopeName: string) {
+async function handleEnvelopeAssigned(transactionId: string, envelopeId: string, envelopeName: string) {
+  const transaction = rows.find((row) => row.id === transactionId);
+  const merchantName = transaction?.merchant_name;
+
   setRows((prev) =>
     prev.map((row) =>
       row.id === transactionId
@@ -485,7 +488,39 @@ function handleEnvelopeAssigned(transactionId: string, envelopeId: string, envel
       : current,
   );
 
-  toast.success("Envelope assigned");
+  // Offer to create a rule for this merchant
+  if (merchantName && !usingDemo) {
+    toast.success("Envelope assigned", {
+      description: `Always assign "${merchantName}" to ${envelopeName}?`,
+      action: {
+        label: "Create Rule",
+        onClick: async () => {
+          try {
+            const response = await fetch("/api/category-rules/from-approval", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                merchantName,
+                envelopeId,
+                matchType: "contains",
+              }),
+            });
+            if (response.ok) {
+              toast.success(`Rule created for "${merchantName}"`);
+            } else {
+              const data = await response.json();
+              toast.error(data.error || "Failed to create rule");
+            }
+          } catch {
+            toast.error("Failed to create rule");
+          }
+        },
+      },
+      duration: 8000,
+    });
+  } else {
+    toast.success("Envelope assigned");
+  }
   router.refresh();
 }
 

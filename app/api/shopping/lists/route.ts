@@ -46,13 +46,13 @@ export async function GET(request: Request) {
       quantity: string | null;
       aisle_name: string | null;
       category_id: string | null;
-      estimated_price: number | null;
-      notes: string | null;
+      estimated_price?: number | null;
+      notes?: string | null;
       is_checked: boolean;
-      checked_at: string | null;
-      sort_order: number | null;
-      photo_url: string | null;
-      created_at: string;
+      checked_at?: string | null;
+      sort_order?: number | null;
+      photo_url?: string | null;
+      created_at?: string;
     }) => ({
       id: item.id,
       name: item.text,
@@ -72,6 +72,7 @@ export async function GET(request: Request) {
       id: list.id,
       name: list.name,
       icon: list.icon || "🛒",
+      list_type: list.list_type || "grocery",
       store: null,
       budget: null,
       items: mappedItems,
@@ -79,6 +80,10 @@ export async function GET(request: Request) {
       totalItems: allItems.length,
       checkedItems: allItems.filter((item: { is_checked: boolean }) => item.is_checked).length,
       estimatedTotal: 0,
+      linked_envelope_id: list.linked_envelope_id || null,
+      linked_envelope_name: list.linked_envelope_name || null,
+      is_completed: list.is_completed || false,
+      show_on_hub: list.show_on_hub ?? true,
     };
   });
 
@@ -98,7 +103,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { name, icon } = body;
+  const { name, icon, from_template_id, list_type } = body;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -111,6 +116,7 @@ export async function POST(request: Request) {
       name,
       icon: icon || "🛒",
       is_active: true,
+      list_type: list_type || "grocery",
     })
     .select()
     .single();
@@ -120,12 +126,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // If creating from template, copy the items
+  if (from_template_id) {
+    const { data: template } = await supabase
+      .from("shopping_list_templates")
+      .select("items")
+      .eq("id", from_template_id)
+      .eq("parent_user_id", user.id)
+      .single();
+
+    if (template?.items && Array.isArray(template.items)) {
+      const itemsToInsert = template.items.map((item: {
+        name: string;
+        quantity?: number;
+        category_id?: string | null;
+        aisle_name?: string | null;
+      }, index: number) => ({
+        shopping_list_id: list.id,
+        text: item.name,
+        quantity: item.quantity?.toString() || "1",
+        category_id: item.category_id || null,
+        aisle_name: item.aisle_name || null,
+        is_checked: false,
+        sort_order: index,
+      }));
+
+      if (itemsToInsert.length > 0) {
+        await supabase.from("shopping_items").insert(itemsToInsert);
+      }
+    }
+  }
+
   // Return in client expected format
   return NextResponse.json({
     id: list.id,
     name: list.name,
     icon: list.icon || "🛒",
+    list_type: list.list_type || "grocery",
     store: null,
     budget: null,
+    show_on_hub: list.show_on_hub ?? true,
   }, { status: 201 });
 }

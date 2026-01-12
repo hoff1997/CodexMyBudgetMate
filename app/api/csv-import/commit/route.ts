@@ -14,6 +14,8 @@ import type {
   CSVImportCommitResponse,
   ParsedTransaction,
 } from "@/lib/csv";
+import { applyRulesToTransactions } from "@/lib/services/transaction-rules";
+import { detectAndProcessIncome } from "@/lib/services/pay-cycle-detection";
 
 /**
  * Batch size for inserting transactions
@@ -143,6 +145,68 @@ export async function POST(request: Request) {
       }
     }
 
+    // Apply merchant rules to imported transactions
+    let rulesApplied = 0;
+    if (importedIds.length > 0) {
+      try {
+        // Fetch the inserted transactions with their merchant names
+        const { data: insertedTxs } = await supabase
+          .from("transactions")
+          .select("id, merchant_name")
+          .in("id", importedIds);
+
+        if (insertedTxs && insertedTxs.length > 0) {
+          const ruleResults = await applyRulesToTransactions(
+            supabase,
+            user.id,
+            insertedTxs.map((tx) => ({
+              id: tx.id,
+              merchantName: tx.merchant_name || "",
+            })),
+            true // skipIfAlreadyAssigned
+          );
+          rulesApplied = ruleResults.applied;
+          console.log(`Applied ${rulesApplied} rules to imported transactions`);
+        }
+      } catch (error) {
+        console.error("Rule application error:", error);
+        // Don't fail the import if rule application fails
+      }
+    }
+
+    // Detect income transactions and advance pay cycles
+    let incomeDetected = 0;
+    if (importedIds.length > 0) {
+      try {
+        // Fetch income transactions (positive amounts)
+        const { data: incomeTxs } = await supabase
+          .from("transactions")
+          .select("id, user_id, amount, merchant_name, description, occurred_at")
+          .in("id", importedIds)
+          .gt("amount", 0);
+
+        if (incomeTxs && incomeTxs.length > 0) {
+          for (const tx of incomeTxs) {
+            const incomeResult = await detectAndProcessIncome(supabase, user.id, {
+              id: tx.id,
+              user_id: tx.user_id,
+              amount: tx.amount,
+              merchant_name: tx.merchant_name,
+              description: tx.description,
+              occurred_at: tx.occurred_at,
+            });
+            if (incomeResult.matched) {
+              incomeDetected++;
+            }
+          }
+          console.log(`Detected ${incomeDetected} income transactions`);
+        }
+      } catch (error) {
+        console.error("Income detection error:", error);
+        // Don't fail the import if income detection fails
+      }
+    }
+
     // Run transfer detection on imported transactions
     let transfersDetected = 0;
     if (importedIds.length > 0) {
@@ -180,6 +244,8 @@ export async function POST(request: Request) {
         transactionIds: importedIds,
         errors,
         transfersDetected,
+        rulesApplied,
+        incomeDetected,
       },
     };
 

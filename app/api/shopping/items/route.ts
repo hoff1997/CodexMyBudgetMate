@@ -154,8 +154,8 @@ export async function GET(request: Request) {
     estimated_price: item.estimated_price || null,
     notes: item.notes || null,
     checked: item.is_checked,
-    checked_at: item.checked_at || null,
-    sort_order: item.sort_order || 0,
+    checked_at: null,
+    sort_order: 0,
     photo_url: item.photo_url || null,
   })) || [];
 
@@ -231,8 +231,8 @@ export async function POST(request: Request) {
     estimated_price: item.estimated_price || null,
     notes: item.notes || null,
     checked: item.is_checked,
-    checked_at: item.checked_at || null,
-    sort_order: item.sort_order || 0,
+    checked_at: null,
+    sort_order: 0,
     photo_url: item.photo_url || null,
   }, { status: 201 });
 }

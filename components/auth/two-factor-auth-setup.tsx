@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Copy,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
 
 interface TwoFactorAuthSetupProps {
@@ -41,53 +42,120 @@ export function TwoFactorAuthSetup({
   const [disableToken, setDisableToken] = useState("");
   const [regenerateToken, setRegenerateToken] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [factorId, setFactorId] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [isEnabled, setIsEnabled] = useState(false);
   const [backupCodesCount, setBackupCodesCount] = useState(0);
+
+  // Check 2FA status on mount
+  useEffect(() => {
+    async function checkStatus() {
+      try {
+        const response = await fetch("/api/2fa/status");
+        if (response.ok) {
+          const data = await response.json();
+          setIsEnabled(data.isEnabled);
+          setBackupCodesCount(data.backupCodesCount || 0);
+          if (data.factorId) {
+            setFactorId(data.factorId);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check 2FA status:", error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    }
+    checkStatus();
+  }, []);
 
   const handleSetup = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement 2FA setup API endpoint
-      // const response = await fetch('/api/2fa/setup', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ userId, username }),
-      // });
-      // const data = await response.json();
-      // setQrCodeUrl(data.qrCodeDataUrl);
-      // setBackupCodes(data.backupCodes);
-      // setShowBackupCodes(true);
+      const response = await fetch("/api/2fa/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
 
-      toast.info(
-        "2FA API endpoints not yet implemented. This feature is coming soon."
-      );
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to setup 2FA");
+      }
+
+      const data = await response.json();
+      setQrCodeUrl(data.qrCodeDataUrl);
+      setFactorId(data.factorId);
+      toast.success("Scan the QR code with your authenticator app");
     } catch (error) {
-      toast.error("Failed to setup two-factor authentication");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to setup two-factor authentication"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleVerify = async () => {
+    if (!factorId) {
+      toast.error("Setup not complete. Please try again.");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // TODO: Implement 2FA verify API endpoint
-      toast.info("2FA verification not yet implemented");
+      const response = await fetch("/api/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ factorId, code: setupToken }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Invalid verification code");
+      }
+
+      const data = await response.json();
+      setIsEnabled(true);
+      setBackupCodes(data.backupCodes || []);
+      setShowBackupCodes(true);
+      setBackupCodesCount(data.backupCodes?.length || 0);
+      setQrCodeUrl("");
+      setSetupToken("");
+      toast.success("Two-factor authentication enabled!");
     } catch (error) {
-      toast.error("Invalid verification code");
+      toast.error(
+        error instanceof Error ? error.message : "Invalid verification code"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleValidate = async () => {
+    if (!factorId) {
+      toast.error("No 2FA factor found");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // TODO: Implement 2FA validate API endpoint
-      toast.info("2FA validation not yet implemented");
+      // Create challenge and verify
+      const response = await fetch("/api/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ factorId, code: verifyToken }),
+      });
+
+      if (response.ok) {
+        toast.success("Authentication code is valid!");
+        setVerifyToken("");
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Invalid authentication code");
+      }
     } catch (error) {
       toast.error("Invalid authentication code");
     } finally {
@@ -98,10 +166,26 @@ export function TwoFactorAuthSetup({
   const handleDisable = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement 2FA disable API endpoint
-      toast.info("2FA disable not yet implemented");
+      const response = await fetch("/api/2fa/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: disableToken }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to disable 2FA");
+      }
+
+      setIsEnabled(false);
+      setFactorId(null);
+      setBackupCodesCount(0);
+      setDisableToken("");
+      toast.success("Two-factor authentication disabled");
     } catch (error) {
-      toast.error("Failed to disable two-factor authentication");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to disable two-factor authentication"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -110,10 +194,28 @@ export function TwoFactorAuthSetup({
   const handleRegenerate = async () => {
     setIsLoading(true);
     try {
-      // TODO: Implement 2FA regenerate backup codes API endpoint
-      toast.info("Backup code regeneration not yet implemented");
+      // First verify the code, then regenerate backup codes
+      const response = await fetch("/api/2fa/regenerate-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: regenerateToken }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to regenerate backup codes");
+      }
+
+      const data = await response.json();
+      setBackupCodes(data.backupCodes || []);
+      setShowBackupCodes(true);
+      setBackupCodesCount(data.backupCodes?.length || 0);
+      setRegenerateToken("");
+      toast.success("New backup codes generated");
     } catch (error) {
-      toast.error("Failed to regenerate backup codes");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to regenerate backup codes"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -124,6 +226,16 @@ export function TwoFactorAuthSetup({
     navigator.clipboard.writeText(codesText);
     toast.success("Backup codes copied to clipboard");
   };
+
+  if (isCheckingStatus) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -167,7 +279,11 @@ export function TwoFactorAuthSetup({
                   disabled={isLoading}
                   className="w-full"
                 >
-                  <Key className="h-4 w-4 mr-2" />
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Key className="h-4 w-4 mr-2" />
+                  )}
                   {isLoading ? "Setting up..." : "Setup Two-Factor Authentication"}
                 </Button>
               </div>
@@ -176,11 +292,12 @@ export function TwoFactorAuthSetup({
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Step 1: Scan QR Code</h3>
                   <div className="flex justify-center">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={qrCodeUrl}
                       alt="2FA QR Code"
-                      width={300}
-                      height={300}
+                      width={200}
+                      height={200}
                       className="border rounded-lg p-4 bg-white"
                     />
                   </div>
@@ -204,7 +321,7 @@ export function TwoFactorAuthSetup({
                       type="text"
                       placeholder="000000"
                       value={setupToken}
-                      onChange={(e) => setSetupToken(e.target.value)}
+                      onChange={(e) => setSetupToken(e.target.value.replace(/\D/g, ""))}
                       maxLength={6}
                     />
                   </div>
@@ -213,7 +330,11 @@ export function TwoFactorAuthSetup({
                     disabled={isLoading || setupToken.length !== 6}
                     className="w-full"
                   >
-                    <ShieldCheck className="h-4 w-4 mr-2" />
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                    )}
                     {isLoading
                       ? "Verifying..."
                       : "Enable Two-Factor Authentication"}
@@ -235,7 +356,7 @@ export function TwoFactorAuthSetup({
                       device.
                     </AlertDescription>
                   </Alert>
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg grid grid-cols-2 gap-2">
                     {backupCodes.map((code, index) => (
                       <div key={index} className="font-mono text-sm">
                         {code}
@@ -280,7 +401,7 @@ export function TwoFactorAuthSetup({
                         type="text"
                         placeholder="Enter 6-digit code"
                         value={verifyToken}
-                        onChange={(e) => setVerifyToken(e.target.value)}
+                        onChange={(e) => setVerifyToken(e.target.value.replace(/\D/g, ""))}
                         maxLength={6}
                       />
                       <Button
@@ -289,7 +410,11 @@ export function TwoFactorAuthSetup({
                         className="w-full"
                         size="sm"
                       >
-                        <Smartphone className="h-4 w-4 mr-2" />
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Smartphone className="h-4 w-4 mr-2" />
+                        )}
                         Test Code
                       </Button>
                     </CardContent>
@@ -309,7 +434,7 @@ export function TwoFactorAuthSetup({
                         type="text"
                         placeholder="Enter auth code to regenerate"
                         value={regenerateToken}
-                        onChange={(e) => setRegenerateToken(e.target.value)}
+                        onChange={(e) => setRegenerateToken(e.target.value.replace(/\D/g, ""))}
                         maxLength={6}
                       />
                       <Button
@@ -319,7 +444,11 @@ export function TwoFactorAuthSetup({
                         className="w-full"
                         size="sm"
                       >
-                        <RotateCcw className="h-4 w-4 mr-2" />
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                        )}
                         Generate New Codes
                       </Button>
                     </CardContent>
@@ -348,7 +477,7 @@ export function TwoFactorAuthSetup({
                       type="text"
                       placeholder="6-digit code"
                       value={disableToken}
-                      onChange={(e) => setDisableToken(e.target.value)}
+                      onChange={(e) => setDisableToken(e.target.value.replace(/\D/g, ""))}
                       maxLength={6}
                     />
                   </div>
@@ -358,6 +487,9 @@ export function TwoFactorAuthSetup({
                     variant="destructive"
                     className="w-full"
                   >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
                     {isLoading
                       ? "Disabling..."
                       : "Disable Two-Factor Authentication"}
@@ -386,7 +518,7 @@ export function TwoFactorAuthSetup({
                       secure location.
                     </AlertDescription>
                   </Alert>
-                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                  <div className="bg-muted p-4 rounded-lg grid grid-cols-2 gap-2">
                     {backupCodes.map((code, index) => (
                       <div key={index} className="font-mono text-sm">
                         {code}

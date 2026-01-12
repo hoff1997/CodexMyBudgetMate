@@ -220,9 +220,6 @@ export function FinancialPositionClient({ assets, liabilities, snapshots, monthl
           <p className="text-sm text-[#6B6B6B]">Track your financial momentum</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/budgetallocation">Planner</Link>
-          </Button>
           <Button size="sm" onClick={createSnapshot} disabled={!canEdit || snapshotLoading} className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-white">
             {snapshotLoading ? "Saving…" : "Take snapshot"}
           </Button>
@@ -1648,9 +1645,6 @@ function MobileNav() {
         </Link>
         <Link href="/net-worth" className="text-primary font-semibold">
           Net worth
-        </Link>
-        <Link href="/envelope-planning" className="text-muted-foreground transition hover:text-primary">
-          Planner
         </Link>
       </div>
     </nav>

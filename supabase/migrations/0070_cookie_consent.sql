@@ -2,7 +2,7 @@
 -- For GDPR, PECR, and NZ Privacy Act compliance
 
 CREATE TABLE cookie_preferences (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   -- Strictly necessary cookies are always enabled (no user choice)
   strictly_necessary BOOLEAN DEFAULT true,

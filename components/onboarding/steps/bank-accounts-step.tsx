@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, DollarSign, Building2, Link2, Shield, CheckCircle2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, DollarSign, Building2, Link2, Shield, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 
@@ -28,6 +28,8 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
     balance: 0,
   });
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const handleAddAccount = () => {
     if (!newAccount.name.trim()) {
@@ -53,10 +55,27 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
     onAccountsChange(accounts.filter((acc) => acc.id !== id));
   };
 
-  const handleConnectAkahu = () => {
-    // TODO: Implement Akahu OAuth flow
-    // For now, show a message that this feature is coming soon
-    alert("Akahu connection coming soon! For now, please add accounts manually.");
+  const handleConnectAkahu = async () => {
+    setIsConnecting(true);
+    setConnectionError(null);
+
+    try {
+      const response = await fetch("/api/akahu/oauth/start");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start Akahu connection");
+      }
+
+      // Redirect to Akahu OAuth page
+      window.location.href = data.authUrl;
+    } catch (error) {
+      console.error("Akahu connection error:", error);
+      setConnectionError(
+        error instanceof Error ? error.message : "Failed to connect to Akahu"
+      );
+      setIsConnecting(false);
+    }
   };
 
   const accountTypeLabels = {
@@ -124,13 +143,30 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
             </div>
           </div>
 
+          {/* Error Display */}
+          {connectionError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {connectionError}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Button
               onClick={handleConnectAkahu}
+              disabled={isConnecting}
               className="w-full sm:w-auto bg-[#7A9E9A] hover:bg-[#5A7E7A]"
             >
-              <Link2 className="mr-2 h-4 w-4" />
-              Connect My Bank
+              {isConnecting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Connect My Bank
+                </>
+              )}
             </Button>
             <a
               href="https://www.akahu.nz"

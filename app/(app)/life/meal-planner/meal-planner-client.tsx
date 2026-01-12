@@ -527,8 +527,12 @@ export function MealPlannerClient({
 
           {!calendarCollapsed && (
             <div className="p-4">
-              {/* Weekly Calendar Grid */}
-              <div className="grid grid-cols-7 gap-2">
+              {/* Weekly Calendar Grid - 8 columns to align with meal planner */}
+              <div className="grid grid-cols-8 gap-1">
+                {/* Empty first column to align with meal name column */}
+                <div className="flex items-center justify-center">
+                  <CalendarDays className="h-4 w-4 text-text-light" />
+                </div>
                 {Array.from({ length: 7 }).map((_, index) => {
                   const day = addDays(currentWeekStart, index);
                   const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
@@ -542,14 +546,14 @@ export function MealPlannerClient({
                           : "border-silver-light bg-white"
                       }`}
                     >
-                      {/* Day Header */}
-                      <div className={`px-2 py-1.5 border-b ${
+                      {/* Day Header - matches meal planner style */}
+                      <div className={`px-2 py-1.5 border-b text-center ${
                         isToday ? "border-blue/30" : "border-silver-light"
                       }`}>
-                        <div className="text-[10px] font-medium text-text-medium uppercase">
+                        <div className="text-xs font-medium text-text-medium">
                           {format(day, "EEE")}
                         </div>
-                        <div className={`text-sm font-semibold ${
+                        <div className={`text-lg font-semibold ${
                           isToday ? "text-blue" : "text-text-dark"
                         }`}>
                           {format(day, "d")}

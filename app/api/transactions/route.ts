@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAutoAllocation, shouldAutoAllocate } from "@/lib/allocations/auto-allocate";
+import { applyRulesToTransaction } from "@/lib/services/transaction-rules";
+import { detectAndProcessIncome } from "@/lib/services/pay-cycle-detection";
 
 const createTransactionSchema = z.object({
   merchant_name: z.string().min(1, "Merchant name is required"),
@@ -111,6 +113,54 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: createError.message }, { status: 400 });
   }
 
+  // Auto-apply merchant rules if no envelope was specified
+  let ruleApplied = false;
+  let appliedEnvelopeName: string | undefined;
+  if (!data.envelope_id && transaction.merchant_name) {
+    const ruleResult = await applyRulesToTransaction(
+      supabase,
+      user.id,
+      transaction.id,
+      transaction.merchant_name,
+      false // Don't skip - we just created it without envelope
+    );
+    if (ruleResult.applied) {
+      ruleApplied = true;
+      appliedEnvelopeName = ruleResult.envelopeName;
+      // Refresh transaction data to include the applied envelope
+      const { data: updatedTx } = await supabase
+        .from("transactions")
+        .select()
+        .eq("id", transaction.id)
+        .single();
+      if (updatedTx) {
+        Object.assign(transaction, updatedTx);
+      }
+    }
+  }
+
+  // Detect income and trigger pay cycle advancement
+  let incomeDetected = false;
+  let incomeSourceName: string | undefined;
+  if (transaction.amount > 0) {
+    const incomeResult = await detectAndProcessIncome(supabase, user.id, {
+      id: transaction.id,
+      user_id: user.id,
+      amount: transaction.amount,
+      merchant_name: transaction.merchant_name,
+      description: transaction.description,
+      occurred_at: transaction.occurred_at,
+    });
+    if (incomeResult.matched) {
+      incomeDetected = true;
+      incomeSourceName = incomeResult.incomeSourceName;
+      console.log(`✅ Income detected: ${incomeResult.incomeSourceName} (confidence: ${incomeResult.confidence})`);
+      if (incomeResult.advancedPayDate) {
+        console.log(`✅ Pay cycle advanced to ${incomeResult.newNextPayDate}`);
+      }
+    }
+  }
+
   // Trigger auto-allocation if this is an income transaction
   if (shouldAutoAllocate(transaction)) {
     const result = await createAutoAllocation(transaction, user.id);
@@ -122,7 +172,13 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ transaction }, { status: 201 });
+  return NextResponse.json({
+    transaction,
+    ruleApplied,
+    appliedEnvelopeName,
+    incomeDetected,
+    incomeSourceName,
+  }, { status: 201 });
 }
 
 export async function GET(request: Request) {

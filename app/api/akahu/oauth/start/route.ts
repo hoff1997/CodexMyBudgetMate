@@ -1,0 +1,77 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+/**
+ * GET /api/akahu/oauth/start
+ *
+ * Initiates the Akahu OAuth flow by returning the authorization URL.
+ * The user will be redirected to Akahu to authorize the connection.
+ */
+export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check for required environment variables
+  const clientId = process.env.AKAHU_CLIENT_ID;
+  const redirectUri = process.env.AKAHU_REDIRECT_URI;
+
+  if (!clientId) {
+    return NextResponse.json(
+      { error: "Akahu is not configured. Please contact support." },
+      { status: 500 }
+    );
+  }
+
+  if (!redirectUri) {
+    return NextResponse.json(
+      { error: "Akahu redirect URI is not configured." },
+      { status: 500 }
+    );
+  }
+
+  // Build the Akahu authorization URL
+  // See: https://developers.akahu.nz/docs/authorizing-your-app
+  const scopes = [
+    "ENDURING_CONSENT",
+    "ACCOUNTS",
+    "TRANSACTIONS",
+  ].join(" ");
+
+  // Generate a state parameter for CSRF protection
+  const state = Buffer.from(
+    JSON.stringify({
+      userId: user.id,
+      timestamp: Date.now(),
+      random: Math.random().toString(36).substring(7),
+    })
+  ).toString("base64url");
+
+  // Store state in database for verification
+  await supabase.from("akahu_oauth_states").upsert(
+    {
+      user_id: user.id,
+      state,
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
+    },
+    { onConflict: "user_id" }
+  );
+
+  const authUrl = new URL("https://oauth.akahu.io/");
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("scope", scopes);
+  authUrl.searchParams.set("state", state);
+
+  return NextResponse.json({
+    authUrl: authUrl.toString(),
+    state,
+  });
+}

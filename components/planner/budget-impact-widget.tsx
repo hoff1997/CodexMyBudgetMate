@@ -152,23 +152,13 @@ export function BudgetImpactWidget({
             <div className={`mt-3 pt-3 border-t border-current/20 ${statusTextStyles[impact.status]}`}>
               <p className="text-xs font-medium mb-2">To resolve this shortfall:</p>
               <div className="flex gap-2">
-                <Link href="/scenario-planner" target="_blank">
+                <Link href="/budgetallocation" target="_blank">
                   <Button
                     size="sm"
                     variant="outline"
                     className="text-xs h-8 gap-1 border-red-300 hover:bg-red-100"
                   >
-                    <span>Explore Scenarios</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </Button>
-                </Link>
-                <Link href="/payday-allocator" target="_blank">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs h-8 gap-1 border-red-300 hover:bg-red-100"
-                  >
-                    <span>View Full Budget</span>
+                    <span>Adjust Budget</span>
                     <ExternalLink className="h-3 w-3" />
                   </Button>
                 </Link>

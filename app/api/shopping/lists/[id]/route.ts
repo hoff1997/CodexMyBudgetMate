@@ -21,7 +21,7 @@ const DEFAULT_AISLE_ORDER = [
   "Cleaning",
   "Baby",
   "Pet",
-  "Other",
+  "Uncategorised",
 ];
 
 // GET /api/shopping/lists/[id] - Fetch a shopping list with sorted items
@@ -160,12 +160,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json();
-  const { name, icon, is_active } = body;
+  const { name, icon, is_active, show_on_hub } = body;
 
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (icon !== undefined) updates.icon = icon;
   if (is_active !== undefined) updates.is_active = is_active;
+  if (show_on_hub !== undefined) updates.show_on_hub = show_on_hub;
 
   const { data: list, error } = await supabase
     .from("shopping_lists")
@@ -186,6 +187,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     icon: list.icon || "🛒",
     store: null,
     budget: null,
+    show_on_hub: list.show_on_hub ?? true,
   });
 }
 

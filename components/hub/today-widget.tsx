@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { CalendarEventCard } from "@/components/calendar/calendar-event-card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Calendar,
   ChefHat,
@@ -13,6 +19,7 @@ import {
   Check,
   Loader2,
   Circle,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
@@ -313,9 +320,113 @@ interface QuickLinksWidgetProps {
     totalItems: number;
     completedItems: number;
   }>;
+  onShoppingListUpdate?: () => void;
 }
 
-export function QuickLinksWidget({ shopping, todos }: QuickLinksWidgetProps) {
+function QuickAddPopover({
+  listId,
+  listName,
+  onSuccess,
+}: {
+  listId: string;
+  listName: string;
+  onSuccess?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [itemName, setItemName] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const { toast } = useToast();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleAdd = async () => {
+    if (!itemName.trim()) return;
+
+    setIsAdding(true);
+    try {
+      const res = await fetch("/api/shopping/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ list_id: listId, name: itemName.trim() }),
+      });
+
+      if (res.ok) {
+        toast({
+          title: "Item added",
+          description: `Added "${itemName.trim()}" to ${listName}`,
+        });
+        setItemName("");
+        setOpen(false);
+        onSuccess?.();
+      } else {
+        throw new Error("Failed to add item");
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to add item",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAdd();
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 text-text-medium hover:text-sage hover:bg-sage-very-light"
+          title={`Quick add to ${listName}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="end">
+        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+          <p className="text-xs text-text-medium font-medium">
+            Add to {listName}
+          </p>
+          <div className="flex gap-2">
+            <Input
+              ref={inputRef}
+              placeholder="Item name..."
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isAdding}
+              className="h-8 text-sm"
+              autoFocus
+            />
+            <Button
+              size="sm"
+              className="h-8 bg-sage hover:bg-sage-dark"
+              onClick={handleAdd}
+              disabled={isAdding || !itemName.trim()}
+            >
+              {isAdding ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function QuickLinksWidget({ shopping, todos, onShoppingListUpdate }: QuickLinksWidgetProps) {
   return (
     <div className="space-y-4">
       {/* Shopping Lists */}
@@ -335,21 +446,28 @@ export function QuickLinksWidget({ shopping, todos }: QuickLinksWidgetProps) {
           </div>
           <div className="space-y-2">
             {shopping.slice(0, 3).map((list) => (
-              <Link
+              <div
                 key={list.id}
-                href="/life/shopping"
-                className="block p-2 rounded-lg bg-silver-very-light hover:bg-silver-light transition"
+                className="flex items-center justify-between p-2 rounded-lg bg-silver-very-light hover:bg-silver-light transition group"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span>{list.icon}</span>
-                    <span className="text-sm text-text-dark">{list.name}</span>
-                  </div>
+                <Link
+                  href="/life/shopping"
+                  className="flex items-center gap-2 flex-1 min-w-0"
+                >
+                  <span>{list.icon}</span>
+                  <span className="text-sm text-text-dark truncate">{list.name}</span>
+                </Link>
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-text-medium">
                     {list.checkedItems}/{list.totalItems}
                   </span>
+                  <QuickAddPopover
+                    listId={list.id}
+                    listName={list.name}
+                    onSuccess={onShoppingListUpdate}
+                  />
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>

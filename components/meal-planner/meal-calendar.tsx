@@ -109,7 +109,7 @@ export function MealCalendar({
       <div className="overflow-x-auto">
         <div className="min-w-[800px]">
           {/* Day headers */}
-          <div className="grid grid-cols-8 gap-2 mb-2">
+          <div className="grid grid-cols-8 gap-1 mb-2">
             <div className="text-xs font-medium text-text-medium p-2"></div>
             {weekDates.map((date, i) => (
               <div
@@ -136,7 +136,7 @@ export function MealCalendar({
 
           {/* Meal rows */}
           {filteredMealTypes.map((mealType) => (
-            <div key={mealType.key} className="grid grid-cols-8 gap-2 mb-2">
+            <div key={mealType.key} className="grid grid-cols-8 gap-1 mb-2">
               {/* Meal type label */}
               <div className="flex items-center gap-2 p-2">
                 <span>{mealType.emoji}</span>

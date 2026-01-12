@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { KidInvoice } from "@/lib/types/kids-invoice";
+import { KidsNotifications } from "@/lib/services/notifications";
 
 interface RouteContext {
   params: Promise<{ childId: string; invoiceId: string }>;
@@ -89,7 +90,23 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  // TODO: Send notification to parent about submitted invoice
+  // Get child name for notification
+  const { data: childProfile } = await supabase
+    .from("child_profiles")
+    .select("name")
+    .eq("id", childId)
+    .single();
+
+  // Send notification to parent about submitted invoice
+  if (childProfile) {
+    await KidsNotifications.invoiceSubmitted(
+      supabase,
+      user.id,
+      childProfile.name,
+      invoiceId,
+      invoice.total_amount || 0
+    );
+  }
 
   return NextResponse.json({
     success: true,

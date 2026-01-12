@@ -27,6 +27,7 @@ interface ApplyRulesResult {
   envelopeName?: string;
   transactionUpdated: boolean;
   error?: string;
+  reason?: string;
 }
 
 /**
@@ -179,17 +180,19 @@ export async function applyRulesToTransaction(
       };
     }
 
-    // Log the rule application for analytics
-    await supabase.from("rule_application_logs").insert({
-      user_id: userId,
-      transaction_id: transactionId,
-      rule_id: matchResult.ruleId,
-      envelope_id: matchResult.envelopeId,
-      merchant_name: merchantName,
-      confidence: matchResult.confidence,
-    }).catch(() => {
+    // Log the rule application for analytics (best-effort)
+    try {
+      await supabase.from("rule_application_logs").insert({
+        user_id: userId,
+        transaction_id: transactionId,
+        rule_id: matchResult.ruleId,
+        envelope_id: matchResult.envelopeId,
+        merchant_name: merchantName,
+        confidence: matchResult.confidence,
+      });
+    } catch {
       // Silently fail if log table doesn't exist
-    });
+    }
 
     return {
       applied: true,

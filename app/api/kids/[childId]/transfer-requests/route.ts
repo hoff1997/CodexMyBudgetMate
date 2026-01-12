@@ -81,7 +81,7 @@ export async function POST(request: Request, context: RouteContext) {
   // Verify parent owns this child
   const { data: child } = await supabase
     .from("child_profiles")
-    .select("id")
+    .select("id, name")
     .eq("id", childId)
     .eq("parent_user_id", user.id)
     .maybeSingle();

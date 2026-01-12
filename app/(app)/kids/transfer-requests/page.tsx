@@ -73,7 +73,7 @@ export default async function TransferRequestsPage() {
     <TransferRequestsClient
       pendingRequests={pendingRequests}
       resolvedRequests={resolvedRequests}
-      children={children || []}
+      childProfiles={children || []}
     />
   );
 }

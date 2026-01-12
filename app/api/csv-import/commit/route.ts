@@ -162,10 +162,9 @@ export async function POST(request: Request) {
             insertedTxs.map((tx) => ({
               id: tx.id,
               merchantName: tx.merchant_name || "",
-            })),
-            true // skipIfAlreadyAssigned
+            }))
           );
-          rulesApplied = ruleResults.applied;
+          rulesApplied = ruleResults.matched;
           console.log(`Applied ${rulesApplied} rules to imported transactions`);
         }
       } catch (error) {

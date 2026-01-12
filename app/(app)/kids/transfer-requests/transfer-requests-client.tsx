@@ -26,7 +26,7 @@ import type { KidTransferRequest, TransferEnvelope } from "@/lib/types/kids-invo
 interface TransferRequestsClientProps {
   pendingRequests: (KidTransferRequest & { childName: string; childAvatar?: string })[];
   resolvedRequests: (KidTransferRequest & { childName: string; childAvatar?: string })[];
-  children: { id: string; name: string; avatar_url?: string }[];
+  childProfiles: { id: string; name: string; avatar_url?: string }[];
 }
 
 const ENVELOPE_CONFIG: Record<TransferEnvelope, { label: string; icon: typeof PiggyBank; color: string; bgColor: string }> = {
@@ -38,7 +38,7 @@ const ENVELOPE_CONFIG: Record<TransferEnvelope, { label: string; icon: typeof Pi
 export function TransferRequestsClient({
   pendingRequests,
   resolvedRequests,
-  children,
+  childProfiles,
 }: TransferRequestsClientProps) {
   const [selectedRequest, setSelectedRequest] = useState<
     (KidTransferRequest & { childName: string }) | null

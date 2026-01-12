@@ -258,22 +258,23 @@ async function advancePayCycle(
     }
 
     // Log reconciliation event (best-effort)
-    await supabase
-      .from("income_reconciliation_events")
-      .insert({
-        user_id: incomeSource.user_id,
-        income_source_id: incomeSourceId,
-        transaction_id: transactionId,
-        expected_amount: incomeSource.typical_amount,
-        actual_amount: transactionAmount,
-        expected_date: previousDate,
-        actual_date: transactionDate,
-        previous_next_pay_date: previousDate,
-        new_next_pay_date: newDateStr,
-      })
-      .catch((err) => {
-        console.warn("Failed to log reconciliation event:", err);
-      });
+    try {
+      await supabase
+        .from("income_reconciliation_events")
+        .insert({
+          user_id: incomeSource.user_id,
+          income_source_id: incomeSourceId,
+          transaction_id: transactionId,
+          expected_amount: incomeSource.typical_amount,
+          actual_amount: transactionAmount,
+          expected_date: previousDate,
+          actual_date: transactionDate,
+          previous_next_pay_date: previousDate,
+          new_next_pay_date: newDateStr,
+        });
+    } catch (err) {
+      console.warn("Failed to log reconciliation event:", err);
+    }
 
     console.log(`✅ Pay cycle advanced for income source ${incomeSourceId}: ${previousDate} → ${newDateStr}`);
 

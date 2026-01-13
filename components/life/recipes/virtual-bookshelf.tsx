@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { BookOpen, Pencil, Plus, UtensilsCrossed, Heart, Clock, Users } from "lucide-react";
+import { BookOpen, Pencil, Plus, UtensilsCrossed, Heart, Clock, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookCover } from "./book-cover";
 import { AddCategoryDialog } from "./add-category-dialog";
@@ -33,9 +33,10 @@ interface Recipe {
 interface VirtualBookshelfProps {
   searchQuery?: string;
   recipes?: Recipe[];
+  onAddToMealPlan?: (recipe: Recipe) => void;
 }
 
-export function VirtualBookshelf({ searchQuery = "", recipes = [] }: VirtualBookshelfProps) {
+export function VirtualBookshelf({ searchQuery = "", recipes = [], onAddToMealPlan }: VirtualBookshelfProps) {
   const { categories, isLoading } = useRecipeCategories();
 
   // Generate shareable category text
@@ -169,58 +170,73 @@ Shared from My Budget Mate Recipe Library`;
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredRecipes.map((recipe) => (
-              <Link
+              <div
                 key={recipe.id}
-                href={`/life/recipes/${recipe.id}`}
-                className="group block bg-white rounded-lg border border-silver-light overflow-hidden hover:shadow-md transition-shadow"
+                className="group relative bg-white rounded-lg border border-silver-light overflow-hidden hover:shadow-md transition-shadow"
               >
-                {/* Recipe image or placeholder */}
-                <div className="relative aspect-[4/3] bg-sage-very-light">
-                  {recipe.image_url ? (
-                    <Image
-                      src={recipe.image_url}
-                      alt={recipe.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <UtensilsCrossed className="w-8 h-8 text-sage opacity-40" />
-                    </div>
-                  )}
-                  {recipe.is_favorite && (
-                    <div className="absolute top-2 right-2 bg-white/90 rounded-full p-1.5 shadow-sm">
-                      <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-                    </div>
-                  )}
-                </div>
-                {/* Recipe details */}
-                <div className="p-3">
-                  <h3 className="font-medium text-text-dark group-hover:text-sage-dark line-clamp-1">
-                    {recipe.title}
-                  </h3>
-                  {recipe.description && (
-                    <p className="text-xs text-text-medium mt-1 line-clamp-2">
-                      {recipe.description}
-                    </p>
-                  )}
-                  {/* Meta info */}
-                  <div className="flex items-center gap-3 mt-2 text-xs text-text-light">
-                    {recipe.prep_time && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {recipe.prep_time}
-                      </span>
+                <Link href={`/life/recipes/${recipe.id}`} className="block">
+                  {/* Recipe image or placeholder */}
+                  <div className="relative aspect-[4/3] bg-sage-very-light">
+                    {recipe.image_url ? (
+                      <Image
+                        src={recipe.image_url}
+                        alt={recipe.title}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <UtensilsCrossed className="w-8 h-8 text-sage opacity-40" />
+                      </div>
                     )}
-                    {recipe.servings && (
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {recipe.servings}
-                      </span>
+                    {recipe.is_favorite && (
+                      <div className="absolute top-2 right-2 bg-white/90 rounded-full p-1.5 shadow-sm">
+                        <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+                      </div>
                     )}
                   </div>
-                </div>
-              </Link>
+                  {/* Recipe details */}
+                  <div className="p-3">
+                    <h3 className="font-medium text-text-dark group-hover:text-sage-dark line-clamp-1">
+                      {recipe.title}
+                    </h3>
+                    {recipe.description && (
+                      <p className="text-xs text-text-medium mt-1 line-clamp-2">
+                        {recipe.description}
+                      </p>
+                    )}
+                    {/* Meta info */}
+                    <div className="flex items-center gap-3 mt-2 text-xs text-text-light">
+                      {recipe.prep_time && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {recipe.prep_time}
+                        </span>
+                      )}
+                      {recipe.servings && (
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {recipe.servings}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                {/* Add to meal plan button - shows on hover */}
+                {onAddToMealPlan && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAddToMealPlan(recipe);
+                    }}
+                    className="absolute bottom-3 right-3 p-2 rounded-full bg-sage text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-sage-dark"
+                    title="Add to meal plan"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
           {/* Divider if we also have category results */}

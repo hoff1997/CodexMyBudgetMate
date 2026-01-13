@@ -91,6 +91,23 @@ export async function GET(request: Request) {
       );
     }
 
+    // Award bank_connected achievement (non-blocking)
+    try {
+      await supabase
+        .from("achievements")
+        .upsert(
+          {
+            user_id: user.id,
+            achievement_key: "bank_connected",
+            achieved_at: new Date().toISOString(),
+            metadata: { provider: "akahu" },
+          },
+          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+        );
+    } catch (achievementError) {
+      console.warn("Achievement check failed (non-critical):", achievementError);
+    }
+
     // Redirect to success page or back to onboarding
     // Check if this was during onboarding
     const referer = request.headers.get("referer") || "";

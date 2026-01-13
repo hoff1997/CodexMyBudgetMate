@@ -191,3 +191,76 @@ export function AchievementToastManager() {
     />
   );
 }
+
+/**
+ * Achievement Toast Queue Hook
+ *
+ * Provides a simple way to queue and display achievement toasts
+ * Use the returned addToQueue function to add achievements
+ * Render the ToastRenderer component to display the toasts
+ */
+export function useAchievementToastQueue() {
+  const [queue, setQueue] = useState<Array<{
+    key: string;
+    achievementKey: string;
+    points: number;
+  }>>([]);
+
+  const [current, setCurrent] = useState<{
+    achievementKey: string;
+    points: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!current && queue.length > 0) {
+      const [next, ...rest] = queue;
+      setCurrent({ achievementKey: next.achievementKey, points: next.points });
+      setQueue(rest);
+    }
+  }, [current, queue]);
+
+  const addToQueue = useCallback((achievementKey: string, points: number = 0) => {
+    setQueue(prev => [
+      ...prev,
+      { key: `${achievementKey}-${Date.now()}`, achievementKey, points }
+    ]);
+  }, []);
+
+  const handleDismiss = useCallback(() => {
+    setCurrent(null);
+  }, []);
+
+  const handleShare = useCallback(() => {
+    if (!current) return;
+
+    const achievement = getAchievement(current.achievementKey);
+    if (!achievement) return;
+
+    const text = `🎉 I just earned the "${achievement.title}" achievement in My Budget Mate! ${achievement.description}`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+  }, [current]);
+
+  // Return a component function, not a useCallback wrapped function
+  const ToastRenderer = function AchievementToastRenderer() {
+    if (!current) return null;
+
+    return (
+      <AchievementToast
+        achievementKey={current.achievementKey}
+        points={current.points}
+        onShare={handleShare}
+        onDismiss={handleDismiss}
+      />
+    );
+  };
+
+  return {
+    addToQueue,
+    ToastRenderer,
+    queueLength: queue.length,
+    currentAchievement: current?.achievementKey ?? null,
+  };
+}

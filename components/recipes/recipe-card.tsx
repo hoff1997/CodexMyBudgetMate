@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, ExternalLink, Heart, MoreVertical, Tag } from "lucide-react";
+import { Clock, Users, ExternalLink, Heart, MoreVertical, Tag, Calendar } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,9 +28,10 @@ interface RecipeCardProps {
   };
   onToggleFavorite?: (id: string, favorite: boolean) => void;
   onEdit?: (recipe: RecipeCardProps["recipe"]) => void;
+  onAddToMealPlan?: (recipe: RecipeCardProps["recipe"]) => void;
 }
 
-export function RecipeCard({ recipe, onToggleFavorite, onEdit }: RecipeCardProps) {
+export function RecipeCard({ recipe, onToggleFavorite, onEdit, onAddToMealPlan }: RecipeCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <Link href={`/life/recipes/${recipe.id}`}>
@@ -86,6 +87,15 @@ export function RecipeCard({ recipe, onToggleFavorite, onEdit }: RecipeCardProps
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onAddToMealPlan?.(recipe);
+                  }}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Add to Meal Plan
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.preventDefault();

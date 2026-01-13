@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { FullEditRecipeDialog } from "@/components/recipes";
+import { AddRecipeToMealPlanDialog } from "@/components/meal-planner/add-recipe-to-meal-plan-dialog";
 
 const RECIPE_HELP_CONTENT = {
   tips: [
@@ -81,6 +82,7 @@ export function RecipeDetailClient({ recipe: initialRecipe }: RecipeDetailClient
   const [isFavorite, setIsFavorite] = useState(initialRecipe.is_favorite);
   const [deleting, setDeleting] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [mealPlanDialogOpen, setMealPlanDialogOpen] = useState(false);
 
   const handleToggleFavorite = async () => {
     try {
@@ -167,7 +169,7 @@ export function RecipeDetailClient({ recipe: initialRecipe }: RecipeDetailClient
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Recipe
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setMealPlanDialogOpen(true)}>
                   <Calendar className="h-4 w-4 mr-2" />
                   Add to Meal Plan
                 </DropdownMenuItem>
@@ -342,6 +344,13 @@ export function RecipeDetailClient({ recipe: initialRecipe }: RecipeDetailClient
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onUpdate={handleRecipeUpdated}
+      />
+
+      {/* Add to Meal Plan Dialog */}
+      <AddRecipeToMealPlanDialog
+        open={mealPlanDialogOpen}
+        onOpenChange={setMealPlanDialogOpen}
+        recipe={recipe}
       />
     </div>
   );

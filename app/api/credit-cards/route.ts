@@ -222,6 +222,26 @@ export async function POST(request: Request) {
       }
     }
 
+    // Award debt-related achievements (non-blocking)
+    try {
+      // If this card has debt, they've started their debt journey
+      if ((usageType === "paying_down" || usageType === "minimum_only") && debtAmount > 0) {
+        await supabase
+          .from("achievements")
+          .upsert(
+            {
+              user_id: user.id,
+              achievement_key: "debt_journey_started",
+              achieved_at: new Date().toISOString(),
+              metadata: { cardName: name, debtAmount },
+            },
+            { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+          );
+      }
+    } catch (achievementError) {
+      console.warn("Achievement check failed (non-critical):", achievementError);
+    }
+
     return NextResponse.json({
       success: true,
       creditCard: account,

@@ -106,6 +106,59 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
   }
 
+  // Check for budget-related achievements (non-blocking)
+  try {
+    // Get all income sources
+    const { data: incomeSources } = await supabase
+      .from("income_sources")
+      .select("id, pay_amount")
+      .eq("user_id", user.id);
+
+    // Get all allocations
+    const { data: allAllocations } = await supabase
+      .from("envelope_income_allocations")
+      .select("income_source_id, allocation_amount")
+      .eq("user_id", user.id);
+
+    if (incomeSources && allAllocations) {
+      // Calculate total income and total allocated per income source
+      const totalIncome = incomeSources.reduce((sum, src) => sum + (src.pay_amount || 0), 0);
+      const totalAllocated = allAllocations.reduce((sum, alloc) => sum + (alloc.allocation_amount || 0), 0);
+
+      // If allocations are at least 95% of income, award zero_budget_achieved
+      if (totalIncome > 0 && totalAllocated >= totalIncome * 0.95) {
+        await supabase
+          .from("achievements")
+          .upsert(
+            {
+              user_id: user.id,
+              achievement_key: "zero_budget_achieved",
+              achieved_at: new Date().toISOString(),
+              metadata: { totalIncome, totalAllocated },
+            },
+            { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+          );
+      }
+
+      // If allocations are 100% of income, award first_budget_complete
+      if (totalIncome > 0 && totalAllocated >= totalIncome) {
+        await supabase
+          .from("achievements")
+          .upsert(
+            {
+              user_id: user.id,
+              achievement_key: "first_budget_complete",
+              achieved_at: new Date().toISOString(),
+              metadata: { totalIncome, totalAllocated },
+            },
+            { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+          );
+      }
+    }
+  } catch (achievementError) {
+    console.warn("Achievement check failed (non-critical):", achievementError);
+  }
+
   return NextResponse.json({ ok: true, count: nonZeroAllocations.length });
 }
 

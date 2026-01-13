@@ -81,9 +81,106 @@ export async function POST(request: Request) {
 
   const { data: updatedEnvelopes } = await supabase
     .from("envelopes")
-    .select("id, current_amount")
+    .select("id, name, current_amount, goal_type, is_goal")
     .eq("user_id", user.id)
     .in("id", [fromId, toId]);
+
+  // Check for savings milestone achievements (non-blocking)
+  try {
+    const toEnvelopeUpdated = updatedEnvelopes?.find((env) => env.id === toId);
+
+    if (toEnvelopeUpdated) {
+      const newBalance = Number(toEnvelopeUpdated.current_amount ?? 0);
+
+      // Check if this is an emergency fund envelope and reached $1000
+      const isEmergencyFund =
+        toEnvelopeUpdated.goal_type === "emergency_fund" ||
+        toEnvelopeUpdated.name?.toLowerCase().includes("emergency") ||
+        toEnvelopeUpdated.name?.toLowerCase().includes("starter stash");
+
+      if (isEmergencyFund && newBalance >= 1000) {
+        // Award emergency_fund_complete achievement (Starter Stash!)
+        await supabase
+          .from("achievements")
+          .upsert(
+            {
+              user_id: user.id,
+              achievement_key: "emergency_fund_complete",
+              achieved_at: new Date().toISOString(),
+              metadata: { balance: newBalance, envelopeName: toEnvelopeUpdated.name },
+            },
+            { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+          );
+
+        // Also award savings_1000 achievement
+        await supabase
+          .from("achievements")
+          .upsert(
+            {
+              user_id: user.id,
+              achievement_key: "savings_1000",
+              achieved_at: new Date().toISOString(),
+              metadata: { balance: newBalance, envelopeName: toEnvelopeUpdated.name },
+            },
+            { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+          );
+      }
+
+      // Check total savings across all savings envelopes
+      const { data: allSavingsEnvelopes } = await supabase
+        .from("envelopes")
+        .select("current_amount")
+        .eq("user_id", user.id)
+        .or("subtype.eq.savings,is_goal.eq.true,goal_type.eq.emergency_fund");
+
+      if (allSavingsEnvelopes) {
+        const totalSavings = allSavingsEnvelopes.reduce(
+          (sum, env) => sum + Number(env.current_amount ?? 0),
+          0
+        );
+
+        // Award savings_1000 if total savings >= $1000
+        if (totalSavings >= 1000) {
+          await supabase
+            .from("achievements")
+            .upsert(
+              {
+                user_id: user.id,
+                achievement_key: "savings_1000",
+                achieved_at: new Date().toISOString(),
+                metadata: { totalSavings },
+              },
+              { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+            );
+        }
+      }
+
+      // Check if a goal was achieved (balance >= target)
+      if (toEnvelopeUpdated.is_goal) {
+        const { data: goalEnvelope } = await supabase
+          .from("envelopes")
+          .select("target_amount, name")
+          .eq("id", toId)
+          .single();
+
+        if (goalEnvelope && newBalance >= Number(goalEnvelope.target_amount ?? 0)) {
+          await supabase
+            .from("achievements")
+            .upsert(
+              {
+                user_id: user.id,
+                achievement_key: "goal_achieved",
+                achieved_at: new Date().toISOString(),
+                metadata: { goalName: goalEnvelope.name, balance: newBalance },
+              },
+              { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+            );
+        }
+      }
+    }
+  } catch (achievementError) {
+    console.warn("Achievement check failed (non-critical):", achievementError);
+  }
 
   return NextResponse.json({
     transfer,

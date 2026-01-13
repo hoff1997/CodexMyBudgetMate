@@ -6,11 +6,12 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Edit, Trash2, Loader2, ChevronLeft, ChevronRight, BookOpen, Clock, Users, UtensilsCrossed, X, ShoppingCart, Check, ImagePlus, Upload, Link2 } from "lucide-react";
+import { Edit, Trash2, Loader2, ChevronLeft, ChevronRight, BookOpen, Clock, Users, UtensilsCrossed, X, ShoppingCart, Check, ImagePlus, Upload, Link2, Calendar } from "lucide-react";
 import { ShareMenu } from "./share-menu";
 import { RecipeCategory, Recipe } from "@/lib/types/recipes";
 import { useRecipeCategories } from "@/lib/hooks/use-recipe-categories";
 import { FullEditRecipeDialog } from "@/components/recipes/full-edit-recipe-dialog";
+import { AddRecipeToMealPlanDialog } from "@/components/meal-planner/add-recipe-to-meal-plan-dialog";
 import { useToast } from "@/lib/hooks/use-toast";
 import {
   AlertDialog,
@@ -130,6 +131,7 @@ export function CategoryDetailDialog({
   const [addedIngredients, setAddedIngredients] = useState<Set<string>>(new Set());
   const [addingIngredient, setAddingIngredient] = useState<string | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [mealPlanDialogOpen, setMealPlanDialogOpen] = useState(false);
   const [editingImageUrl, setEditingImageUrl] = useState<string>("");
   const [imagePopoverOpen, setImagePopoverOpen] = useState(false);
   const [savingImage, setSavingImage] = useState(false);
@@ -981,20 +983,35 @@ Shared from My Budget Mate`;
               background: colors.sageVeryLight,
             }}
           >
-            {/* Edit button */}
-            <button
-              onClick={() => currentRecipe && setEditingRecipe(currentRecipe)}
-              disabled={!currentRecipe}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-all hover:scale-105 disabled:opacity-30"
-              style={{
-                color: colors.sageDark,
-                border: `1px solid ${colors.sageLight}`,
-                background: '#FFFFFF',
-              }}
-            >
-              <Edit className="w-3 h-3" />
-              <span>Edit</span>
-            </button>
+            {/* Edit and Add to Meal Plan buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => currentRecipe && setEditingRecipe(currentRecipe)}
+                disabled={!currentRecipe}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-all hover:scale-105 disabled:opacity-30"
+                style={{
+                  color: colors.sageDark,
+                  border: `1px solid ${colors.sageLight}`,
+                  background: '#FFFFFF',
+                }}
+              >
+                <Edit className="w-3 h-3" />
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={() => currentRecipe && setMealPlanDialogOpen(true)}
+                disabled={!currentRecipe}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-all hover:scale-105 disabled:opacity-30"
+                style={{
+                  color: colors.sageDark,
+                  border: `1px solid ${colors.sageLight}`,
+                  background: '#FFFFFF',
+                }}
+              >
+                <Calendar className="w-3 h-3" />
+                <span>Add to Plan</span>
+              </button>
+            </div>
 
             {/* Page navigation - centered */}
             {recipes.length > 0 && (
@@ -1093,6 +1110,13 @@ Shared from My Budget Mate`;
           onUpdate={handleRecipeUpdate}
         />
       )}
+
+      {/* Add to meal plan dialog */}
+      <AddRecipeToMealPlanDialog
+        open={mealPlanDialogOpen}
+        onOpenChange={setMealPlanDialogOpen}
+        recipe={currentRecipe}
+      />
     </>
   );
 }

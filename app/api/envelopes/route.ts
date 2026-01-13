@@ -213,5 +213,95 @@ export async function POST(request: Request) {
     await recalculateSafetyNetTarget(supabase, user.id);
   }
 
+  // Check and award envelope achievements (non-blocking)
+  try {
+    // Get envelope count for this user
+    const { count: envelopeCount } = await supabase
+      .from("envelopes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .or("is_archived.is.null,is_archived.eq.false");
+
+    const count = envelopeCount ?? 0;
+
+    // Check first_envelope achievement
+    if (count >= 1) {
+      await supabase
+        .from("achievements")
+        .upsert(
+          {
+            user_id: user.id,
+            achievement_key: "first_envelope",
+            achieved_at: new Date().toISOString(),
+            metadata: { count: 1 },
+          },
+          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+        );
+    }
+
+    // Check envelopes_5 achievement
+    if (count >= 5) {
+      await supabase
+        .from("achievements")
+        .upsert(
+          {
+            user_id: user.id,
+            achievement_key: "envelopes_5",
+            achieved_at: new Date().toISOString(),
+            metadata: { count },
+          },
+          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+        );
+    }
+
+    // Check envelopes_10 achievement
+    if (count >= 10) {
+      await supabase
+        .from("achievements")
+        .upsert(
+          {
+            user_id: user.id,
+            achievement_key: "envelopes_10",
+            achieved_at: new Date().toISOString(),
+            metadata: { count },
+          },
+          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+        );
+    }
+
+    // Check if this is an emergency fund envelope (goal achievements)
+    if (payload.goalType === "emergency_fund" || payload.name.toLowerCase().includes("emergency")) {
+      await supabase
+        .from("achievements")
+        .upsert(
+          {
+            user_id: user.id,
+            achievement_key: "emergency_fund_started",
+            achieved_at: new Date().toISOString(),
+            metadata: { envelopeName: payload.name },
+          },
+          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+        );
+    }
+
+    // Check if this is a goal envelope
+    if (payload.isGoal) {
+      await supabase
+        .from("achievements")
+        .upsert(
+          {
+            user_id: user.id,
+            achievement_key: "first_goal",
+            achieved_at: new Date().toISOString(),
+            metadata: { goalName: payload.name, goalType: payload.goalType },
+          },
+          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+        );
+    }
+  } catch (achievementError) {
+    // Non-critical - log but don't fail the envelope creation
+    console.warn("Achievement check failed (non-critical):", achievementError);
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -8,6 +8,7 @@ import { RecipeCard, AddRecipeDialog, EditRecipeDialog } from "@/components/reci
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { VirtualBookshelf } from "@/components/life/recipes/virtual-bookshelf";
 import { AddCategoryDialog } from "@/components/life/recipes/add-category-dialog";
+import { AddRecipeToMealPlanDialog } from "@/components/meal-planner/add-recipe-to-meal-plan-dialog";
 import { Plus, Search, Heart, BookOpen, X, LayoutGrid, Library, FolderPlus, ChevronDown, Tag, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
@@ -95,6 +96,7 @@ export function RecipesClient({
   const [newTagInput, setNewTagInput] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("bookshelf");
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const [mealPlanRecipe, setMealPlanRecipe] = useState<Recipe | null>(null);
   const { toast } = useToast();
 
   // All tags including those from current recipes
@@ -253,6 +255,10 @@ export function RecipesClient({
     setEditingRecipe(recipe);
   };
 
+  const handleAddToMealPlan = (recipe: Recipe) => {
+    setMealPlanRecipe(recipe);
+  };
+
   const handleRecipeUpdated = (updatedRecipe: Recipe) => {
     setRecipes((prev) =>
       prev.map((r) => (r.id === updatedRecipe.id ? { ...r, ...updatedRecipe } : r))
@@ -348,7 +354,11 @@ export function RecipesClient({
 
         {/* Bookshelf View */}
         {viewMode === "bookshelf" && (
-          <VirtualBookshelf searchQuery={searchQuery} recipes={recipes} />
+          <VirtualBookshelf
+            searchQuery={searchQuery}
+            recipes={recipes}
+            onAddToMealPlan={handleAddToMealPlan}
+          />
         )}
 
         {/* Grid View */}
@@ -449,6 +459,7 @@ export function RecipesClient({
                     recipe={recipe}
                     onToggleFavorite={handleToggleFavorite}
                     onEdit={handleEditRecipe}
+                    onAddToMealPlan={handleAddToMealPlan}
                   />
                 ))}
               </div>
@@ -566,6 +577,13 @@ export function RecipesClient({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add to meal plan dialog */}
+      <AddRecipeToMealPlanDialog
+        open={!!mealPlanRecipe}
+        onOpenChange={(open) => !open && setMealPlanRecipe(null)}
+        recipe={mealPlanRecipe}
+      />
     </div>
   );
 }

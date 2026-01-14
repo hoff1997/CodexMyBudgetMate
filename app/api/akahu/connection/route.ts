@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { akahuRequest, refreshAkahuToken } from "@/lib/akahu/client";
+import { akahuRequest, refreshAkahuToken, AkahuApiError } from "@/lib/akahu/client";
 import { logAuditEvent } from "@/lib/audit/log";
 import { z } from "zod";
 import { deriveProvidersFromAccounts, type AkahuAccount } from "@/lib/akahu/providers";
@@ -149,6 +149,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, providers: Array.from(providers.keys()) });
   } catch (error) {
     console.error("Akahu refresh fetch failed", error);
+
+    // Handle token revocation gracefully (Akahu requirement)
+    if (error instanceof AkahuApiError && error.requiresReauthorization) {
+      // Mark connection as requiring action - token was revoked externally
+      await supabase
+        .from("bank_connections")
+        .update({
+          status: "action_required",
+          last_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      // Clear the invalid token
+      await supabase.from("akahu_tokens").delete().eq("user_id", userId);
+
+      await logAuditEvent(supabase, {
+        userId,
+        action: "akahu.token_revoked",
+        metadata: {
+          error: error.message,
+          status: error.status,
+          requiresReauthorization: true,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: "Bank connection requires re-authorization",
+          requiresReauthorization: true,
+          message:
+            "Your bank connection has expired or been revoked. Please reconnect your bank account.",
+        },
+        { status: 401 },
+      );
+    }
+
+    // Handle other errors
     await supabase
       .from("bank_connections")
       .update({ status: "issues", last_synced_at: new Date().toISOString() })

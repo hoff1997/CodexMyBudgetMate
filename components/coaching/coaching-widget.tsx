@@ -152,6 +152,25 @@ export function CoachingWidget({
   // RENDER
   // ====================================
 
+  // Check for empty budget state (no income or no envelopes configured)
+  const hasNoData = totalIncome === 0 || activeEnvelopes.length === 0;
+
+  // If no data yet, show setup prompt instead of "balanced" message
+  if (hasNoData) {
+    return (
+      <div className="rounded-xl border border-blue-light bg-blue-light/30 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4 text-blue" />
+          <span className="text-sm font-medium text-blue">
+            {totalIncome === 0
+              ? "Set up your income sources to get started with budgeting."
+              : "Create some envelopes to start allocating your income."}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // If everything is fine, show compact success state
   if (!hasBudgetMismatch && !hasUnderfundedEnvelopes) {
     return (

@@ -1,5 +1,37 @@
 const AKAHU_BASE_URL = "https://api.akahu.io/v1";
 
+/**
+ * Custom error class for Akahu API errors
+ * Provides structured error information for better handling
+ */
+export class AkahuApiError extends Error {
+  public readonly status: number;
+  public readonly isTokenRevoked: boolean;
+  public readonly isUnauthorized: boolean;
+  public readonly requiresReauthorization: boolean;
+
+  constructor(message: string, status: number, body?: string) {
+    super(message);
+    this.name = "AkahuApiError";
+    this.status = status;
+
+    // Determine error type based on status code
+    this.isUnauthorized = status === 401;
+    this.isTokenRevoked = status === 401 || status === 403;
+
+    // Check if body contains token-related error messages
+    const bodyLower = body?.toLowerCase() ?? "";
+    const isTokenError =
+      bodyLower.includes("token") &&
+      (bodyLower.includes("revoked") ||
+        bodyLower.includes("expired") ||
+        bodyLower.includes("invalid"));
+
+    this.requiresReauthorization =
+      status === 401 || status === 403 || isTokenError;
+  }
+}
+
 type AkahuRequestOptions = {
   endpoint: string;
   method?: string;
@@ -31,7 +63,11 @@ export async function akahuRequest<T>({
 
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Akahu request failed: ${response.status} ${errorBody}`);
+    throw new AkahuApiError(
+      `Akahu request failed: ${response.status} ${errorBody}`,
+      response.status,
+      errorBody
+    );
   }
 
   return response.json();

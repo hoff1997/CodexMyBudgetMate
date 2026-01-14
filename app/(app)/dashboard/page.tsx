@@ -78,6 +78,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   }
 
   const userId = user!.id;
+
+  // Check if user has completed onboarding - if not, redirect to onboarding
+  const { data: onboardingCheck } = await supabase
+    .from("profiles")
+    .select("onboarding_completed")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!onboardingCheck?.onboarding_completed) {
+    redirect("/onboarding");
+  }
+
   const now = new Date();
   const monthStart = startOfMonth(now).toISOString();
   const monthEnd = endOfMonth(now).toISOString();

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { MFA_VERIFIED_COOKIE, MFA_SESSION_TIMEOUT_MS } from "@/lib/utils/mfa-session";
 
 /**
  * POST /api/2fa/verify
@@ -76,6 +78,17 @@ export async function POST(request: Request) {
       console.warn("Failed to store backup codes:", storeError);
       // Don't fail the request - 2FA is still enabled
     }
+
+    // Set the MFA verified timestamp cookie (2-hour session)
+    const now = Date.now();
+    const cookieStore = await cookies();
+    cookieStore.set(MFA_VERIFIED_COOKIE, now.toString(), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: MFA_SESSION_TIMEOUT_MS / 1000, // Convert to seconds
+      path: "/",
+    });
 
     return NextResponse.json({
       success: true,

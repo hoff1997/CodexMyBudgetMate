@@ -129,7 +129,9 @@
       "Bash(else echo \"No .vercel/project.json found - check Vercel dashboard directly\")",
       "Bash(timeout 120 npx tsc:*)",
       "Bash(timeout 30 npx tsc:*)",
-      "Bash(nslookup:*)"
+      "Bash(nslookup:*)",
+      "Bash(git diff:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

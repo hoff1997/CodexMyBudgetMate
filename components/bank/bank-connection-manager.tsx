@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TwoFactorAuthSetup } from "@/components/auth/two-factor-auth-setup";
+import { MfaSessionPrompt } from "@/components/auth/mfa-session-prompt";
 
 interface BankConnection {
   id: string;
@@ -73,6 +74,8 @@ export default function BankConnectionManager({
   const [selectedConnection, setSelectedConnection] =
     useState<BankConnection | null>(null);
   const [show2FAValidation, setShow2FAValidation] = useState(false);
+  const [showMfaSessionPrompt, setShowMfaSessionPrompt] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"connect" | "disconnect" | "sync" | null>(null);
   const [twoFactorToken, setTwoFactorToken] = useState("");
   const [syncSettings, setSyncSettings] = useState({
     autoSync: true,
@@ -95,43 +98,106 @@ export default function BankConnectionManager({
     },
   });
 
-  // Check 2FA status (TODO: implement API endpoint)
+  // Check 2FA status
   const { data: twoFactorStatus } = useQuery({
     queryKey: ["2fa-status", userId],
     queryFn: async () => {
-      // TODO: Implement /api/2fa/status endpoint
-      return { twoFactorEnabled: false, backupCodesCount: 0 };
+      const response = await fetch("/api/2fa/status");
+      if (!response.ok) {
+        return { isEnabled: false, backupCodesCount: 0 };
+      }
+      return response.json();
     },
   });
 
-  // Connect to Akahu OAuth
-  const handleConnectBank = () => {
-    // In production, redirect to Akahu OAuth flow
-    const akahuAuthUrl = process.env.NEXT_PUBLIC_AKAHU_AUTH_URL;
-    if (!akahuAuthUrl) {
-      toast.error(
-        "Akahu configuration missing. Check NEXT_PUBLIC_AKAHU_AUTH_URL environment variable."
-      );
-      return;
+  // Check MFA session status
+  const { data: mfaSessionStatus, refetch: refetchMfaSession } = useQuery({
+    queryKey: ["mfa-session"],
+    queryFn: async () => {
+      const response = await fetch("/api/2fa/verify-session");
+      if (!response.ok) {
+        return { mfaEnabled: false, sessionValid: true };
+      }
+      return response.json();
+    },
+    // Refetch every minute to keep session status updated
+    refetchInterval: 60 * 1000,
+  });
+
+  // Helper to check if MFA session is fresh before sensitive actions
+  const requireFreshMfaSession = async (action: "connect" | "disconnect" | "sync"): Promise<boolean> => {
+    // Refetch to get latest status
+    const { data } = await refetchMfaSession();
+
+    if (!data?.mfaEnabled) {
+      // MFA not enabled, proceed without verification
+      return true;
     }
 
-    // Check if 2FA is enabled (optional for now)
-    if (twoFactorStatus?.twoFactorEnabled) {
-      setShow2FAValidation(true);
-    } else {
-      // Proceed directly to Akahu OAuth
-      window.location.href = akahuAuthUrl;
+    if (data.sessionValid) {
+      // Session is still fresh
+      return true;
+    }
+
+    // Session expired, prompt for re-verification
+    setPendingAction(action);
+    setShowMfaSessionPrompt(true);
+    return false;
+  };
+
+  // Handle MFA session verified callback
+  const handleMfaSessionVerified = async () => {
+    setShowMfaSessionPrompt(false);
+    await refetchMfaSession();
+
+    // Execute the pending action
+    if (pendingAction === "connect") {
+      proceedToConnect();
+    } else if (pendingAction === "disconnect") {
+      disconnectBankMutation.mutate();
+    } else if (pendingAction === "sync") {
+      syncBankMutation.mutate();
+    }
+    setPendingAction(null);
+  };
+
+  // Helper to proceed to Akahu OAuth after MFA verification
+  const proceedToConnect = async () => {
+    try {
+      // Use the API route to get the Akahu auth URL
+      const response = await fetch("/api/akahu/oauth/start");
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || "Failed to start bank connection");
+        return;
+      }
+
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    } catch (error) {
+      toast.error("Failed to connect to bank. Please try again.");
     }
   };
 
-  // Validate 2FA before connecting
-  const handleValidate2FA = async () => {
-    // TODO: Implement 2FA validation
-    toast.info("2FA validation not yet implemented. Proceeding to Akahu...");
-    const akahuAuthUrl = process.env.NEXT_PUBLIC_AKAHU_AUTH_URL;
-    if (akahuAuthUrl) {
-      window.location.href = akahuAuthUrl;
+  // Connect to Akahu OAuth - with MFA session check
+  const handleConnectBank = async () => {
+    // First check if MFA session is fresh (for users with 2FA enabled)
+    const canProceed = await requireFreshMfaSession("connect");
+    if (!canProceed) {
+      // MFA prompt will be shown, wait for verification
+      return;
     }
+
+    // Proceed to connect
+    proceedToConnect();
+  };
+
+  // Validate 2FA before connecting (legacy - kept for compatibility)
+  const handleValidate2FA = async () => {
+    // This is now handled by the MFA session system
+    proceedToConnect();
     setShow2FAValidation(false);
     setTwoFactorToken("");
   };
@@ -970,6 +1036,17 @@ export default function BankConnectionManager({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* MFA Session Re-verification Prompt */}
+      <MfaSessionPrompt
+        open={showMfaSessionPrompt}
+        onVerified={handleMfaSessionVerified}
+        onCancel={() => {
+          setShowMfaSessionPrompt(false);
+          setPendingAction(null);
+        }}
+        reason="Your security session has expired. Please verify your identity to continue with bank operations."
+      />
     </div>
   );
 }

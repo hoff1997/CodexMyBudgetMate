@@ -16,5 +16,21 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL(`/login?error=${error.message}`, request.url));
   }
 
+  // Check if user has completed onboarding
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    // If onboarding not completed (or no profile yet), go to onboarding
+    if (!profile?.onboarding_completed) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+  }
+
   return NextResponse.redirect(new URL("/dashboard", request.url));
 }

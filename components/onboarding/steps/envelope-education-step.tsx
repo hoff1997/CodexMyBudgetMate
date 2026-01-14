@@ -2,14 +2,15 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Zap, ShoppingBag, Target, PlayCircle } from "lucide-react";
+import { ArrowRight, ArrowLeft, Zap, ShoppingBag, Target, PlayCircle } from "lucide-react";
 import { RemyAvatar, RemyTip } from "@/components/onboarding/remy-tip";
 
 interface EnvelopeEducationStepProps {
   onContinue: () => void;
+  onBack?: () => void;
 }
 
-export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps) {
+export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationStepProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header with Remy */}
@@ -200,17 +201,29 @@ export function EnvelopeEducationStep({ onContinue }: EnvelopeEducationStepProps
 
       {/* CTA */}
       <div className="flex flex-col items-center gap-4 pt-4">
-        <Button
-          onClick={onContinue}
-          size="lg"
-          className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-lg px-8"
-        >
-          I Understand - Let&apos;s Create My Envelopes
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <Button
+              onClick={onBack}
+              variant="outline"
+              size="lg"
+            >
+              <ArrowLeft className="mr-2 h-5 w-5" />
+              Back
+            </Button>
+          )}
+          <Button
+            onClick={onContinue}
+            size="lg"
+            className="bg-[#7A9E9A] hover:bg-[#5A7E7A] text-lg px-8"
+          >
+            I Understand - Let&apos;s Create My Envelopes
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </div>
 
         <p className="text-sm text-muted-foreground text-center">
-          Take your time and be thorough - this is where the magic happens ✨
+          Take your time and be thorough - this is where the magic happens
         </p>
       </div>
     </div>

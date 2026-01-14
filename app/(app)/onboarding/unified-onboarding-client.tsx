@@ -461,7 +461,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         );
 
       case 7:
-        return <EnvelopeEducationStep onContinue={handleNext} />;
+        return <EnvelopeEducationStep onContinue={handleNext} onBack={handleBack} />;
 
       case 8:
         return (
@@ -508,7 +508,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         );
 
       case 12:
-        return <CompletionStep isLoading={isLoading} onComplete={handleNext} />;
+        return <CompletionStep isLoading={isLoading} onComplete={handleNext} onBack={handleBack} />;
 
       default:
         return null;

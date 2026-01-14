@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
  * Initiates the Akahu OAuth flow by returning the authorization URL.
  * The user will be redirected to Akahu to authorize the connection.
  */
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,6 +16,10 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Check if request is coming from onboarding
+  const referer = request.headers.get("referer") || "";
+  const isFromOnboarding = referer.includes("/onboarding");
 
   // Check for required environment variables
   const clientId = process.env.AKAHU_CLIENT_ID;
@@ -44,11 +48,13 @@ export async function GET() {
   ].join(" ");
 
   // Generate a state parameter for CSRF protection
+  // Include origin to know where to redirect after OAuth
   const state = Buffer.from(
     JSON.stringify({
       userId: user.id,
       timestamp: Date.now(),
       random: Math.random().toString(36).substring(7),
+      origin: isFromOnboarding ? "onboarding" : "settings",
     })
   ).toString("base64url");
 

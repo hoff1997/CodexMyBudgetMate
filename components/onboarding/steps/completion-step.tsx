@@ -3,16 +3,17 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { RemyAvatar } from "@/components/onboarding/remy-tip";
 import confetti from "canvas-confetti";
 
 interface CompletionStepProps {
   isLoading: boolean;
   onComplete: () => void;
+  onBack?: () => void;
 }
 
-export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
+export function CompletionStep({ isLoading, onComplete, onBack }: CompletionStepProps) {
   // Fire confetti on mount
   useEffect(() => {
     const duration = 3000;
@@ -166,21 +167,33 @@ export function CompletionStep({ isLoading, onComplete }: CompletionStepProps) {
 
       {/* CTA */}
       <div className="flex flex-col items-center gap-4 pt-4">
-        {isLoading ? (
-          <Button size="lg" disabled className="bg-sage text-lg px-8">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Setting up your dashboard...
-          </Button>
-        ) : (
-          <Button
-            onClick={onComplete}
-            size="lg"
-            className="bg-sage hover:bg-sage-dark text-lg px-8"
-          >
-            Go to Dashboard
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {onBack && !isLoading && (
+            <Button
+              onClick={onBack}
+              variant="outline"
+              size="lg"
+            >
+              <ArrowLeft className="mr-2 h-5 w-5" />
+              Review Setup
+            </Button>
+          )}
+          {isLoading ? (
+            <Button size="lg" disabled className="bg-sage text-lg px-8">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Setting up your dashboard...
+            </Button>
+          ) : (
+            <Button
+              onClick={onComplete}
+              size="lg"
+              className="bg-sage hover:bg-sage-dark text-lg px-8"
+            >
+              Go to Dashboard
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          )}
+        </div>
 
         <p className="text-sm text-muted-foreground">
           Your data is saved, you can explore at your own pace

@@ -109,11 +109,18 @@ export async function GET(request: Request) {
     }
 
     // Redirect to success page or back to onboarding
-    // Check if this was during onboarding
-    const referer = request.headers.get("referer") || "";
-    if (referer.includes("onboarding")) {
+    // Decode state to determine where to redirect
+    let origin = "settings";
+    try {
+      const decodedState = JSON.parse(Buffer.from(state, "base64url").toString());
+      origin = decodedState.origin || "settings";
+    } catch {
+      // Fall back to settings if state decoding fails
+    }
+
+    if (origin === "onboarding") {
       return NextResponse.redirect(
-        new URL("/onboarding?step=bank-accounts&akahu=connected", request.url)
+        new URL("/onboarding?akahu=connected", request.url)
       );
     }
 

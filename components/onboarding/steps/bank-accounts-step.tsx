@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +15,38 @@ import {
 import { Card } from "@/components/ui/card";
 import { Plus, Trash2, DollarSign, Building2, Link2, Shield, CheckCircle2, ExternalLink, Loader2 } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
+import { toast } from "sonner";
 import type { BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
+
+// Akahu account type from API
+interface AkahuAccount {
+  _id: string;
+  name: string;
+  balance: {
+    current: number;
+    available?: number;
+  };
+  type: string;
+  attributes: string[];
+  connection?: {
+    _id: string;
+    name: string;
+  };
+}
+
+// Map Akahu account type to our app's account type
+function mapAkahuAccountType(akahuType: string): "checking" | "savings" | "credit_card" {
+  const typeUpper = akahuType.toUpperCase();
+
+  if (typeUpper.includes("CREDIT") || typeUpper === "CREDITCARD") {
+    return "credit_card";
+  }
+  if (typeUpper.includes("SAVING") || typeUpper === "SAVINGS") {
+    return "savings";
+  }
+  // Default to checking for transaction accounts, everyday accounts, etc.
+  return "checking";
+}
 
 interface BankAccountsStepProps {
   accounts: BankAccount[];
@@ -22,6 +54,10 @@ interface BankAccountsStepProps {
 }
 
 export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsStepProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const hasFetchedAccounts = useRef(false);
+
   const [newAccount, setNewAccount] = useState({
     name: "",
     type: "checking" as "checking" | "savings" | "credit_card",
@@ -29,7 +65,69 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
   });
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isFetchingAccounts, setIsFetchingAccounts] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  // Fetch Akahu accounts when returning from OAuth
+  useEffect(() => {
+    const akahuStatus = searchParams.get("akahu");
+
+    // Only fetch if we just connected and haven't fetched yet
+    if (akahuStatus === "connected" && !hasFetchedAccounts.current) {
+      hasFetchedAccounts.current = true;
+
+      const fetchAkahuAccounts = async () => {
+        setIsFetchingAccounts(true);
+        try {
+          const response = await fetch("/api/akahu/accounts?refresh=true");
+
+          if (!response.ok) {
+            throw new Error("Failed to fetch accounts from Akahu");
+          }
+
+          const data = await response.json();
+          const akahuAccounts: AkahuAccount[] = data.items || [];
+
+          if (akahuAccounts.length > 0) {
+            // Map Akahu accounts to our BankAccount format
+            const mappedAccounts: BankAccount[] = akahuAccounts.map((acc) => ({
+              id: acc._id,
+              name: acc.name,
+              type: mapAkahuAccountType(acc.type),
+              balance: acc.balance?.current ?? 0,
+            }));
+
+            // Merge with any existing manually-added accounts (avoid duplicates by ID)
+            const existingIds = new Set(accounts.map(a => a.id));
+            const newAccounts = mappedAccounts.filter(a => !existingIds.has(a.id));
+
+            onAccountsChange([...accounts, ...newAccounts]);
+
+            const creditCardCount = mappedAccounts.filter(a => a.type === "credit_card").length;
+            toast.success(
+              `Connected ${mappedAccounts.length} account${mappedAccounts.length !== 1 ? "s" : ""}` +
+              (creditCardCount > 0 ? ` (including ${creditCardCount} credit card${creditCardCount !== 1 ? "s" : ""})` : "")
+            );
+          } else {
+            toast.info("No accounts found. You may need to select accounts in Akahu.");
+          }
+
+          // Clear the URL parameter to prevent re-fetching
+          router.replace("/onboarding", { scroll: false });
+        } catch (error) {
+          console.error("Failed to fetch Akahu accounts:", error);
+          setConnectionError(
+            error instanceof Error ? error.message : "Failed to fetch accounts"
+          );
+          toast.error("Failed to fetch accounts from your bank. Please try again.");
+        } finally {
+          setIsFetchingAccounts(false);
+        }
+      };
+
+      fetchAkahuAccounts();
+    }
+  }, [searchParams, accounts, onAccountsChange, router]);
 
   const handleAddAccount = () => {
     if (!newAccount.name.trim()) {
@@ -100,6 +198,21 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
         optional, but it makes tracking way easier. Your data stays secure
         with Akahu - even I don't see your login details.
       </RemyTip>
+
+      {/* Loading state when fetching accounts after OAuth */}
+      {isFetchingAccounts && (
+        <Card className="p-6 border-2 border-[#7A9E9A]">
+          <div className="flex items-center justify-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-[#7A9E9A]" />
+            <div>
+              <p className="font-medium">Loading your accounts...</p>
+              <p className="text-sm text-muted-foreground">
+                Fetching account details from your bank
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Akahu Connection Option - Recommended */}
       <Card className="relative p-6 border-2 border-[#7A9E9A]">

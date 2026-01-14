@@ -37,10 +37,11 @@ export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationS
         <h3 className="text-xl font-semibold mb-4 text-text-dark">You Tell Your Money Where to Go</h3>
         <div className="space-y-3 text-text-medium">
           <p>
-            Envelope budgeting is a proven method where <strong>you decide where your money goes before you spend it</strong>.
+            Envelope budgeting is a proven method where <strong>you decide where your money goes once</strong>,
+            then the system handles allocations automatically each pay cycle.
           </p>
           <p>
-            When the envelope is empty, you stop spending in that category until the next pay cycle.
+            You only need to revisit your setup if your expenses or income change.
             <strong> We use digital "envelopes"</strong> instead of cash, but the principle is the same:
             your money is organised, intentional, and always accounted for.
           </p>

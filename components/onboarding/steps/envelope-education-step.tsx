@@ -26,14 +26,10 @@ export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationS
 
       {/* Remy's explanation */}
       <RemyTip pose="thinking">
-        <p className="mb-3">
-          Envelopes are how you tell your money where to go. Each envelope has
-          a job - rent, groceries, savings, whatever matters to you.
-        </p>
-        <p className="mb-3">
-          When money comes in, you decide which envelopes it fills. That's it.
-          Simple, intentional, and you're always in control.
-        </p>
+        Envelopes are how you tell your money where to go. Each envelope has
+        a job - rent, groceries, savings, whatever matters to you. When money
+        comes in, you decide which envelopes it fills. That's it. Simple,
+        intentional, and you're always in control.
       </RemyTip>
 
       {/* What is Envelope Budgeting */}

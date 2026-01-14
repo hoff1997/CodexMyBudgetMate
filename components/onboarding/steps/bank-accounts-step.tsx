@@ -193,7 +193,7 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
       </div>
 
       {/* Remy's Tip */}
-      <RemyTip pose="thinking">
+      <RemyTip pose="small">
         Connect all your accounts - everyday, savings, and credit cards.
         Seeing the full picture is how you take control. It's optional,
         but it makes tracking way easier. Your data stays secure with

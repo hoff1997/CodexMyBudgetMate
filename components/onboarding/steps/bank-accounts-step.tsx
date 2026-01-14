@@ -194,9 +194,10 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
 
       {/* Remy's Tip */}
       <RemyTip pose="thinking">
-        Connecting your bank accounts helps you see the full picture. It's
-        optional, but it makes tracking way easier. Your data stays secure
-        with Akahu - even I don't see your login details.
+        Connect all your accounts - everyday, savings, and credit cards.
+        Seeing the full picture is how you take control. It's optional,
+        but it makes tracking way easier. Your data stays secure with
+        Akahu - even I don't see your login details.
       </RemyTip>
 
       {/* Loading state when fetching accounts after OAuth */}

@@ -260,6 +260,13 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const creditCardAccounts = bankAccounts.filter(acc => acc.type === "credit_card");
   const hasCreditCards = creditCardAccounts.length > 0;
 
+  // Auto-skip step 4 if user lands on it with no credit cards
+  useEffect(() => {
+    if (!isLoadingDraft && currentStep === 4 && !hasCreditCards) {
+      setCurrentStep(5);
+    }
+  }, [currentStep, hasCreditCards, isLoadingDraft]);
+
   const handleNext = async () => {
     // Validation for each step
     if (currentStep === 2 && !fullName) {
@@ -304,7 +311,14 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   };
 
   const handleBack = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => {
+      const newStep = Math.max(prev - 1, 1);
+      // Skip step 4 if going backward and no credit cards
+      if (newStep === 4 && !hasCreditCards) {
+        return 3; // Go to Bank Accounts step instead
+      }
+      return newStep;
+    });
   };
 
   const completeOnboarding = async () => {

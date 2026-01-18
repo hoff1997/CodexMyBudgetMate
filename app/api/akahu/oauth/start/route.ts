@@ -64,6 +64,7 @@ export async function GET(request: Request) {
     {
       user_id: user.id,
       state,
+      origin: isFromOnboarding ? "onboarding" : "settings",
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
     },

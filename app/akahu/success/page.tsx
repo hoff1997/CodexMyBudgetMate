@@ -1,18 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 
-/**
- * Akahu OAuth Success Page
- *
- * This page handles the redirect after successful Akahu OAuth callback.
- * It checks if the user's session is still valid and redirects appropriately.
- * If the session was lost during the OAuth flow, it prompts re-authentication.
- */
-export default function AkahuSuccessPage() {
+function AkahuSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"checking" | "redirecting" | "needs_auth">("checking");
@@ -94,5 +87,36 @@ export default function AkahuSuccessPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center p-8 max-w-md">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-sage mb-4" />
+        <h1 className="text-xl font-semibold text-gray-900 mb-2">
+          Bank Connected Successfully!
+        </h1>
+        <p className="text-gray-600">
+          Setting up your accounts...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Akahu OAuth Success Page
+ *
+ * This page handles the redirect after successful Akahu OAuth callback.
+ * It checks if the user's session is still valid and redirects appropriately.
+ * If the session was lost during the OAuth flow, it prompts re-authentication.
+ */
+export default function AkahuSuccessPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AkahuSuccessContent />
+    </Suspense>
   );
 }

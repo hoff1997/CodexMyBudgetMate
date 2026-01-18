@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { createUnauthorizedError } from "@/lib/utils/api-error";
 
 /**
@@ -59,7 +60,9 @@ export async function GET(request: Request) {
   ).toString("base64url");
 
   // Store state in database for verification
-  await supabase.from("akahu_oauth_states").upsert(
+  // Use service client to bypass RLS - ensures state is always stored
+  const serviceClient = createServiceClient();
+  const { error: stateError } = await serviceClient.from("akahu_oauth_states").upsert(
     {
       user_id: user.id,
       state,
@@ -69,6 +72,16 @@ export async function GET(request: Request) {
     },
     { onConflict: "user_id" }
   );
+
+  if (stateError) {
+    console.error("[Akahu OAuth Start] Failed to store state:", stateError);
+    return NextResponse.json(
+      { error: "Failed to initialize OAuth flow. Please try again." },
+      { status: 500 }
+    );
+  }
+
+  console.log("[Akahu OAuth Start] State stored for user:", user.id);
 
   const authUrl = new URL("https://oauth.akahu.io/");
   authUrl.searchParams.set("client_id", clientId);

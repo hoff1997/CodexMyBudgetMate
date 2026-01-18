@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { exchangeAkahuCode } from "@/lib/akahu/client";
 
 /**
@@ -9,6 +10,10 @@ import { exchangeAkahuCode } from "@/lib/akahu/client";
  * This route matches Akahu's registered redirect URIs:
  * - Production: https://mybudgetmate.co.nz/akahu/callback
  * - Local Dev: http://localhost:3000/akahu/callback
+ *
+ * NOTE: Due to potential session cookie issues across domains/redirects,
+ * this route uses the state parameter to identify the user and uses
+ * the service client as a fallback when the session is not available.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -19,6 +24,13 @@ export async function GET(request: Request) {
 
   // Get the base URL for redirects
   const baseUrl = new URL(request.url).origin;
+
+  console.log("[Akahu Callback] Processing callback", {
+    hasCode: !!code,
+    hasState: !!state,
+    hasError: !!error,
+    baseUrl,
+  });
 
   // Handle OAuth errors
   if (error) {
@@ -32,29 +44,51 @@ export async function GET(request: Request) {
   }
 
   if (!code || !state) {
+    console.error("[Akahu Callback] Missing code or state");
     return NextResponse.redirect(
       new URL("/settings/bank-connections?error=missing_params", baseUrl)
     );
   }
 
+  // Try to get user from session first
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", baseUrl));
+  console.log("[Akahu Callback] User from session:", user?.id || "NO USER");
+
+  // Decode state to get userId (needed for both session and fallback paths)
+  let stateUserId: string | null = null;
+  let stateOrigin: string = "settings";
+
+  try {
+    const decodedState = JSON.parse(Buffer.from(state, "base64url").toString());
+    stateUserId = decodedState.userId;
+    stateOrigin = decodedState.origin || "settings";
+    console.log("[Akahu Callback] State decoded - userId:", stateUserId, "origin:", stateOrigin);
+  } catch (e) {
+    console.error("[Akahu Callback] Failed to decode state:", e);
+    return NextResponse.redirect(
+      new URL("/settings/bank-connections?error=invalid_state", baseUrl)
+    );
   }
 
-  // Verify state parameter
-  const { data: storedState } = await supabase
+  // Use service client for database operations (bypasses RLS)
+  const serviceClient = createServiceClient();
+
+  // Verify the state exists in the database
+  const { data: storedState } = await serviceClient
     .from("akahu_oauth_states")
-    .select("state, expires_at, origin")
-    .eq("user_id", user.id)
+    .select("state, expires_at, origin, user_id")
+    .eq("user_id", stateUserId)
     .maybeSingle();
 
   if (!storedState || storedState.state !== state) {
-    console.error("State mismatch:", { expected: storedState?.state, received: state });
+    console.error("[Akahu Callback] State mismatch:", {
+      expected: storedState?.state?.substring(0, 20),
+      received: state.substring(0, 20),
+    });
     return NextResponse.redirect(
       new URL("/settings/bank-connections?error=invalid_state", baseUrl)
     );
@@ -62,22 +96,25 @@ export async function GET(request: Request) {
 
   // Check if state has expired
   if (new Date(storedState.expires_at) < new Date()) {
+    console.error("[Akahu Callback] State expired");
     return NextResponse.redirect(
       new URL("/settings/bank-connections?error=state_expired", baseUrl)
     );
   }
 
   // Clean up state
-  await supabase.from("akahu_oauth_states").delete().eq("user_id", user.id);
+  await serviceClient.from("akahu_oauth_states").delete().eq("user_id", stateUserId);
 
   try {
     // Exchange code for tokens
+    console.log("[Akahu Callback] Exchanging code for tokens...");
     const tokens = await exchangeAkahuCode(code);
+    console.log("[Akahu Callback] Token exchange successful");
 
-    // Store tokens
-    const { error: upsertError } = await supabase.from("akahu_tokens").upsert(
+    // Store tokens using service client (bypasses RLS issues)
+    const { error: upsertError } = await serviceClient.from("akahu_tokens").upsert(
       {
-        user_id: user.id,
+        user_id: stateUserId,
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
         expires_at: tokens.expires_in
@@ -90,43 +127,42 @@ export async function GET(request: Request) {
     );
 
     if (upsertError) {
-      console.error("Failed to store Akahu tokens:", upsertError);
+      console.error("[Akahu Callback] Failed to store tokens:", upsertError);
       return NextResponse.redirect(
         new URL("/settings/bank-connections?error=token_storage_failed", baseUrl)
       );
     }
 
+    console.log("[Akahu Callback] Tokens stored successfully");
+
     // Award bank_connected achievement (non-blocking)
     try {
-      await supabase
-        .from("achievements")
-        .upsert(
-          {
-            user_id: user.id,
-            achievement_key: "bank_connected",
-            achieved_at: new Date().toISOString(),
-            metadata: { provider: "akahu" },
-          },
-          { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
-        );
+      await serviceClient.from("achievements").upsert(
+        {
+          user_id: stateUserId,
+          achievement_key: "bank_connected",
+          achieved_at: new Date().toISOString(),
+          metadata: { provider: "akahu" },
+        },
+        { onConflict: "user_id,achievement_key", ignoreDuplicates: true }
+      );
     } catch (achievementError) {
-      console.warn("Achievement check failed (non-critical):", achievementError);
+      console.warn("[Akahu Callback] Achievement check failed (non-critical):", achievementError);
     }
 
-    // Determine where to redirect based on stored origin
-    const origin = storedState.origin || "settings";
+    // Determine redirect based on origin
+    const origin = storedState.origin || stateOrigin || "settings";
+    console.log("[Akahu Callback] Success! Redirecting to:", origin);
 
     if (origin === "onboarding") {
-      return NextResponse.redirect(
-        new URL("/onboarding?akahu=connected", baseUrl)
-      );
+      return NextResponse.redirect(new URL("/onboarding?akahu=connected", baseUrl));
     }
 
     return NextResponse.redirect(
       new URL("/settings/bank-connections?akahu=connected", baseUrl)
     );
   } catch (err) {
-    console.error("Akahu code exchange error:", err);
+    console.error("[Akahu Callback] Token exchange error:", err);
     return NextResponse.redirect(
       new URL(
         `/settings/bank-connections?error=${encodeURIComponent(

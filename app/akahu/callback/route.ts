@@ -154,12 +154,10 @@ export async function GET(request: Request) {
     const origin = storedState.origin || stateOrigin || "settings";
     console.log("[Akahu Callback] Success! Redirecting to:", origin);
 
-    if (origin === "onboarding") {
-      return NextResponse.redirect(new URL("/onboarding?akahu=connected", baseUrl));
-    }
-
+    // Redirect to success page which handles session restoration
+    // This page checks if the user's session is still valid and redirects appropriately
     return NextResponse.redirect(
-      new URL("/settings/bank-connections?akahu=connected", baseUrl)
+      new URL(`/akahu/success?destination=${origin}`, baseUrl)
     );
   } catch (err) {
     console.error("[Akahu Callback] Token exchange error:", err);

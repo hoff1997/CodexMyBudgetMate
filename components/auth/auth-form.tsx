@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -11,7 +11,22 @@ import { markUserAsReturning } from "@/components/landing/returning-user-cta";
 
 export function AuthForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState("/dashboard");
+
+  // Check for redirect parameter or sessionStorage (from Akahu OAuth flow)
+  useEffect(() => {
+    const redirectParam = searchParams.get("redirect");
+    const storedRedirect = typeof window !== "undefined" ? sessionStorage.getItem("akahu_redirect") : null;
+
+    if (redirectParam) {
+      setRedirectUrl(redirectParam);
+    } else if (storedRedirect) {
+      setRedirectUrl(storedRedirect);
+      sessionStorage.removeItem("akahu_redirect");
+    }
+  }, [searchParams]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -74,7 +89,7 @@ export function AuthForm() {
 
       // Wait a bit for cookies to be stored, then redirect client-side
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push(redirectUrl);
         router.refresh();
       }, 100);
     } catch (error) {

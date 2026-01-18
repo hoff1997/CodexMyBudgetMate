@@ -157,11 +157,24 @@ export async function GET(request: Request) {
     const origin = storedState.origin || stateOrigin || "settings";
     console.log("[Akahu Callback] Success! Redirecting to:", origin);
 
-    // Redirect to success page which handles session restoration
-    // This page checks if the user's session is still valid and redirects appropriately
-    return NextResponse.redirect(
-      new URL(`/akahu/success?destination=${origin}`, baseUrl)
-    );
+    // Build the destination URL
+    const destinationPath = origin === "onboarding"
+      ? "/onboarding?akahu=connected"
+      : "/settings/bank-connections?akahu=connected";
+
+    // Check if we have a valid session
+    // If not, redirect to login with the destination as a parameter
+    // The user will need to log in again, but their bank connection is saved!
+    if (!user) {
+      console.log("[Akahu Callback] No session, redirecting to login with return URL");
+      const loginUrl = new URL("/login", baseUrl);
+      loginUrl.searchParams.set("redirect", destinationPath);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Session is valid, redirect directly to destination
+    console.log("[Akahu Callback] Session valid, redirecting to:", destinationPath);
+    return NextResponse.redirect(new URL(destinationPath, baseUrl));
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "token_exchange_failed";
     console.error("[Akahu Callback] Token exchange error:", errorMessage);

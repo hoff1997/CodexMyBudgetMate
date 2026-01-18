@@ -74,6 +74,15 @@ export async function akahuRequest<T>({
 }
 
 export async function exchangeAkahuCode(code: string) {
+  // Log the parameters being sent (without secrets)
+  console.log("[Akahu Token Exchange] Params:", {
+    grant_type: "authorization_code",
+    client_id: process.env.AKAHU_CLIENT_ID?.substring(0, 20) + "...",
+    redirect_uri: process.env.AKAHU_REDIRECT_URI,
+    hasSecret: !!process.env.AKAHU_CLIENT_SECRET,
+    hasCode: !!code,
+  });
+
   const response = await fetch(`${AKAHU_BASE_URL}/token`, {
     method: "POST",
     headers: {
@@ -81,8 +90,9 @@ export async function exchangeAkahuCode(code: string) {
       "X-Akahu-App-Token": process.env.AKAHU_APP_TOKEN!,
     },
     body: JSON.stringify({
-      id: process.env.AKAHU_CLIENT_ID,
-      secret: process.env.AKAHU_CLIENT_SECRET,
+      grant_type: "authorization_code",
+      client_id: process.env.AKAHU_CLIENT_ID,
+      client_secret: process.env.AKAHU_CLIENT_SECRET,
       code,
       redirect_uri: process.env.AKAHU_REDIRECT_URI,
     }),
@@ -90,17 +100,21 @@ export async function exchangeAkahuCode(code: string) {
 
   if (!response.ok) {
     const error = await response.text();
+    console.error("[Akahu Token Exchange] Failed:", response.status, error);
     throw new Error(`Akahu code exchange failed: ${response.status} ${error}`);
   }
 
-  return response.json() as Promise<{
+  const tokens = await response.json();
+  console.log("[Akahu Token Exchange] Success, got access_token");
+
+  return tokens as {
     access_token: string;
     refresh_token: string;
     expires_in?: number;
     refresh_expires_in?: number;
     refresh_token_expires_in?: number;
     scope?: string;
-  }>;
+  };
 }
 
 export async function refreshAkahuToken(refreshToken: string) {

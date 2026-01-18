@@ -1,4 +1,28 @@
 {
+  "redirects": [
+    {
+      "source": "/:path((?!api/|_next/).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.mybudgetmate.co.nz"
+        }
+      ],
+      "destination": "https://mybudgetmate.co.nz/:path",
+      "permanent": true
+    },
+    {
+      "source": "/api/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.mybudgetmate.co.nz"
+        }
+      ],
+      "destination": "https://mybudgetmate.co.nz/api/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!api/|_next/).*)",

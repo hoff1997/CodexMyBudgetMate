@@ -24,7 +24,9 @@ export async function GET(request: Request) {
   const isFromOnboarding = referer.includes("/onboarding");
 
   // Check for required environment variables
-  const clientId = process.env.AKAHU_CLIENT_ID;
+  // Use AKAHU_APP_TOKEN as client_id (they're the same value)
+  // Fall back to AKAHU_CLIENT_ID for backwards compatibility
+  const clientId = process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID;
 
   if (!clientId) {
     return NextResponse.json(
@@ -32,6 +34,8 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+
+  console.log("[Akahu OAuth Start] Using client_id:", clientId.substring(0, 20) + "...");
 
   // Construct redirect URI dynamically from the request origin
   // This ensures consistency between authorization and token exchange

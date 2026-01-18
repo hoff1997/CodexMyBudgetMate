@@ -77,10 +77,14 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
   // Use provided redirectUri or fall back to environment variable
   const finalRedirectUri = redirectUri || process.env.AKAHU_REDIRECT_URI;
 
+  // Use AKAHU_APP_TOKEN as client_id (they're the same value)
+  // Fall back to AKAHU_CLIENT_ID for backwards compatibility
+  const clientId = process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID;
+
   // Log the parameters being sent (without secrets)
   console.log("[Akahu Token Exchange] Params:", {
     grant_type: "authorization_code",
-    client_id: process.env.AKAHU_CLIENT_ID?.substring(0, 20) + "...",
+    client_id: clientId?.substring(0, 20) + "...",
     redirect_uri: finalRedirectUri,
     hasSecret: !!process.env.AKAHU_CLIENT_SECRET,
     hasCode: !!code,
@@ -97,7 +101,7 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
       grant_type: "authorization_code",
       code,
       redirect_uri: finalRedirectUri,
-      client_id: process.env.AKAHU_CLIENT_ID,
+      client_id: clientId,
       client_secret: process.env.AKAHU_CLIENT_SECRET,
     }),
   });

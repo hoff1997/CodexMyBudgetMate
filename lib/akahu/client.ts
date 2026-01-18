@@ -79,8 +79,9 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
 
   // Use AKAHU_APP_TOKEN as client_id (they're the same value)
   // Fall back to AKAHU_CLIENT_ID for backwards compatibility
-  const clientId = process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID;
-  const clientSecret = process.env.AKAHU_CLIENT_SECRET;
+  // Trim whitespace in case env vars have trailing newlines
+  const clientId = (process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID)?.trim();
+  const clientSecret = process.env.AKAHU_CLIENT_SECRET?.trim();
 
   // Log the parameters being sent (with partial values for debugging)
   console.log("[Akahu Token Exchange] Params:", {

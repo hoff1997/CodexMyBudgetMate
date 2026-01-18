@@ -140,7 +140,9 @@
       "Bash(ping:*)",
       "Bash(cmd //c \"type .env.local | findstr SUPABASE\")",
       "Bash(git check-ignore:*)",
-      "Bash(del \"c:\\\\Users\\\\hoff1\\\\My Budget Mate\\\\Cloned Codex\\\\CodexMyBudgetMate\\\\reset-password.js\")"
+      "Bash(del \"c:\\\\Users\\\\hoff1\\\\My Budget Mate\\\\Cloned Codex\\\\CodexMyBudgetMate\\\\reset-password.js\")",
+      "Bash(cmd //c \"taskkill /PID 33500 /F\")",
+      "Bash(npx vercel logs:*)"
     ],
     "deny": [],
     "ask": []

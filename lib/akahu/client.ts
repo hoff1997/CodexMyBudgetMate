@@ -1,4 +1,21 @@
+import { AkahuClient } from "akahu";
+
 const AKAHU_BASE_URL = "https://api.akahu.io/v1";
+
+// Get an Akahu client configured for token exchange (requires appSecret)
+function getAkahuClientForAuth(): AkahuClient {
+  const appToken = process.env.AKAHU_APP_TOKEN?.trim();
+  const appSecret = process.env.AKAHU_CLIENT_SECRET?.trim();
+
+  if (!appToken) {
+    throw new Error("AKAHU_APP_TOKEN is not configured");
+  }
+  if (!appSecret) {
+    throw new Error("AKAHU_CLIENT_SECRET is not configured");
+  }
+
+  return new AkahuClient({ appToken, appSecret });
+}
 
 /**
  * Custom error class for Akahu API errors
@@ -77,63 +94,34 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
   // Use provided redirectUri or fall back to environment variable
   const finalRedirectUri = redirectUri || process.env.AKAHU_REDIRECT_URI;
 
-  // Debug: log raw env var presence
-  console.log("[Akahu Token Exchange] ENV CHECK:", {
-    AKAHU_APP_TOKEN_set: !!process.env.AKAHU_APP_TOKEN,
-    AKAHU_CLIENT_ID_set: !!process.env.AKAHU_CLIENT_ID,
-    AKAHU_CLIENT_SECRET_set: !!process.env.AKAHU_CLIENT_SECRET,
-  });
+  if (!finalRedirectUri) {
+    throw new Error("Redirect URI is required for token exchange");
+  }
 
-  // Use AKAHU_APP_TOKEN as client_id (they're the same value)
-  // Fall back to AKAHU_CLIENT_ID for backwards compatibility
-  // Trim whitespace in case env vars have trailing newlines
-  const clientId = (process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID)?.trim();
-  const clientSecret = process.env.AKAHU_CLIENT_SECRET?.trim();
-
-  // Log the parameters being sent (with partial values for debugging)
-  console.log("[Akahu Token Exchange] CREDENTIALS:", {
-    client_id: clientId,
-    client_id_length: clientId?.length,
-    secret_length: clientSecret?.length,
-    secret_first_8: clientSecret?.substring(0, 8),
+  console.log("[Akahu Token Exchange] Using SDK with:", {
     redirect_uri: finalRedirectUri,
     code_length: code?.length,
   });
 
-  // Akahu OAuth2 token exchange
-  // See: https://developers.akahu.nz/reference/post_token
-  const response = await fetch(`${AKAHU_BASE_URL}/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: finalRedirectUri,
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
+  try {
+    // Use the official Akahu SDK for token exchange
+    // The SDK handles the API call format correctly
+    const client = getAkahuClientForAuth();
+    const tokenResponse = await client.auth.exchange(code, finalRedirectUri);
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error("[Akahu Token Exchange] Failed:", response.status, error);
-    console.error("[Akahu Token Exchange] Request was to:", `${AKAHU_BASE_URL}/token`);
-    throw new Error(`Akahu code exchange failed: ${response.status} ${error}`);
+    console.log("[Akahu Token Exchange] Success via SDK, got access_token");
+
+    // The SDK returns AuthorizationToken { access_token, token_type, scope }
+    return {
+      access_token: tokenResponse.access_token,
+      refresh_token: "", // Akahu doesn't return refresh tokens in SDK response
+      expires_in: undefined,
+      scope: tokenResponse.scope,
+    };
+  } catch (error) {
+    console.error("[Akahu Token Exchange] SDK error:", error);
+    throw error;
   }
-
-  const tokens = await response.json();
-  console.log("[Akahu Token Exchange] Success, got access_token");
-
-  return tokens as {
-    access_token: string;
-    refresh_token: string;
-    expires_in?: number;
-    refresh_expires_in?: number;
-    refresh_token_expires_in?: number;
-    scope?: string;
-  };
 }
 
 export async function refreshAkahuToken(refreshToken: string) {

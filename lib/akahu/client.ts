@@ -83,18 +83,19 @@ export async function exchangeAkahuCode(code: string) {
     hasCode: !!code,
   });
 
+  // Token exchange uses standard OAuth2 format - NO app token header
+  // See: https://developers.akahu.nz/docs/authorizing-with-oauth2
   const response = await fetch(`${AKAHU_BASE_URL}/token`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Akahu-App-Token": process.env.AKAHU_APP_TOKEN!,
     },
     body: JSON.stringify({
       grant_type: "authorization_code",
-      client_id: process.env.AKAHU_CLIENT_ID,
-      client_secret: process.env.AKAHU_CLIENT_SECRET,
       code,
       redirect_uri: process.env.AKAHU_REDIRECT_URI,
+      client_id: process.env.AKAHU_CLIENT_ID,
+      client_secret: process.env.AKAHU_CLIENT_SECRET,
     }),
   });
 

@@ -82,20 +82,22 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
   const clientId = process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID;
   const clientSecret = process.env.AKAHU_CLIENT_SECRET;
 
-  // Log the parameters being sent (without secrets)
+  // Log the parameters being sent (with partial values for debugging)
   console.log("[Akahu Token Exchange] Params:", {
     grant_type: "authorization_code",
-    client_id: clientId?.substring(0, 20) + "...",
+    client_id_length: clientId?.length,
+    client_id_prefix: clientId?.substring(0, 25),
+    client_id_full: clientId, // Temporarily log full ID (it's not a secret)
     redirect_uri: finalRedirectUri,
     hasSecret: !!clientSecret,
-    secretPrefix: clientSecret?.substring(0, 4) + "...",
+    secret_length: clientSecret?.length,
+    secretPrefix: clientSecret?.substring(0, 6) + "...",
     hasCode: !!code,
-    codePrefix: code?.substring(0, 10) + "...",
+    code_length: code?.length,
   });
 
   // Akahu OAuth2 token exchange
-  // See: https://developers.akahu.nz/docs/authorizing-with-oauth2
-  // Akahu expects 'id' and 'secret' fields (not 'client_id' and 'client_secret')
+  // See: https://developers.akahu.nz/reference/post_token
   const response = await fetch(`${AKAHU_BASE_URL}/token`, {
     method: "POST",
     headers: {
@@ -105,8 +107,8 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
       grant_type: "authorization_code",
       code,
       redirect_uri: finalRedirectUri,
-      id: clientId,
-      secret: clientSecret,
+      client_id: clientId,
+      client_secret: clientSecret,
     }),
   });
 

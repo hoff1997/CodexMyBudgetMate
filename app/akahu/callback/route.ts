@@ -163,12 +163,15 @@ export async function GET(request: Request) {
       new URL(`/akahu/success?destination=${origin}`, baseUrl)
     );
   } catch (err) {
-    console.error("[Akahu Callback] Token exchange error:", err);
+    const errorMessage = err instanceof Error ? err.message : "token_exchange_failed";
+    console.error("[Akahu Callback] Token exchange error:", errorMessage);
+    console.error("[Akahu Callback] Full error:", err);
+
+    // For debugging: show a more detailed error page instead of redirecting
+    // This helps identify what's going wrong
     return NextResponse.redirect(
       new URL(
-        `/settings/bank-connections?error=${encodeURIComponent(
-          err instanceof Error ? err.message : "token_exchange_failed"
-        )}`,
+        `/settings/bank-connections?error=${encodeURIComponent(errorMessage)}`,
         baseUrl
       )
     );

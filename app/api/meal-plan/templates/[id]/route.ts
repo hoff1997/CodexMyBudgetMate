@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET a single template
 export async function GET(
@@ -12,7 +13,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id } = await params;
@@ -25,7 +26,7 @@ export async function GET(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch template");
   }
 
   return NextResponse.json({ template: data });
@@ -42,7 +43,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id } = await params;
@@ -54,7 +55,7 @@ export async function DELETE(
     .eq("parent_user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete template");
   }
 
   return NextResponse.json({ success: true });
@@ -71,7 +72,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id } = await params;
@@ -84,7 +85,7 @@ export async function PATCH(
   if (body.template_data !== undefined) updateData.template_data = body.template_data;
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    return createValidationError("No fields to update");
   }
 
   const { data, error } = await supabase
@@ -96,7 +97,7 @@ export async function PATCH(
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update template");
   }
 
   return NextResponse.json({ template: data });

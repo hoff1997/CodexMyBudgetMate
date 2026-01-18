@@ -6,6 +6,7 @@ import {
   setCachedAccounts,
 } from "@/lib/cache/akahu-cache";
 import { type AkahuAccount } from "@/lib/akahu/providers";
+import { createErrorResponse, createUnauthorizedError, createNotFoundError } from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -50,14 +51,11 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (tokenError) {
-      return NextResponse.json({ error: tokenError.message }, { status: 500 });
+      return createErrorResponse(tokenError, 500, "Failed to retrieve Akahu connection");
     }
 
     if (!tokenRecord) {
-      return NextResponse.json(
-        { error: "No Akahu connection" },
-        { status: 404 },
-      );
+      return createNotFoundError("Akahu connection");
     }
 
     let accessToken = tokenRecord.access_token;
@@ -96,10 +94,7 @@ export async function GET(request: Request) {
           .eq("user_id", user.id);
       } catch (error) {
         console.error("Akahu token refresh failed", error);
-        return NextResponse.json(
-          { error: "Token refresh failed" },
-          { status: 502 },
-        );
+        return createErrorResponse(error as { message: string }, 502, "Token refresh failed");
       }
     }
 
@@ -117,11 +112,6 @@ export async function GET(request: Request) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Akahu request failed",
-      },
-      { status: 500 },
-    );
+    return createErrorResponse(error as { message: string }, 500, "Akahu request failed");
   }
 }

@@ -163,9 +163,9 @@ export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationS
               3
             </div>
             <div>
-              <p className="font-medium mb-1">Each pay cycle, allocate money to envelopes</p>
+              <p className="font-medium mb-1">Remy remembers and allocates</p>
               <p className="text-sm text-muted-foreground">
-                When you get paid, you&apos;ll fund your envelopes according to the plan
+                Each pay cycle, Remy automatically allocates your income to your envelopes. You just confirm.
               </p>
             </div>
           </div>
@@ -175,9 +175,9 @@ export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationS
               4
             </div>
             <div>
-              <p className="font-medium mb-1">Spend only from the envelope's available amount</p>
+              <p className="font-medium mb-1">You&apos;re in control of your spending</p>
               <p className="text-sm text-muted-foreground">
-                Track your spending and stay within each envelope's balance. No overspending!
+                Track your spending against each envelope. You decide how to use your allocated funds.
               </p>
             </div>
           </div>
@@ -186,14 +186,9 @@ export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationS
 
       {/* Remy's encouragement */}
       <RemyTip pose="encouraging">
-        <p className="mb-2">
-          Don't stress about getting this perfect. Start with your essentials -
-          the must-pays. You can add more envelopes anytime.
-        </p>
-        <p>
-          Most people need about 5-10 to start. Future you will thank you for
-          keeping it simple.
-        </p>
+        Don&apos;t stress about getting this perfect. Start with your essentials -
+        the must-pays. You can add more envelopes anytime. Future you will thank
+        you for keeping it simple.
       </RemyTip>
 
       {/* CTA */}

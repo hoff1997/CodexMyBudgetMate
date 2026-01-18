@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { KidInvoice } from "@/lib/types/kids-invoice";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string; invoiceId: string }>;
@@ -16,7 +21,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -40,7 +45,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch invoice");
   }
 
   if (!invoice) {
@@ -63,7 +68,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -84,7 +89,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   // Validate status
   const validStatuses = ["draft", "submitted", "paid"];
   if (status && !validStatuses.includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    return createValidationError("Invalid status");
   }
 
   // Build update object
@@ -114,7 +119,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update invoice");
   }
 
   return NextResponse.json({ invoice });
@@ -130,7 +135,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -158,10 +163,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   if (invoice.status !== "draft") {
-    return NextResponse.json(
-      { error: "Can only delete draft invoices" },
-      { status: 400 }
-    );
+    return createValidationError("Can only delete draft invoices");
   }
 
   // Delete invoice (items will cascade)
@@ -172,7 +174,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     .eq("child_profile_id", childId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete invoice");
   }
 
   return NextResponse.json({ success: true });

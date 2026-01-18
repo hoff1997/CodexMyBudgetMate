@@ -11,6 +11,11 @@ import {
   normaliseStatus,
   type DbFeatureRequest,
 } from "@/lib/server/feature-requests";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -19,7 +24,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const url = new URL(request.url);
@@ -44,7 +49,7 @@ export async function GET(request: Request) {
   const { data, error } = await query.returns<DbFeatureRequest[]>();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to fetch feature requests");
   }
 
   const requests = (data ?? []).map(mapFeatureRequestRow);
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -79,7 +84,7 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     const message = parsed.error.flatten().formErrors[0] ?? "Invalid payload";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createValidationError(message);
   }
 
   const payload = parsed.data;
@@ -97,11 +102,11 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to create feature request");
   }
 
   if (!data) {
-    return NextResponse.json({ error: "Unable to create feature request" }, { status: 500 });
+    return createErrorResponse(null, 500, "Unable to create feature request");
   }
 
   return NextResponse.json({ request: mapFeatureRequestRow(data) }, { status: 201 });

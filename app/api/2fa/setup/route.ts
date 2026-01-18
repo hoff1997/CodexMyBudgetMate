@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 /**
  * POST /api/2fa/setup
@@ -16,7 +20,7 @@ export async function POST() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     // Enroll the user in TOTP MFA
@@ -27,10 +31,7 @@ export async function POST() {
 
     if (error) {
       console.error("MFA enroll error:", error);
-      return NextResponse.json(
-        { error: error.message || "Failed to setup 2FA" },
-        { status: 400 }
-      );
+      return createErrorResponse(error, 400, "Failed to setup 2FA");
     }
 
     // data contains: id (factor id), totp (contains qr_code and secret)

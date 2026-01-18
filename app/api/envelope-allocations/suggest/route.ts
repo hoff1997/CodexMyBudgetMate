@@ -7,6 +7,11 @@ import {
   type PayCycle,
   type BillFrequency
 } from "@/lib/utils/ideal-allocation-calculator";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 /**
  * POST /api/envelope-allocations/suggest
@@ -21,7 +26,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -59,9 +64,7 @@ export async function POST(request: Request) {
     }
 
     if (!incomeSources || incomeSources.length === 0) {
-      return NextResponse.json({
-        error: "No income sources found. Please add income sources first."
-      }, { status: 400 });
+      return createValidationError("No income sources found. Please add income sources first.");
     }
 
     // Calculate total income per user's pay cycle
@@ -123,11 +126,12 @@ export async function POST(request: Request) {
       suggestions,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error generating suggestions:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate suggestions" },
-      { status: 500 }
+    return createErrorResponse(
+      error as { message: string; code?: string },
+      500,
+      "Failed to generate suggestions"
     );
   }
 }

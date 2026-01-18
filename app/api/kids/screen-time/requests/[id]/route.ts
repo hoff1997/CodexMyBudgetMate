@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 export async function PATCH(
   request: Request,
@@ -11,17 +12,14 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { status, minutes_granted } = body;
 
   if (!status || !["approved", "denied"].includes(status)) {
-    return NextResponse.json(
-      { error: "Valid status required (approved or denied)" },
-      { status: 400 }
-    );
+    return createValidationError("Valid status required (approved or denied)");
   }
 
   // Get request
@@ -33,14 +31,11 @@ export async function PATCH(
     .single();
 
   if (!screenTimeRequest) {
-    return NextResponse.json({ error: "Request not found" }, { status: 404 });
+    return createNotFoundError("Request");
   }
 
   if (screenTimeRequest.status !== "pending") {
-    return NextResponse.json(
-      { error: "Request already processed" },
-      { status: 400 }
-    );
+    return createValidationError("Request already processed");
   }
 
   // Update request
@@ -55,7 +50,7 @@ export async function PATCH(
     .eq("id", params.id);
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
+    return createErrorResponse(updateError, 400, "Failed to update screen time request");
   }
 
   // If approved, deduct from balance and create transaction

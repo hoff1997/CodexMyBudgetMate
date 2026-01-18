@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 const updateCategorySchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -19,7 +25,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Try with full schema
@@ -44,7 +50,7 @@ export async function GET(
 
   if (minimalResult.error) {
     console.error("Failed to fetch envelope category:", minimalResult.error);
-    return NextResponse.json({ error: minimalResult.error.message }, { status: 404 });
+    return createNotFoundError("Category");
   }
 
   const category = {
@@ -68,7 +74,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify category belongs to user - try full schema first
@@ -93,28 +99,21 @@ export async function PATCH(
       .single();
 
     if (minimalCheck.error || !minimalCheck.data) {
-      return NextResponse.json(
-        { error: "Category not found or unauthorised" },
-        { status: 404 }
-      );
+      return createNotFoundError("Category");
     }
     existingCategory = { id: minimalCheck.data.id, is_system: false };
   }
 
   if (!existingCategory) {
-    return NextResponse.json(
-      { error: "Category not found or unauthorised" },
-      { status: 404 }
-    );
+    return createNotFoundError("Category");
   }
 
   const body = await request.json();
   const parsed = updateCategorySchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.errors },
-      { status: 400 }
+    return createValidationError(
+      parsed.error.errors.map((e) => e.message).join(", ")
     );
   }
 
@@ -167,7 +166,7 @@ export async function PATCH(
 
   if (minimalUpdate.error) {
     console.error("Failed to update envelope category:", minimalUpdate.error);
-    return NextResponse.json({ error: minimalUpdate.error.message }, { status: 400 });
+    return createErrorResponse(minimalUpdate.error, 400, "Failed to update category");
   }
 
   const category = {
@@ -191,7 +190,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify category belongs to user and check if it's a system category
@@ -205,10 +204,7 @@ export async function DELETE(
   if (!fullCheck.error && fullCheck.data) {
     // Full schema - check system flag
     if (fullCheck.data.is_system) {
-      return NextResponse.json(
-        { error: "Cannot delete system category" },
-        { status: 400 }
-      );
+      return createValidationError("Cannot delete system category");
     }
   } else {
     // Try minimal schema
@@ -220,10 +216,7 @@ export async function DELETE(
       .single();
 
     if (minimalCheck.error || !minimalCheck.data) {
-      return NextResponse.json(
-        { error: "Category not found or unauthorised" },
-        { status: 404 }
-      );
+      return createNotFoundError("Category");
     }
   }
 
@@ -236,7 +229,7 @@ export async function DELETE(
 
   if (error) {
     console.error("Failed to delete envelope category:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete category");
   }
 
   return NextResponse.json({ success: true });

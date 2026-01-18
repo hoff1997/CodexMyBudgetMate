@@ -10,6 +10,7 @@ import {
   getFamilyCodeRateLimitKey,
 } from "@/lib/utils/rate-limiter";
 import { validateCsrfRequest, extractCsrfToken } from "@/lib/utils/csrf";
+import { createErrorResponse, createValidationError } from "@/lib/utils/api-error";
 
 // Helper to get client IP
 function getClientIP(request: NextRequest): string {
@@ -46,10 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Validate family code format
     if (!familyCode || !isValidFamilyCodeFormat(familyCode.toUpperCase())) {
-      return NextResponse.json(
-        { error: "Invalid family code format" },
-        { status: 400 }
-      );
+      return createValidationError("Invalid family code format");
     }
 
     const normalizedCode = familyCode.toUpperCase();
@@ -100,10 +98,7 @@ export async function POST(request: NextRequest) {
       console.error("Error looking up family code:", error);
       await recordFailedAttempt(rateLimitKey);
       await recordGlobalIpAttempt(clientIP);
-      return NextResponse.json(
-        { error: "Failed to look up family code" },
-        { status: 400 }
-      );
+      return createErrorResponse(error, 400, "Failed to look up family code");
     }
 
     if (!children || children.length === 0) {
@@ -122,9 +117,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: children });
   } catch (err) {
     console.error("Error in POST /api/kids/auth/lookup:", err);
-    return NextResponse.json(
-      { error: "Failed to process request" },
-      { status: 500 }
-    );
+    return createErrorResponse(err as Error, 500, "Failed to process request");
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/notifications - Get user's notifications
 export async function GET(request: Request) {
@@ -10,12 +11,14 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
-  const limit = parseInt(searchParams.get("limit") || "50");
-  const offset = parseInt(searchParams.get("offset") || "0");
+  // SECURITY: Cap limit to prevent DoS via unbounded queries
+  const MAX_LIMIT = 100;
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), MAX_LIMIT);
+  const offset = Math.max(0, parseInt(searchParams.get("offset") || "0"));
   const unreadOnly = searchParams.get("unread") === "true";
   const type = searchParams.get("type");
 
@@ -40,7 +43,7 @@ export async function GET(request: Request) {
   const { data: notifications, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch notifications");
   }
 
   // Get unread count
@@ -67,7 +70,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -110,7 +113,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create notification");
   }
 
   return NextResponse.json({ notification });
@@ -125,7 +128,7 @@ export async function PATCH(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -143,14 +146,14 @@ export async function PATCH(request: Request) {
       .eq("is_read", false);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to mark notifications as read");
     }
 
     return NextResponse.json({ success: true, marked_all: true });
   }
 
   if (!notification_ids || !Array.isArray(notification_ids)) {
-    return NextResponse.json({ error: "notification_ids required" }, { status: 400 });
+    return createValidationError("notification_ids required");
   }
 
   const { error } = await supabase
@@ -163,7 +166,7 @@ export async function PATCH(request: Request) {
     .in("id", notification_ids);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to mark notifications as read");
   }
 
   return NextResponse.json({ success: true, marked_count: notification_ids.length });

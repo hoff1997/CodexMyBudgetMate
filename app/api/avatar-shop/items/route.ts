@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -9,7 +13,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -30,7 +34,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching shop items:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch shop items");
   }
 
   // If child_id provided, mark owned items

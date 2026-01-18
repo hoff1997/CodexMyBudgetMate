@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -15,7 +16,7 @@ export async function GET(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: template, error } = await supabase
@@ -43,7 +44,7 @@ export async function PATCH(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // First verify user owns this template (can't edit preset templates)
@@ -99,10 +100,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json(
-      { error: "No valid fields to update" },
-      { status: 400 }
-    );
+    return createValidationError("No valid fields to update");
   }
 
   const { data: template, error } = await supabase
@@ -114,7 +112,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error updating chore template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update chore template");
   }
 
   return NextResponse.json(template);
@@ -130,7 +128,7 @@ export async function DELETE(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // First verify user owns this template
@@ -166,7 +164,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error deleting chore template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete chore template");
   }
 
   return NextResponse.json({ success: true });

@@ -4,6 +4,7 @@ import type {
   KidPaymentSettings,
   UpdateKidPaymentSettingsRequest,
 } from "@/lib/types/kids-invoice";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -19,7 +20,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -31,7 +32,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Get payment settings
@@ -42,7 +43,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch payment settings");
   }
 
   // Return defaults if no settings exist
@@ -75,7 +76,7 @@ export async function PUT(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -87,7 +88,7 @@ export async function PUT(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   const body: UpdateKidPaymentSettingsRequest = await request.json();
@@ -96,17 +97,11 @@ export async function PUT(request: Request, context: RouteContext) {
   if (body.invoice_day !== undefined) {
     if (body.invoice_frequency === "weekly" || body.invoice_frequency === "fortnightly") {
       if (body.invoice_day < 0 || body.invoice_day > 6) {
-        return NextResponse.json(
-          { error: "Invoice day must be 0-6 for weekly/fortnightly frequency" },
-          { status: 400 }
-        );
+        return createValidationError("Invoice day must be 0-6 for weekly/fortnightly frequency");
       }
     } else if (body.invoice_frequency === "monthly") {
       if (body.invoice_day < 1 || body.invoice_day > 28) {
-        return NextResponse.json(
-          { error: "Invoice day must be 1-28 for monthly frequency" },
-          { status: 400 }
-        );
+        return createValidationError("Invoice day must be 1-28 for monthly frequency");
       }
     }
   }
@@ -133,7 +128,7 @@ export async function PUT(request: Request, context: RouteContext) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to update payment settings");
     }
 
     return NextResponse.json({
@@ -155,7 +150,7 @@ export async function PUT(request: Request, context: RouteContext) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to create payment settings");
     }
 
     return NextResponse.json({

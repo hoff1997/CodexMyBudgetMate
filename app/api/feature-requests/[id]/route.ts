@@ -9,6 +9,12 @@ import {
   normaliseStatus,
   type DbFeatureRequest,
 } from "@/lib/server/feature-requests";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 export async function PATCH(
   request: Request,
@@ -20,11 +26,11 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   if (!params.id) {
-    return NextResponse.json({ error: "Missing feature request id" }, { status: 400 });
+    return createValidationError("Missing feature request id");
   }
 
   const body = await request.json();
@@ -35,7 +41,7 @@ export async function PATCH(
 
   if (!parsed.success) {
     const message = parsed.error.flatten().formErrors[0] ?? "Invalid payload";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createValidationError(message);
   }
 
   const payload = parsed.data;
@@ -66,11 +72,11 @@ export async function PATCH(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to update feature request");
   }
 
   if (!data) {
-    return NextResponse.json({ error: "Feature request not found" }, { status: 404 });
+    return createNotFoundError("Feature request");
   }
 
   return NextResponse.json({ request: mapFeatureRequestRow(data) });
@@ -86,11 +92,11 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   if (!params.id) {
-    return NextResponse.json({ error: "Missing feature request id" }, { status: 400 });
+    return createValidationError("Missing feature request id");
   }
 
   const { error } = await supabase
@@ -100,7 +106,7 @@ export async function DELETE(
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to delete feature request");
   }
 
   return NextResponse.json({ ok: true });

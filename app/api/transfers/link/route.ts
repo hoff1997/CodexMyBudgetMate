@@ -8,6 +8,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from '@/lib/utils/api-error';
 
 const linkSchema = z.object({
   transactionId1: z.string().uuid(),
@@ -33,27 +39,21 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = linkSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return createValidationError('Invalid request body');
   }
 
   const { transactionId1, transactionId2 } = parsed.data;
 
   // Prevent linking to self
   if (transactionId1 === transactionId2) {
-    return NextResponse.json(
-      { error: 'Cannot link a transaction to itself' },
-      { status: 400 }
-    );
+    return createValidationError('Cannot link a transaction to itself');
   }
 
   // Fetch both transactions and verify ownership
@@ -64,40 +64,28 @@ export async function POST(request: Request) {
     .eq('user_id', user.id);
 
   if (txError) {
-    return NextResponse.json({ error: txError.message }, { status: 500 });
+    return createErrorResponse(txError, 500, 'Failed to fetch transactions');
   }
 
   if (!transactions || transactions.length !== 2) {
-    return NextResponse.json(
-      { error: 'One or both transactions not found or do not belong to user' },
-      { status: 404 }
-    );
+    return createNotFoundError('One or both transactions');
   }
 
   const tx1 = transactions.find((t) => t.id === transactionId1);
   const tx2 = transactions.find((t) => t.id === transactionId2);
 
   if (!tx1 || !tx2) {
-    return NextResponse.json(
-      { error: 'Transactions not found' },
-      { status: 404 }
-    );
+    return createNotFoundError('Transactions');
   }
 
   // Verify different accounts
   if (tx1.account_id === tx2.account_id) {
-    return NextResponse.json(
-      { error: 'Transactions must be from different accounts to be a transfer' },
-      { status: 400 }
-    );
+    return createValidationError('Transactions must be from different accounts to be a transfer');
   }
 
   // Check if either is already linked
   if (tx1.linked_transaction_id || tx2.linked_transaction_id) {
-    return NextResponse.json(
-      { error: 'One or both transactions are already linked' },
-      { status: 400 }
-    );
+    return createValidationError('One or both transactions are already linked');
   }
 
   // Determine which is outgoing (negative) and which is incoming (positive)
@@ -120,7 +108,7 @@ export async function POST(request: Request) {
     .eq('user_id', user.id);
 
   if (update1Error) {
-    return NextResponse.json({ error: update1Error.message }, { status: 500 });
+    return createErrorResponse(update1Error, 500, 'Failed to link transaction');
   }
 
   // Update transaction 2
@@ -148,7 +136,7 @@ export async function POST(request: Request) {
       .eq('id', transactionId1)
       .eq('user_id', user.id);
 
-    return NextResponse.json({ error: update2Error.message }, { status: 500 });
+    return createErrorResponse(update2Error, 500, 'Failed to link second transaction');
   }
 
   // Fetch the updated transactions with account info
@@ -195,17 +183,14 @@ export async function DELETE(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = unlinkSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return createValidationError('Invalid request body');
   }
 
   const { transactionId } = parsed.data;
@@ -219,17 +204,11 @@ export async function DELETE(request: Request) {
     .single();
 
   if (txError || !transaction) {
-    return NextResponse.json(
-      { error: 'Transaction not found or does not belong to user' },
-      { status: 404 }
-    );
+    return createNotFoundError('Transaction');
   }
 
   if (!transaction.linked_transaction_id) {
-    return NextResponse.json(
-      { error: 'Transaction is not linked to a transfer' },
-      { status: 400 }
-    );
+    return createValidationError('Transaction is not linked to a transfer');
   }
 
   const linkedTransactionId = transaction.linked_transaction_id;
@@ -250,7 +229,7 @@ export async function DELETE(request: Request) {
     .eq('user_id', user.id);
 
   if (update1Error) {
-    return NextResponse.json({ error: update1Error.message }, { status: 500 });
+    return createErrorResponse(update1Error, 500, 'Failed to unlink transaction');
   }
 
   // Fetch the linked transaction to get its amount for type inference
@@ -284,7 +263,7 @@ export async function DELETE(request: Request) {
       .eq('id', transactionId)
       .eq('user_id', user.id);
 
-    return NextResponse.json({ error: update2Error.message }, { status: 500 });
+    return createErrorResponse(update2Error, 500, 'Failed to unlink second transaction');
   }
 
   // Fetch the updated transactions

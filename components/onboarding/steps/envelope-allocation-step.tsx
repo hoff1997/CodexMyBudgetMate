@@ -1,354 +1,1502 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/finance";
-import { Check, X, AlertCircle, Calculator } from "lucide-react";
+import {
+  Check,
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Info,
+  Pencil,
+  TrendingUp,
+  Calendar as CalendarIcon,
+  FileText,
+  Thermometer,
+  Sun,
+  Snowflake,
+  HelpCircle,
+  Plus,
+  Gift,
+} from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { RemyTip } from "@/components/onboarding/remy-tip";
-import type { EnvelopeData, IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  type BuiltInCategory,
+} from "@/lib/onboarding/master-envelope-list";
+import type { EnvelopeData, IncomeSource, LevelingData, SeasonalPatternType } from "@/app/(app)/onboarding/unified-onboarding-client";
+import { detectSeasonalBill } from "@/lib/utils/seasonal-bills";
+import { detectCelebration, type GiftRecipientInput } from "@/lib/types/celebrations";
+import {
+  createLevelingDataFromQuickEstimate,
+  calculateLeveledPayCycleAmount,
+} from "@/lib/utils/leveled-bills";
+import { SeasonalBillDetectionDialog } from "@/components/leveled-bills/seasonal-bill-detection-dialog";
+import { QuickEstimateDialog } from "@/components/leveled-bills/quick-estimate-dialog";
+import { TwelveMonthEntryDialog } from "@/components/leveled-bills/twelve-month-entry-dialog";
+import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-dialog";
+import { AllocationTutorial } from "./allocation-tutorial";
 
 interface EnvelopeAllocationStepProps {
   envelopes: EnvelopeData[];
   incomeSources: IncomeSource[];
   onAllocationsChange: (allocations: { [envelopeId: string]: { [incomeId: string]: number } }) => void;
+  onEnvelopesChange: (envelopes: EnvelopeData[]) => void;
 }
+
+// Pay frequency cycles per year
+const PAY_FREQUENCY_CYCLES: Record<string, number> = {
+  weekly: 52,
+  fortnightly: 26,
+  twice_monthly: 24,
+  monthly: 12,
+};
+
+// Bill frequency cycles per year
+const BILL_FREQUENCY_CYCLES: Record<string, number> = {
+  weekly: 52,
+  fortnightly: 26,
+  monthly: 12,
+  quarterly: 4,
+  annual: 1,
+  annually: 1,
+  custom: 12,
+};
+
+// Calculate per-pay amount for an envelope
+function calculatePerPayAmount(
+  targetAmount: number,
+  billFrequency: string | undefined,
+  payFrequency: string,
+  isLeveled?: boolean,
+  levelingData?: LevelingData
+): number {
+  if (!targetAmount && !isLeveled) return 0;
+
+  // Use leveled calculation if envelope is leveled
+  if (isLeveled && levelingData) {
+    return calculateLeveledPayCycleAmount(
+      levelingData,
+      payFrequency as 'weekly' | 'fortnightly' | 'twice_monthly' | 'monthly'
+    );
+  }
+
+  const billCycles = BILL_FREQUENCY_CYCLES[billFrequency || 'monthly'] || 12;
+  const payCycles = PAY_FREQUENCY_CYCLES[payFrequency] || 26;
+
+  const annualAmount = targetAmount * billCycles;
+  return annualAmount / payCycles;
+}
+
+// Calculate annual amount
+function calculateAnnualAmount(
+  targetAmount: number,
+  billFrequency: string | undefined,
+  isLeveled?: boolean,
+  levelingData?: LevelingData
+): number {
+  if (isLeveled && levelingData) {
+    return levelingData.yearlyAverage * 12 * (1 + levelingData.bufferPercent / 100);
+  }
+
+  if (!targetAmount) return 0;
+  const billCycles = BILL_FREQUENCY_CYCLES[billFrequency || 'monthly'] || 12;
+  return targetAmount * billCycles;
+}
+
+// Priority types
+type Priority = 'essential' | 'important' | 'discretionary';
+
+// Priority configuration
+const PRIORITY_CONFIG: Record<Priority, {
+  label: string;
+  dotColor: string;
+  bgColor: string;
+}> = {
+  essential: {
+    label: 'Essential',
+    dotColor: 'bg-[#5A7E7A]',
+    bgColor: 'bg-[#E2EEEC]',
+  },
+  important: {
+    label: 'Important',
+    dotColor: 'bg-[#9CA3AF]',
+    bgColor: 'bg-[#F3F4F6]',
+  },
+  discretionary: {
+    label: 'Flexible',
+    dotColor: 'bg-[#6B9ECE]',
+    bgColor: 'bg-[#DDEAF5]',
+  },
+};
+
+// Type labels
+const TYPE_LABELS: Record<string, string> = {
+  bill: 'Bill',
+  spending: 'Spending',
+  savings: 'Savings',
+  goal: 'Goal',
+  tracking: 'Tracking',
+};
+
+// Frequency labels
+const FREQUENCY_LABELS: Record<string, string> = {
+  weekly: 'Weekly',
+  fortnightly: 'Fortnightly',
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  annual: 'Annual',
+  annually: 'Annual',
+  custom: 'Custom',
+};
 
 export function EnvelopeAllocationStep({
   envelopes,
   incomeSources,
   onAllocationsChange,
+  onEnvelopesChange,
 }: EnvelopeAllocationStepProps) {
   const [allocations, setAllocations] = useState<{ [envelopeId: string]: { [incomeId: string]: number } }>({});
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORY_ORDER));
+  const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
 
-  // Initialize allocations with smart defaults
+  // Tutorial state
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialMounted, setTutorialMounted] = useState(false);
+
+  // Mark as mounted after first render (prevents SSR issues)
   useEffect(() => {
-    const initialAllocations: { [envelopeId: string]: { [incomeId: string]: number } } = {};
+    setTutorialMounted(true);
+  }, []);
 
-    // If only one income source, allocate everything to it
-    if (incomeSources.length === 1) {
-      const income = incomeSources[0];
-      for (const envelope of envelopes) {
-        initialAllocations[envelope.id] = {
-          [income.id]: envelope.payCycleAmount || 0,
-        };
-      }
-    } else {
-      // Multiple incomes - start with empty allocations
-      for (const envelope of envelopes) {
-        initialAllocations[envelope.id] = {};
-        for (const income of incomeSources) {
-          initialAllocations[envelope.id][income.id] = 0;
+  // Auto-open tutorial on first visit
+  useEffect(() => {
+    if (!tutorialMounted) return;
+
+    const seen = localStorage.getItem("allocation_tutorial_completed");
+    if (!seen) {
+      const timer = setTimeout(() => {
+        setTutorialOpen(true);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [tutorialMounted]);
+
+  // Leveled bills dialog state (for seasonal bills like power, gas, water)
+  const [levelingEnvelopeId, setLevelingEnvelopeId] = useState<string | null>(null);
+  const [levelingDialogStep, setLevelingDialogStep] = useState<'detection' | 'quick' | '12month' | null>(null);
+
+  // Celebration/gift dialog state (for birthdays, Christmas, etc.)
+  const [celebrationEnvelopeId, setCelebrationEnvelopeId] = useState<string | null>(null);
+
+  // Add envelope dialog state
+  const [addEnvelopeOpen, setAddEnvelopeOpen] = useState(false);
+  const [newEnvelope, setNewEnvelope] = useState({
+    name: '',
+    type: 'bill' as 'bill' | 'spending' | 'savings' | 'goal' | 'tracking',
+    icon: '📁',
+    billAmount: 0,
+    frequency: 'monthly' as 'monthly' | 'weekly' | 'fortnightly' | 'quarterly' | 'annual',
+    priority: 'important' as 'essential' | 'important' | 'discretionary',
+    category: 'other',
+  });
+
+  // Get envelope being leveled (for seasonal bills)
+  const levelingEnvelope = useMemo(() => {
+    return envelopes.find(e => e.id === levelingEnvelopeId);
+  }, [envelopes, levelingEnvelopeId]);
+
+  // Detection info for leveling envelope
+  const levelingDetection = useMemo(() => {
+    if (!levelingEnvelope) return null;
+    return detectSeasonalBill(levelingEnvelope.name);
+  }, [levelingEnvelope]);
+
+  // Get envelope being configured as celebration (for GiftAllocationDialog)
+  const celebrationEnvelope = useMemo(() => {
+    return envelopes.find(e => e.id === celebrationEnvelopeId);
+  }, [envelopes, celebrationEnvelopeId]);
+
+  // Memoized props for GiftAllocationDialog to prevent infinite loops
+  const celebrationDialogEnvelope = useMemo(() => {
+    if (!celebrationEnvelope) return null;
+    return {
+      id: celebrationEnvelope.id,
+      name: celebrationEnvelope.name,
+      icon: celebrationEnvelope.icon,
+      is_celebration: celebrationEnvelope.isCelebration || false,
+      target_amount: celebrationEnvelope.billAmount || celebrationEnvelope.monthlyBudget || celebrationEnvelope.savingsAmount || 0,
+      current_amount: 0, // New envelope, no balance yet
+    };
+  }, [celebrationEnvelope]);
+
+  // Memoized existing recipients for GiftAllocationDialog
+  // Convert OnboardingGiftRecipient to GiftRecipient format expected by dialog
+  const celebrationExistingRecipients = useMemo(() => {
+    if (!celebrationEnvelope?.giftRecipients) return [];
+    // Map to GiftRecipient format with required fields
+    return celebrationEnvelope.giftRecipients.map((r, index) => {
+      // Handle date which could be Date object or already serialized string
+      let dateStr: string | null = null;
+      if (r.celebration_date) {
+        if (r.celebration_date instanceof Date) {
+          dateStr = r.celebration_date.toISOString().split('T')[0];
+        } else if (typeof r.celebration_date === 'string') {
+          dateStr = r.celebration_date;
         }
       }
-    }
+      return {
+        id: r.id || `temp-${index}`,
+        user_id: '', // Not needed for onboarding
+        envelope_id: celebrationEnvelope.id,
+        recipient_name: r.recipient_name,
+        gift_amount: r.gift_amount,
+        party_amount: r.party_amount,
+        celebration_date: dateStr,
+        notes: r.notes || null,
+        needs_gift: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    });
+  }, [celebrationEnvelope?.giftRecipients, celebrationEnvelope?.id]);
+
+  // Detection info for celebration envelope
+  const celebrationDetection = useMemo(() => {
+    if (!celebrationEnvelope) return null;
+    return detectCelebration(celebrationEnvelope.name);
+  }, [celebrationEnvelope]);
+
+  // Get primary income (first one) for calculations
+  const primaryIncome = incomeSources[0];
+  const payFrequency = primaryIncome?.frequency || 'fortnightly';
+
+  // Calculate per-pay amounts for each envelope
+  const envelopesWithPerPay = useMemo(() => {
+    return envelopes.map((env) => ({
+      ...env,
+      perPayAmount: calculatePerPayAmount(
+        env.billAmount || env.monthlyBudget || env.savingsAmount || 0,
+        env.frequency,
+        payFrequency,
+        env.isLeveled,
+        env.levelingData
+      ),
+      targetAmount: env.billAmount || env.monthlyBudget || env.savingsAmount || 0,
+      annualAmount: calculateAnnualAmount(
+        env.billAmount || env.monthlyBudget || env.savingsAmount || 0,
+        env.frequency,
+        env.isLeveled,
+        env.levelingData
+      ),
+    }));
+  }, [envelopes, payFrequency]);
+
+  // Group envelopes by category
+  const envelopesByCategory = useMemo(() => {
+    const grouped: Record<string, typeof envelopesWithPerPay> = {};
+
+    // Initialize categories
+    CATEGORY_ORDER.forEach((cat) => {
+      grouped[cat] = [];
+    });
+    grouped['other'] = [];
+
+    envelopesWithPerPay.forEach((env) => {
+      const category = env.category || 'other';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(env);
+    });
+
+    return grouped;
+  }, [envelopesWithPerPay]);
+
+  // Calculate totals per income source
+  const incomeStats = useMemo(() => {
+    return incomeSources.map((income) => {
+      const committedAmount = envelopesWithPerPay.reduce((sum, env) => {
+        // For now, all envelopes funded by primary income
+        // In future, check env.fundedBy
+        return sum + env.perPayAmount;
+      }, 0);
+
+      const surplus = income.amount - committedAmount;
+      const percentAllocated = income.amount > 0 ? (committedAmount / income.amount) * 100 : 0;
+
+      return {
+        income,
+        committedAmount,
+        surplus,
+        percentAllocated,
+        isBalanced: surplus >= 0,
+      };
+    });
+  }, [incomeSources, envelopesWithPerPay]);
+
+  // Primary income stats
+  const primaryStats = incomeStats[0];
+
+  // Total stats across all income
+  const totals = useMemo(() => {
+    const totalPerPay = envelopesWithPerPay.reduce((sum, env) => sum + env.perPayAmount, 0);
+    const totalIncome = incomeSources.reduce((sum, inc) => sum + inc.amount, 0);
+    const surplus = totalIncome - totalPerPay;
+    const percentAllocated = totalIncome > 0 ? (totalPerPay / totalIncome) * 100 : 0;
+
+    return {
+      totalPerPay,
+      incomePerPay: totalIncome,
+      surplus,
+      percentAllocated,
+      isBalanced: surplus >= 0,
+    };
+  }, [envelopesWithPerPay, incomeSources]);
+
+  // Initialize allocations with all going to primary income
+  useEffect(() => {
+    if (!primaryIncome) return;
+
+    const initialAllocations: { [envelopeId: string]: { [incomeId: string]: number } } = {};
+
+    envelopesWithPerPay.forEach((env) => {
+      initialAllocations[env.id] = {
+        [primaryIncome.id]: env.perPayAmount,
+      };
+    });
 
     setAllocations(initialAllocations);
-  }, [envelopes, incomeSources]);
+    onAllocationsChange(initialAllocations);
+  }, [envelopesWithPerPay, primaryIncome, onAllocationsChange]);
 
-  // Notify parent of changes
-  useEffect(() => {
-    onAllocationsChange(allocations);
-  }, [allocations, onAllocationsChange]);
-
-  // Calculate income totals
-  const getIncomeTotals = useCallback(() => {
-    const totals: { [incomeId: string]: { allocated: number; remaining: number; isBalanced: boolean } } = {};
-
-    for (const income of incomeSources) {
-      const allocated = Object.values(allocations).reduce(
-        (sum, envAlloc) => sum + (envAlloc[income.id] || 0),
-        0
-      );
-      const remaining = income.amount - allocated;
-      const isBalanced = Math.abs(remaining) < 0.01;
-
-      totals[income.id] = { allocated, remaining, isBalanced };
-    }
-
-    return totals;
-  }, [incomeSources, allocations]);
-
-  const incomeTotals = getIncomeTotals();
-  const allBalanced = Object.values(incomeTotals).every((t) => t.isBalanced);
-
-  // Update allocation for specific envelope and income
-  function updateAllocation(envelopeId: string, incomeId: string, newAmount: string) {
-    const amount = newAmount === "" ? 0 : parseFloat(newAmount);
-    if (isNaN(amount)) return;
-
-    setAllocations((prev) => ({
-      ...prev,
-      [envelopeId]: {
-        ...prev[envelopeId],
-        [incomeId]: amount,
-      },
-    }));
-  }
-
-  // Get total allocated to an envelope
-  function getEnvelopeTotal(envelopeId: string): number {
-    const envAlloc = allocations[envelopeId] || {};
-    return Object.values(envAlloc).reduce((sum, amount) => sum + amount, 0);
-  }
-
-  // Check if envelope is balanced
-  function isEnvelopeBalanced(envelope: EnvelopeData): boolean {
-    const total = getEnvelopeTotal(envelope.id);
-    const target = envelope.payCycleAmount || 0;
-    return Math.abs(total - target) < 0.01;
-  }
-
-  // Auto-distribute evenly across all incomes
-  function autoDistribute() {
-    const newAllocations: { [envelopeId: string]: { [incomeId: string]: number } } = {};
-
-    for (const envelope of envelopes) {
-      const target = envelope.payCycleAmount || 0;
-      const perIncome = target / incomeSources.length;
-
-      newAllocations[envelope.id] = {};
-      for (const income of incomeSources) {
-        newAllocations[envelope.id][income.id] = perIncome;
+  // Toggle category expansion
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
       }
+      return next;
+    });
+  };
+
+  // Count envelopes in category
+  const countInCategory = (category: string): number => {
+    return envelopesByCategory[category]?.length || 0;
+  };
+
+  // Sum per-pay in category
+  const sumPerPayInCategory = (category: string): number => {
+    return (envelopesByCategory[category] || []).reduce((sum, env) => sum + env.perPayAmount, 0);
+  };
+
+  // Get pay frequency label
+  const getPayFrequencyLabel = (freq: string): string => {
+    const labels: Record<string, string> = {
+      weekly: 'per week',
+      fortnightly: 'per fortnight',
+      twice_monthly: 'twice monthly',
+      monthly: 'per month',
+    };
+    return labels[freq] || 'per pay';
+  };
+
+  // Handle envelope field updates
+  const handleEnvelopeChange = useCallback((envelopeId: string, field: string, value: any) => {
+    const updated = envelopes.map(env => {
+      if (env.id !== envelopeId) return env;
+
+      const updatedEnv = { ...env, [field]: value };
+
+      // Sync billAmount/monthlyBudget/savingsAmount based on type
+      if (field === 'targetAmount') {
+        if (env.type === 'bill') {
+          updatedEnv.billAmount = value;
+        } else if (env.type === 'spending') {
+          updatedEnv.monthlyBudget = value;
+        } else {
+          updatedEnv.savingsAmount = value;
+        }
+      }
+
+      return updatedEnv;
+    });
+    onEnvelopesChange(updated);
+    setEditingCell(null);
+  }, [envelopes, onEnvelopesChange]);
+
+  // Handle leveling setup
+  const handleStartLeveling = (envelopeId: string) => {
+    setLevelingEnvelopeId(envelopeId);
+    setLevelingDialogStep('detection');
+  };
+
+  const handleLevelingMethodSelect = (method: '12-month' | 'quick-estimate') => {
+    if (method === 'quick-estimate') {
+      setLevelingDialogStep('quick');
+    } else {
+      setLevelingDialogStep('12month');
+    }
+  };
+
+  const handleLevelingSave = (levelingData: LevelingData) => {
+    if (!levelingEnvelopeId || !levelingDetection) return;
+
+    const updated = envelopes.map(env => {
+      if (env.id !== levelingEnvelopeId) return env;
+      return {
+        ...env,
+        isLeveled: true,
+        levelingData,
+        seasonalPattern: levelingDetection.suggestedPattern as SeasonalPatternType,
+      };
+    });
+
+    onEnvelopesChange(updated);
+    setLevelingEnvelopeId(null);
+    setLevelingDialogStep(null);
+  };
+
+  const handleCloseLevelingDialogs = () => {
+    setLevelingEnvelopeId(null);
+    setLevelingDialogStep(null);
+  };
+
+  // Handle celebration envelope setup (GiftAllocationDialog)
+  const handleStartCelebration = (envelopeId: string) => {
+    setCelebrationEnvelopeId(envelopeId);
+  };
+
+  const handleCelebrationSave = async (
+    recipients: GiftRecipientInput[],
+    budgetChange: number
+  ) => {
+    if (!celebrationEnvelopeId) return;
+
+    // Calculate total annual budget from recipients
+    const totalAnnualBudget = recipients
+      .filter(r => r.recipient_name !== '__PARTY__')
+      .reduce((sum, r) => sum + (r.gift_amount || 0) + (r.party_amount || 0), 0) +
+      (recipients.find(r => r.recipient_name === '__PARTY__')?.gift_amount || 0);
+
+    // Calculate monthly amount
+    const monthlyAmount = totalAnnualBudget / 12;
+
+    // Update envelope with celebration data
+    const updated = envelopes.map(env => {
+      if (env.id !== celebrationEnvelopeId) return env;
+      return {
+        ...env,
+        isCelebration: true,
+        giftRecipients: recipients,
+        billAmount: monthlyAmount, // Monthly target
+        frequency: 'monthly' as const,
+      };
+    });
+
+    onEnvelopesChange(updated);
+    setCelebrationEnvelopeId(null);
+  };
+
+  const handleCloseCelebrationDialog = () => {
+    setCelebrationEnvelopeId(null);
+  };
+
+  // Handle adding a new envelope
+  const handleAddEnvelope = () => {
+    if (!newEnvelope.name.trim()) return;
+
+    const newEnv: EnvelopeData = {
+      id: `new-${Date.now()}`,
+      name: newEnvelope.name.trim(),
+      icon: newEnvelope.icon,
+      type: newEnvelope.type,
+      billAmount: newEnvelope.type === 'bill' ? newEnvelope.billAmount : undefined,
+      monthlyBudget: newEnvelope.type === 'spending' ? newEnvelope.billAmount : undefined,
+      savingsAmount: newEnvelope.type === 'savings' || newEnvelope.type === 'goal' ? newEnvelope.billAmount : undefined,
+      frequency: newEnvelope.frequency,
+      priority: newEnvelope.priority,
+      category: newEnvelope.category,
+    };
+
+    onEnvelopesChange([...envelopes, newEnv]);
+    setAddEnvelopeOpen(false);
+    setNewEnvelope({
+      name: '',
+      type: 'bill',
+      icon: '📁',
+      billAmount: 0,
+      frequency: 'monthly',
+      priority: 'important',
+      category: 'other',
+    });
+  };
+
+  // Check for seasonal bills that haven't been leveled (power, gas, water)
+  const unleveledSeasonalBills = useMemo(() => {
+    return envelopes.filter(env => {
+      if (env.isLeveled) return false;
+      // Don't include celebrations - those are handled separately
+      const celebrationCheck = detectCelebration(env.name);
+      if (celebrationCheck.isCelebration) return false;
+      const detection = detectSeasonalBill(env.name);
+      return detection.isLikelySeasonal && detection.confidence !== 'low';
+    });
+  }, [envelopes]);
+
+  // Check for celebration envelopes that haven't been configured
+  const unconfiguredCelebrations = useMemo(() => {
+    return envelopes.filter(env => {
+      if (env.isCelebration) return false; // Already configured
+      const detection = detectCelebration(env.name);
+      return detection.isCelebration;
+    });
+  }, [envelopes]);
+
+  // Render editable cell
+  const renderEditableCell = (
+    env: typeof envelopesWithPerPay[0],
+    field: string,
+    currentValue: any,
+    type: 'text' | 'number' | 'select' | 'date' = 'text',
+    options?: { value: string; label: string }[]
+  ) => {
+    const isEditing = editingCell?.id === env.id && editingCell?.field === field;
+
+    if (isEditing) {
+      if (type === 'select' && options) {
+        return (
+          <Select
+            value={currentValue || ''}
+            onValueChange={(val) => handleEnvelopeChange(env.id, field, val)}
+          >
+            <SelectTrigger className="h-7 w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      }
+
+      if (type === 'number') {
+        return (
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={currentValue || ''}
+            autoFocus
+            className="h-7 w-20 text-xs"
+            onBlur={(e) => handleEnvelopeChange(env.id, field, parseFloat(e.target.value) || 0)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleEnvelopeChange(env.id, field, parseFloat((e.target as HTMLInputElement).value) || 0);
+              } else if (e.key === 'Escape') {
+                setEditingCell(null);
+              }
+            }}
+          />
+        );
+      }
+
+      if (type === 'date') {
+        return (
+          <Input
+            type="number"
+            min="1"
+            max="31"
+            defaultValue={currentValue || ''}
+            autoFocus
+            className="h-7 w-14 text-xs"
+            placeholder="Day"
+            onBlur={(e) => handleEnvelopeChange(env.id, field, parseInt(e.target.value) || null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleEnvelopeChange(env.id, field, parseInt((e.target as HTMLInputElement).value) || null);
+              } else if (e.key === 'Escape') {
+                setEditingCell(null);
+              }
+            }}
+          />
+        );
+      }
+
+      return (
+        <Input
+          type="text"
+          defaultValue={currentValue || ''}
+          autoFocus
+          className="h-7 text-xs"
+          onBlur={(e) => handleEnvelopeChange(env.id, field, e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              handleEnvelopeChange(env.id, field, (e.target as HTMLInputElement).value);
+            } else if (e.key === 'Escape') {
+              setEditingCell(null);
+            }
+          }}
+        />
+      );
     }
 
-    setAllocations(newAllocations);
-  }
+    return null;
+  };
 
-  // Single income - no need for complex UI
-  if (incomeSources.length === 1) {
+  // Render envelope row
+  const renderEnvelopeRow = (env: typeof envelopesWithPerPay[0], index: number) => {
+    const priority = env.priority as Priority || 'discretionary';
+    const config = PRIORITY_CONFIG[priority];
+
+    // Check for celebration first (birthdays, Christmas, etc.)
+    const celebrationCheck = detectCelebration(env.name);
+    const showCelebrationPrompt = celebrationCheck.isCelebration && !env.isCelebration;
+
+    // Check for seasonal bills (power, gas, water) - only if NOT a celebration
+    const seasonalDetection = celebrationCheck.isCelebration ? null : detectSeasonalBill(env.name);
+    const showLevelingPrompt = seasonalDetection?.isLikelySeasonal && !env.isLeveled && seasonalDetection.confidence !== 'low';
+
+    const isFirstRow = index === 0;
+
     return (
-      <div className="max-w-2xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Allocation Complete!</h2>
-          <p className="text-muted-foreground">
-            Since you have one income source, all envelopes are automatically funded from{" "}
-            <span className="font-semibold">{incomeSources[0].name}</span>
-          </p>
-        </div>
-
-        {/* Remy's Tip */}
-        <RemyTip pose="encouraging">
-          Sweet as! With one income, this part's easy. Everything flows from your main pay.
-        </RemyTip>
-
-        <Card className="p-6 bg-sage-very-light border-sage-light">
-          <div className="flex items-center gap-3 mb-4">
-            <Check className="h-6 w-6 text-[#7A9E9A]" />
-            <div>
-              <h3 className="font-semibold text-text-dark">All Set!</h3>
-              <p className="text-sm text-text-medium">
-                Every envelope is funded from your {incomeSources[0].name}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2 text-sm">
-            {envelopes.map((envelope) => (
-              <div key={envelope.id} className="flex items-center justify-between">
-                <span className="text-muted-foreground">
-                  {envelope.icon} {envelope.name}
-                </span>
-                <span className="font-medium">{formatCurrency(envelope.payCycleAmount || 0)}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  // Multiple incomes - show allocation UI
-  return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Allocate Your Income</h2>
-        <p className="text-muted-foreground">
-          Decide which income sources fund each envelope
-        </p>
-      </div>
-
-      {/* Remy's Tip */}
-      <RemyTip pose="thinking">
-        Time to allocate your income. Let's make sure your essentials are
-        covered first - the must-pays that keep life running. What's left
-        goes to your priorities. You decide what matters most.
-      </RemyTip>
-
-      {/* Income Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {incomeSources.map((income) => {
-          const totals = incomeTotals[income.id];
-          return (
-            <Card
-              key={income.id}
-              className={`p-4 ${
-                totals.isBalanced
-                  ? "border-[#B8D4D0] bg-[#E2EEEC]"
-                  : totals.remaining > 0
-                  ? "border-[#D4A853] bg-[#F5E6C4]"
-                  : "border-[#6B9ECE] bg-[#DDEAF5]"
-              }`}
+      <tr key={env.id} className="border-b last:border-0 hover:bg-muted/20 group">
+        {/* Priority */}
+        <td className="px-1 py-2 text-center" {...(isFirstRow ? { 'data-tutorial': 'priority-cell' } : {})}>
+          {editingCell?.id === env.id && editingCell?.field === 'priority' ? (
+            <Select
+              value={priority}
+              onValueChange={(val) => handleEnvelopeChange(env.id, 'priority', val)}
             >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-secondary">{income.name}</h3>
-                {totals.isBalanced ? (
-                  <Check className="h-5 w-5 text-[#7A9E9A]" />
-                ) : (
-                  <AlertCircle
-                    className={`h-5 w-5 ${totals.remaining > 0 ? "text-[#D4A853]" : "text-[#6B9ECE]"}`}
-                  />
+              <SelectTrigger className="h-7 w-24 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+                  <SelectItem key={key} value={key}>
+                    <div className="flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${cfg.dotColor}`} />
+                      {cfg.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <button
+              onClick={() => setEditingCell({ id: env.id, field: 'priority' })}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${config.bgColor} hover:ring-1 hover:ring-sage cursor-pointer`}
+              title={`${config.label} - Click to change`}
+            >
+              <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
+            </button>
+          )}
+        </td>
+
+        {/* Envelope Name */}
+        <td className="px-2 py-2" {...(isFirstRow ? { 'data-tutorial': 'envelope-name' } : {})}>
+          <div className="flex items-center gap-2">
+            <span className="text-base">{env.icon}</span>
+            {editingCell?.id === env.id && editingCell?.field === 'name' ? (
+              <Input
+                type="text"
+                defaultValue={env.name}
+                autoFocus
+                className="h-7 text-xs flex-1"
+                onBlur={(e) => handleEnvelopeChange(env.id, 'name', e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleEnvelopeChange(env.id, 'name', (e.target as HTMLInputElement).value);
+                  } else if (e.key === 'Escape') {
+                    setEditingCell(null);
+                  }
+                }}
+              />
+            ) : (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditingCell({ id: env.id, field: 'name' })}
+                  className="font-medium text-text-dark hover:text-sage-dark text-left flex items-center gap-1"
+                >
+                  {env.name}
+                  <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                </button>
+                {/* Celebration indicator - shows gift icon when configured */}
+                {env.isCelebration && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold-light text-gold text-[10px]">
+                          🎁
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          Celebration envelope - click to edit gift recipients
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {/* Leveled indicator - shows seasonal pattern for seasonal bills */}
+                {env.isLeveled && !env.isCelebration && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-light text-blue text-[10px]">
+                          {env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          Leveled ({env.seasonalPattern === 'winter-peak' ? 'Winter Peak' : 'Summer Peak'})
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {/* Celebration prompt - gift icon for birthdays, Christmas, etc. */}
+                {showCelebrationPrompt && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartCelebration(env.id)}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold-light text-gold hover:bg-gold hover:text-white transition-colors"
+                        >
+                          <Gift className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          Click to add gift recipients and spread the cost across the year
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {/* Leveling prompt - thermometer for seasonal bills (power, gas, water) */}
+                {showLevelingPrompt && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartLeveling(env.id)}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-light text-blue hover:bg-blue hover:text-white transition-colors"
+                        >
+                          <Thermometer className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          This bill varies seasonally - click to level it
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Income:</span>
-                  <span className="font-medium">{formatCurrency(income.amount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Allocated:</span>
-                  <span className="font-medium">{formatCurrency(totals.allocated)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-1">
-                  <span className="text-muted-foreground">Remaining:</span>
-                  <span
-                    className={`font-bold ${
-                      totals.isBalanced
-                        ? "text-[#5A7E7A]"
-                        : totals.remaining > 0
-                        ? "text-[#8B7035]"
-                        : "text-[#6B9ECE]"
-                    }`}
-                  >
-                    {formatCurrency(totals.remaining)}
-                  </span>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+            )}
+          </div>
+        </td>
 
-      {/* Warning if not balanced */}
-      {!allBalanced && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Zero-based budget requires all income to be allocated. Please adjust allocations until all income
-            sources show $0.00 remaining.
-          </AlertDescription>
-        </Alert>
+        {/* Type */}
+        <td className="px-1 py-2 text-center hidden md:table-cell">
+          {editingCell?.id === env.id && editingCell?.field === 'type' ? (
+            <Select
+              value={env.type}
+              onValueChange={(val) => handleEnvelopeChange(env.id, 'type', val)}
+            >
+              <SelectTrigger className="h-7 w-24 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <button
+              onClick={() => setEditingCell({ id: env.id, field: 'type' })}
+              className="text-xs text-muted-foreground hover:text-sage-dark"
+            >
+              {TYPE_LABELS[env.type] || env.type}
+            </button>
+          )}
+        </td>
+
+        {/* Target */}
+        <td className="px-1 py-2 text-right" {...(isFirstRow ? { 'data-tutorial': 'target-cell' } : {})}>
+          {editingCell?.id === env.id && editingCell?.field === 'targetAmount' ? (
+            renderEditableCell(env, 'targetAmount', env.targetAmount, 'number')
+          ) : (
+            <button
+              onClick={() => setEditingCell({ id: env.id, field: 'targetAmount' })}
+              className="text-text-medium hover:text-sage-dark"
+            >
+              {formatCurrency(env.targetAmount)}
+            </button>
+          )}
+        </td>
+
+        {/* Frequency */}
+        <td className="px-1 py-2 text-center hidden sm:table-cell" {...(isFirstRow ? { 'data-tutorial': 'frequency-cell' } : {})}>
+          {editingCell?.id === env.id && editingCell?.field === 'frequency' ? (
+            <Select
+              value={env.frequency || 'monthly'}
+              onValueChange={(val) => handleEnvelopeChange(env.id, 'frequency', val)}
+            >
+              <SelectTrigger className="h-7 w-24 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(FREQUENCY_LABELS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <button
+              onClick={() => setEditingCell({ id: env.id, field: 'frequency' })}
+              className="text-muted-foreground text-xs hover:text-sage-dark"
+            >
+              {FREQUENCY_LABELS[env.frequency || 'monthly'] || 'Monthly'}
+            </button>
+          )}
+        </td>
+
+        {/* Due Date */}
+        <td className="px-1 py-2 text-center hidden lg:table-cell">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="text-muted-foreground text-xs hover:text-sage-dark flex items-center gap-1 mx-auto"
+              >
+                {env.dueDate ? (
+                  <>
+                    <CalendarIcon className="h-3 w-3" />
+                    {typeof env.dueDate === 'number'
+                      ? `${env.dueDate.toString().padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`
+                      : new Date(env.dueDate).toLocaleDateString('en-NZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </>
+                ) : (
+                  <span className="text-muted-foreground/50">—</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <Calendar
+                mode="single"
+                selected={env.dueDate ? new Date(env.dueDate) : undefined}
+                onSelect={(date) => {
+                  handleEnvelopeChange(env.id, 'dueDate', date ? date.toISOString().split('T')[0] : null);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        </td>
+
+        {/* Funded By */}
+        <td className="px-1 py-2 text-center hidden xl:table-cell">
+          {editingCell?.id === env.id && editingCell?.field === 'fundedBy' ? (
+            <Select
+              value={env.fundedBy || primaryIncome?.id || 'split'}
+              onValueChange={(val) => handleEnvelopeChange(env.id, 'fundedBy', val)}
+            >
+              <SelectTrigger className="h-7 w-28 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {incomeSources.map((inc) => (
+                  <SelectItem key={inc.id} value={inc.id}>{inc.name}</SelectItem>
+                ))}
+                {incomeSources.length > 1 && (
+                  <SelectItem value="split">Split evenly</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          ) : (
+            <button
+              onClick={() => setEditingCell({ id: env.id, field: 'fundedBy' })}
+              className="text-muted-foreground text-xs hover:text-sage-dark"
+            >
+              {env.fundedBy === 'split' ? 'Split' : (incomeSources.find(i => i.id === env.fundedBy)?.name || primaryIncome?.name || '—')}
+            </button>
+          )}
+        </td>
+
+        {/* Per Pay */}
+        <td className="px-1 py-2 text-right" {...(isFirstRow ? { 'data-tutorial': 'per-pay-cell' } : {})}>
+          <span className="font-semibold text-[#5A7E7A]">
+            {formatCurrency(env.perPayAmount)}
+          </span>
+        </td>
+
+        {/* Annual */}
+        <td className="px-1 py-2 text-right hidden lg:table-cell">
+          <span className="text-muted-foreground text-xs">
+            {formatCurrency(env.annualAmount)}
+          </span>
+        </td>
+
+        {/* Notes */}
+        <td className="px-1 py-2 text-center hidden xl:table-cell">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="text-muted-foreground hover:text-sage-dark">
+                {env.notes ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <FileText className="h-4 w-4 text-sage" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs max-w-xs">{env.notes}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <FileText className="h-4 w-4 text-muted-foreground/30 hover:text-muted-foreground" />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3">
+              <div className="space-y-2">
+                <Textarea
+                  id={`notes-${env.id}`}
+                  placeholder="Add notes..."
+                  defaultValue={env.notes || ''}
+                  className="text-xs resize-none"
+                  rows={3}
+                />
+                <Button
+                  size="sm"
+                  className="w-full h-7 text-xs bg-sage hover:bg-sage-dark"
+                  onClick={() => {
+                    const textarea = document.getElementById(`notes-${env.id}`) as HTMLTextAreaElement;
+                    if (textarea) {
+                      handleEnvelopeChange(env.id, 'notes', textarea.value);
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </td>
+      </tr>
+    );
+  };
+
+  return (
+    <div className="w-full space-y-6">
+      {/* Interactive Tutorial Overlay */}
+      {tutorialMounted && (
+        <AllocationTutorial
+          open={tutorialOpen}
+          onOpenChange={setTutorialOpen}
+          onComplete={() => {}}
+        />
       )}
 
-      {/* Quick Action */}
-      <div className="flex justify-center">
-        <Button onClick={autoDistribute} variant="outline" size="sm">
-          <Calculator className="mr-2 h-4 w-4" />
-          Auto-Distribute Evenly
+      {/* Header */}
+      <div className="text-center space-y-2 relative">
+        <div className="flex items-center justify-center gap-2">
+          <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Your Budget Allocation</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTutorialOpen(true)}
+            className="h-8 px-2 gap-1 rounded-full hover:bg-sage-very-light text-sage"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="text-xs font-medium">Tutorial</span>
+          </Button>
+        </div>
+        <p className="text-muted-foreground">
+          Here's what you'll set aside each payday to cover your commitments.
+        </p>
+        <p className="text-muted-foreground">
+          The goal is simple: make sure what goes out isn't more than what comes in.
+        </p>
+        {/* Add Envelope Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAddEnvelopeOpen(true)}
+          className="mt-2 gap-1 border-sage text-sage hover:bg-sage-very-light"
+        >
+          <Plus className="h-4 w-4" />
+          Add Envelope
         </Button>
       </div>
 
-      {/* Allocation Table */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left p-3 font-semibold text-sm text-secondary">Envelope</th>
-                {incomeSources.map((income) => (
-                  <th
-                    key={income.id}
-                    className="text-center p-3 font-semibold text-sm text-secondary min-w-[140px]"
-                  >
-                    {income.name}
-                  </th>
-                ))}
-                <th className="text-right p-3 font-semibold text-sm text-secondary min-w-[100px]">Total</th>
-                <th className="text-center p-3 font-semibold text-sm text-secondary w-12">✓</th>
-              </tr>
-            </thead>
-            <tbody>
-              {envelopes.map((envelope) => {
-                const isBalanced = isEnvelopeBalanced(envelope);
-                const total = getEnvelopeTotal(envelope.id);
-                const target = envelope.payCycleAmount || 0;
+      {/* Remy's Coaching - Context aware */}
+      {totals.surplus < 0 ? (
+        <RemyTip pose="thinking">
+          You're committing more than you earn by {formatCurrency(Math.abs(totals.surplus))} per pay.
+          Adjust your flexible expenses first by clicking <strong>Target</strong> (the bill amount) to reduce it.
+          Focus on essentials first and we'll fine-tune after onboarding.
+        </RemyTip>
+      ) : unconfiguredCelebrations.length > 0 ? (
+        <RemyTip pose="encouraging">
+          I've spotted a celebration envelope - {unconfiguredCelebrations[0].name}! Look for the 🎁 gift icon
+          next to the envelope name and click it to add who you're buying for. We'll spread the cost across
+          the year so you're never caught short when the big day arrives. Check out the{" "}
+          <button
+            onClick={() => setTutorialOpen(true)}
+            className="text-sage underline hover:text-sage-dark font-medium"
+          >
+            Tutorial
+          </button>
+          {" "}to learn more about celebrations and seasonal bills.
+        </RemyTip>
+      ) : unleveledSeasonalBills.length > 0 ? (
+        <RemyTip pose="encouraging">
+          I've spotted some bills that might vary through the year - like {unleveledSeasonalBills[0].name}.
+          Power bills can be heaps higher in winter! Look for the thermometer icon next to the envelope name
+          and click it to level the bill so you save a steady amount each pay. Check out the{" "}
+          <button
+            onClick={() => setTutorialOpen(true)}
+            className="text-sage underline hover:text-sage-dark font-medium"
+          >
+            Tutorial
+          </button>
+          {" "}to learn how leveling works.
+        </RemyTip>
+      ) : (
+        <RemyTip pose="encouraging">
+          If you can't fully fund every envelope right now, that's completely okay - this is just the starting line, not the finish.
+          We'll work together to get you on track over time. For now, focus on your essentials and do what feels realistic.
+          You've already taken the biggest step just by being here.
+        </RemyTip>
+      )}
 
-                return (
-                  <tr key={envelope.id} className="border-b border-border hover:bg-muted/30">
-                    {/* Envelope Name */}
-                    <td className="p-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{envelope.icon}</span>
-                        <div>
-                          <p className="font-medium text-secondary text-sm">{envelope.name}</p>
-                          <p className="text-xs text-muted-foreground">Target: {formatCurrency(target)}</p>
-                        </div>
-                      </div>
-                    </td>
+      {/* Income Progress Cards */}
+      <div className={`grid gap-4 ${incomeSources.length > 1 ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+        {incomeStats.map((stats, idx) => (
+          <div key={stats.income.id} data-tutorial={idx === 0 ? 'income-cards' : undefined}>
+            <Card
+              className={`p-4 ${stats.isBalanced ? 'bg-[#E2EEEC] border-[#B8D4D0]' : 'bg-[#DDEAF5] border-[#6B9ECE]'}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  {stats.isBalanced ? (
+                    <Check className="h-5 w-5 text-[#7A9E9A]" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-[#6B9ECE]" />
+                  )}
+                  <div>
+                    <h3 className="font-semibold text-text-dark">{stats.income.name}</h3>
+                    <p className="text-sm text-text-medium">
+                      {formatCurrency(stats.income.amount)} {getPayFrequencyLabel(stats.income.frequency)}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">
+                    {stats.isBalanced ? 'Surplus' : 'Shortfall'}
+                  </p>
+                  <p className={`font-bold ${stats.isBalanced ? 'text-[#5A7E7A]' : 'text-[#6B9ECE]'}`}>
+                    {formatCurrency(Math.abs(stats.surplus))}
+                  </p>
+                </div>
+              </div>
 
-                    {/* Allocation Inputs per Income */}
-                    {incomeSources.map((income) => (
-                      <td key={income.id} className="p-3">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={allocations[envelope.id]?.[income.id] || ""}
-                          onChange={(e) => updateAllocation(envelope.id, income.id, e.target.value)}
-                          onFocus={(e) => e.target.select()}
-                          className="h-9 text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          placeholder="0.00"
-                        />
-                      </td>
-                    ))}
-
-                    {/* Total */}
-                    <td className="p-3 text-right">
-                      <span
-                        className={`font-medium ${
-                          isBalanced
-                            ? "text-[#7A9E9A]"
-                            : total > target
-                            ? "text-[#6B9ECE]"
-                            : "text-[#D4A853]"
-                        }`}
-                      >
-                        {formatCurrency(total)}
-                      </span>
-                    </td>
-
-                    {/* Status Icon */}
-                    <td className="p-3 text-center">
-                      {isBalanced ? (
-                        <Check className="h-5 w-5 text-[#7A9E9A] mx-auto" />
-                      ) : (
-                        <X className="h-5 w-5 text-[#6B9ECE] mx-auto" />
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              {/* Progress bar */}
+              <div className="space-y-1">
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all ${stats.percentAllocated > 100 ? 'bg-[#6B9ECE]' : 'bg-[#7A9E9A]'}`}
+                    style={{ width: `${Math.min(stats.percentAllocated, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{formatCurrency(stats.committedAmount)} allocated</span>
+                  <span>{Math.round(stats.percentAllocated)}%</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        ))}
       </div>
 
-      {/* Continue hint */}
-      {allBalanced && (
+      {/* Allocation Table by Category */}
+      <div className="space-y-3">
+        {CATEGORY_ORDER.map((category) => {
+          const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
+          if (!categoryInfo) return null;
+
+          const categoryEnvelopes = envelopesByCategory[category] || [];
+          if (categoryEnvelopes.length === 0) return null;
+
+          const isExpanded = expandedCategories.has(category);
+          const categoryTotal = sumPerPayInCategory(category);
+
+          return (
+            <div key={category} className="border rounded-lg overflow-hidden">
+              {/* Category Header */}
+              <button
+                type="button"
+                onClick={() => toggleCategory(category)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
+                {...(category === CATEGORY_ORDER[0] ? { 'data-tutorial': 'category-header' } : {})}
+              >
+                <div className="flex items-center gap-3">
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-lg">{categoryInfo.icon}</span>
+                  <span className="font-semibold text-gray-700">{categoryInfo.label}</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({countInCategory(category)})
+                  </span>
+                </div>
+                <span className="font-semibold text-[#5A7E7A]">
+                  {formatCurrency(categoryTotal)}
+                </span>
+              </button>
+
+              {/* Category Content - Table */}
+              {isExpanded && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground w-10">Pri</th>
+                        <th className="text-left px-2 py-2 font-medium text-muted-foreground">Envelope</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden md:table-cell w-16">Type</th>
+                        <th className="text-right px-1 py-2 font-medium text-muted-foreground w-20">Target</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden sm:table-cell w-20">Freq</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-24">Due</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden xl:table-cell w-24">Funded By</th>
+                        <th className="text-right px-1 py-2 font-medium text-[#5A7E7A] w-20">Per Pay</th>
+                        <th className="text-right px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-20">Annual</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden xl:table-cell w-10">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categoryEnvelopes.map((env, idx) => renderEnvelopeRow(env, idx))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Other/Uncategorized */}
+        {envelopesByCategory['other']?.length > 0 && (
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleCategory('other')}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                {expandedCategories.has('other') ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-lg">📦</span>
+                <span className="font-semibold text-gray-700">Other</span>
+                <span className="text-sm text-muted-foreground">
+                  ({envelopesByCategory['other'].length})
+                </span>
+              </div>
+              <span className="font-semibold text-[#5A7E7A]">
+                {formatCurrency(sumPerPayInCategory('other'))}
+              </span>
+            </button>
+
+            {expandedCategories.has('other') && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground w-10">Pri</th>
+                      <th className="text-left px-2 py-2 font-medium text-muted-foreground">Envelope</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden md:table-cell w-16">Type</th>
+                      <th className="text-right px-1 py-2 font-medium text-muted-foreground w-20">Target</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden sm:table-cell w-20">Freq</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-24">Due</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden xl:table-cell w-24">Funded By</th>
+                      <th className="text-right px-1 py-2 font-medium text-[#5A7E7A] w-20">Per Pay</th>
+                      <th className="text-right px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-20">Annual</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden xl:table-cell w-10">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {envelopesByCategory['other'].map((env, idx) => renderEnvelopeRow(env, idx))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Summary Footer */}
+      <Card className="p-4 bg-white border-[#B8D4D0]" data-tutorial="summary-footer">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-center sm:text-left">
+            <p className="text-sm text-muted-foreground">Total Allocation Per Pay</p>
+            <p className="text-2xl font-bold text-[#5A7E7A]">{formatCurrency(totals.totalPerPay)}</p>
+          </div>
+
+          <div className="flex items-center gap-6 text-sm">
+            <div className="text-center">
+              <p className="text-muted-foreground">Envelopes</p>
+              <p className="font-semibold">{envelopes.length}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-muted-foreground">Income</p>
+              <p className="font-semibold">{formatCurrency(totals.incomePerPay)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-muted-foreground">
+                {totals.surplus >= 0 ? 'Surplus' : 'Shortfall'}
+              </p>
+              <p className={`font-semibold ${totals.surplus >= 0 ? 'text-[#5A7E7A]' : 'text-[#6B9ECE]'}`}>
+                {formatCurrency(Math.abs(totals.surplus))}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Balance Status Message */}
+      {totals.surplus > 0 && totals.surplus < totals.incomePerPay * 0.1 && (
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg px-4 py-2">
             <Check className="h-5 w-5 text-[#7A9E9A]" />
             <span className="text-sm font-medium text-text-dark">
-              Perfect! All income is allocated. Click Continue to review.
+              Looking good! You have {formatCurrency(totals.surplus)} surplus each pay.
             </span>
           </div>
         </div>
       )}
+
+      {/* Leveling Dialogs */}
+      {levelingEnvelope && levelingDetection && (
+        <>
+          <SeasonalBillDetectionDialog
+            open={levelingDialogStep === 'detection'}
+            onOpenChange={(open) => !open && handleCloseLevelingDialogs()}
+            envelopeName={levelingEnvelope.name}
+            matchedKeyword={levelingDetection.matchedKeyword || ''}
+            suggestedPattern={levelingDetection.suggestedPattern || 'winter-peak'}
+            confidence={levelingDetection.confidence}
+            onSetupLeveling={handleLevelingMethodSelect}
+            onSkip={handleCloseLevelingDialogs}
+          />
+
+          <QuickEstimateDialog
+            open={levelingDialogStep === 'quick'}
+            onOpenChange={(open) => !open && handleCloseLevelingDialogs()}
+            envelopeName={levelingEnvelope.name}
+            suggestedPattern={(levelingDetection.suggestedPattern as 'winter-peak' | 'summer-peak') || 'winter-peak'}
+            onBack={() => setLevelingDialogStep('detection')}
+            onSave={handleLevelingSave}
+          />
+
+          <TwelveMonthEntryDialog
+            open={levelingDialogStep === '12month'}
+            onOpenChange={(open) => !open && handleCloseLevelingDialogs()}
+            envelopeName={levelingEnvelope.name}
+            onBack={() => setLevelingDialogStep('detection')}
+            onSave={handleLevelingSave}
+          />
+        </>
+      )}
+
+      {/* Celebration/Gift Allocation Dialog - for birthdays, Christmas, etc. */}
+      {celebrationDialogEnvelope && (
+        <GiftAllocationDialog
+          open={!!celebrationEnvelopeId}
+          onOpenChange={(open) => !open && handleCloseCelebrationDialog()}
+          envelope={celebrationDialogEnvelope}
+          existingRecipients={celebrationExistingRecipients}
+          onSave={handleCelebrationSave}
+        />
+      )}
+
+      {/* Add Envelope Dialog */}
+      <Dialog open={addEnvelopeOpen} onOpenChange={setAddEnvelopeOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Envelope</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="envelope-name">Name</Label>
+              <Input
+                id="envelope-name"
+                placeholder="e.g., Car Insurance, Haircuts"
+                value={newEnvelope.name}
+                onChange={(e) => setNewEnvelope(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            {/* Type */}
+            <div className="space-y-2">
+              <Label htmlFor="envelope-type">Type</Label>
+              <Select
+                value={newEnvelope.type}
+                onValueChange={(val) => setNewEnvelope(prev => ({ ...prev, type: val as typeof prev.type }))}
+              >
+                <SelectTrigger id="envelope-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bill">Bill</SelectItem>
+                  <SelectItem value="spending">Spending</SelectItem>
+                  <SelectItem value="savings">Savings</SelectItem>
+                  <SelectItem value="goal">Goal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="envelope-amount">
+                {newEnvelope.type === 'bill' ? 'Bill Amount' :
+                 newEnvelope.type === 'spending' ? 'Monthly Budget' : 'Target Amount'}
+              </Label>
+              <Input
+                id="envelope-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={newEnvelope.billAmount || ''}
+                onChange={(e) => setNewEnvelope(prev => ({ ...prev, billAmount: parseFloat(e.target.value) || 0 }))}
+              />
+            </div>
+
+            {/* Frequency */}
+            <div className="space-y-2">
+              <Label htmlFor="envelope-frequency">Frequency</Label>
+              <Select
+                value={newEnvelope.frequency}
+                onValueChange={(val) => setNewEnvelope(prev => ({ ...prev, frequency: val as typeof prev.frequency }))}
+              >
+                <SelectTrigger id="envelope-frequency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="annual">Annual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Priority */}
+            <div className="space-y-2">
+              <Label htmlFor="envelope-priority">Priority</Label>
+              <Select
+                value={newEnvelope.priority}
+                onValueChange={(val) => setNewEnvelope(prev => ({ ...prev, priority: val as typeof prev.priority }))}
+              >
+                <SelectTrigger id="envelope-priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="essential">Essential</SelectItem>
+                  <SelectItem value="important">Important</SelectItem>
+                  <SelectItem value="discretionary">Flexible</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Category */}
+            <div className="space-y-2">
+              <Label htmlFor="envelope-category">Category</Label>
+              <Select
+                value={newEnvelope.category}
+                onValueChange={(val) => setNewEnvelope(prev => ({ ...prev, category: val }))}
+              >
+                <SelectTrigger id="envelope-category">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_ORDER.map((cat) => {
+                    const info = CATEGORY_LABELS[cat as BuiltInCategory];
+                    if (!info) return null;
+                    return (
+                      <SelectItem key={cat} value={cat}>
+                        {info.icon} {info.label}
+                      </SelectItem>
+                    );
+                  })}
+                  <SelectItem value="other">📦 Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddEnvelopeOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddEnvelope}
+              disabled={!newEnvelope.name.trim()}
+              className="bg-sage hover:bg-sage-dark"
+            >
+              Add Envelope
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

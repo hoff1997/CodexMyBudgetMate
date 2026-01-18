@@ -35,6 +35,7 @@ export type MilestoneKey =
   | "emergency_fund_75"
   | "emergency_fund_complete"
   | "debt_free"
+  | "individual_debt_paid"
   | "first_savings_goal"
   | "all_bills_funded"
   | "budget_surplus";
@@ -90,7 +91,7 @@ export const MILESTONES: Record<MilestoneKey, Milestone> = {
     title: "First Bill Funded! 💪",
     description: "Your first bill is fully funded ahead of time",
     remyMessage:
-      "Sweet as! Your first bill is fully funded before it's due. That's the My Budget Way - no more scrambling when bills arrive. They're just... handled.",
+      "Your first bill is fully funded before it's due. That's the My Budget Way - no more scrambling when bills arrive. They're just... handled.",
     icon: "📋",
     confettiColors: ["#7A9E9A", "#B8D4D0"],
     priority: 2,
@@ -114,6 +115,16 @@ export const MILESTONES: Record<MilestoneKey, Milestone> = {
     icon: "🆓",
     confettiColors: ["#D4A853", "#FFD700", "#7A9E9A"],
     priority: 4,
+  },
+  individual_debt_paid: {
+    key: "individual_debt_paid",
+    title: "Debt Destroyed! 🎯",
+    description: "You've paid off a debt completely",
+    remyMessage:
+      "YES! You've knocked out a debt completely! That's one less thing hanging over your head. The momentum is building - on to the next one!",
+    icon: "💪",
+    confettiColors: ["#D4A853", "#7A9E9A", "#FFD700"],
+    priority: 3,
   },
   emergency_fund_25: {
     key: "emergency_fund_25",

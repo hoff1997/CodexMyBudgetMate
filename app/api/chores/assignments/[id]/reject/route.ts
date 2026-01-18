@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -15,7 +16,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -80,7 +81,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   if (error) {
     console.error("Error rejecting chore:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to reject chore");
   }
 
   return NextResponse.json(updated);

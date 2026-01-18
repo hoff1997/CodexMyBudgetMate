@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 import { recalculateSafetyNetTarget } from "@/lib/utils/suggested-envelopes";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -11,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if (!user) {
     console.log('🔴 [API /envelopes/[id]] Unauthorized - no user');
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   console.log('🟢 [API /envelopes/[id]] User authenticated:', user.email);
@@ -35,6 +36,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "is_spending",
     "is_goal",
     "is_tracking_only",
+    "is_debt",
     "is_monitored",
     "icon",
     "opening_balance",
@@ -64,9 +66,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     payload.icon = null;
   }
 
-  // Sync is_tracking_only flag when subtype changes
+  // Sync flags when subtype changes
   if ("subtype" in payload) {
     payload.is_tracking_only = payload.subtype === "tracking";
+    payload.is_debt = payload.subtype === "debt";
   }
 
   // Validate and handle leveling fields
@@ -159,7 +162,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if (error) {
     console.log('🔴 [API /envelopes/[id]] Database error:', error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update envelope");
   }
 
   console.log('🟢 [API /envelopes/[id]] Successfully updated envelope:', data);
@@ -193,7 +196,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   if (!user) {
     console.log('🔴 [API /envelopes/[id]] Unauthorized - no user');
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   console.log('🟢 [API /envelopes/[id]] User authenticated:', user.email);
@@ -206,7 +209,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   if (error) {
     console.log('🔴 [API /envelopes/[id]] Database error:', error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete envelope");
   }
 
   console.log('🟢 [API /envelopes/[id]] Successfully deleted envelope');

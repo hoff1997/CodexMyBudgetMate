@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createErrorResponse, createUnauthorizedError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,7 +16,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: supermarket, error } = await supabase
@@ -33,7 +34,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     .single();
 
   if (error || !supermarket) {
-    return NextResponse.json({ error: "Supermarket not found" }, { status: 404 });
+    return createNotFoundError("Supermarket");
   }
 
   const categoryOrders = supermarket.category_orders || [];
@@ -60,7 +61,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -72,7 +73,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Supermarket not found" }, { status: 404 });
+    return createNotFoundError("Supermarket");
   }
 
   const body = await request.json();
@@ -87,7 +88,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (error) {
       console.error("Error updating supermarket name:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return createErrorResponse(error, 500, "Failed to update supermarket name");
     }
   }
 
@@ -113,7 +114,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
       if (orderError) {
         console.error("Error saving category order:", orderError);
-        return NextResponse.json({ error: orderError.message }, { status: 500 });
+        return createErrorResponse(orderError, 500, "Failed to save category order");
       }
     }
   }
@@ -134,7 +135,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error fetching updated supermarket:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch updated supermarket");
   }
 
   const categoryOrders = supermarket.category_orders || [];
@@ -161,7 +162,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -172,7 +173,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error deleting supermarket:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete supermarket");
   }
 
   return NextResponse.json({ success: true });

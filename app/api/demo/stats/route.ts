@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/demo/stats
@@ -12,7 +16,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -76,11 +80,8 @@ export async function GET() {
       dismissalCount,
       lastDismissalAt: metadata.last_dismissal_at || null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Demo stats error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse(error as { message: string }, 500, "Failed to fetch demo stats");
   }
 }

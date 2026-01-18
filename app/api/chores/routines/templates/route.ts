@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 // GET /api/chores/routines/templates - Get system routine templates
 export async function GET(request: Request) {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching system routine templates:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch system routine templates");
   }
 
   return NextResponse.json(templates);
@@ -49,17 +50,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { template_id, name_override } = body;
 
   if (!template_id) {
-    return NextResponse.json(
-      { error: "template_id is required" },
-      { status: 400 }
-    );
+    return createValidationError("template_id is required");
   }
 
   // Get the system template
@@ -70,10 +68,7 @@ export async function POST(request: Request) {
     .single();
 
   if (templateError || !template) {
-    return NextResponse.json(
-      { error: "Template not found" },
-      { status: 404 }
-    );
+    return createNotFoundError("Template");
   }
 
   // Find or create chore templates for each chore name
@@ -135,7 +130,7 @@ export async function POST(request: Request) {
 
   if (routineError) {
     console.error("Error creating routine:", routineError);
-    return NextResponse.json({ error: routineError.message }, { status: 500 });
+    return createErrorResponse(routineError, 500, "Failed to create routine");
   }
 
   // Add routine items
@@ -154,7 +149,7 @@ export async function POST(request: Request) {
     console.error("Error adding routine items:", itemsError);
     // Clean up
     await supabase.from("chore_routines").delete().eq("id", routine.id);
-    return NextResponse.json({ error: itemsError.message }, { status: 500 });
+    return createErrorResponse(itemsError, 500, "Failed to add routine items");
   }
 
   // Return full routine with items

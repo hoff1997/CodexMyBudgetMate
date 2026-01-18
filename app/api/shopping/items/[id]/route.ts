@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const item = await verifyItemOwnership(supabase, id, user.id);
@@ -80,7 +81,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -112,7 +113,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error updating shopping item:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update shopping item");
   }
 
   // Return in client expected format
@@ -143,7 +144,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -159,7 +160,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error deleting shopping item:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete shopping item");
   }
 
   return NextResponse.json({ success: true });

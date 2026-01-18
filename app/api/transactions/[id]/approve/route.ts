@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 export async function POST(
   _request: Request,
@@ -11,7 +12,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -23,7 +24,7 @@ export async function POST(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to approve transaction");
   }
 
   // Check and award achievements (non-blocking)

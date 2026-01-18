@@ -7,6 +7,11 @@ import {
   isMfaSessionFresh,
   parseMfaVerifiedCookie,
 } from "@/lib/utils/mfa-session";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/2fa/verify-session
@@ -23,7 +28,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     // Check if user has MFA enabled
@@ -31,10 +36,7 @@ export async function GET() {
       await supabase.auth.mfa.listFactors();
 
     if (factorsError) {
-      return NextResponse.json(
-        { error: "Failed to check MFA status" },
-        { status: 500 }
-      );
+      return createErrorResponse(factorsError, 500, "Failed to check MFA status");
     }
 
     const hasMfaEnabled = factorsData.totp.some((f) => f.status === "verified");
@@ -89,17 +91,14 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     const body = await request.json();
     const { code } = body;
 
     if (!code) {
-      return NextResponse.json(
-        { error: "Verification code is required" },
-        { status: 400 }
-      );
+      return createValidationError("Verification code is required");
     }
 
     // Get user's MFA factors
@@ -107,19 +106,13 @@ export async function POST(request: Request) {
       await supabase.auth.mfa.listFactors();
 
     if (factorsError) {
-      return NextResponse.json(
-        { error: "Failed to get MFA factors" },
-        { status: 500 }
-      );
+      return createErrorResponse(factorsError, 500, "Failed to get MFA factors");
     }
 
     const totpFactor = factorsData.totp.find((f) => f.status === "verified");
 
     if (!totpFactor) {
-      return NextResponse.json(
-        { error: "MFA not enabled for this account" },
-        { status: 400 }
-      );
+      return createValidationError("MFA not enabled for this account");
     }
 
     // Create a challenge for the factor
@@ -130,10 +123,7 @@ export async function POST(request: Request) {
 
     if (challengeError) {
       console.error("MFA challenge error:", challengeError);
-      return NextResponse.json(
-        { error: challengeError.message || "Failed to create challenge" },
-        { status: 400 }
-      );
+      return createErrorResponse(challengeError, 400, "Failed to create challenge");
     }
 
     // Verify the code
@@ -145,10 +135,7 @@ export async function POST(request: Request) {
 
     if (verifyError) {
       console.error("MFA verify error:", verifyError);
-      return NextResponse.json(
-        { error: "Invalid verification code" },
-        { status: 400 }
-      );
+      return createValidationError("Invalid verification code");
     }
 
     // Set the MFA verified timestamp cookie

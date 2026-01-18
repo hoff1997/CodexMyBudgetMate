@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ const ICONS = [
 
 type CategoryOption = { id: string; name: string };
 
-type EnvelopeSubtype = "bill" | "spending" | "savings" | "goal" | "tracking";
+type EnvelopeSubtype = "bill" | "spending" | "savings" | "goal" | "tracking" | "debt";
 
 type FormState = {
   name: string;
@@ -64,6 +64,7 @@ const SUBTYPE_OPTIONS: { value: EnvelopeSubtype; label: string; description: str
   { value: "savings", label: "Savings", description: "Savings goals to build up over time" },
   { value: "goal", label: "Goal", description: "One-time goals with a target date" },
   { value: "tracking", label: "Tracking", description: "Track spending without a budget" },
+  { value: "debt", label: "Debt", description: "Track and pay off debts (credit cards, loans)" },
 ];
 
 const DEFAULT_FORM: FormState = {
@@ -157,9 +158,16 @@ export function EnvelopeCreateDialog({
   const [showPostCreationPrompt, setShowPostCreationPrompt] = useState(false);
   const [createdEnvelope, setCreatedEnvelope] = useState<{ id: string; name: string; icon: string } | null>(null);
 
-  // Sync categories when prop changes
+  // Track previous categories to avoid unnecessary updates
+  const prevCategoriesRef = useRef<string>('');
+
+  // Sync categories when prop changes (only if content actually changed)
   useEffect(() => {
-    setCategories(initialCategories);
+    const newIds = initialCategories.map(c => c.id).sort().join(',');
+    if (prevCategoriesRef.current !== newIds) {
+      prevCategoriesRef.current = newIds;
+      setCategories(initialCategories);
+    }
   }, [initialCategories]);
 
   // Fetch income reality when dialog opens

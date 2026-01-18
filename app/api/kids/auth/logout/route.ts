@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { clearKidSession, getKidSession } from "@/lib/utils/kid-session";
+import { createErrorResponse } from "@/lib/utils/api-error";
 
 // POST: Log out kid session
 export async function POST() {
@@ -23,9 +24,6 @@ export async function POST() {
     });
   } catch (err) {
     console.error("Error in POST /api/kids/auth/logout:", err);
-    return NextResponse.json(
-      { error: "Failed to logout" },
-      { status: 500 }
-    );
+    return createErrorResponse(err as Error, 500, "Failed to logout");
   }
 }

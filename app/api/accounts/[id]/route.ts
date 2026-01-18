@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -27,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -37,7 +38,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   });
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const payload = parsed.data;
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update account");
   }
 
   return NextResponse.json({ ok: true });
@@ -82,7 +83,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -92,7 +93,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete account");
   }
 
   return NextResponse.json({ ok: true });

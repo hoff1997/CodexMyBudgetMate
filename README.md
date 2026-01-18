@@ -48,10 +48,11 @@ Fresh Next.js 14 + Supabase foundation for the My Budget Mate budgeting platform
 
 ## Akahu integration flow
 1. Create an Akahu app and request production access if required.
-2. Set the redirect URI to match `AKAHU_REDIRECT_URI` – e.g. `https://your-site.vercel.app/integrations/akahu/callback`.
-3. Users authorise via Akahu, you receive a `code`, and call `POST /api/akahu/link` with that code.
-4. The route exchanges the code for an access + refresh token pair which is stored in `akahu_tokens`.
-5. Use the `GET /api/akahu/transactions` endpoint to pull transactions for the authenticated user.
+2. Set the redirect URI to match `AKAHU_REDIRECT_URI` – e.g. `https://your-site.vercel.app/api/akahu/oauth/callback`.
+3. Users click "Connect Bank" which calls `GET /api/akahu/oauth/start` to get the authorization URL.
+4. After authorization, Akahu redirects to `/api/akahu/oauth/callback` with a `code` parameter.
+5. The callback route exchanges the code for an access + refresh token pair which is stored in `akahu_tokens`.
+6. Use the `GET /api/akahu/transactions` endpoint to pull transactions for the authenticated user.
 
 > ℹ️  Transaction ingestion is intentionally light-touch right now. Extend `app/api/akahu/transactions/route.ts` to map Akahu payloads into Supabase `transactions` and envelope logic.
 

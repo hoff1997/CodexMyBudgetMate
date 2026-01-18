@@ -371,8 +371,8 @@ export function SnapshotView({
                 {displayEnvelopes.map((envelope) => {
                   const statusInfo = getEnvelopeStatusIcon(envelope);
                   const envPriorityConfig = getPriorityConfig(envelope.priority);
-                  const iconBg = envelope.priority === 'essential' ? 'bg-sage-very-light' :
-                                 envelope.priority === 'important' ? 'bg-blue-light' : 'bg-silver-very-light';
+                  // No background color for icons - keep transparent to match page
+                  const iconBg = '';
 
                   return (
                     <tr

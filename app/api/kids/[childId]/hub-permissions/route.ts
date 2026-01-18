@@ -7,6 +7,7 @@ import type {
   UpdateKidHubPermissionsRequest,
   HUB_FEATURE_LABELS,
 } from "@/lib/types/kids-invoice";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -40,7 +41,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -52,7 +53,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Get existing permissions
@@ -62,7 +63,7 @@ export async function GET(request: Request, context: RouteContext) {
     .eq("child_profile_id", childId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch hub permissions");
   }
 
   // Build complete permissions object with defaults for missing features
@@ -98,7 +99,7 @@ export async function PUT(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -110,32 +111,23 @@ export async function PUT(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   const body: UpdateKidHubPermissionsRequest = await request.json();
 
   if (!body.permissions || !Array.isArray(body.permissions)) {
-    return NextResponse.json(
-      { error: "Permissions array is required" },
-      { status: 400 }
-    );
+    return createValidationError("Permissions array is required");
   }
 
   // Validate permissions
   const validLevels = ["none", "view", "edit", "full"];
   for (const perm of body.permissions) {
     if (!ALL_HUB_FEATURES.includes(perm.feature_name)) {
-      return NextResponse.json(
-        { error: `Invalid feature: ${perm.feature_name}` },
-        { status: 400 }
-      );
+      return createValidationError(`Invalid feature: ${perm.feature_name}`);
     }
     if (!validLevels.includes(perm.permission_level)) {
-      return NextResponse.json(
-        { error: `Invalid permission level: ${perm.permission_level}` },
-        { status: 400 }
-      );
+      return createValidationError(`Invalid permission level: ${perm.permission_level}`);
     }
   }
 
@@ -158,7 +150,7 @@ export async function PUT(request: Request, context: RouteContext) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to update hub permission");
     }
     results.push(data);
   }

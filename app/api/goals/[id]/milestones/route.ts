@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const milestoneSchema = z.object({
   name: z.string().min(1),
@@ -37,7 +38,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id: goalId } = await params;
@@ -59,7 +60,7 @@ export async function POST(
   const parsed = milestoneSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const payload = parsed.data;
@@ -87,7 +88,7 @@ export async function POST(
     });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create milestone");
   }
 
   return NextResponse.json({ ok: true });
@@ -107,7 +108,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id: goalId } = await params;
@@ -115,7 +116,7 @@ export async function PATCH(
   const parsed = updateMilestoneSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const payload = parsed.data;
@@ -135,7 +136,7 @@ export async function PATCH(
   }
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    return createValidationError("No fields to update");
   }
 
   const { error } = await supabase
@@ -146,7 +147,7 @@ export async function PATCH(
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update milestone");
   }
 
   return NextResponse.json({ ok: true });
@@ -166,7 +167,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id: goalId } = await params;
@@ -174,7 +175,7 @@ export async function DELETE(
   const parsed = deleteMilestoneSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const { milestoneId } = parsed.data;
@@ -187,7 +188,7 @@ export async function DELETE(
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete milestone");
   }
 
   return NextResponse.json({ ok: true });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
 import { generatePdfDocument } from "@/lib/reports/pdf";
+import { createUnauthorizedError, createErrorResponse } from "@/lib/utils/api-error";
 
 type AssetRow = {
   name: string;
@@ -25,7 +26,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const [assetsRes, liabilitiesRes] = await Promise.all([
@@ -42,10 +43,10 @@ export async function GET() {
   ]);
 
   if (assetsRes.error) {
-    return NextResponse.json({ error: assetsRes.error.message }, { status: 400 });
+    return createErrorResponse(assetsRes.error, 400, "Failed to fetch assets");
   }
   if (liabilitiesRes.error) {
-    return NextResponse.json({ error: liabilitiesRes.error.message }, { status: 400 });
+    return createErrorResponse(liabilitiesRes.error, 400, "Failed to fetch liabilities");
   }
 
   const assets = (assetsRes.data ?? []) as AssetRow[];

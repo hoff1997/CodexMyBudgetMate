@@ -9,6 +9,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from '@/lib/utils/api-error';
 
 const pendingSchema = z.object({
   transactionId: z.string().uuid(),
@@ -27,7 +33,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: pendingTransfers, error } = await supabase
@@ -55,7 +61,7 @@ export async function GET() {
     .order('occurred_at', { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, 'Failed to fetch pending transfers');
   }
 
   return NextResponse.json({
@@ -80,17 +86,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = pendingSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return createValidationError('Invalid request body');
   }
 
   const { transactionId } = parsed.data;
@@ -104,18 +107,12 @@ export async function POST(request: Request) {
     .single();
 
   if (txError || !transaction) {
-    return NextResponse.json(
-      { error: 'Transaction not found or does not belong to user' },
-      { status: 404 }
-    );
+    return createNotFoundError('Transaction');
   }
 
   // Check if already linked
   if (transaction.linked_transaction_id) {
-    return NextResponse.json(
-      { error: 'Transaction is already linked to a transfer' },
-      { status: 400 }
-    );
+    return createValidationError('Transaction is already linked to a transfer');
   }
 
   // Mark as pending
@@ -148,7 +145,7 @@ export async function POST(request: Request) {
     .single();
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return createErrorResponse(updateError, 500, 'Failed to mark transaction as pending');
   }
 
   return NextResponse.json({
@@ -172,17 +169,14 @@ export async function DELETE(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = pendingSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid request body', details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return createValidationError('Invalid request body');
   }
 
   const { transactionId } = parsed.data;
@@ -196,10 +190,7 @@ export async function DELETE(request: Request) {
     .single();
 
   if (txError || !transaction) {
-    return NextResponse.json(
-      { error: 'Transaction not found or does not belong to user' },
-      { status: 404 }
-    );
+    return createNotFoundError('Transaction');
   }
 
   // Determine the original transaction type based on amount
@@ -234,7 +225,7 @@ export async function DELETE(request: Request) {
     .single();
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    return createErrorResponse(updateError, 500, 'Failed to clear pending status');
   }
 
   return NextResponse.json({

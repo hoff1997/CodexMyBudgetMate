@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createNotFoundError } from "@/lib/utils/api-error";
 import type { UpdateRoutineRequest } from "@/lib/types/chores";
 
 // GET /api/chores/routines/[id] - Get a single routine with items
@@ -15,7 +16,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: routine, error } = await supabase
@@ -47,7 +48,7 @@ export async function GET(
     .single();
 
   if (error || !routine) {
-    return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    return createNotFoundError("Routine");
   }
 
   // Sort items by sort_order
@@ -72,7 +73,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -84,7 +85,7 @@ export async function PATCH(
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    return createNotFoundError("Routine");
   }
 
   const body: UpdateRoutineRequest = await request.json();
@@ -112,7 +113,7 @@ export async function PATCH(
 
   if (error) {
     console.error("Error updating routine:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update routine");
   }
 
   return NextResponse.json(routine);
@@ -131,7 +132,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -143,7 +144,7 @@ export async function DELETE(
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    return createNotFoundError("Routine");
   }
 
   // Items are cascade deleted via FK constraint
@@ -154,7 +155,7 @@ export async function DELETE(
 
   if (error) {
     console.error("Error deleting routine:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete routine");
   }
 
   return NextResponse.json({ success: true });

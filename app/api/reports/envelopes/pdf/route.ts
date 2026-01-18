@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/finance";
 import { generatePdfDocument } from "@/lib/reports/pdf";
+import { createUnauthorizedError, createErrorResponse } from "@/lib/utils/api-error";
 
 type EnvelopeRow = {
   name: string;
@@ -21,7 +22,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: envelopes, error } = await supabase
@@ -33,7 +34,7 @@ export async function GET() {
     .order("name");
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch envelopes");
   }
 
   const envelopeRows: EnvelopeRow[] = (envelopes ?? []).map((row: any) => ({

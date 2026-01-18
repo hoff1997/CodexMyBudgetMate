@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const updateSchema = z
   .object({
@@ -34,7 +35,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -54,9 +55,8 @@ export async function PATCH(
 
   const parsed = updateSchema.safeParse(normalised);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.flatten().formErrors[0] ?? "Invalid payload" },
-      { status: 400 },
+    return createValidationError(
+      parsed.error.flatten().formErrors[0] ?? "Invalid payload"
     );
   }
 
@@ -79,7 +79,7 @@ export async function PATCH(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update liability");
   }
 
   if (!data) {
@@ -99,7 +99,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error, count } = await supabase
@@ -109,7 +109,7 @@ export async function DELETE(
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete liability");
   }
 
   if (!count) {

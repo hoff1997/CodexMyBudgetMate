@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { ExpectedChoreStreak } from "@/lib/types/kids-invoice";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -16,7 +17,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -28,7 +29,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Get streaks with chore template info
@@ -46,7 +47,7 @@ export async function GET(request: Request, context: RouteContext) {
     .order("current_streak", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch chore streaks");
   }
 
   // Calculate some stats
@@ -84,7 +85,7 @@ export async function POST(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -96,16 +97,13 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   const body = await request.json();
 
   if (!body.chore_template_id) {
-    return NextResponse.json(
-      { error: "Chore template ID is required" },
-      { status: 400 }
-    );
+    return createValidationError("Chore template ID is required");
   }
 
   // Verify the chore is an expected chore
@@ -116,14 +114,11 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!chore) {
-    return NextResponse.json({ error: "Chore not found" }, { status: 404 });
+    return createNotFoundError("Chore");
   }
 
   if (!chore.is_expected) {
-    return NextResponse.json(
-      { error: "This chore is not an expected chore - use the invoice system for extra chores" },
-      { status: 400 }
-    );
+    return createValidationError("This chore is not an expected chore - use the invoice system for extra chores");
   }
 
   const completedDate = body.completed_date || new Date().toISOString().split("T")[0];

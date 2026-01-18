@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -16,10 +17,7 @@ export async function GET(request: Request) {
   const end_date = searchParams.get("end_date");
 
   if (!start_date || !end_date) {
-    return NextResponse.json(
-      { error: "start_date and end_date required" },
-      { status: 400 }
-    );
+    return createValidationError("start_date and end_date required");
   }
 
   const { data, error } = await supabase
@@ -37,7 +35,7 @@ export async function GET(request: Request) {
     .order("meal_type");
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch meal plans");
   }
 
   // Transform recipe from array to object
@@ -56,7 +54,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -80,7 +78,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create meal plan");
   }
 
   // Transform recipe from array to object

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 const schema = z.object({
   defaultPage: z.string().min(1),
@@ -17,17 +22,14 @@ export async function PATCH(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid payload", details: parsed.error },
-      { status: 400 }
-    );
+    return createValidationError("Invalid payload");
   }
 
   const { defaultPage } = parsed.data;
@@ -40,15 +42,12 @@ export async function PATCH(request: Request) {
 
     if (error) {
       console.error("Default page update error:", error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to update default page");
     }
 
     return NextResponse.json({ ok: true, defaultPage });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Default page update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error as { message: string }, 500, "Failed to update default page");
   }
 }

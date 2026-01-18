@@ -11,7 +11,17 @@ import crypto from "crypto";
 // Session configuration
 const SESSION_COOKIE_NAME = "kid_session";
 const SESSION_EXPIRY_HOURS = 24;
-const SESSION_SECRET = process.env.KID_SESSION_SECRET || "fallback-secret-change-in-production";
+
+// SECURITY: No fallback secrets - KID_SESSION_SECRET must be configured
+const SESSION_SECRET = process.env.KID_SESSION_SECRET;
+
+// Validate that security secret is configured at startup
+if (!SESSION_SECRET) {
+  console.error(
+    "[SECURITY CRITICAL] KID_SESSION_SECRET environment variable is not set! " +
+    "Kid session management will NOT work. Generate a secret with: openssl rand -hex 32"
+  );
+}
 
 export interface KidSession {
   childId: string;
@@ -23,14 +33,28 @@ export interface KidSession {
   isKidSession: true;
   createdAt: number;
   expiresAt: number;
+
+  // Teen mode fields
+  isTeenMode: boolean;
+  canReconcileTransactions: boolean;
+  canAddExternalIncome: boolean;
+  autoGraduationDate: string | null; // ISO date of 18th birthday
 }
 
 /**
  * Create a signed session token
  * @param session - Session data to encode
  * @returns Signed token string
+ * @throws Error if SESSION_SECRET is not configured
  */
 function createSessionToken(session: KidSession): string {
+  if (!SESSION_SECRET) {
+    throw new Error(
+      "KID_SESSION_SECRET must be configured. " +
+      "Generate with: openssl rand -hex 32"
+    );
+  }
+
   const payload = JSON.stringify(session);
   const signature = crypto
     .createHmac("sha256", SESSION_SECRET)
@@ -45,9 +69,15 @@ function createSessionToken(session: KidSession): string {
 /**
  * Verify and decode a session token
  * @param token - Token to verify
- * @returns Decoded session or null if invalid
+ * @returns Decoded session or null if invalid (fails secure if secret not configured)
  */
 function verifySessionToken(token: string): KidSession | null {
+  // SECURITY: Fail secure if secret is not configured
+  if (!SESSION_SECRET) {
+    console.error("[SECURITY] Cannot verify kid session - KID_SESSION_SECRET not configured");
+    return null;
+  }
+
   try {
     const [encodedPayload, signature] = token.split(".");
 
@@ -93,6 +123,11 @@ export function createKidSessionToken(childData: {
   parent_user_id: string;
   star_balance: number;
   screen_time_balance: number;
+  // Teen mode fields (optional for backwards compatibility)
+  is_teen_mode?: boolean;
+  can_reconcile_transactions?: boolean;
+  can_add_external_income?: boolean;
+  auto_graduation_date?: string | null;
 }): { session: KidSession; token: string; cookieName: string; maxAge: number } {
   const now = Date.now();
   const expiresAt = now + SESSION_EXPIRY_HOURS * 60 * 60 * 1000;
@@ -107,6 +142,11 @@ export function createKidSessionToken(childData: {
     isKidSession: true,
     createdAt: now,
     expiresAt,
+    // Teen mode fields (default to false/null for non-teens)
+    isTeenMode: childData.is_teen_mode ?? false,
+    canReconcileTransactions: childData.can_reconcile_transactions ?? false,
+    canAddExternalIncome: childData.can_add_external_income ?? false,
+    autoGraduationDate: childData.auto_graduation_date ?? null,
   };
 
   const token = createSessionToken(session);
@@ -131,6 +171,11 @@ export async function createKidSession(childData: {
   parent_user_id: string;
   star_balance: number;
   screen_time_balance: number;
+  // Teen mode fields (optional for backwards compatibility)
+  is_teen_mode?: boolean;
+  can_reconcile_transactions?: boolean;
+  can_add_external_income?: boolean;
+  auto_graduation_date?: string | null;
 }): Promise<KidSession> {
   const { session, token, cookieName, maxAge } = createKidSessionToken(childData);
 

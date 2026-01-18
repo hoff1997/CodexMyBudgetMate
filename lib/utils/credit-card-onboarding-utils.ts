@@ -66,7 +66,7 @@ export async function findOrCreateDebtCategory(
 export interface EnvelopeCreatePayload {
   name: string;
   category_id?: string;
-  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
+  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
   target_amount?: number;
   current_amount: number;
   frequency?: string;
@@ -74,6 +74,7 @@ export interface EnvelopeCreatePayload {
   priority?: number;
   is_cc_holding?: boolean;
   is_credit_card_payment?: boolean;
+  is_debt?: boolean;
   cc_account_id?: string;
   linked_account_id?: string;
   notes?: string;

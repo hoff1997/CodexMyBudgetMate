@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/chores/templates - List all chore templates (system + custom)
 export async function GET(request: Request) {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching chore templates:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch chore templates");
   }
 
   return NextResponse.json(templates);
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
   } = body;
 
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   // Expected chores don't have monetary rewards
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating chore template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create chore template");
   }
 
   return NextResponse.json(template, { status: 201 });

@@ -23,8 +23,6 @@ import {
   Sun,
 } from "lucide-react";
 import { RemyAvatar } from "@/components/onboarding/remy-tip";
-import { cn } from "@/lib/cn";
-import { SeasonalPattern } from "@/lib/utils/seasonal-bills";
 import {
   createLevelingDataFromQuickEstimate,
   analyzeLevelingBenefit,
@@ -59,8 +57,7 @@ export function QuickEstimateDialog({
   const isWinterPeak = suggestedPattern === "winter-peak";
 
   // Check if we have valid inputs
-  const hasValidInputs =
-    highSeasonAmount !== "" &&
+  const hasValidInputs = highSeasonAmount !== "" &&
     lowSeasonAmount !== "" &&
     highSeasonAmount > 0 &&
     lowSeasonAmount > 0;
@@ -149,55 +146,55 @@ export function QuickEstimateDialog({
                   className="pl-7"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {isWinterPeak
-                  ? "Typical June-August bill"
-                  : "Typical December-February bill"}
-              </p>
-            </div>
-
-            {/* Low season */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="low-season"
-                className="text-sm font-medium flex items-center gap-2"
-              >
-                {isWinterPeak ? (
-                  <>
-                    <Sun className="h-4 w-4 text-gold" />
-                    Summer bill
-                  </>
-                ) : (
-                  <>
-                    <Thermometer className="h-4 w-4 text-blue" />
-                    Winter bill
-                  </>
-                )}
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
-                </span>
-                <Input
-                  id="low-season"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="e.g. 150"
-                  value={lowSeasonAmount}
-                  onChange={(e) =>
-                    setLowSeasonAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
-                  }
-                  className="pl-7"
-                />
+                <p className="text-xs text-muted-foreground">
+                  {isWinterPeak
+                    ? "Typical June-August bill"
+                    : "Typical December-February bill"}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {isWinterPeak
-                  ? "Typical December-February bill"
-                  : "Typical June-August bill"}
-              </p>
+
+              {/* Low season */}
+              <div className="space-y-2">
+                <Label
+                  htmlFor="low-season"
+                  className="text-sm font-medium flex items-center gap-2"
+                >
+                  {isWinterPeak ? (
+                    <>
+                      <Sun className="h-4 w-4 text-gold" />
+                      Summer bill
+                    </>
+                  ) : (
+                    <>
+                      <Thermometer className="h-4 w-4 text-blue" />
+                      Winter bill
+                    </>
+                  )}
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    id="low-season"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g. 150"
+                    value={lowSeasonAmount}
+                    onChange={(e) =>
+                      setLowSeasonAmount(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)
+                    }
+                    className="pl-7"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isWinterPeak
+                    ? "Typical December-February bill"
+                    : "Typical June-August bill"}
+                </p>
+              </div>
             </div>
-          </div>
 
           {/* Buffer slider */}
           {hasValidInputs && (

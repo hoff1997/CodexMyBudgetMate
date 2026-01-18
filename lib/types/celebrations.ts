@@ -66,7 +66,7 @@ export interface EnvelopeTemplate {
   id: string;
   name: string;
   category_name: string;
-  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
+  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
   icon: string;
   description: string | null;
   is_celebration: boolean;
@@ -196,4 +196,92 @@ export function getDaysUntilText(daysUntil: number): string {
   if (daysUntil <= 14) return 'Next week';
   if (daysUntil <= 30) return `In ${Math.ceil(daysUntil / 7)} weeks`;
   return `In ${Math.ceil(daysUntil / 30)} months`;
+}
+
+/**
+ * Keywords that indicate a celebration envelope (one-off festival or birthdays)
+ * These are handled by GiftAllocationDialog, not seasonal bill leveling
+ */
+export const CELEBRATION_KEYWORDS = [
+  // Festivals (one-off events)
+  'christmas',
+  'xmas',
+  'diwali',
+  'easter',
+  'hanukkah',
+  'eid',
+  'lunar',
+  'new year',
+  'thanksgiving',
+  // People-specific events (birthdays, anniversaries)
+  'birthday',
+  'anniversary',
+  'mother',
+  'father',
+  'valentine',
+  // Generic celebration terms
+  'gift',
+  'gifts',
+  'present',
+  'presents',
+  'celebration',
+  'holiday',
+  'festival',
+] as const;
+
+/**
+ * Keywords that suggest a "festival" type celebration (one-off event, not date-specific per person)
+ */
+export const FESTIVAL_KEYWORDS = [
+  'christmas',
+  'xmas',
+  'diwali',
+  'easter',
+  'hanukkah',
+  'eid',
+  'lunar',
+  'new year',
+  'thanksgiving',
+  'mother',
+  'father',
+  'valentine',
+] as const;
+
+/**
+ * Detects if an envelope name suggests a celebration
+ *
+ * This is separate from seasonal bill detection (power, gas, water).
+ * Celebrations use the GiftAllocationDialog with gift recipients.
+ *
+ * @param envelopeName - The name of the envelope to check
+ * @returns Object with detection result and celebration type
+ */
+export function detectCelebration(envelopeName: string): {
+  isCelebration: boolean;
+  matchedKeyword: string | null;
+  isFestival: boolean; // true for Christmas/Diwali (one-off), false for birthdays (multiple dates)
+} {
+  const lowerName = envelopeName.toLowerCase().trim();
+
+  // Check for celebration keywords
+  for (const keyword of CELEBRATION_KEYWORDS) {
+    if (lowerName.includes(keyword.toLowerCase())) {
+      // Determine if this is a festival (one-off) or date-based (birthdays)
+      const isFestival = FESTIVAL_KEYWORDS.some(fk =>
+        lowerName.includes(fk.toLowerCase())
+      );
+
+      return {
+        isCelebration: true,
+        matchedKeyword: keyword,
+        isFestival,
+      };
+    }
+  }
+
+  return {
+    isCelebration: false,
+    matchedKeyword: null,
+    isFestival: false,
+  };
 }

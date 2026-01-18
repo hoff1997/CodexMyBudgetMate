@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { markUserAsReturning } from "@/components/landing/returning-user-cta";
+import { HydrationSafe } from "@/components/utils/hydration-safe";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -82,16 +83,16 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
+      <HydrationSafe className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
         <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+          <HydrationSafe className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
             <Link href="/" className="flex items-center">
               <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
             </Link>
-          </div>
+          </HydrationSafe>
         </header>
 
-        <main className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
+        <HydrationSafe className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
           <Card className="w-full border-[#E5E7EB] shadow-sm">
             <CardHeader className="text-center">
               <CardTitle className="text-xl text-[#3D3D3D]">Check your email</CardTitle>
@@ -113,25 +114,25 @@ export default function SignupPage() {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </HydrationSafe>
+      </HydrationSafe>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
+    <HydrationSafe className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
       <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <HydrationSafe className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center">
             <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
           </Link>
           <Button asChild variant="ghost" size="sm" className="text-[#6B6B6B]">
             <Link href="/">Back to home</Link>
           </Button>
-        </div>
+        </HydrationSafe>
       </header>
 
-      <main className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
+      <HydrationSafe className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
         <div className="w-full space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-semibold text-[#3D3D3D]">Create your account</h1>
@@ -212,7 +213,7 @@ export default function SignupPage() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </HydrationSafe>
+    </HydrationSafe>
   );
 }

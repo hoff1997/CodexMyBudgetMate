@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 export async function POST() {
   const supabase = await createClient();
@@ -8,13 +9,13 @@ export async function POST() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase.rpc("refresh_label_usage");
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to refresh label usage");
   }
 
   const { data } = await supabase

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/notifications/preferences - Get user's notification preferences
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get preferences or create defaults
@@ -21,7 +22,7 @@ export async function GET() {
     .maybeSingle();
 
   if (error && error.code !== "PGRST116") {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch notification preferences");
   }
 
   // If no preferences exist, create defaults
@@ -62,7 +63,7 @@ export async function PATCH(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -88,14 +89,14 @@ export async function PATCH(request: Request) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    return createValidationError("No valid fields to update");
   }
 
   // Validate digest_frequency
   if (updateData.digest_frequency) {
     const validFrequencies = ["instant", "hourly", "daily", "weekly"];
     if (!validFrequencies.includes(updateData.digest_frequency as string)) {
-      return NextResponse.json({ error: "Invalid digest frequency" }, { status: 400 });
+      return createValidationError("Invalid digest frequency");
     }
   }
 
@@ -118,7 +119,7 @@ export async function PATCH(request: Request) {
       .single();
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 400 });
+      return createErrorResponse(updateError, 400, "Failed to update notification preferences");
     }
 
     return NextResponse.json({ preferences: updated });
@@ -142,7 +143,7 @@ export async function PATCH(request: Request) {
       .single();
 
     if (createError) {
-      return NextResponse.json({ error: createError.message }, { status: 400 });
+      return createErrorResponse(createError, 400, "Failed to create notification preferences");
     }
 
     return NextResponse.json({ preferences: created });

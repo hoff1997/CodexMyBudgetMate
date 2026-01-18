@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 import type { CreateRoutineRequest } from "@/lib/types/chores";
 
 // GET /api/chores/routines - List all chore routines for this parent
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching chore routines:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch chore routines");
   }
 
   // Sort items by sort_order
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body: CreateRoutineRequest = await request.json();
@@ -99,14 +100,11 @@ export async function POST(request: Request) {
   } = body;
 
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   if (!items || items.length === 0) {
-    return NextResponse.json(
-      { error: "At least one chore is required in the routine" },
-      { status: 400 }
-    );
+    return createValidationError("At least one chore is required in the routine");
   }
 
   // Create the routine
@@ -128,7 +126,7 @@ export async function POST(request: Request) {
 
   if (routineError) {
     console.error("Error creating chore routine:", routineError);
-    return NextResponse.json({ error: routineError.message }, { status: 500 });
+    return createErrorResponse(routineError, 500, "Failed to create chore routine");
   }
 
   // Add routine items
@@ -149,7 +147,7 @@ export async function POST(request: Request) {
     console.error("Error adding routine items:", itemsError);
     // Clean up the routine
     await supabase.from("chore_routines").delete().eq("id", routine.id);
-    return NextResponse.json({ error: itemsError.message }, { status: 500 });
+    return createErrorResponse(itemsError, 500, "Failed to add routine items");
   }
 
   // Return full routine with items

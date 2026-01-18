@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { exchangeAkahuCode } from "@/lib/akahu/client";
 import { z } from "zod";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   code: z.string().min(1),
@@ -14,13 +15,13 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const payload = schema.safeParse(await request.json());
 
   if (!payload.success) {
-    return NextResponse.json({ error: "Missing code" }, { status: 400 });
+    return createValidationError("Missing code");
   }
 
   try {
@@ -42,9 +43,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Akahu linking failed" },
-      { status: 500 },
-    );
+    return createErrorResponse(error as { message: string }, 500, "Akahu linking failed");
   }
 }

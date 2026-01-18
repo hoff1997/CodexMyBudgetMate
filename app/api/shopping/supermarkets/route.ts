@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/shopping/supermarkets - Fetch all user's supermarkets with their category orders
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get supermarkets with their category orders
@@ -29,7 +30,7 @@ export async function GET() {
 
   if (error) {
     console.error("Error fetching supermarkets:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch supermarkets");
   }
 
   // Map to client format
@@ -62,14 +63,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { name, category_order } = body;
 
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   // Create supermarket with empty aisle_structure (will use category orders instead)
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating supermarket:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create supermarket");
   }
 
   // If category_order provided, insert the ordering

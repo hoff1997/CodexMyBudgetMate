@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { CategoryRule } from "@/lib/types/rules";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 const MATCH_TYPES = new Set(["contains", "starts_with", "exact"]);
 
@@ -11,7 +17,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -24,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .maybeSingle();
 
   if (existingError || !existing) {
-    return NextResponse.json({ error: "Rule not found" }, { status: 404 });
+    return createNotFoundError("Rule");
   }
 
   const body = await request.json();
@@ -33,7 +39,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (body.pattern !== undefined) {
     const pattern = String(body.pattern ?? "").trim();
     if (!pattern) {
-      return NextResponse.json({ error: "Pattern cannot be empty" }, { status: 400 });
+      return createValidationError("Pattern cannot be empty");
     }
     update.pattern = pattern;
     const caseSensitive = body.caseSensitive ?? existing.case_sensitive ?? false;
@@ -60,7 +66,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: "No changes supplied" }, { status: 400 });
+    return createValidationError("No changes supplied");
   }
 
   update.updated_at = new Date().toISOString();
@@ -76,7 +82,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     .maybeSingle();
 
   if (error || !updated) {
-    return NextResponse.json({ error: error?.message ?? "Unable to update rule" }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to update rule");
   }
 
   const { data: envelope } = await supabase
@@ -97,7 +103,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -107,7 +113,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to delete rule");
   }
 
   return NextResponse.json({ ok: true });

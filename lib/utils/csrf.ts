@@ -8,7 +8,17 @@
 import * as crypto from "crypto";
 import { cookies } from "next/headers";
 
-const CSRF_SECRET = process.env.CSRF_SECRET || process.env.KID_SESSION_SECRET || "csrf-fallback-secret-change-me";
+// SECURITY: No fallback secrets - these must be configured in environment
+const CSRF_SECRET = process.env.CSRF_SECRET || process.env.KID_SESSION_SECRET;
+
+// Validate that security secrets are configured at startup
+if (!CSRF_SECRET) {
+  console.error(
+    "[SECURITY CRITICAL] Neither CSRF_SECRET nor KID_SESSION_SECRET environment variable is set! " +
+    "CSRF protection will NOT work. Generate a secret with: openssl rand -hex 32"
+  );
+}
+
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
 const TOKEN_EXPIRY = 60 * 60 * 1000; // 1 hour
@@ -20,8 +30,16 @@ interface CsrfToken {
 
 /**
  * Generate a CSRF token
+ * @throws Error if CSRF_SECRET is not configured
  */
 function generateToken(): string {
+  if (!CSRF_SECRET) {
+    throw new Error(
+      "CSRF_SECRET or KID_SESSION_SECRET must be configured. " +
+      "Generate with: openssl rand -hex 32"
+    );
+  }
+
   const timestamp = Date.now();
   const randomBytes = crypto.randomBytes(32).toString("hex");
   const payload = `${timestamp}.${randomBytes}`;
@@ -36,8 +54,15 @@ function generateToken(): string {
 
 /**
  * Validate a CSRF token
+ * Returns false if secret is not configured (fail secure)
  */
 function validateToken(token: string): boolean {
+  // SECURITY: Fail secure if secret is not configured
+  if (!CSRF_SECRET) {
+    console.error("[SECURITY] Cannot validate CSRF token - secret not configured");
+    return false;
+  }
+
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;

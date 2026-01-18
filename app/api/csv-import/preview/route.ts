@@ -27,6 +27,12 @@ import type {
   ColumnMapping,
 } from "@/lib/csv";
 import { v4 as uuidv4 } from "uuid";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 /**
  * Transform a CSV row into a parsed transaction using the column mapping
@@ -140,10 +146,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return createUnauthorizedError();
     }
 
     // Parse request body
@@ -152,33 +155,21 @@ export async function POST(request: Request) {
 
     // Validate request
     if (!rows || !Array.isArray(rows)) {
-      return NextResponse.json(
-        { success: false, error: "Rows are required" },
-        { status: 400 }
-      );
+      return createValidationError("Rows are required");
     }
 
     if (!mapping) {
-      return NextResponse.json(
-        { success: false, error: "Column mapping is required" },
-        { status: 400 }
-      );
+      return createValidationError("Column mapping is required");
     }
 
     if (!accountId) {
-      return NextResponse.json(
-        { success: false, error: "Account ID is required" },
-        { status: 400 }
-      );
+      return createValidationError("Account ID is required");
     }
 
     // Validate mapping configuration
     const mappingValidation = validateMapping(mapping);
     if (!mappingValidation.valid) {
-      return NextResponse.json(
-        { success: false, error: mappingValidation.errors.join("; ") },
-        { status: 400 }
-      );
+      return createValidationError(mappingValidation.errors.join("; "));
     }
 
     // Verify account belongs to user
@@ -190,10 +181,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (accountError || !account) {
-      return NextResponse.json(
-        { success: false, error: "Account not found or access denied" },
-        { status: 404 }
-      );
+      return createNotFoundError("Account");
     }
 
     // Transform rows into transactions
@@ -258,12 +246,10 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("CSV import preview error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to preview transactions",
-      },
-      { status: 500 }
+    return createErrorResponse(
+      error instanceof Error ? { message: error.message } : null,
+      500,
+      "Failed to preview transactions"
     );
   }
 }

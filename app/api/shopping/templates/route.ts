@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 interface TemplateItem {
   name: string;
@@ -17,7 +18,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: templates, error } = await supabase
@@ -28,7 +29,7 @@ export async function GET() {
 
   if (error) {
     console.error("Error fetching templates:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch templates");
   }
 
   return NextResponse.json(templates || []);
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 
     if (itemsError) {
       console.error("Error fetching list items:", itemsError);
-      return NextResponse.json({ error: itemsError.message }, { status: 500 });
+      return createErrorResponse(itemsError, 500, "Failed to fetch list items");
     }
 
     templateItems = (listItems || []).map((item) => ({
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   }
 
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   const { data: template, error } = await supabase
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create template");
   }
 
   return NextResponse.json(template, { status: 201 });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 /**
  * GET /api/birthdays
@@ -12,7 +13,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: recipients, error } = await supabase
@@ -38,7 +39,7 @@ export async function GET() {
 
   if (error) {
     console.error("[birthdays] GET error:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch birthdays");
   }
 
   return NextResponse.json(recipients || []);
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -72,11 +73,11 @@ export async function POST(request: Request) {
 
   // Validate required fields
   if (!recipient_name?.trim()) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   if (!celebration_date) {
-    return NextResponse.json({ error: "Date is required" }, { status: 400 });
+    return createValidationError("Date is required");
   }
 
   // Find or create a Birthdays envelope
@@ -225,7 +226,7 @@ export async function POST(request: Request) {
 
   if (recipientError) {
     console.error("[birthdays] Failed to create recipient:", recipientError);
-    return NextResponse.json({ error: recipientError.message }, { status: 400 });
+    return createErrorResponse(recipientError, 400, "Failed to create birthday");
   }
 
   // Update envelope target amount to sum of all recipients

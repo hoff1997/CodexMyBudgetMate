@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 // Pre-built todo templates
 const SYSTEM_TEMPLATES = [
@@ -134,7 +139,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -154,7 +159,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching user templates:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch templates");
   }
 
   // Combine system templates with user templates
@@ -180,18 +185,18 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { name, icon, category, items } = body;
 
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   if (!items || !Array.isArray(items) || items.length === 0) {
-    return NextResponse.json({ error: "Items are required" }, { status: 400 });
+    return createValidationError("Items are required");
   }
 
   const { data: template, error } = await supabase
@@ -208,7 +213,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create template");
   }
 
   return NextResponse.json(template, { status: 201 });

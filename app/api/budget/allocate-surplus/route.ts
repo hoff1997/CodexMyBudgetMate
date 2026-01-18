@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 const schema = z.object({
   surplusAmount: z.number().positive(),
@@ -21,14 +27,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const { surplusAmount, incomeSources } = parsed.data;
@@ -36,11 +42,7 @@ export async function POST(request: Request) {
   // Validate surplus amount matches total of income source amounts
   const totalIncomeAmount = incomeSources.reduce((sum, source) => sum + source.amount, 0);
   if (Math.abs(totalIncomeAmount - surplusAmount) > 0.01) {
-    return NextResponse.json({
-      error: "Surplus amount does not match income source amounts",
-      surplus: surplusAmount,
-      total: totalIncomeAmount,
-    }, { status: 400 });
+    return createValidationError("Surplus amount does not match income source amounts");
   }
 
   // Find Surplus envelope
@@ -53,11 +55,11 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (surplusError) {
-    return NextResponse.json({ error: surplusError.message }, { status: 400 });
+    return createErrorResponse(surplusError, 400, "Failed to find Surplus envelope");
   }
 
   if (!surplusEnvelope) {
-    return NextResponse.json({ error: "Surplus envelope not found" }, { status: 404 });
+    return createNotFoundError("Surplus envelope");
   }
 
   // Get existing allocations for Surplus envelope
@@ -94,7 +96,7 @@ export async function POST(request: Request) {
     .eq("user_id", user.id);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 400 });
+    return createErrorResponse(deleteError, 400, "Failed to update Surplus allocations");
   }
 
   // Insert new allocations
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
       .insert(newAllocations);
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 400 });
+      return createErrorResponse(insertError, 400, "Failed to create Surplus allocations");
     }
   }
 

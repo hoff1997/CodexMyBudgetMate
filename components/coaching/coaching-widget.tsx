@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { Calculator, Wallet, Info, HelpCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface IncomeSource {
   id: string;
@@ -97,12 +103,13 @@ export function CoachingWidget({
   // ENVELOPE BALANCE DETECTION
   // ====================================
   // Find envelopes that are underfunded (actual balance < 80% of target)
+  // Include spending envelopes as they still have budget allocations
   const underfundedEnvelopes = useMemo(() => {
     return activeEnvelopes.filter((envelope) => {
       const current = Number(envelope.currentAmount || 0);
       const target = Number(envelope.targetAmount || 0);
 
-      // Only check envelopes with targets (bills mostly)
+      // Only check envelopes with targets
       if (!target || target === 0) return false;
 
       // Underfunded if less than 80% of target
@@ -113,14 +120,20 @@ export function CoachingWidget({
   const hasUnderfundedEnvelopes = underfundedEnvelopes.length > 0;
   const underfundedCount = underfundedEnvelopes.length;
 
-  // Calculate total shortfall
+  // Calculate total funding gap (target - current for ALL envelopes with targets)
+  // This matches the My Budget Way "Fill Envelopes" calculation
   const totalShortfall = useMemo(() => {
-    return underfundedEnvelopes.reduce((sum, env) => {
+    return activeEnvelopes.reduce((sum, env) => {
       const current = Number(env.currentAmount || 0);
       const target = Number(env.targetAmount || 0);
+
+      // Only include envelopes with targets
+      if (!target || target === 0) return sum;
+
+      // Add the gap if envelope is below target
       return sum + Math.max(0, target - current);
     }, 0);
-  }, [underfundedEnvelopes]);
+  }, [activeEnvelopes]);
 
   // ====================================
   // ACTION HANDLERS
@@ -186,12 +199,12 @@ export function CoachingWidget({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-sage-light overflow-hidden">
-      {/* Collapsible header */}
+    <div className="rounded-xl border border-sage-light overflow-hidden shadow-sm">
+      {/* Collapsible header - matching My Budget Way style */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors border-b border-sage-light/50"
+        className="flex items-center justify-between w-full px-4 py-2 cursor-pointer bg-sage-very-light hover:bg-sage-light/50 transition-colors border-b border-sage-light"
       >
         <div className="flex items-center gap-2">
           {isExpanded ? (
@@ -199,7 +212,31 @@ export function CoachingWidget({
           ) : (
             <ChevronRight className="h-4 w-4 text-sage-dark transition-transform" />
           )}
-          <span className="text-sm font-medium text-text-dark">Budget Status</span>
+          <span className="text-sm font-bold text-text-dark uppercase tracking-wide">Budget Status</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 rounded-full text-sage hover:text-sage-dark hover:bg-sage-light/50 transition-colors"
+                  aria-label="About Budget Status"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                className="max-w-xs bg-sage-very-light border-sage-light text-sage-dark"
+              >
+                <p className="text-sm">
+                  Budget Allocation is your PLAN - how you divide your income each pay.
+                  Envelope Balances show ACTUAL money in each envelope. The goal is to
+                  align your actual balances with your plan over time.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {hasBudgetMismatch && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-light text-blue">
               <Calculator className="h-3 w-3" />
@@ -217,7 +254,7 @@ export function CoachingWidget({
 
       {/* Collapsible content */}
       {isExpanded && (
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4 bg-white">
         {/* Two-column layout */}
         <div className="grid md:grid-cols-[1fr_1px_1fr] gap-4">
           {/* Budget Allocation Section */}
@@ -305,8 +342,7 @@ export function CoachingWidget({
                   <span>
                     <strong className="text-gold">{underfundedCount}</strong>{" "}
                     {underfundedCount === 1 ? "envelope needs" : "envelopes need"}{" "}
-                    <strong className="text-gold">${totalShortfall.toFixed(2)}</strong> more money.{" "}
-                    <strong>Top up</strong> from surplus.
+                    <strong className="text-gold">${totalShortfall.toFixed(2)}</strong> more money.
                   </span>
                 </p>
                 {currentPage === "dashboard" && (

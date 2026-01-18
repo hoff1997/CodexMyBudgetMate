@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/chores/rotations - List chore rotations for this parent
 export async function GET(request: Request) {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching chore rotations:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch chore rotations");
   }
 
   return NextResponse.json(rotations);
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -82,17 +83,11 @@ export async function POST(request: Request) {
 
   // Required fields
   if (!chore_template_id || !frequency) {
-    return NextResponse.json(
-      { error: "chore_template_id and frequency are required" },
-      { status: 400 }
-    );
+    return createValidationError("chore_template_id and frequency are required");
   }
 
   if (!child_ids || !Array.isArray(child_ids) || child_ids.length === 0) {
-    return NextResponse.json(
-      { error: "At least one child is required for rotation" },
-      { status: 400 }
-    );
+    return createValidationError("At least one child is required for rotation");
   }
 
   // Verify parent owns all these children
@@ -103,10 +98,7 @@ export async function POST(request: Request) {
     .in("id", child_ids);
 
   if (!children || children.length !== child_ids.length) {
-    return NextResponse.json(
-      { error: "Some children not found or don't belong to you" },
-      { status: 400 }
-    );
+    return createValidationError("Some children not found or don't belong to you");
   }
 
   // Get template for defaults
@@ -139,7 +131,7 @@ export async function POST(request: Request) {
 
   if (rotationError) {
     console.error("Error creating chore rotation:", rotationError);
-    return NextResponse.json({ error: rotationError.message }, { status: 500 });
+    return createErrorResponse(rotationError, 500, "Failed to create chore rotation");
   }
 
   // Add rotation members
@@ -157,7 +149,7 @@ export async function POST(request: Request) {
     console.error("Error adding rotation members:", membersError);
     // Try to clean up the rotation
     await supabase.from("chore_rotations").delete().eq("id", rotation.id);
-    return NextResponse.json({ error: membersError.message }, { status: 500 });
+    return createErrorResponse(membersError, 500, "Failed to add rotation members");
   }
 
   // Return full rotation with members

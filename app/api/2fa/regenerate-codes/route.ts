@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 /**
  * POST /api/2fa/regenerate-codes
@@ -15,17 +20,14 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     const body = await request.json();
     const { code } = body;
 
     if (!code) {
-      return NextResponse.json(
-        { error: "Verification code is required" },
-        { status: 400 }
-      );
+      return createValidationError("Verification code is required");
     }
 
     // Get user's MFA factors
@@ -33,20 +35,14 @@ export async function POST(request: Request) {
       await supabase.auth.mfa.listFactors();
 
     if (factorsError) {
-      return NextResponse.json(
-        { error: factorsError.message || "Failed to get MFA factors" },
-        { status: 400 }
-      );
+      return createErrorResponse(factorsError, 400, "Failed to get MFA factors");
     }
 
     // Find the TOTP factor
     const totpFactor = factorsData.totp.find((f) => f.status === "verified");
 
     if (!totpFactor) {
-      return NextResponse.json(
-        { error: "No verified TOTP factor found" },
-        { status: 400 }
-      );
+      return createValidationError("No verified TOTP factor found");
     }
 
     // Verify the code first
@@ -56,10 +52,7 @@ export async function POST(request: Request) {
       });
 
     if (challengeError) {
-      return NextResponse.json(
-        { error: challengeError.message || "Failed to create challenge" },
-        { status: 400 }
-      );
+      return createErrorResponse(challengeError, 400, "Failed to create challenge");
     }
 
     const { error: verifyError } = await supabase.auth.mfa.verify({
@@ -69,10 +62,7 @@ export async function POST(request: Request) {
     });
 
     if (verifyError) {
-      return NextResponse.json(
-        { error: "Invalid verification code" },
-        { status: 400 }
-      );
+      return createValidationError("Invalid verification code");
     }
 
     // Generate new backup codes

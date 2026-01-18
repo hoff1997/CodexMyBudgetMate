@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,7 +16,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: template, error } = await supabase
@@ -27,11 +28,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error fetching template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch template");
   }
 
   if (!template) {
-    return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    return createNotFoundError("Template");
   }
 
   return NextResponse.json(template);
@@ -47,7 +48,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -59,7 +60,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (items !== undefined) updates.items = items;
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "No updates provided" }, { status: 400 });
+    return createValidationError("No updates provided");
   }
 
   const { data: template, error } = await supabase
@@ -72,7 +73,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error updating template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update template");
   }
 
   return NextResponse.json(template);
@@ -88,7 +89,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -99,7 +100,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error deleting template:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete template");
   }
 
   return NextResponse.json({ success: true });

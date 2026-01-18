@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAutoAllocation, shouldAutoAllocate } from "@/lib/allocations/auto-allocate";
 import { applyRulesToTransaction } from "@/lib/services/transaction-rules";
 import { detectAndProcessIncome } from "@/lib/services/pay-cycle-detection";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 const createTransactionSchema = z.object({
   merchant_name: z.string().min(1, "Merchant name is required"),
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
   if (!user) {
     console.log('🔴 [API /transactions] Unauthorized - no user');
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const parsed = createTransactionSchema.safeParse(await request.json());
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
     .single();
 
   if (createError) {
-    return NextResponse.json({ error: createError.message }, { status: 400 });
+    return createErrorResponse(createError, 400, "Failed to create transaction");
   }
 
   // Auto-apply merchant rules if no envelope was specified
@@ -194,7 +195,7 @@ export async function GET(request: Request) {
 
   if (!user) {
     console.log('🔴 [API /transactions] Unauthorized - no user');
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -235,7 +236,7 @@ export async function GET(request: Request) {
   const { data: transactions, error: queryError } = await query;
 
   if (queryError) {
-    return NextResponse.json({ error: queryError.message }, { status: 400 });
+    return createErrorResponse(queryError, 400, "Failed to fetch transactions");
   }
 
   return NextResponse.json({ transactions });

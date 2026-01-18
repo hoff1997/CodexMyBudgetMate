@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // Common product to category name mappings for auto-categorization
 const PRODUCT_CATEGORY_MAPPINGS: Record<string, string[]> = {
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -139,7 +140,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching shopping items:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch shopping items");
   }
 
   // Map DB columns to client expected format
@@ -171,18 +172,18 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { list_id, name, quantity } = body;
 
   if (!list_id) {
-    return NextResponse.json({ error: "List ID is required" }, { status: 400 });
+    return createValidationError("List ID is required");
   }
 
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   // Verify the list belongs to the user
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating shopping item:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create shopping item");
   }
 
   // Return in client expected format

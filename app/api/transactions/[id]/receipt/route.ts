@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createReceiptUploadUrl, createSignedReceiptUrl, removeReceipt } from "@/lib/storage/receipts";
+import { createErrorResponse, createNotFoundError, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 export async function POST(
   request: Request,
@@ -12,7 +13,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: transaction, error: transactionError } = await supabase
@@ -23,7 +24,7 @@ export async function POST(
     .maybeSingle();
 
   if (transactionError || !transaction) {
-    return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+    return createNotFoundError("Transaction");
   }
 
   const body = await request.json();
@@ -31,7 +32,7 @@ export async function POST(
   const contentTypeRaw = String(body.contentType ?? "application/octet-stream");
   const contentType = contentTypeRaw.toLowerCase();
   if (!contentType.startsWith("image/") && contentType !== "application/pdf") {
-    return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+    return createValidationError("Unsupported file type");
   }
 
   try {
@@ -50,10 +51,7 @@ export async function POST(
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to create upload URL" },
-      { status: 500 },
-    );
+    return createErrorResponse(error as { message: string }, 500, "Unable to create upload URL");
   }
 }
 
@@ -67,18 +65,18 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const receiptPath = String(body.receiptPath ?? "").trim();
   if (!receiptPath) {
-    return NextResponse.json({ error: "receiptPath is required" }, { status: 400 });
+    return createValidationError("receiptPath is required");
   }
 
   const expectedPrefix = `${user.id}/`;
   if (!receiptPath.startsWith(expectedPrefix)) {
-    return NextResponse.json({ error: "Path does not belong to user" }, { status: 400 });
+    return createValidationError("Path does not belong to user");
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -89,11 +87,11 @@ export async function PATCH(
     .maybeSingle();
 
   if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 400 });
+    return createErrorResponse(existingError, 400, "Failed to fetch transaction");
   }
 
   if (!existing) {
-    return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+    return createNotFoundError("Transaction");
   }
 
   const previousPath = existing.receipt_url ? String(existing.receipt_url) : null;
@@ -105,7 +103,7 @@ export async function PATCH(
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update receipt");
   }
 
   if (previousPath && previousPath !== receiptPath) {

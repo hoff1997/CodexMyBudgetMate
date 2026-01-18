@@ -4,6 +4,7 @@ import { akahuRequest, refreshAkahuToken, AkahuApiError } from "@/lib/akahu/clie
 import { logAuditEvent } from "@/lib/audit/log";
 import { z } from "zod";
 import { deriveProvidersFromAccounts, type AkahuAccount } from "@/lib/akahu/providers";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   action: z.enum(["refresh", "disconnect"]),
@@ -13,7 +14,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const payload = schema.safeParse(body);
   if (!payload.success) {
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return createValidationError("Invalid action");
   }
 
   const supabase = await createClient();
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const userId = user.id;
@@ -47,11 +48,11 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (tokenError) {
-    return NextResponse.json({ error: tokenError.message }, { status: 500 });
+    return createErrorResponse(tokenError, 500, "Failed to retrieve Akahu connection");
   }
 
   if (!tokenRecord) {
-    return NextResponse.json({ error: "No Akahu connection" }, { status: 404 });
+    return createNotFoundError("Akahu connection");
   }
 
   let accessToken = tokenRecord.access_token;
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
         action: "akahu.refresh_failed",
         metadata: { error: error instanceof Error ? error.message : "Refresh failed" },
       });
-      return NextResponse.json({ error: "Token refresh failed" }, { status: 502 });
+      return createErrorResponse(error as { message: string }, 502, "Token refresh failed");
     }
   }
 
@@ -196,9 +197,6 @@ export async function POST(request: Request) {
       action: "akahu.refresh_failed",
       metadata: { error: error instanceof Error ? error.message : "Fetch failed" },
     });
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to refresh connection" },
-      { status: 502 },
-    );
+    return createErrorResponse(error as { message: string }, 502, "Unable to refresh connection");
   }
 }

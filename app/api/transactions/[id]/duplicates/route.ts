@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   duplicateId: z.string().uuid(),
@@ -18,13 +19,13 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const payload = schema.safeParse(await request.json());
   if (!payload.success) {
     const message = payload.error.flatten().formErrors[0] ?? "Invalid payload";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createValidationError(message);
   }
 
   const { duplicateId, decision, note } = payload.data;
@@ -38,7 +39,7 @@ export async function POST(
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to resolve duplicate");
   }
 
   const { data: updated, error: fetchError } = await supabase

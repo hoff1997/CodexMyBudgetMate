@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 interface Params {
   params: { id: string };
@@ -14,7 +15,7 @@ export async function GET(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get the assignment with child info to verify ownership
@@ -56,7 +57,7 @@ export async function PATCH(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -105,10 +106,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json(
-      { error: "No valid fields to update" },
-      { status: 400 }
-    );
+    return createValidationError("No valid fields to update");
   }
 
   const { data: assignment, error } = await supabase
@@ -134,7 +132,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error updating chore assignment:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update chore assignment");
   }
 
   return NextResponse.json(assignment);
@@ -149,7 +147,7 @@ export async function DELETE(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -183,7 +181,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error deleting chore assignment:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete chore assignment");
   }
 
   return NextResponse.json({ success: true });

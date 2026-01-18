@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 interface Params {
   params: { id: string };
@@ -14,7 +15,7 @@ export async function PATCH(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get the assignment
@@ -72,7 +73,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error marking chore as done:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to mark chore as done");
   }
 
   return NextResponse.json(updated);

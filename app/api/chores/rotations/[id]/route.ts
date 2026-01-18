@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface Params {
   params: { id: string };
@@ -14,7 +15,7 @@ export async function GET(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: rotation, error } = await supabase
@@ -40,7 +41,7 @@ export async function GET(request: Request, { params }: Params) {
     .single();
 
   if (error || !rotation) {
-    return NextResponse.json({ error: "Rotation not found" }, { status: 404 });
+    return createNotFoundError("Rotation");
   }
 
   return NextResponse.json(rotation);
@@ -55,7 +56,7 @@ export async function PATCH(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -67,7 +68,7 @@ export async function PATCH(request: Request, { params }: Params) {
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Rotation not found" }, { status: 404 });
+    return createNotFoundError("Rotation");
   }
 
   const body = await request.json();
@@ -90,10 +91,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json(
-      { error: "No valid fields to update" },
-      { status: 400 }
-    );
+    return createValidationError("No valid fields to update");
   }
 
   const { data: rotation, error } = await supabase
@@ -123,7 +121,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error updating rotation:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update rotation");
   }
 
   return NextResponse.json(rotation);
@@ -138,7 +136,7 @@ export async function DELETE(request: Request, { params }: Params) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -150,7 +148,7 @@ export async function DELETE(request: Request, { params }: Params) {
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Rotation not found" }, { status: 404 });
+    return createNotFoundError("Rotation");
   }
 
   // Delete rotation members first (cascade should handle this, but be explicit)
@@ -166,7 +164,7 @@ export async function DELETE(request: Request, { params }: Params) {
 
   if (error) {
     console.error("Error deleting rotation:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete rotation");
   }
 
   return NextResponse.json({ success: true });

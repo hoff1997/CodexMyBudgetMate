@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
+import { createUnauthorizedError, createErrorResponse, createValidationError } from "@/lib/utils/api-error";
 
 const querySchema = z.object({
   format: z.enum(["csv", "xlsx"]).default("csv"),
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const url = new URL(request.url);
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 
   if (!parsedQuery.success) {
     const message = parsedQuery.error.flatten().formErrors[0] ?? "Invalid query parameters";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createValidationError(message);
   }
 
   const exportFormat = parsedQuery.data.format;
@@ -59,10 +60,10 @@ export async function GET(request: Request) {
   ]);
 
   if (assetsRes.error) {
-    return NextResponse.json({ error: assetsRes.error.message }, { status: 400 });
+    return createErrorResponse(assetsRes.error, 400, "Failed to fetch assets");
   }
   if (liabilitiesRes.error) {
-    return NextResponse.json({ error: liabilitiesRes.error.message }, { status: 400 });
+    return createErrorResponse(liabilitiesRes.error, 400, "Failed to fetch liabilities");
   }
 
   const assets = (assetsRes.data ?? []) as AssetRow[];

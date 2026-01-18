@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createNotFoundError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 interface RouteParams {
   params: { id: string };
@@ -14,14 +20,14 @@ export async function POST(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { template_id } = body;
 
   if (!template_id) {
-    return NextResponse.json({ error: "Template ID is required" }, { status: 400 });
+    return createValidationError("Template ID is required");
   }
 
   // Verify the list belongs to the user
@@ -33,7 +39,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     .single();
 
   if (listError || !list) {
-    return NextResponse.json({ error: "List not found" }, { status: 404 });
+    return createNotFoundError("List");
   }
 
   // Fetch the template
@@ -44,7 +50,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     .single();
 
   if (templateError || !template) {
-    return NextResponse.json({ error: "Template not found" }, { status: 404 });
+    return createNotFoundError("Template");
   }
 
   // Get the highest sort order in the current list
@@ -75,7 +81,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   if (insertError) {
     console.error("Error creating items from template:", insertError);
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    return createErrorResponse(insertError, 500, "Failed to create items from template");
   }
 
   return NextResponse.json({

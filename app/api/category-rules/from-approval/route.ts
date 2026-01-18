@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createRuleFromApproval } from "@/lib/services/transaction-rules";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 /**
  * POST /api/category-rules/from-approval
@@ -13,17 +19,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { merchantName, envelopeId, matchType = "contains" } = body;
 
   if (!merchantName || !envelopeId) {
-    return NextResponse.json(
-      { error: "merchantName and envelopeId are required" },
-      { status: 400 }
-    );
+    return createValidationError("merchantName and envelopeId are required");
   }
 
   // Verify envelope belongs to user
@@ -35,10 +38,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (!envelope) {
-    return NextResponse.json(
-      { error: "Envelope not found" },
-      { status: 404 }
-    );
+    return createNotFoundError("Envelope");
   }
 
   // Create the rule
@@ -51,9 +51,10 @@ export async function POST(request: Request) {
   );
 
   if (!result.created) {
-    return NextResponse.json(
-      { error: result.error || "Failed to create rule" },
-      { status: 400 }
+    return createErrorResponse(
+      { message: result.error || "Failed to create rule" },
+      400,
+      "Failed to create rule"
     );
   }
 

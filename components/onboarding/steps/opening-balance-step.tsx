@@ -5,11 +5,43 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Wallet, CreditCard, Sparkles, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
+import { formatCurrency } from "@/lib/finance";
+import {
+  AlertTriangle,
+  Wallet,
+  CreditCard,
+  Sparkles,
+  RotateCcw,
+  ChevronDown,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  FileText,
+  Thermometer,
+  Gift,
+  Pencil,
+} from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import { RemyTip } from "@/components/onboarding/remy-tip";
 import { AllocationStrategySelector } from "@/components/onboarding/allocation-strategy-selector";
 import { CreditCardHoldingSection } from "@/components/onboarding/credit-card-holding-section";
 import { WaterfallProgressCard } from "@/components/onboarding/waterfall-progress-card";
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  type BuiltInCategory,
+} from "@/lib/onboarding/master-envelope-list";
 import {
   calculateWaterfallAllocation,
   calculateAvailableFunds,
@@ -17,6 +49,8 @@ import {
   type AllocationStrategy,
   type EnvelopeForAllocation,
 } from "@/lib/utils/waterfall-allocator";
+import { detectSeasonalBill } from "@/lib/utils/seasonal-bills";
+import { detectCelebration } from "@/lib/types/celebrations";
 import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface OpeningBalanceStepProps {
@@ -27,6 +61,52 @@ interface OpeningBalanceStepProps {
   onOpeningBalancesChange: (balances: { [envelopeId: string]: number }) => void;
   onCreditCardAllocationChange?: (amount: number) => void;
 }
+
+// Priority types
+type Priority = 'essential' | 'important' | 'discretionary';
+
+// Priority configuration - matches envelope-allocation-step exactly
+const PRIORITY_CONFIG: Record<Priority, {
+  label: string;
+  dotColor: string;
+  bgColor: string;
+}> = {
+  essential: {
+    label: 'Essential',
+    dotColor: 'bg-[#5A7E7A]',
+    bgColor: 'bg-[#E2EEEC]',
+  },
+  important: {
+    label: 'Important',
+    dotColor: 'bg-[#9CA3AF]',
+    bgColor: 'bg-[#F3F4F6]',
+  },
+  discretionary: {
+    label: 'Flexible',
+    dotColor: 'bg-[#6B9ECE]',
+    bgColor: 'bg-[#DDEAF5]',
+  },
+};
+
+// Type labels
+const TYPE_LABELS: Record<string, string> = {
+  bill: 'Bill',
+  spending: 'Spending',
+  savings: 'Savings',
+  goal: 'Goal',
+  tracking: 'Tracking',
+};
+
+// Frequency labels
+const FREQUENCY_LABELS: Record<string, string> = {
+  weekly: 'Weekly',
+  fortnightly: 'Fortnightly',
+  monthly: 'Monthly',
+  quarterly: 'Quarterly',
+  annual: 'Annual',
+  annually: 'Annual',
+  custom: 'Custom',
+};
 
 export function OpeningBalanceStep({
   envelopes,
@@ -39,11 +119,7 @@ export function OpeningBalanceStep({
   const [openingBalances, setOpeningBalances] = useState<{ [envelopeId: string]: number }>({});
   const [strategy, setStrategy] = useState<AllocationStrategy>("envelopes_only");
   const [hybridAmount, setHybridAmount] = useState(0);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    essential: true,
-    important: true,
-    flexible: true,
-  });
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set([...CATEGORY_ORDER, 'other']));
 
   // Calculate available funds
   const totalBankBalance = bankAccounts
@@ -102,7 +178,7 @@ export function OpeningBalanceStep({
         targetAmount: env.billAmount || env.savingsAmount || 0,
         frequency: env.frequency,
         dueDate: env.dueDate,
-        perPayAllocation: totalPerPay, // Pass the user's actual per-pay budget
+        perPayAllocation: totalPerPay,
       };
     });
   }, [envelopes, envelopeAllocations]);
@@ -121,36 +197,26 @@ export function OpeningBalanceStep({
   const remaining = availableForEnvelopes - totalAllocated;
   const hasInsufficientFunds = remaining < 0;
 
-  // Group envelopes by priority
-  const groupedEnvelopes = useMemo(() => {
-    const groups: Record<string, EnvelopeData[]> = {
-      essential: [],
-      important: [],
-      flexible: [],
-    };
+  // Group envelopes by category (matching envelope-allocation-step)
+  const envelopesByCategory = useMemo(() => {
+    const grouped: Record<string, EnvelopeData[]> = {};
+
+    // Initialize all category groups
+    CATEGORY_ORDER.forEach(cat => {
+      grouped[cat] = [];
+    });
+    grouped['other'] = [];
 
     envelopes.forEach(env => {
-      const priority = env.priority || 'discretionary';
-      if (priority === 'essential') {
-        groups.essential.push(env);
-      } else if (priority === 'important') {
-        groups.important.push(env);
+      const category = env.category || 'other';
+      if (grouped[category]) {
+        grouped[category].push(env);
       } else {
-        groups.flexible.push(env);
+        grouped['other'].push(env);
       }
     });
 
-    // Sort within each group by due date, then name
-    Object.keys(groups).forEach(key => {
-      groups[key].sort((a, b) => {
-        const dueDateA = a.dueDate || 32;
-        const dueDateB = b.dueDate || 32;
-        if (dueDateA !== dueDateB) return dueDateA - dueDateB;
-        return a.name.localeCompare(b.name);
-      });
-    });
-
-    return groups;
+    return grouped;
   }, [envelopes]);
 
   // Handle balance change
@@ -180,12 +246,15 @@ export function OpeningBalanceStep({
     onOpeningBalancesChange({});
   };
 
-  // Toggle group expansion
-  const toggleGroup = (group: string) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [group]: !prev[group],
-    }));
+  // Toggle category expansion
+  const toggleCategory = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
   };
 
   // Get suggested amount for an envelope from waterfall result
@@ -194,139 +263,167 @@ export function OpeningBalanceStep({
     return result?.suggested || 0;
   };
 
-  // Render envelope group
-  const renderEnvelopeGroup = (
-    groupKey: string,
-    groupTitle: string,
-    groupEnvelopes: EnvelopeData[],
-    dotColor: string,
-    bgColor: string
-  ) => {
-    if (groupEnvelopes.length === 0) return null;
+  // Sum opening balances in category
+  const sumOpeningInCategory = (category: string): number => {
+    const categoryEnvelopes = envelopesByCategory[category] || [];
+    return categoryEnvelopes.reduce((sum, env) => sum + (openingBalances[env.id] || 0), 0);
+  };
 
-    const isExpanded = expandedGroups[groupKey];
-    const groupTotal = groupEnvelopes.reduce(
-      (sum, env) => sum + (openingBalances[env.id] || 0),
-      0
-    );
+  // Count envelopes in category
+  const countInCategory = (category: string): number => {
+    return (envelopesByCategory[category] || []).length;
+  };
+
+  // Format date for display
+  const formatDueDate = (dueDate: string | number | undefined): string => {
+    if (!dueDate) return '—';
+    if (typeof dueDate === 'number') {
+      return `${dueDate.toString().padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`;
+    }
+    return new Date(dueDate).toLocaleDateString('en-NZ', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Render envelope row - matches envelope-allocation-step exactly with Opening column added
+  const renderEnvelopeRow = (env: EnvelopeData, index: number) => {
+    const priority = (env.priority || 'discretionary') as Priority;
+    const config = PRIORITY_CONFIG[priority];
+    const suggested = getSuggestedAmount(env.id);
+    const current = openingBalances[env.id] || 0;
+    const isFullyFunded = current >= suggested && suggested > 0;
+
+    // Check for celebration/seasonal indicators
+    const celebrationCheck = detectCelebration(env.name);
+    const seasonalDetection = celebrationCheck.isCelebration ? null : detectSeasonalBill(env.name);
 
     return (
-      <div key={groupKey} className={`rounded-lg border ${bgColor}`}>
-        {/* Group Header */}
-        <button
-          type="button"
-          onClick={() => toggleGroup(groupKey)}
-          className="w-full flex items-center justify-between p-3 hover:bg-black/5 transition-colors"
-        >
+      <tr key={env.id} className="border-b last:border-0 hover:bg-muted/20 group">
+        {/* Priority */}
+        <td className="px-1 py-2 text-center">
+          <button
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${config.bgColor}`}
+            title={config.label}
+          >
+            <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
+          </button>
+        </td>
+
+        {/* Envelope Name */}
+        <td className="px-2 py-2">
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${dotColor}`} />
-            <span className="font-semibold text-sm text-text-dark">{groupTitle}</span>
-            <span className="text-xs text-text-medium">({groupEnvelopes.length})</span>
+            <span className="text-base">{env.icon}</span>
+            <div className="flex items-center gap-1">
+              <span className="font-medium text-text-dark">
+                {env.name}
+              </span>
+              {/* Celebration indicator */}
+              {env.isCelebration && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold-light text-gold text-[10px]">
+                        🎁
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Celebration envelope</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {/* Leveled indicator */}
+              {env.isLeveled && !env.isCelebration && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-light text-blue text-[10px]">
+                        {env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">
+                        Leveled ({env.seasonalPattern === 'winter-peak' ? 'Winter Peak' : 'Summer Peak'})
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-text-dark">
-              ${groupTotal.toLocaleString()}
-            </span>
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4 text-text-medium" />
+        </td>
+
+        {/* Type */}
+        <td className="px-1 py-2 text-center hidden md:table-cell">
+          <span className="text-xs text-muted-foreground">
+            {TYPE_LABELS[env.type] || env.type}
+          </span>
+        </td>
+
+        {/* Target */}
+        <td className="px-1 py-2 text-right">
+          <span className="text-text-medium">
+            {formatCurrency(env.billAmount || env.savingsAmount || env.monthlyBudget || 0)}
+          </span>
+        </td>
+
+        {/* Frequency */}
+        <td className="px-1 py-2 text-center hidden sm:table-cell">
+          <span className="text-muted-foreground text-xs">
+            {FREQUENCY_LABELS[env.frequency || 'monthly'] || 'Monthly'}
+          </span>
+        </td>
+
+        {/* Due Date */}
+        <td className="px-1 py-2 text-center hidden lg:table-cell">
+          <span className="text-muted-foreground text-xs flex items-center gap-1 justify-center">
+            {env.dueDate ? (
+              <>
+                <CalendarIcon className="h-3 w-3" />
+                {formatDueDate(env.dueDate)}
+              </>
             ) : (
-              <ChevronDown className="h-4 w-4 text-text-medium" />
+              <span className="text-muted-foreground/50">—</span>
             )}
-          </div>
-        </button>
+          </span>
+        </td>
 
-        {/* Group Envelopes */}
-        {isExpanded && (
-          <div className="border-t border-silver-light overflow-x-auto">
-            <table className="w-full min-w-[600px]">
-              <thead>
-                <tr className="text-[10px] font-semibold text-text-medium border-b border-silver-light">
-                  <th className="w-8 px-2 py-2"></th>
-                  <th className="text-left px-2 py-2">Envelope</th>
-                  <th className="text-center px-2 py-2 w-16">Type</th>
-                  <th className="text-right px-2 py-2 w-20">Target</th>
-                  <th className="text-center px-2 py-2 w-16">Freq</th>
-                  <th className="text-center px-2 py-2 w-16">Due</th>
-                  <th className="text-right px-2 py-2 w-20">Suggested</th>
-                  <th className="text-right px-2 py-2 w-24">Opening</th>
-                </tr>
-              </thead>
-              <tbody>
-                {groupEnvelopes.map((envelope) => {
-                  const suggested = getSuggestedAmount(envelope.id);
-                  const current = openingBalances[envelope.id] || 0;
-                  const isFullyFunded = current >= suggested;
+        {/* Per Pay */}
+        <td className="px-1 py-2 text-right">
+          <span className="font-semibold text-[#5A7E7A]">
+            {formatCurrency(env.payCycleAmount || 0)}
+          </span>
+        </td>
 
-                  return (
-                    <tr
-                      key={envelope.id}
-                      className="border-b border-silver-very-light hover:bg-white/50"
-                    >
-                      <td className="px-2 py-2 text-center">
-                        <span className="text-lg">{envelope.icon}</span>
-                      </td>
-                      <td className="px-2 py-2">
-                        <span className="font-medium text-sm text-text-dark">
-                          {envelope.name}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <span className="text-xs text-text-medium capitalize">
-                          {envelope.type}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <span className="text-sm text-text-dark">
-                          {envelope.billAmount || envelope.savingsAmount
-                            ? `$${(envelope.billAmount || envelope.savingsAmount || 0).toLocaleString()}`
-                            : '—'}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <span className="text-xs text-text-medium capitalize">
-                          {envelope.frequency?.substring(0, 3) || '—'}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-center">
-                        <span className="text-xs text-text-medium">
-                          {envelope.dueDate ? `${envelope.dueDate}${getDaySuffix(envelope.dueDate)}` : '—'}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2 text-right">
-                        <span className="text-sm text-text-medium">
-                          ${suggested.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-2 py-2">
-                        <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-medium">
-                            $
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={current || ''}
-                            onChange={(e) => handleBalanceChange(envelope.id, e.target.value)}
-                            placeholder="0"
-                            className={`h-8 text-right text-sm pl-5 pr-2 ${
-                              isFullyFunded
-                                ? 'border-sage focus:ring-sage'
-                                : current > 0
-                                ? 'border-gold focus:ring-gold'
-                                : ''
-                            }`}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {/* Suggested Opening */}
+        <td className="px-1 py-2 text-right hidden lg:table-cell">
+          <span className="text-muted-foreground text-xs">
+            {formatCurrency(suggested)}
+          </span>
+        </td>
+
+        {/* Opening Balance - editable */}
+        <td className="px-1 py-2">
+          <div className="relative">
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-text-medium">
+              $
+            </span>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={current || ''}
+              onChange={(e) => handleBalanceChange(env.id, e.target.value)}
+              placeholder="0"
+              className={`h-7 w-24 text-right text-sm pl-5 pr-2 ${
+                isFullyFunded
+                  ? 'border-sage focus:ring-sage'
+                  : current > 0
+                  ? 'border-gold focus:ring-gold'
+                  : ''
+              }`}
+            />
           </div>
-        )}
-      </div>
+        </td>
+      </tr>
     );
   };
 
@@ -335,8 +432,8 @@ export function OpeningBalanceStep({
       {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl md:text-3xl font-bold text-text-dark">Set your starting point</h2>
-        <p className="text-text-medium">
-          How much is in your accounts right now?
+        <p className="text-muted-foreground">
+          How much is in your accounts right now? Let's distribute it across your envelopes.
         </p>
       </div>
 
@@ -356,7 +453,7 @@ export function OpeningBalanceStep({
               <div>
                 <div className="text-xs text-text-medium">Bank Balance</div>
                 <div className="text-lg font-bold text-sage">
-                  ${totalBankBalance.toLocaleString()}
+                  {formatCurrency(totalBankBalance)}
                 </div>
               </div>
             </div>
@@ -367,7 +464,7 @@ export function OpeningBalanceStep({
                 <div>
                   <div className="text-xs text-text-medium">Credit Card Debt</div>
                   <div className="text-lg font-bold text-blue">
-                    ${totalCreditCardDebt.toLocaleString()}
+                    {formatCurrency(totalCreditCardDebt)}
                   </div>
                 </div>
               </div>
@@ -377,7 +474,7 @@ export function OpeningBalanceStep({
           <div className="text-right">
             <div className="text-xs text-text-medium">Available for Envelopes</div>
             <div className="text-2xl font-bold text-text-dark">
-              ${availableForEnvelopes.toLocaleString()}
+              {formatCurrency(availableForEnvelopes)}
             </div>
           </div>
         </div>
@@ -435,33 +532,123 @@ export function OpeningBalanceStep({
               ? 'text-sage'
               : 'text-text-medium'
           }`}>
-            ${remaining.toLocaleString()}
+            {formatCurrency(remaining)}
           </div>
         </div>
       </div>
 
-      {/* Envelope Groups */}
+      {/* Allocation Table by Category - matches envelope-allocation-step */}
       <div className="space-y-3">
-        {renderEnvelopeGroup(
-          'essential',
-          'Essential',
-          groupedEnvelopes.essential,
-          'bg-sage-dark',
-          'bg-sage-very-light border-sage-light'
-        )}
-        {renderEnvelopeGroup(
-          'important',
-          'Important',
-          groupedEnvelopes.important,
-          'bg-silver',
-          'bg-silver-very-light border-silver-light'
-        )}
-        {renderEnvelopeGroup(
-          'flexible',
-          'Flexible',
-          groupedEnvelopes.flexible,
-          'bg-blue',
-          'bg-blue-light border-blue'
+        {CATEGORY_ORDER.map((category) => {
+          const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
+          if (!categoryInfo) return null;
+
+          const categoryEnvelopes = envelopesByCategory[category] || [];
+          if (categoryEnvelopes.length === 0) return null;
+
+          const isExpanded = expandedCategories.has(category);
+          const categoryTotal = sumOpeningInCategory(category);
+
+          return (
+            <div key={category} className="border rounded-lg overflow-hidden">
+              {/* Category Header */}
+              <button
+                type="button"
+                onClick={() => toggleCategory(category)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-lg">{categoryInfo.icon}</span>
+                  <span className="font-semibold text-gray-700">{categoryInfo.label}</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({countInCategory(category)})
+                  </span>
+                </div>
+                <span className="font-semibold text-[#5A7E7A]">
+                  {formatCurrency(categoryTotal)}
+                </span>
+              </button>
+
+              {/* Category Content - Table */}
+              {isExpanded && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/30">
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground w-10">Pri</th>
+                        <th className="text-left px-2 py-2 font-medium text-muted-foreground">Envelope</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden md:table-cell w-16">Type</th>
+                        <th className="text-right px-1 py-2 font-medium text-muted-foreground w-20">Target</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden sm:table-cell w-20">Freq</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-24">Due</th>
+                        <th className="text-right px-1 py-2 font-medium text-[#5A7E7A] w-20">Per Pay</th>
+                        <th className="text-right px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-20">Suggested</th>
+                        <th className="text-right px-1 py-2 font-medium text-sage w-24">Opening</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categoryEnvelopes.map((env, idx) => renderEnvelopeRow(env, idx))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Other/Uncategorized */}
+        {envelopesByCategory['other']?.length > 0 && (
+          <div className="border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => toggleCategory('other')}
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                {expandedCategories.has('other') ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-lg">📦</span>
+                <span className="font-semibold text-gray-700">Other</span>
+                <span className="text-sm text-muted-foreground">
+                  ({envelopesByCategory['other'].length})
+                </span>
+              </div>
+              <span className="font-semibold text-[#5A7E7A]">
+                {formatCurrency(sumOpeningInCategory('other'))}
+              </span>
+            </button>
+
+            {expandedCategories.has('other') && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground w-10">Pri</th>
+                      <th className="text-left px-2 py-2 font-medium text-muted-foreground">Envelope</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden md:table-cell w-16">Type</th>
+                      <th className="text-right px-1 py-2 font-medium text-muted-foreground w-20">Target</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden sm:table-cell w-20">Freq</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-24">Due</th>
+                      <th className="text-right px-1 py-2 font-medium text-[#5A7E7A] w-20">Per Pay</th>
+                      <th className="text-right px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-20">Suggested</th>
+                      <th className="text-right px-1 py-2 font-medium text-sage w-24">Opening</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {envelopesByCategory['other'].map((env, idx) => renderEnvelopeRow(env, idx))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -469,18 +656,15 @@ export function OpeningBalanceStep({
       <WaterfallProgressCard
         totalAvailable={availableForEnvelopes}
         creditCardAllocated={creditCardAllocation}
-        essentialAllocated={groupedEnvelopes.essential.reduce(
-          (sum, env) => sum + (openingBalances[env.id] || 0),
-          0
-        )}
-        importantAllocated={groupedEnvelopes.important.reduce(
-          (sum, env) => sum + (openingBalances[env.id] || 0),
-          0
-        )}
-        flexibleAllocated={groupedEnvelopes.flexible.reduce(
-          (sum, env) => sum + (openingBalances[env.id] || 0),
-          0
-        )}
+        essentialAllocated={envelopes
+          .filter(env => env.priority === 'essential')
+          .reduce((sum, env) => sum + (openingBalances[env.id] || 0), 0)}
+        importantAllocated={envelopes
+          .filter(env => env.priority === 'important')
+          .reduce((sum, env) => sum + (openingBalances[env.id] || 0), 0)}
+        flexibleAllocated={envelopes
+          .filter(env => env.priority === 'discretionary' || !env.priority)
+          .reduce((sum, env) => sum + (openingBalances[env.id] || 0), 0)}
         remaining={Math.max(0, remaining)}
       />
 
@@ -490,7 +674,7 @@ export function OpeningBalanceStep({
           <AlertTriangle className="h-5 w-5 text-gold" />
           <AlertTitle className="text-text-dark">Over Budget</AlertTitle>
           <AlertDescription className="text-sm text-text-dark">
-            You&apos;re allocating <strong>${Math.abs(remaining).toLocaleString()}</strong> more
+            You&apos;re allocating <strong>{formatCurrency(Math.abs(remaining))}</strong> more
             than available. You can still continue, but you&apos;ll need to add funds or
             adjust allocations when your next income arrives.
           </AlertDescription>
@@ -503,16 +687,4 @@ export function OpeningBalanceStep({
       </div>
     </div>
   );
-}
-
-function getDaySuffix(day: number): string {
-  if (day >= 11 && day <= 13) {
-    return 'th';
-  }
-  switch (day % 10) {
-    case 1: return 'st';
-    case 2: return 'nd';
-    case 3: return 'rd';
-    default: return 'th';
-  }
 }

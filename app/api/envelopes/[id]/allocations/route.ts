@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const allocationSchema = z.object({
   income_source_id: z.string().uuid(),
@@ -22,7 +23,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data, error } = await supabase
@@ -32,7 +33,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch allocations");
   }
 
   return NextResponse.json(data || []);
@@ -50,14 +51,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const { allocations } = parsed.data;
@@ -82,7 +83,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     .eq("user_id", user.id);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 400 });
+    return createErrorResponse(deleteError, 400, "Failed to update allocations");
   }
 
   // Insert new allocations (only if amount > 0)
@@ -102,7 +103,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       );
 
     if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 400 });
+      return createErrorResponse(insertError, 400, "Failed to save allocations");
     }
   }
 
@@ -173,14 +174,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { income_source_id, amount } = body;
 
   if (!income_source_id || typeof amount !== 'number') {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   // If amount is 0 or negative, delete the allocation
@@ -193,7 +194,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       .eq("user_id", user.id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to delete allocation");
     }
 
     return NextResponse.json({ ok: true, deleted: true });
@@ -216,7 +217,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     );
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update allocation");
   }
 
   return NextResponse.json({ ok: true });

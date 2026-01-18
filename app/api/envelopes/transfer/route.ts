@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   fromId: z.string().uuid(),
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const { fromId, toId, amount, note } = parsed.data;
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     .in("id", [fromId, toId]);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch envelopes");
   }
 
   if (!envelopes || envelopes.length !== 2) {
@@ -74,9 +75,7 @@ export async function POST(request: Request) {
   );
 
   if (transferError) {
-    const message =
-      transferError.message ?? transferError.details ?? "Unable to complete transfer";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createErrorResponse(transferError, 400, "Unable to complete transfer");
   }
 
   const { data: updatedEnvelopes } = await supabase

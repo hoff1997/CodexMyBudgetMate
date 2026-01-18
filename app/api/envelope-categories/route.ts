@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 const createCategorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(100),
@@ -14,7 +19,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Try to fetch with full schema (after migration)
@@ -52,7 +57,7 @@ export async function GET() {
 
   if (minimalResult.error) {
     console.error("Failed to fetch envelope categories:", minimalResult.error);
-    return NextResponse.json({ error: minimalResult.error.message }, { status: 400 });
+    return createErrorResponse(minimalResult.error, 400, "Failed to fetch categories");
   }
 
   // Map minimal data to full structure with defaults
@@ -73,16 +78,15 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = createCategorySchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Validation failed", details: parsed.error.errors },
-      { status: 400 }
+    return createValidationError(
+      parsed.error.errors.map((e) => e.message).join(", ")
     );
   }
 
@@ -117,7 +121,7 @@ export async function POST(request: Request) {
 
   if (minimalInsert.error) {
     console.error("Failed to create envelope category:", minimalInsert.error);
-    return NextResponse.json({ error: minimalInsert.error.message }, { status: 400 });
+    return createErrorResponse(minimalInsert.error, 400, "Failed to create category");
   }
 
   // Return with default values for missing fields

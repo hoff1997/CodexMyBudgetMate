@@ -4,6 +4,11 @@ import type {
   KidIncomeSource,
   CreateKidIncomeSourceRequest,
 } from "@/lib/types/kids-invoice";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -19,7 +24,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -42,7 +47,7 @@ export async function GET(request: Request, context: RouteContext) {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch income sources");
   }
 
   return NextResponse.json({
@@ -62,7 +67,7 @@ export async function POST(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -81,17 +86,11 @@ export async function POST(request: Request, context: RouteContext) {
 
   // Validate required fields
   if (!body.amount || body.amount <= 0) {
-    return NextResponse.json(
-      { error: "Amount is required and must be positive" },
-      { status: 400 }
-    );
+    return createValidationError("Amount is required and must be positive");
   }
 
   if (!body.frequency) {
-    return NextResponse.json(
-      { error: "Frequency is required" },
-      { status: 400 }
-    );
+    return createValidationError("Frequency is required");
   }
 
   // Create income source
@@ -111,7 +110,7 @@ export async function POST(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create income source");
   }
 
   return NextResponse.json({

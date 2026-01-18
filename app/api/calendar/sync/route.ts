@@ -5,6 +5,7 @@ import {
   refreshAccessToken,
   parseGoogleDateTime,
 } from "@/lib/google-calendar";
+import { createUnauthorizedError } from "@/lib/utils/api-error";
 
 export async function POST() {
   const supabase = await createClient();
@@ -13,7 +14,7 @@ export async function POST() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get all calendar connections

@@ -89,16 +89,97 @@ Verify:
 - [Supabase SSR Docs](https://supabase.com/docs/guides/auth/server-side/nextjs)
 - [Project Architecture Docs](/docs/ARCHITECTURE.md)
 
+## 🏦 Akahu Integration (NZ Open Banking)
+
+### Overview
+Akahu provides open banking connectivity for New Zealand banks. Users can connect their bank accounts to automatically import transactions.
+
+### User-Facing Components
+
+| Component | File | Location |
+|-----------|------|----------|
+| **Onboarding Step** | `components/onboarding/steps/bank-accounts-step.tsx` | Step 4 of onboarding |
+| **Dashboard Widget** | `components/bank/bank-connection-status-widget.tsx` | Dashboard overview |
+| **Status Banner** | `components/layout/overview/akahu-connect.tsx` | Dashboard widget grid |
+| **Settings Manager** | `components/layout/settings/settings-client.tsx` | Settings → Bank Connections |
+| **Full Manager** | `components/bank/bank-connection-manager.tsx` | Comprehensive management |
+
+### User Flow
+1. **Onboarding**: User sees "Connect My Bank" card with security benefits
+2. **Click Connect**: Redirects to Akahu OAuth page
+3. **Authorize**: User logs into their bank via Akahu
+4. **Callback**: Tokens stored, accounts fetched, status shown
+5. **Dashboard**: Widget shows connection status, last sync time
+6. **Settings**: Full management (sync, disconnect, view accounts)
+
+### OAuth Flow (Technical)
+1. User clicks "Connect Bank" → calls `GET /api/akahu/oauth/start`
+2. Returns authorization URL with CSRF state token (stored in `akahu_oauth_states`)
+3. User authorizes on Akahu → redirects to `/api/akahu/oauth/callback`
+4. Callback verifies state, exchanges code for tokens, stores in `akahu_tokens`
+
+### API Routes
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/akahu/oauth/start` | Initiates OAuth flow, returns auth URL |
+| `GET /api/akahu/oauth/callback` | Handles OAuth callback, stores tokens |
+| `GET /api/akahu/accounts` | Fetches user's bank accounts (cached) |
+| `GET /api/akahu/transactions` | Fetches transactions (cached) |
+| `GET /api/akahu/connection` | Get/refresh connection status |
+| `DELETE /api/akahu/connection` | Disconnect Akahu |
+| `POST /api/akahu/cache/invalidate` | Manual cache invalidation |
+| `POST /api/webhooks/akahu` | Handles Akahu webhooks |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/akahu/client.ts` | Akahu API client, token refresh, error handling |
+| `lib/akahu/providers.ts` | Derive provider names from accounts |
+| `lib/cache/akahu-cache.ts` | Redis caching (5min accounts, 15min transactions) |
+| `lib/jobs/akahu-sync.ts` | Background token refresh job |
+| `lib/hooks/use-akahu-accounts.ts` | React Query hook for accounts |
+| `lib/hooks/use-akahu-transactions.ts` | React Query hook for transactions |
+
+### Environment Variables
+```
+AKAHU_APP_TOKEN=app_token_xxx           # Your Akahu app token
+AKAHU_CLIENT_ID=app_token_xxx           # Same as app token
+AKAHU_CLIENT_SECRET=xxx                 # Your Akahu client secret
+AKAHU_REDIRECT_URI=http://localhost:3000/api/akahu/oauth/callback
+AKAHU_WEBHOOK_SECRET=xxx                # Optional: for webhook verification
+```
+
+### Database Tables
+- `akahu_tokens` - Stores user access/refresh tokens with expiry
+- `akahu_oauth_states` - Temporary CSRF state storage (expires 10 min)
+- `akahu_webhook_events` - Webhook event log for debugging
+- `bank_connections` - User's connected bank providers and status
+
+### Webhook Events Handled
+- `TOKEN:DELETE` / `TOKEN:REVOKED` - Deletes tokens, marks connection disconnected
+- `ACCOUNT:UPDATE` - Updates connection status (ACTIVE → connected, INACTIVE → action_required)
+- `TRANSACTION:*` - Logged for future cache invalidation
+
+### Important Notes
+- **Redirect URI must match exactly** what's registered with Akahu
+- Production URI: `https://www.mybudgetmate.co.nz/api/akahu/oauth/callback`
+- Development URI: `http://localhost:3000/api/akahu/oauth/callback`
+- Tokens are refreshed automatically 60 seconds before expiry
+- Webhook signature verification uses HMAC-SHA256 with timing-safe comparison
+- Caching: Accounts 5min, Recent transactions 15min, Historical 24hr
+
 ## 🤝 Working with This Codebase
 
 This project has been carefully configured to handle authentication correctly in Next.js 14 with Supabase SSR. The auth setup is complex and was debugged extensively.
 
 **If you're unsure about a change - especially anything related to authentication, cookies, or middleware - please ask the user before proceeding.**
 
-## 📊 Budget Manager Features (Updated Dec 2025)
+## 📊 Budget Manager Features (Updated Jan 2026)
 
 ### Envelope Types
-The Budget Manager supports **5 envelope subtypes**:
+The Budget Manager supports **6 envelope subtypes**:
 
 | Subtype | Description | Needs Budget? | Priority Column? |
 |---------|-------------|---------------|------------------|
@@ -107,12 +188,15 @@ The Budget Manager supports **5 envelope subtypes**:
 | `savings` | Savings goals | ❌ No | ❌ No |
 | `goal` | One-time goals | ❌ No | ❌ No |
 | `tracking` | Tracking-only (reimbursements) | ❌ No | ❌ No |
+| `debt` | Debt payoff (credit cards, loans) | ✅ Yes | ✅ Yes |
 
 **Key Files:**
 - Type definition: `lib/types/unified-envelope.ts` (`EnvelopeSubtype`)
 - Table component: `components/shared/unified-envelope-table.tsx`
-- API auto-sync: `app/api/envelopes/[id]/route.ts` (syncs `is_tracking_only` flag)
-- Database migration: `supabase/migrations/0024_envelope_tracking_flag.sql`
+- API auto-sync: `app/api/envelopes/[id]/route.ts` (syncs `is_tracking_only` and `is_debt` flags)
+- Debt items API: `app/api/envelopes/[id]/debt-items/route.ts`
+- Debt types: `lib/types/debt.ts`
+- Database migration: `supabase/migrations/0075_debt_envelope_system.sql`
 
 ### Sortable Columns
 All major columns in the Budget Manager table are sortable:
@@ -160,6 +244,7 @@ When changing envelope subtype via API, the system auto-syncs related flags:
 // In app/api/envelopes/[id]/route.ts
 if ("subtype" in payload) {
   payload.is_tracking_only = payload.subtype === "tracking";
+  payload.is_debt = payload.subtype === "debt";
 }
 ```
 
@@ -689,6 +774,80 @@ The Kids Module teaches teens with bank accounts real money management, preparin
 
 **Core Philosophy**: Kids = My Budget Way (lite version) + Household Hub access + Invoice-based earning system
 
+### Kid Login Security (Updated Jan 2026)
+
+**IMPORTANT**: Each child now has a unique login key instead of a shared family code.
+
+#### Login Key System
+
+| Feature | Old (Family Code) | New (Login Key) |
+|---------|-------------------|-----------------|
+| Format | `HOFF-2026` | `K7M2-P9QR-3WNX` |
+| Scope | Shared by all children | Unique per child |
+| Entropy | ~1,000 combinations | ~4.7 × 10¹⁸ combinations |
+| Security | Guessable (based on name) | Cryptographically random |
+
+#### Database Columns
+
+```sql
+-- On child_profiles table
+login_key TEXT UNIQUE NOT NULL,           -- XXXX-XXXX-XXXX format
+login_key_created_at TIMESTAMPTZ,         -- When key was generated
+login_key_last_used_at TIMESTAMPTZ,       -- Last successful login
+family_access_code TEXT NOT NULL          -- DEPRECATED: kept for backwards compatibility
+```
+
+#### Key API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/kids/auth/login-key` | POST | Login with key + PIN (new secure flow) |
+| `/api/kids/auth/lookup` | POST | Legacy family code lookup (deprecated) |
+| `/api/kids/auth/login` | POST | Legacy PIN verification (deprecated) |
+| `/api/kids/profiles/[id]/login-key` | GET | Parent views child's login key |
+| `/api/kids/profiles/[id]/login-key` | POST | Parent regenerates child's login key |
+
+#### Key Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `SecureKidLogin` | `app/(auth)/kids/login/secure-login.tsx` | New secure login page |
+| `LoginKeyManager` | `components/kids/login-key-manager.tsx` | Parent UI to view/copy/regenerate keys |
+| `LegacyKidsLogin` | `app/(auth)/kids/login/page.tsx` | Old login (accessible via `?legacy=true`) |
+
+#### Browser Credential Saving
+
+The new login page supports browser password managers:
+- Form uses `autocomplete="username"` for login key field
+- Form uses `autocomplete="current-password"` for PIN field
+- Visible submit button triggers browser's "Save Password" prompt
+- Users are prompted to save credentials for easy future login
+
+#### Parent Workflow
+
+1. Parent creates child profile → login key auto-generated
+2. Parent views login key in child's profile card
+3. Parent can copy key, show QR code, or regenerate
+4. Key regeneration logged to `kid_login_key_audit` table
+5. Old key immediately stops working on regeneration
+
+#### Security Features
+
+- **Per-child isolation**: Compromise of one key doesn't affect siblings
+- **Regeneratable**: Parent can rotate keys anytime
+- **Audit trail**: Key views and regenerations logged
+- **Rate limiting**: Same protections as before (per-IP and per-key)
+- **CSRF protection**: Required on all login endpoints
+- **Timing-safe comparison**: No timing attacks possible
+
+#### Migration
+
+Migration `0078_secure_kid_login_keys.sql`:
+1. Adds `login_key`, `login_key_created_at`, `login_key_last_used_at` columns
+2. Generates login keys for existing children
+3. Creates audit table `kid_login_key_audit`
+4. Adds trigger to auto-generate keys on new child creation
+
 ### Two Chore Types
 
 | Type | Description | Can Invoice? | Tracking |
@@ -785,3 +944,160 @@ const betaAccess = await checkBetaAccess();
 if (!betaAccess.hasAccess) {
   redirect("/dashboard");
 }
+```
+
+## 🎓 Teens Module (Added Jan 2026)
+
+### Overview
+
+The Teens Module provides a pathway for kids (13+) who start earning their own money to transition from the Kids Module to an independent experience, while remaining connected to the parent ecosystem. The goal is to create lifetime customers through smooth, value-driven transitions.
+
+**Key Principle**: FREE while linked to parent ecosystem, 6 months free after full graduation, then regular subscription.
+
+### Three Phases
+
+```
+Phase 1: Teen Mode (FREE - within parent ecosystem)
+├── Parent enables "Teen Mode" for child
+├── Teen gets 6 envelope types (vs 4 in Kids Module)
+├── Teen can add external income (job, side gig)
+├── Teen can reconcile their own bank transactions
+├── Still uses PIN login (kid_session)
+└── Covered by parent relationship = FREE
+
+Phase 2: Full Graduation (6 months FREE, then subscription)
+├── Parent or teen initiates "Graduate to Own Account"
+├── Creates new auth.users record for teen
+├── Migrates ALL data from child profile
+├── Teen gets email/password login (full Supabase Auth)
+└── 6-month free trial via Stripe coupon
+
+Phase 3: Lifetime Customer
+├── Optional family link for Household Hub access
+├── Teen controls what parents can see (if anything)
+└── Eventually brings their own kids to the platform
+```
+
+### Conversion Safeguards (Preventing Perpetual Free Users)
+
+| Safeguard | Description |
+|-----------|-------------|
+| **DOB Required** | Date of birth is REQUIRED to enable teen mode |
+| **Age 18 Auto-Graduation** | Teen mode automatically ends at 18th birthday |
+| **90-Day Grace Period** | After 18, teens have 90 days to complete graduation |
+| **6 Envelope Limit** | Teen mode limits to 6 envelopes max |
+| **2 External Income Limit** | Teen mode limits to 2 income sources max |
+| **1 Bank Connection Limit** | Teen mode limits to 1 bank connection max |
+
+### Teen Mode Limits
+
+```typescript
+// lib/utils/teen-limits.ts
+export const TEEN_MODE_LIMITS = {
+  envelopes: 6,
+  externalIncomeSources: 2,
+  bankConnections: 1,
+} as const;
+```
+
+### Feature Comparison: Teen vs Graduated
+
+| Feature | Teen Mode | Graduated |
+|---------|-----------|-----------|
+| Envelopes | 6 max | Unlimited |
+| Envelope types | All 6 types | All 6 types |
+| Debt tracking | Basic only | Full snowball/avalanche |
+| Reports/PDF export | No | Yes |
+| Net worth tracking | No | Yes |
+| Multiple bank connections | 1 max | Unlimited |
+| Transaction reconciliation | Yes | Yes |
+| External income sources | 2 max | Unlimited |
+
+### Key Database Tables (Teen Mode)
+
+```sql
+-- Teen mode columns on child_profiles
+is_teen_mode BOOLEAN DEFAULT false
+teen_mode_enabled_at TIMESTAMPTZ
+can_reconcile_transactions BOOLEAN DEFAULT false
+can_add_external_income BOOLEAN DEFAULT false
+graduation_status TEXT ('child', 'teen_mode', 'graduating', 'graduated', 'expired')
+auto_graduation_date DATE  -- 18th birthday
+graduation_grace_ends_at TIMESTAMPTZ
+
+-- Teen external income sources
+teen_external_income (id, child_profile_id, name, employer_name, amount, frequency, ...)
+
+-- Teen envelopes (full 6-type system)
+teen_envelopes (id, child_profile_id, name, icon, subtype, target_amount, current_amount, ...)
+
+-- Teen envelope allocations
+teen_envelope_allocations (id, child_profile_id, teen_envelope_id, income_source_type, allocation_amount, ...)
+
+-- Graduation tracking
+teen_graduation_requests (id, child_profile_id, parent_user_id, request_type, status, ...)
+graduated_family_links (id, graduated_user_id, parent_user_id, share_budget_overview, ...)
+graduation_promo_codes (id, code, graduated_user_id, months_free, is_used, ...)
+```
+
+### Key API Routes (Teen Mode)
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/kids/[childId]/teen-mode/enable` | POST | Parent enables teen mode |
+| `/api/kids/[childId]/teen-mode/disable` | POST | Parent disables teen mode |
+| `/api/kids/[childId]/teen-envelopes` | GET/POST | Full envelope CRUD |
+| `/api/kids/[childId]/teen-envelopes/[id]` | GET/PATCH/DELETE | Update/delete envelope |
+| `/api/kids/[childId]/external-income` | GET/POST | Manage external income |
+| `/api/kids/[childId]/external-income/[id]` | GET/PATCH/DELETE | Update/delete income |
+| `/api/kids/[childId]/limits` | GET | Get current usage vs limits |
+
+### Teen Envelope Templates
+
+**File:** `lib/teens/teen-envelope-templates.ts`
+
+Common teen expense categories with pre-built templates:
+
+| Category | Examples |
+|----------|----------|
+| Essentials | Phone Bill, Food & Snacks |
+| Transport | Bus/Train, Petrol, Car Expenses |
+| Lifestyle | Clothing, Entertainment, Going Out, Hobbies |
+| Subscriptions | Netflix, Spotify, Gaming |
+| Savings | Emergency Fund, Car Savings, Tech Fund, Travel Fund |
+
+### KidSession Extension
+
+The `KidSession` interface in `lib/utils/kid-session.ts` includes teen mode fields:
+
+```typescript
+export interface KidSession {
+  // ... existing fields ...
+
+  // Teen mode additions
+  isTeenMode: boolean;
+  canReconcileTransactions: boolean;
+  canAddExternalIncome: boolean;
+  autoGraduationDate: string | null; // ISO date of 18th birthday
+}
+```
+
+### Upgrade Prompt UX
+
+When a teen hits a limit, show an encouraging graduation prompt:
+
+```typescript
+// From /api/kids/[childId]/limits response
+upgradePrompt: {
+  title: "You've Grown!",
+  message: "You're managing 6 envelopes like a pro. Graduate to unlock unlimited envelopes.",
+  ctaText: "Graduate Now - It's Free!",
+  ctaUrl: `/kids/${childId}/graduate`,
+}
+```
+
+### Migration File
+
+**File:** `supabase/migrations/0077_teen_graduation_system.sql`
+
+Creates all teen mode tables, columns, constraints, triggers, and helper functions.

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { KidInvoice } from "@/lib/types/kids-invoice";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -16,7 +20,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -51,7 +55,7 @@ export async function GET(request: Request, context: RouteContext) {
   const { data: invoices, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch invoices");
   }
 
   return NextResponse.json({
@@ -71,7 +75,7 @@ export async function POST(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -128,7 +132,7 @@ export async function POST(request: Request, context: RouteContext) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to create invoice");
     }
 
     return NextResponse.json({
@@ -150,7 +154,7 @@ export async function POST(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create invoice");
   }
 
   return NextResponse.json({

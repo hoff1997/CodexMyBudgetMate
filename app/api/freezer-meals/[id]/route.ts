@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -17,7 +23,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data, error } = await supabase
@@ -28,7 +34,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     .single();
 
   if (error || !data) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return createNotFoundError("Freezer meal");
   }
 
   return NextResponse.json({ freezerMeal: data });
@@ -46,7 +52,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -58,7 +64,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   if (body.name !== undefined) {
     if (!body.name?.trim()) {
-      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+      return createValidationError("Name is required");
     }
     updatePayload.name = body.name.trim();
   }
@@ -103,7 +109,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("[freezer-meals] PUT error:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update freezer meal");
   }
 
   return NextResponse.json({ freezerMeal: data });
@@ -121,7 +127,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -132,7 +138,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("[freezer-meals] DELETE error:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete freezer meal");
   }
 
   return NextResponse.json({ success: true });

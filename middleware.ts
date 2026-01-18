@@ -1,10 +1,54 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// MFA session timeout in milliseconds (2 hours as required by Akahu)
+const MFA_SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
+const MFA_VERIFIED_COOKIE = "mfa_verified_at";
+
+// API routes that require fresh MFA verification for users with MFA enabled
+// These are security-sensitive operations as per Akahu certification requirements
+const MFA_PROTECTED_API_ROUTES = [
+  "/api/akahu",     // Bank connections (Akahu requirement)
+  "/api/2fa",       // Security settings (except verify endpoints needed to establish MFA)
+];
+
+// Exemptions within protected routes (these don't require MFA to be verified)
+const MFA_EXEMPT_ROUTES = [
+  "/api/2fa/status",          // Check MFA status (needed before enforcement)
+  "/api/2fa/verify",          // Verify MFA code (needed to establish session)
+  "/api/2fa/verify-session",  // Verify/refresh MFA session
+];
+
+/**
+ * Check if a route requires fresh MFA verification
+ */
+function routeRequiresMfaVerification(pathname: string): boolean {
+  // Check if route is exempt
+  if (MFA_EXEMPT_ROUTES.some(route => pathname === route || pathname.startsWith(route + "/"))) {
+    return false;
+  }
+  // Check if route is protected
+  return MFA_PROTECTED_API_ROUTES.some(route => pathname.startsWith(route));
+}
+
+/**
+ * Check if MFA session is fresh (within 2 hours)
+ */
+function isMfaSessionFresh(verifiedAt: number | null): boolean {
+  if (!verifiedAt) return false;
+  return Date.now() - verifiedAt < MFA_SESSION_TIMEOUT_MS;
+}
+
 // Kid session verification (mirrors lib/utils/kid-session.ts)
-// MUST match the fallback in lib/utils/kid-session.ts exactly
-const KID_SESSION_SECRET = process.env.KID_SESSION_SECRET || "fallback-secret-change-in-production";
+// SECURITY: No fallback - KID_SESSION_SECRET must be set in environment
+const KID_SESSION_SECRET = process.env.KID_SESSION_SECRET;
 const KID_SESSION_COOKIE = "kid_session";
+
+// Fail fast if security secret is not configured
+if (!KID_SESSION_SECRET) {
+  console.error("[SECURITY] KID_SESSION_SECRET environment variable is not set!");
+  // In production, this will cause kid session verification to fail safely
+}
 
 // Helper to convert ArrayBuffer to hex string (Edge-compatible)
 function arrayBufferToHex(buffer: ArrayBuffer): string {
@@ -25,6 +69,12 @@ function base64urlDecode(str: string): string {
 
 // Async verification using Web Crypto API (Edge-compatible)
 async function verifyKidSessionFromCookie(cookieValue: string): Promise<{ valid: boolean; childId?: string }> {
+  // SECURITY: Reject all sessions if secret is not configured
+  if (!KID_SESSION_SECRET) {
+    console.error("[SECURITY] Cannot verify kid session - KID_SESSION_SECRET not configured");
+    return { valid: false };
+  }
+
   try {
     const [encodedPayload, signature] = cookieValue.split(".");
     if (!encodedPayload || !signature) {
@@ -83,12 +133,9 @@ async function verifyKidSessionFromCookie(cookieValue: string): Promise<{ valid:
 }
 
 export async function middleware(request: NextRequest) {
-  // Audit mode bypass - disable auth for site audit
-  // Set NEXT_PUBLIC_AUDIT_MODE=true in .env.local to enable
-  if (process.env.NEXT_PUBLIC_AUDIT_MODE === 'true') {
-    console.log('[AUDIT MODE] Bypassing auth middleware for:', request.nextUrl.pathname);
-    return NextResponse.next();
-  }
+  // SECURITY: Audit mode bypass has been removed for security compliance
+  // For accessibility/Lighthouse testing, use authenticated sessions
+  // or set up a dedicated staging environment with test accounts
 
   const pathname = request.nextUrl.pathname;
 
@@ -158,7 +205,35 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // MFA Enforcement for sensitive routes (Akahu certification requirement)
+  // Only enforced for authenticated users who have MFA enabled
+  if (user && routeRequiresMfaVerification(pathname)) {
+    // Check if user has MFA enabled by looking at their factors
+    const { data: factorsData } = await supabase.auth.mfa.listFactors();
+    const hasMfaEnabled = factorsData?.totp?.some((f) => f.status === "verified") ?? false;
+
+    if (hasMfaEnabled) {
+      // User has MFA enabled - check if session is fresh
+      const mfaCookie = request.cookies.get(MFA_VERIFIED_COOKIE);
+      const verifiedAt = mfaCookie ? parseInt(mfaCookie.value, 10) : null;
+      const sessionFresh = isMfaSessionFresh(verifiedAt);
+
+      if (!sessionFresh) {
+        // MFA session expired - return 403 with specific error code
+        // Frontend should redirect to MFA verification page
+        return NextResponse.json(
+          {
+            error: "MFA verification required",
+            code: "MFA_REQUIRED",
+            message: "Please verify your identity with MFA to access this resource",
+          },
+          { status: 403 }
+        );
+      }
+    }
+  }
 
   return response;
 }

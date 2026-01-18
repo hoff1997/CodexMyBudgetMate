@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { createSuggestedEnvelopes } from "@/lib/utils/suggested-envelopes";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 const schema = z.object({
   dataChoice: z.enum(['demo', 'akahu', 'csv', 'manual']).optional(),
@@ -19,17 +24,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid payload", details: parsed.error },
-      { status: 400 }
-    );
+    return createValidationError("Invalid payload");
   }
 
   const { dataChoice, completedAt } = parsed.data;
@@ -52,10 +54,7 @@ export async function POST(request: Request) {
 
     if (profileError) {
       console.error('Profile update error:', profileError);
-      return NextResponse.json(
-        { error: profileError.message },
-        { status: 400 }
-      );
+      return createErrorResponse(profileError, 400, "Failed to update profile");
     }
 
     // Create "The My Budget Way" suggested envelopes
@@ -94,11 +93,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true, dataChoice });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Onboarding completion error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse(error as { message: string }, 500, "Internal server error");
   }
 }

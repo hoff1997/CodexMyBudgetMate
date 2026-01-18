@@ -4,6 +4,7 @@ import {
   getSessionRemainingTime,
   refreshKidSession,
 } from "@/lib/utils/kid-session";
+import { createErrorResponse } from "@/lib/utils/api-error";
 
 // GET: Check current kid session status
 export async function GET() {
@@ -34,10 +35,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error("Error in GET /api/kids/auth/session:", err);
-    return NextResponse.json(
-      { error: "Failed to check session" },
-      { status: 500 }
-    );
+    return createErrorResponse(err as Error, 500, "Failed to check session");
   }
 }
 
@@ -70,9 +68,6 @@ export async function POST() {
     });
   } catch (err) {
     console.error("Error in POST /api/kids/auth/session:", err);
-    return NextResponse.json(
-      { error: "Failed to refresh session" },
-      { status: 500 }
-    );
+    return createErrorResponse(err as Error, 500, "Failed to refresh session");
   }
 }

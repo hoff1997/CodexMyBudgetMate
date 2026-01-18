@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // POST /api/chores/rotations/generate-weekly - Generate assignments from rotations
 export async function POST(request: Request) {
@@ -10,17 +11,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { week_starting } = body;
 
   if (!week_starting) {
-    return NextResponse.json(
-      { error: "week_starting is required (YYYY-MM-DD format)" },
-      { status: 400 }
-    );
+    return createValidationError("week_starting is required (YYYY-MM-DD format)");
   }
 
   // Get all active rotations for this parent
@@ -41,7 +39,7 @@ export async function POST(request: Request) {
 
   if (rotationsError) {
     console.error("Error fetching rotations:", rotationsError);
-    return NextResponse.json({ error: rotationsError.message }, { status: 500 });
+    return createErrorResponse(rotationsError, 500, "Failed to fetch rotations");
   }
 
   if (!rotations || rotations.length === 0) {
@@ -169,7 +167,7 @@ export async function POST(request: Request) {
 
   if (insertError) {
     console.error("Error creating assignments:", insertError);
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+    return createErrorResponse(insertError, 500, "Failed to create assignments");
   }
 
   return NextResponse.json({

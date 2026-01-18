@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -15,7 +16,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: notification, error } = await supabase
@@ -26,7 +27,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch notification");
   }
 
   if (!notification) {
@@ -46,7 +47,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -69,7 +70,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    return createValidationError("No valid fields to update");
   }
 
   const { data: notification, error } = await supabase
@@ -81,7 +82,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update notification");
   }
 
   return NextResponse.json({ notification });
@@ -97,7 +98,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -110,7 +111,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to dismiss notification");
   }
 
   return NextResponse.json({ success: true });

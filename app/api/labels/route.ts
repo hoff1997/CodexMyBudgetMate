@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -19,7 +20,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data, error } = await supabase
@@ -30,7 +31,7 @@ export async function GET() {
     .order("name", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch labels");
   }
 
   return NextResponse.json({ labels: data ?? [] });
@@ -43,13 +44,13 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = schema.safeParse(await request.json());
   if (!body.success) {
     const message = body.error.flatten().formErrors[0] ?? "Invalid payload";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createValidationError(message);
   }
 
   const payload = body.data;
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create label");
   }
 
   return NextResponse.json({ label: data }, { status: 201 });

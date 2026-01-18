@@ -4,6 +4,8 @@ import { AuthForm } from "@/components/auth/auth-form";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { HydrationSafe, ClientOnly } from "@/components/utils/hydration-safe";
+import { Loader2 } from "lucide-react";
 
 export default async function LoginPage() {
   const supabase = await createClient();
@@ -16,39 +18,47 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
+    <HydrationSafe className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
       <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <HydrationSafe className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center">
             <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
           </Link>
           <Button asChild variant="ghost" size="sm" className="text-[#6B6B6B]">
             <Link href="/">Back to home</Link>
           </Button>
-        </div>
+        </HydrationSafe>
       </header>
 
-      <main className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
+      <HydrationSafe className="mx-auto flex min-h-[calc(100vh-80px)] max-w-md items-center justify-center px-6 py-12">
         <div className="w-full space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-semibold text-[#3D3D3D]">Welcome back</h1>
           </div>
 
           <Card className="border-[#E5E7EB] shadow-sm">
-            <CardContent className="pt-6">
-              <AuthForm />
-              <div className="mt-6 text-center">
-                <p className="text-sm text-[#6B6B6B]">
-                  Don't have an account?{" "}
-                  <Link href="/signup" className="text-[#5A7E7A] hover:underline">
-                    Sign up
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+              <CardContent className="pt-6">
+                <ClientOnly
+                  fallback={
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-[#7A9E9A]" />
+                    </div>
+                  }
+                >
+                  <AuthForm />
+                </ClientOnly>
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-[#6B6B6B]">
+                    Don't have an account?{" "}
+                    <Link href="/signup" className="text-[#5A7E7A] hover:underline">
+                      Sign up
+                    </Link>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
         </div>
-      </main>
-    </div>
+      </HydrationSafe>
+    </HydrationSafe>
   );
 }

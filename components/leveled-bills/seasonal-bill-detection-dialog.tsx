@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -80,7 +79,7 @@ export function SeasonalBillDetectionDialog({
             <RemyAvatar pose="thinking" size="sm" />
             <div>
               <DialogTitle className="text-lg">
-                Looks like "{envelopeName}" might be seasonal
+                Looks like &quot;{envelopeName}&quot; might be seasonal
               </DialogTitle>
               <DialogDescription className="text-sm mt-1">
                 Would you like to level out the payments?
@@ -142,30 +141,11 @@ export function SeasonalBillDetectionDialog({
             </p>
 
             <div className="grid gap-2">
-              {/* 12-month entry option */}
-              <button
-                type="button"
-                onClick={() => onSetupLeveling("12-month")}
-                className="w-full p-3 text-left rounded-lg border border-sage-light hover:border-sage hover:bg-sage-very-light transition-colors group"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-text-dark group-hover:text-sage-dark">
-                      Enter 12 months of bills
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Most accurate - enter each month's actual amount
-                    </p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-sage opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </button>
-
               {/* Quick estimate option */}
               <button
                 type="button"
                 onClick={() => onSetupLeveling("quick-estimate")}
-                className="w-full p-3 text-left rounded-lg border border-silver-light hover:border-sage hover:bg-sage-very-light transition-colors group"
+                className="w-full p-3 text-left rounded-lg border border-sage-light hover:border-sage hover:bg-sage-very-light transition-colors group"
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -174,6 +154,25 @@ export function SeasonalBillDetectionDialog({
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Just enter your typical high and low season bills
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-sage opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </button>
+
+              {/* 12-month entry option */}
+              <button
+                type="button"
+                onClick={() => onSetupLeveling("12-month")}
+                className="w-full p-3 text-left rounded-lg border border-silver-light hover:border-sage hover:bg-sage-very-light transition-colors group"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-text-dark group-hover:text-sage-dark">
+                      Enter 12 months of bills
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Most accurate - enter each month's actual amount
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 text-sage opacity-0 group-hover:opacity-100 transition-opacity" />

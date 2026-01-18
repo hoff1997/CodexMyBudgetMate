@@ -32,8 +32,10 @@ import type { IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-cli
 import {
   MASTER_ENVELOPE_LIST,
   CATEGORY_LABELS,
+  CATEGORY_ORDER,
   type MasterEnvelope,
   type CustomCategory,
+  type BuiltInCategory,
 } from "@/lib/onboarding/master-envelope-list";
 import { IconPicker } from "@/components/onboarding/icon-picker";
 
@@ -175,9 +177,9 @@ export function EnvelopeCreationStepV2({
   // Track category overrides for built-in envelopes
   const [categoryOverrides, setCategoryOverrides] = useState<Map<string, string>>(new Map());
 
-  // Track which priority groups are expanded
-  const [expandedGroups, setExpandedGroups] = useState<Set<Priority>>(
-    new Set(['essential', 'important', 'discretionary'])
+  // Track which category groups are expanded
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(CATEGORY_ORDER) // Start with all categories expanded
   );
 
   // Track if we've initialized
@@ -219,29 +221,33 @@ export function EnvelopeCreationStepV2({
   // Pre-selected system envelope IDs (shown separately at top)
   const preSelectedSystemIds = useMemo(() => new Set(['surplus', 'credit-card-holding']), []);
 
-  // Group envelopes by priority (excluding pre-selected system envelopes)
-  const envelopesByPriority = useMemo(() => {
-    const grouped: Record<Priority, MasterEnvelope[]> = {
-      essential: [],
-      important: [],
-      discretionary: [],
-    };
+  // Group envelopes by category (excluding pre-selected system envelopes)
+  const envelopesByCategory = useMemo(() => {
+    const grouped: Record<string, MasterEnvelope[]> = {};
+
+    // Initialize all categories
+    CATEGORY_ORDER.forEach((cat) => {
+      grouped[cat] = [];
+    });
 
     MASTER_ENVELOPE_LIST.forEach((envelope) => {
       // Skip pre-selected system envelopes (shown in separate section)
       if (preSelectedSystemIds.has(envelope.id)) return;
 
-      const effectivePriority = getEffectivePriority(envelope);
-      grouped[effectivePriority].push(envelope);
+      const effectiveCategory = categoryOverrides.get(envelope.id) || envelope.category;
+      if (!grouped[effectiveCategory]) {
+        grouped[effectiveCategory] = [];
+      }
+      grouped[effectiveCategory].push(envelope);
     });
 
-    // Sort by name within each group
+    // Sort by name within each category
     Object.values(grouped).forEach((list) => {
       list.sort((a, b) => a.name.localeCompare(b.name));
     });
 
     return grouped;
-  }, [getEffectivePriority, preSelectedSystemIds]);
+  }, [categoryOverrides, preSelectedSystemIds]);
 
   // Initialize selections - include Surplus and Credit Card Holding by default
   useEffect(() => {
@@ -255,6 +261,15 @@ export function EnvelopeCreationStepV2({
     // Always include surplus and credit card holding
     initialSelected.add("surplus");
     initialSelected.add("credit-card-holding");
+
+    // Include all defaultSelected envelopes when starting fresh
+    if (envelopes.length === 0) {
+      MASTER_ENVELOPE_LIST.forEach((env) => {
+        if (env.defaultSelected || env.alwaysInclude) {
+          initialSelected.add(env.id);
+        }
+      });
+    }
 
     // If we have existing envelopes (e.g., from going back), restore them
     if (envelopes.length > 0) {
@@ -663,26 +678,27 @@ export function EnvelopeCreationStepV2({
     );
   };
 
-  // Toggle group expansion
-  const toggleGroup = (priority: Priority) => {
-    setExpandedGroups((prev) => {
+  // Toggle category expansion
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
       const next = new Set(prev);
-      if (next.has(priority)) {
-        next.delete(priority);
+      if (next.has(category)) {
+        next.delete(category);
       } else {
-        next.add(priority);
+        next.add(category);
       }
       return next;
     });
   };
 
-  // Count selected in priority group
-  const countSelectedInGroup = (priority: Priority): number => {
+  // Count selected in category group
+  const countSelectedInCategory = (category: string): number => {
     let count = 0;
 
     MASTER_ENVELOPE_LIST.forEach((env) => {
-      const effectivePriority = getEffectivePriority(env);
-      if (effectivePriority !== priority) return;
+      const effectiveCategory = categoryOverrides.get(env.id) || env.category;
+      if (effectiveCategory !== category) return;
+      if (preSelectedSystemIds.has(env.id)) return;
 
       if (!env.allowMultiple && selectedIds.has(env.id)) {
         count++;
@@ -695,7 +711,7 @@ export function EnvelopeCreationStepV2({
       }
     });
 
-    count += customEnvelopes.filter((e) => e.priority === priority).length;
+    count += customEnvelopes.filter((e) => e.category === category).length;
 
     return count;
   };
@@ -988,26 +1004,27 @@ export function EnvelopeCreationStepV2({
         </div>
       </div>
 
-      {/* Priority Groups */}
+      {/* Category Groups */}
       <div className="space-y-3">
-        {(['essential', 'important', 'discretionary'] as Priority[]).map((priority) => {
-          const config = PRIORITY_CONFIG[priority];
-          const isExpanded = expandedGroups.has(priority);
-          const selectedCount = countSelectedInGroup(priority);
-          const priorityEnvelopes = envelopesByPriority[priority];
-          const priorityCustomEnvelopes = customEnvelopes.filter((e) => e.priority === priority);
+        {CATEGORY_ORDER.map((category) => {
+          const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
+          if (!categoryInfo) return null;
+
+          const isExpanded = expandedCategories.has(category);
+          const selectedCount = countSelectedInCategory(category);
+          const categoryEnvelopes = envelopesByCategory[category] || [];
+          const categoryCustomEnvelopes = customEnvelopes.filter((e) => e.category === category);
+
+          // Skip empty categories
+          if (categoryEnvelopes.length === 0 && categoryCustomEnvelopes.length === 0) return null;
 
           return (
-            <div key={priority} className="border rounded-lg overflow-hidden">
-              {/* Group Header */}
+            <div key={category} className="border rounded-lg overflow-hidden">
+              {/* Category Header */}
               <button
                 type="button"
-                onClick={() => toggleGroup(priority)}
-                className={`
-                  w-full flex items-center justify-between px-4 py-2.5
-                  ${config.bgColor} ${config.borderColor} border-b
-                  hover:opacity-90 transition-opacity
-                `}
+                onClick={() => toggleCategory(category)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   {isExpanded ? (
@@ -1015,10 +1032,10 @@ export function EnvelopeCreationStepV2({
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span className={`w-3 h-3 rounded-full ${config.dotColor}`} />
-                  <span className={`font-semibold ${config.textColor}`}>{config.label}</span>
+                  <span className="text-lg">{categoryInfo.icon}</span>
+                  <span className="font-semibold text-gray-700">{categoryInfo.label}</span>
                   <span className="text-sm text-muted-foreground">
-                    ({priorityEnvelopes.length + priorityCustomEnvelopes.length} envelopes)
+                    ({categoryEnvelopes.length + categoryCustomEnvelopes.length} envelopes)
                   </span>
                 </div>
                 {selectedCount > 0 && (
@@ -1028,11 +1045,11 @@ export function EnvelopeCreationStepV2({
                 )}
               </button>
 
-              {/* Group Content */}
+              {/* Category Content */}
               {isExpanded && (
                 <div className="p-3 space-y-2 bg-white">
-                  {priorityEnvelopes.map((envelope) => renderEnvelopeRow(envelope))}
-                  {priorityCustomEnvelopes.map((customEnv) => renderCustomEnvelopeRow(customEnv))}
+                  {categoryEnvelopes.map((envelope) => renderEnvelopeRow(envelope))}
+                  {categoryCustomEnvelopes.map((customEnv) => renderCustomEnvelopeRow(customEnv))}
                 </div>
               )}
             </div>

@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 /**
  * PATCH /api/envelope-allocations/lock
@@ -15,7 +20,7 @@ export async function PATCH(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -23,25 +28,16 @@ export async function PATCH(request: Request) {
     const { envelope_id, lock, suggested_allocations } = body;
 
     if (!envelope_id) {
-      return NextResponse.json(
-        { error: "envelope_id is required" },
-        { status: 400 }
-      );
+      return createValidationError("envelope_id is required");
     }
 
     if (lock === undefined) {
-      return NextResponse.json(
-        { error: "lock (boolean) is required" },
-        { status: 400 }
-      );
+      return createValidationError("lock (boolean) is required");
     }
 
     // If locking, we need suggested_allocations
     if (lock && !suggested_allocations) {
-      return NextResponse.json(
-        { error: "suggested_allocations required when locking" },
-        { status: 400 }
-      );
+      return createValidationError("suggested_allocations required when locking");
     }
 
     // Get existing allocations for this envelope
@@ -134,11 +130,12 @@ export async function PATCH(request: Request) {
       });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error locking/unlocking allocations:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update lock status" },
-      { status: 500 }
+    return createErrorResponse(
+      error as { message: string; code?: string },
+      500,
+      "Failed to update lock status"
     );
   }
 }

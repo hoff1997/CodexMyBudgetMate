@@ -5,6 +5,7 @@ import {
   getCachedTransactions,
   setCachedTransactions,
 } from "@/lib/cache/akahu-cache";
+import { createErrorResponse, createUnauthorizedError, createNotFoundError } from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -60,10 +61,7 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (!token) {
-      return NextResponse.json(
-        { error: "No Akahu connection" },
-        { status: 404 },
-      );
+      return createNotFoundError("Akahu connection");
     }
 
     // Build query params for Akahu API
@@ -94,11 +92,6 @@ export async function GET(request: Request) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Akahu request failed",
-      },
-      { status: 500 },
-    );
+    return createErrorResponse(error as { message: string }, 500, "Akahu request failed");
   }
 }

@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, Loader2, Save, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Save, CheckCircle2, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // Step components
@@ -41,6 +41,31 @@ export interface IncomeSource {
   irregularIncome: boolean;
 }
 
+// Leveling data for seasonal bills
+export interface LevelingData {
+  monthlyAmounts: number[]; // 12 values, Jan=0 to Dec=11
+  yearlyAverage: number;
+  bufferPercent: number;
+  estimationType: '12-month' | 'quick-estimate';
+  highSeasonEstimate?: number;
+  lowSeasonEstimate?: number;
+  lastUpdated: string;
+}
+
+// Seasonal patterns are for bills that vary by season (power, gas, water)
+// Celebrations (birthdays, Christmas) are handled separately via GiftAllocationDialog
+export type SeasonalPatternType = 'winter-peak' | 'summer-peak' | 'custom';
+
+// Gift recipient type for celebration envelopes
+interface OnboardingGiftRecipient {
+  id?: string;
+  recipient_name: string;
+  gift_amount: number;
+  party_amount?: number;
+  celebration_date?: Date | null;
+  notes?: string;
+}
+
 export interface EnvelopeData {
   id: string;
   name: string;
@@ -48,7 +73,7 @@ export interface EnvelopeData {
   type: "bill" | "spending" | "savings" | "goal" | "tracking";
   // Bill fields
   billAmount?: number;
-  frequency?: "monthly" | "quarterly" | "annual" | "custom";
+  frequency?: "monthly" | "quarterly" | "annual" | "custom" | "weekly" | "fortnightly";
   dueDate?: number; // day of month
   priority?: "essential" | "important" | "discretionary";
   // Spending fields
@@ -62,6 +87,17 @@ export interface EnvelopeData {
   // Category and ordering
   category?: string; // Category ID (built-in or custom)
   sortOrder?: number; // Order within category for drag-and-drop
+  // Notes
+  notes?: string;
+  // Income allocation
+  fundedBy?: string; // Income source ID or "split" for multiple
+  // Leveled bill fields (for seasonal expenses like power, gas, water)
+  isLeveled?: boolean;
+  levelingData?: LevelingData;
+  seasonalPattern?: SeasonalPatternType;
+  // Celebration fields (for birthdays, Christmas, etc.)
+  isCelebration?: boolean;
+  giftRecipients?: OnboardingGiftRecipient[];
 }
 
 interface OnboardingStep {
@@ -73,15 +109,15 @@ interface OnboardingStep {
 const STEPS: OnboardingStep[] = [
   { id: 1, title: "Welcome", description: "Set expectations" },
   { id: 2, title: "About You", description: "Your name" },
-  { id: 3, title: "Bank Accounts", description: "Connect accounts" },
-  { id: 4, title: "Credit Cards", description: "Configure cards" },
-  { id: 5, title: "Income", description: "Set up pay cycle" },
-  { id: 6, title: "Approach", description: "Template or custom" },
-  { id: 7, title: "Learn", description: "Envelope budgeting" },
-  { id: 8, title: "Envelopes", description: "Create your budget" },
-  { id: 9, title: "Budget Manager", description: "Set targets & allocate" },
-  { id: 10, title: "Opening Balance", description: "Initial funds" },
-  { id: 11, title: "Review", description: "Validate & adjust" },
+  { id: 3, title: "Income", description: "Set up pay cycle" },
+  { id: 4, title: "Approach", description: "Template or custom" },
+  { id: 5, title: "Learn", description: "Envelope budgeting" },
+  { id: 6, title: "Envelopes", description: "Create your budget" },
+  { id: 7, title: "Budget Manager", description: "Set targets & allocate" },
+  { id: 8, title: "Review", description: "Validate & adjust" },
+  { id: 9, title: "Bank Accounts", description: "Connect accounts" },
+  { id: 10, title: "Credit Cards", description: "Configure cards" },
+  { id: 11, title: "Opening Balance", description: "Initial funds" },
   { id: 12, title: "Complete", description: "You're all set!" },
 ];
 
@@ -260,10 +296,10 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const creditCardAccounts = bankAccounts.filter(acc => acc.type === "credit_card");
   const hasCreditCards = creditCardAccounts.length > 0;
 
-  // Auto-skip step 4 if user lands on it with no credit cards
+  // Auto-skip step 10 (Credit Cards) if user lands on it with no credit cards
   useEffect(() => {
-    if (!isLoadingDraft && currentStep === 4 && !hasCreditCards) {
-      setCurrentStep(5);
+    if (!isLoadingDraft && currentStep === 10 && !hasCreditCards) {
+      setCurrentStep(11); // Skip to Opening Balance
     }
   }, [currentStep, hasCreditCards, isLoadingDraft]);
 
@@ -274,30 +310,34 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
       return;
     }
 
-    if (currentStep === 3 && bankAccounts.length === 0) {
-      toast.error("Please add at least one bank account");
-      return;
-    }
-
-    // Step 4: Credit Cards - skip if no credit cards
-    if (currentStep === 4 && !hasCreditCards) {
-      // Auto-skip to Income step if no credit cards
-      setCurrentStep(5);
-      return;
-    }
-
-    if (currentStep === 5 && incomeSources.length === 0) {
+    // Step 3: Income
+    if (currentStep === 3 && incomeSources.length === 0) {
       toast.error("Please add at least one income source");
       return;
     }
 
-    if (currentStep === 6 && useTemplate === undefined) {
+    // Step 4: Approach
+    if (currentStep === 4 && useTemplate === undefined) {
       toast.error("Please choose how you'd like to set up your budget");
       return;
     }
 
-    if (currentStep === 8 && envelopes.length === 0) {
+    // Step 6: Envelopes
+    if (currentStep === 6 && envelopes.length === 0) {
       toast.error("Please create at least one envelope");
+      return;
+    }
+
+    // Step 9: Bank Accounts
+    if (currentStep === 9 && bankAccounts.length === 0) {
+      toast.error("Please add at least one bank account");
+      return;
+    }
+
+    // Step 10: Credit Cards - skip if no credit cards
+    if (currentStep === 10 && !hasCreditCards) {
+      // Auto-skip to Opening Balance step if no credit cards
+      setCurrentStep(11);
       return;
     }
 
@@ -313,9 +353,9 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const handleBack = () => {
     setCurrentStep((prev) => {
       const newStep = Math.max(prev - 1, 1);
-      // Skip step 4 if going backward and no credit cards
-      if (newStep === 4 && !hasCreditCards) {
-        return 3; // Go to Bank Accounts step instead
+      // Skip step 10 (Credit Cards) if going backward and no credit cards
+      if (newStep === 10 && !hasCreditCards) {
+        return 9; // Go to Bank Accounts step instead
       }
       return newStep;
     });
@@ -416,7 +456,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   // Handle credit card config completion
   const handleCreditCardConfigComplete = (configs: CreditCardConfig[]) => {
     setCreditCardConfigs(configs);
-    setCurrentStep(5); // Move to Income step
+    setCurrentStep(11); // Move to Opening Balance step
   };
 
   const renderStep = () => {
@@ -434,13 +474,65 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
 
       case 3:
         return (
+          <IncomeStep
+            incomeSources={incomeSources}
+            onIncomeSourcesChange={setIncomeSources}
+          />
+        );
+
+      case 4:
+        return (
+          <BudgetingApproachStep
+            useTemplate={useTemplate}
+            onUseTemplateChange={setUseTemplate}
+          />
+        );
+
+      case 5:
+        return <EnvelopeEducationStep onContinue={handleNext} onBack={handleBack} />;
+
+      case 6:
+        return (
+          <EnvelopeCreationStep
+            envelopes={envelopes}
+            onEnvelopesChange={setEnvelopes}
+            customCategories={customCategories}
+            onCustomCategoriesChange={setCustomCategories}
+            categoryOrder={categoryOrder}
+            onCategoryOrderChange={setCategoryOrder}
+            useTemplate={useTemplate}
+            incomeSources={incomeSources}
+          />
+        );
+
+      case 7:
+        return (
+          <EnvelopeAllocationStep
+            envelopes={envelopes}
+            incomeSources={incomeSources}
+            onAllocationsChange={setEnvelopeAllocations}
+            onEnvelopesChange={setEnvelopes}
+          />
+        );
+
+      case 8:
+        return (
+          <BudgetReviewStep
+            envelopes={envelopes}
+            incomeSources={incomeSources}
+            onEditEnvelopes={() => setCurrentStep(6)}
+          />
+        );
+
+      case 9:
+        return (
           <BankAccountsStep
             accounts={bankAccounts}
             onAccountsChange={setBankAccounts}
           />
         );
 
-      case 4:
+      case 10:
         // Credit Cards step - only shown if there are credit cards
         if (!hasCreditCards) {
           // Auto-advance if no credit cards (shouldn't reach here due to handleNext logic)
@@ -458,49 +550,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           />
         );
 
-      case 5:
-        return (
-          <IncomeStep
-            incomeSources={incomeSources}
-            onIncomeSourcesChange={setIncomeSources}
-          />
-        );
-
-      case 6:
-        return (
-          <BudgetingApproachStep
-            useTemplate={useTemplate}
-            onUseTemplateChange={setUseTemplate}
-          />
-        );
-
-      case 7:
-        return <EnvelopeEducationStep onContinue={handleNext} onBack={handleBack} />;
-
-      case 8:
-        return (
-          <EnvelopeCreationStep
-            envelopes={envelopes}
-            onEnvelopesChange={setEnvelopes}
-            customCategories={customCategories}
-            onCustomCategoriesChange={setCustomCategories}
-            categoryOrder={categoryOrder}
-            onCategoryOrderChange={setCategoryOrder}
-            useTemplate={useTemplate}
-            incomeSources={incomeSources}
-          />
-        );
-
-      case 9:
-        return (
-          <EnvelopeAllocationStep
-            envelopes={envelopes}
-            incomeSources={incomeSources}
-            onAllocationsChange={setEnvelopeAllocations}
-          />
-        );
-
-      case 10:
+      case 11:
         return (
           <OpeningBalanceStep
             envelopes={envelopes}
@@ -509,15 +559,6 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
             envelopeAllocations={envelopeAllocations}
             onOpeningBalancesChange={setOpeningBalances}
             onCreditCardAllocationChange={setCreditCardOpeningAllocation}
-          />
-        );
-
-      case 11:
-        return (
-          <BudgetReviewStep
-            envelopes={envelopes}
-            incomeSources={incomeSources}
-            onEditEnvelopes={() => setCurrentStep(8)}
           />
         );
 
@@ -530,8 +571,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   };
 
   // Determine if "Continue" button should be shown
-  // Steps with their own continue buttons: Welcome (1), Credit Cards (4), Envelope Education (7), Complete (12)
-  const showContinueButton = ![1, 4, 7, 12].includes(currentStep);
+  // Steps with their own continue buttons: Welcome (1), Envelope Education (5), Credit Cards (10), Complete (12)
+  const showContinueButton = ![1, 5, 10, 12].includes(currentStep);
 
   // Show loading state while fetching draft
   if (isLoadingDraft) {
@@ -579,16 +620,76 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Clickable Step Navigation */}
       {currentStep > 1 && (
         <div className="border-b bg-muted/30">
-          <div className="container max-w-5xl mx-auto px-4 py-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{STEPS[currentStep - 1].description}</span>
-                <span className="font-medium">{STEPS[currentStep - 1].title}</span>
-              </div>
-              <Progress value={progress} className="h-2" />
+          <div className="container max-w-5xl mx-auto px-4 py-3">
+            {/* Step Indicators */}
+            <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1">
+              {STEPS.map((step, index) => {
+                const stepNumber = index + 1;
+                const isCompleted = stepNumber < currentStep;
+                const isCurrent = stepNumber === currentStep;
+                const isClickable = stepNumber < currentStep; // Can only go back
+                const isSkipped = stepNumber === 10 && !hasCreditCards; // Skip CC step if no cards
+
+                if (isSkipped) return null;
+
+                return (
+                  <button
+                    key={step.id}
+                    onClick={() => {
+                      if (isClickable) {
+                        // Handle skipping step 10 when going back if no credit cards
+                        if (stepNumber === 10 && !hasCreditCards) {
+                          setCurrentStep(9);
+                        } else {
+                          setCurrentStep(stepNumber);
+                        }
+                      }
+                    }}
+                    disabled={!isClickable}
+                    className={cn(
+                      "flex flex-col items-center min-w-[60px] p-1.5 rounded-lg transition-all",
+                      isClickable && "hover:bg-[#E2EEEC] cursor-pointer",
+                      !isClickable && !isCurrent && "opacity-50 cursor-not-allowed"
+                    )}
+                    title={isClickable ? `Go back to ${step.title}` : step.title}
+                  >
+                    {/* Step Circle */}
+                    <div
+                      className={cn(
+                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                        isCompleted && "bg-[#7A9E9A] text-white",
+                        isCurrent && "bg-[#7A9E9A] text-white ring-2 ring-[#B8D4D0] ring-offset-1",
+                        !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {isCompleted ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        stepNumber
+                      )}
+                    </div>
+                    {/* Step Label (hidden on mobile, shown on larger screens) */}
+                    <span
+                      className={cn(
+                        "text-[10px] mt-1 text-center leading-tight hidden sm:block",
+                        isCurrent && "font-medium text-[#5A7E7A]",
+                        isCompleted && "text-[#7A9E9A]",
+                        !isCompleted && !isCurrent && "text-muted-foreground"
+                      )}
+                    >
+                      {step.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Current step description for mobile */}
+            <div className="sm:hidden text-center mt-2 text-sm">
+              <span className="font-medium text-[#5A7E7A]">{STEPS[currentStep - 1].title}</span>
+              <span className="text-muted-foreground"> - {STEPS[currentStep - 1].description}</span>
             </div>
           </div>
         </div>

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/budget/income-reality
@@ -15,7 +19,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get all active income sources
@@ -28,7 +32,7 @@ export async function GET() {
 
   if (incomeError) {
     console.error("Failed to fetch income sources:", incomeError);
-    return NextResponse.json({ error: incomeError.message }, { status: 400 });
+    return createErrorResponse(incomeError, 400, "Failed to fetch income sources");
   }
 
   if (!incomeSources || incomeSources.length === 0) {
@@ -47,13 +51,20 @@ export async function GET() {
 
   if (envelopesError) {
     console.error("Failed to fetch envelopes:", envelopesError);
-    return NextResponse.json({ error: envelopesError.message }, { status: 400 });
+    return createErrorResponse(envelopesError, 400, "Failed to fetch envelopes");
   }
 
   // Find surplus envelope (if exists)
   const surplusEnvelope = envelopes?.find(
     (env) => env.suggestion_type === "surplus" && !env.is_dismissed
   );
+
+  // Find CC Holding envelope (if exists) - this balance needs to be deducted from available
+  // CC Holding tracks money that's been spent on credit cards and needs to be set aside for payment
+  const ccHoldingEnvelope = envelopes?.find(
+    (env) => env.suggestion_type === "cc-holding" && !env.is_dismissed
+  );
+  const ccHoldingBalance = ccHoldingEnvelope?.current_amount || 0;
 
   // Calculate total committed per pay (excluding surplus)
   const totalCommittedPerPay = (envelopes || [])
@@ -91,10 +102,17 @@ export async function GET() {
   // If we have a surplus envelope, use its current amount instead
   const actualSurplus = surplusEnvelope?.current_amount ?? totalSurplus;
 
+  // CC Holding balance reduces what's actually allocatable
+  // This money is already "spoken for" to pay the credit card bill
+  const allocatableSurplus = Math.max(0, actualSurplus - ccHoldingBalance);
+
   return NextResponse.json({
     incomes: incomeReality,
     totalSurplus: Math.round(actualSurplus * 100) / 100,
     totalCommittedPerPay: Math.round(totalCommittedPerPay * 100) / 100,
     surplusEnvelopeBalance: surplusEnvelope?.current_amount ?? null,
+    // CC Holding fields - helps UI show deduction
+    ccHoldingBalance: Math.round(ccHoldingBalance * 100) / 100,
+    allocatableSurplus: Math.round(allocatableSurplus * 100) / 100,
   });
 }

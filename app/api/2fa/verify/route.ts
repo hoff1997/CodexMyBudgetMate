@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { MFA_VERIFIED_COOKIE, MFA_SESSION_TIMEOUT_MS } from "@/lib/utils/mfa-session";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 /**
  * POST /api/2fa/verify
@@ -18,17 +23,14 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     const body = await request.json();
     const { factorId, code } = body;
 
     if (!factorId || !code) {
-      return NextResponse.json(
-        { error: "Factor ID and code are required" },
-        { status: 400 }
-      );
+      return createValidationError("Factor ID and code are required");
     }
 
     // Create a challenge for the factor
@@ -39,10 +41,7 @@ export async function POST(request: Request) {
 
     if (challengeError) {
       console.error("MFA challenge error:", challengeError);
-      return NextResponse.json(
-        { error: challengeError.message || "Failed to create challenge" },
-        { status: 400 }
-      );
+      return createErrorResponse(challengeError, 400, "Failed to create challenge");
     }
 
     // Verify the code
@@ -55,10 +54,7 @@ export async function POST(request: Request) {
 
     if (verifyError) {
       console.error("MFA verify error:", verifyError);
-      return NextResponse.json(
-        { error: verifyError.message || "Invalid verification code" },
-        { status: 400 }
-      );
+      return createErrorResponse(verifyError, 400, "Invalid verification code");
     }
 
     // Generate backup codes (stored in user profile or separate table)

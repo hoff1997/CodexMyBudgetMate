@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -23,17 +24,18 @@ export async function GET() {
 
   if (!user) {
     console.log('🔴 [API /accounts] Unauthorized - no user');
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
+  // SECURITY: Select specific columns instead of "*" to prevent data exposure
   const { data: accounts, error: queryError } = await supabase
     .from("accounts")
-    .select("*")
+    .select("id, name, type, institution, current_balance, reconciled, is_manual, akahu_id, created_at, updated_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true });
 
   if (queryError) {
-    return NextResponse.json({ error: queryError.message }, { status: 400 });
+    return createErrorResponse(queryError, 400, "Failed to load accounts");
   }
 
   return NextResponse.json({ accounts: accounts || [] });
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const { data, error } = await supabase
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create account");
   }
 
   return NextResponse.json({ ok: true, id: data?.id });

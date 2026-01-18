@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { invalidateAkahuCache } from "@/lib/cache/akahu-cache";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 /**
  * Manually invalidate Akahu cache
@@ -13,7 +14,7 @@ export async function POST() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -25,12 +26,6 @@ export async function POST() {
     });
   } catch (error) {
     console.error("Cache invalidation error:", error);
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to invalidate cache",
-      },
-      { status: 500 },
-    );
+    return createErrorResponse(error as { message: string }, 500, "Failed to invalidate cache");
   }
 }

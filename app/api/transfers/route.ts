@@ -12,6 +12,12 @@ import {
   detectPotentialTransfers,
 } from '@/lib/utils/transfer-detection';
 import type { TransactionForMatching } from '@/lib/types/transfer';
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from '@/lib/utils/api-error';
 
 interface AccountInfo {
   id: string;
@@ -32,7 +38,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Fetch unlinked transactions from the last 30 days
@@ -58,7 +64,7 @@ export async function GET() {
     .order('occurred_at', { ascending: false });
 
   if (txError) {
-    return NextResponse.json({ error: txError.message }, { status: 500 });
+    return createErrorResponse(txError, 500, 'Failed to fetch transactions');
   }
 
   // Fetch user's accounts
@@ -68,7 +74,7 @@ export async function GET() {
     .eq('user_id', user.id);
 
   if (accError) {
-    return NextResponse.json({ error: accError.message }, { status: 500 });
+    return createErrorResponse(accError, 500, 'Failed to fetch accounts');
   }
 
   // Build accounts map
@@ -118,17 +124,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { transactionId } = body;
 
   if (!transactionId) {
-    return NextResponse.json(
-      { error: 'transactionId is required' },
-      { status: 400 }
-    );
+    return createValidationError('transactionId is required');
   }
 
   // Fetch the source transaction
@@ -150,10 +153,7 @@ export async function POST(request: Request) {
     .single();
 
   if (sourceError || !sourceTransaction) {
-    return NextResponse.json(
-      { error: 'Transaction not found' },
-      { status: 404 }
-    );
+    return createNotFoundError('Transaction');
   }
 
   // If already linked, return the link info
@@ -207,7 +207,7 @@ export async function POST(request: Request) {
     .lte('occurred_at', maxDate.toISOString());
 
   if (candError) {
-    return NextResponse.json({ error: candError.message }, { status: 500 });
+    return createErrorResponse(candError, 500, 'Failed to fetch candidate transactions');
   }
 
   // Fetch user's accounts
@@ -217,7 +217,7 @@ export async function POST(request: Request) {
     .eq('user_id', user.id);
 
   if (accError) {
-    return NextResponse.json({ error: accError.message }, { status: 500 });
+    return createErrorResponse(accError, 500, 'Failed to fetch accounts');
   }
 
   // Build accounts map

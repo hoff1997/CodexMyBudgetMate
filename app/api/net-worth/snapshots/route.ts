@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const createSchema = z.object({
   totalAssets: z.number(),
@@ -31,7 +32,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data, error } = await supabase
@@ -41,7 +42,7 @@ export async function GET() {
     .order("snapshot_date", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch snapshots");
   }
 
   return NextResponse.json({ snapshots: data ?? [] });
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
   });
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const snapshotDate = normaliseSnapshotDate(parsed.data.snapshotDate);
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create snapshot");
   }
 
   return NextResponse.json({ snapshot: inserted }, { status: 201 });

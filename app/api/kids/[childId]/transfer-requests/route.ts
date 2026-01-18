@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 import type {
   KidTransferRequest,
   CreateTransferRequestRequest,
@@ -20,7 +21,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -32,13 +33,15 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Parse query params for filtering
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
-  const limit = parseInt(searchParams.get("limit") || "20");
+  // SECURITY: Cap limit to prevent DoS via unbounded queries
+  const MAX_LIMIT = 100;
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20"), MAX_LIMIT);
 
   // Build query
   let query = supabase
@@ -55,7 +58,7 @@ export async function GET(request: Request, context: RouteContext) {
   const { data: requests, error } = await query;
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to load transfer requests");
   }
 
   return NextResponse.json({
@@ -75,7 +78,7 @@ export async function POST(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -87,32 +90,23 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   const body: CreateTransferRequestRequest = await request.json();
 
   // Validate required fields
   if (!body.from_envelope) {
-    return NextResponse.json(
-      { error: "From envelope is required" },
-      { status: 400 }
-    );
+    return createValidationError("From envelope is required");
   }
 
   const validEnvelopes = ["save", "invest", "give"];
   if (!validEnvelopes.includes(body.from_envelope)) {
-    return NextResponse.json(
-      { error: "From envelope must be save, invest, or give" },
-      { status: 400 }
-    );
+    return createValidationError("From envelope must be save, invest, or give");
   }
 
   if (!body.amount || body.amount <= 0) {
-    return NextResponse.json(
-      { error: "Amount must be positive" },
-      { status: 400 }
-    );
+    return createValidationError("Amount must be positive");
   }
 
   // Check if child has sufficient balance in the from envelope
@@ -134,7 +128,7 @@ export async function POST(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create transfer request");
   }
 
   // Notify parent about new transfer request

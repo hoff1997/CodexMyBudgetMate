@@ -5,6 +5,7 @@ import type {
   RespondToTransferRequestRequest,
 } from "@/lib/types/kids-invoice";
 import { KidsNotifications } from "@/lib/services/notifications";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string; requestId: string }>;
@@ -20,7 +21,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -32,7 +33,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Get transfer request
@@ -44,14 +45,11 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch transfer request");
   }
 
   if (!transferRequest) {
-    return NextResponse.json(
-      { error: "Transfer request not found" },
-      { status: 404 }
-    );
+    return createNotFoundError("Transfer request");
   }
 
   return NextResponse.json({
@@ -70,7 +68,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -82,7 +80,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Get existing transfer request
@@ -94,27 +92,18 @@ export async function PATCH(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!existing) {
-    return NextResponse.json(
-      { error: "Transfer request not found" },
-      { status: 404 }
-    );
+    return createNotFoundError("Transfer request");
   }
 
   if (existing.status !== "pending") {
-    return NextResponse.json(
-      { error: "Transfer request has already been responded to" },
-      { status: 400 }
-    );
+    return createValidationError("Transfer request has already been responded to");
   }
 
   const body: RespondToTransferRequestRequest = await request.json();
 
   // Validate status
   if (!body.status || !["approved", "denied"].includes(body.status)) {
-    return NextResponse.json(
-      { error: "Status must be 'approved' or 'denied'" },
-      { status: 400 }
-    );
+    return createValidationError("Status must be 'approved' or 'denied'");
   }
 
   // Update transfer request
@@ -132,7 +121,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update transfer request");
   }
 
   // Notify about the decision
@@ -168,7 +157,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -180,7 +169,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Only allow deleting pending requests
@@ -192,17 +181,11 @@ export async function DELETE(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!existing) {
-    return NextResponse.json(
-      { error: "Transfer request not found" },
-      { status: 404 }
-    );
+    return createNotFoundError("Transfer request");
   }
 
   if (existing.status !== "pending") {
-    return NextResponse.json(
-      { error: "Can only delete pending transfer requests" },
-      { status: 400 }
-    );
+    return createValidationError("Can only delete pending transfer requests");
   }
 
   // Delete transfer request
@@ -213,7 +196,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     .eq("child_profile_id", childId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete transfer request");
   }
 
   return NextResponse.json({ success: true });

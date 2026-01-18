@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const goalTypeSchema = z.enum(["savings", "debt_payoff", "purchase", "emergency_fund", "other"]);
 
@@ -32,7 +33,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id } = await params;
@@ -47,7 +48,7 @@ export async function GET(
     .maybeSingle();
 
   if (goalError) {
-    return NextResponse.json({ error: goalError.message }, { status: 400 });
+    return createErrorResponse(goalError, 400, "Failed to fetch goal");
   }
 
   if (!goal) {
@@ -62,7 +63,7 @@ export async function GET(
     .order("sort_order", { ascending: true });
 
   if (milestonesError) {
-    return NextResponse.json({ error: milestonesError.message }, { status: 400 });
+    return createErrorResponse(milestonesError, 400, "Failed to fetch milestones");
   }
 
   return NextResponse.json({
@@ -85,7 +86,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id } = await params;
@@ -93,7 +94,7 @@ export async function PATCH(
   const parsed = updateSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const payload = parsed.data;
@@ -118,7 +119,7 @@ export async function PATCH(
   }
 
   if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    return createValidationError("No fields to update");
   }
 
   const { error } = await supabase
@@ -129,7 +130,7 @@ export async function PATCH(
     .eq("is_goal", true);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update goal");
   }
 
   return NextResponse.json({ ok: true });
@@ -149,7 +150,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { id } = await params;
@@ -162,7 +163,7 @@ export async function DELETE(
     .eq("is_goal", true);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete goal");
   }
 
   return NextResponse.json({ ok: true });

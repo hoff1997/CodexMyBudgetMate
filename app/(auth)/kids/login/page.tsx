@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { ArrowLeft, Loader2, Lock, AlertTriangle } from "lucide-react";
+import { SecureKidLogin } from "./secure-login";
 
 type LoginStep = "family-code" | "select-child" | "enter-pin";
 
@@ -17,8 +18,39 @@ interface ChildProfile {
   avatar_url: string | null;
 }
 
+/**
+ * Kids Login Page
+ *
+ * By default, uses the new secure login flow (unique login key per child).
+ * Supports legacy family code login via ?legacy=true query param for
+ * backwards compatibility during transition.
+ */
+function KidsLoginPageContent() {
+  const searchParams = useSearchParams();
+  const useLegacy = searchParams.get("legacy") === "true";
+
+  // Use the new secure login by default
+  if (!useLegacy) {
+    return <SecureKidLogin />;
+  }
+
+  // Legacy login flow (will be removed in future version)
+  return <LegacyKidsLogin />;
+}
+
 export default function KidsLoginPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-sage" /></div>}>
+      <KidsLoginPageContent />
+    </Suspense>
+  );
+}
+
+/**
+ * Legacy login using shared family code
+ * @deprecated Use SecureKidLogin instead
+ */
+function LegacyKidsLogin() {
   const [step, setStep] = useState<LoginStep>("family-code");
   const [familyCode, setFamilyCode] = useState("");
   const [children, setChildren] = useState<ChildProfile[]>([]);

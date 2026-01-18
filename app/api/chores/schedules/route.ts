@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 import type { CreateScheduleRequest } from "@/lib/types/chores";
 
 // Calculate next occurrence based on frequency and days
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -138,7 +139,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching chore schedules:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch chore schedules");
   }
 
   return NextResponse.json(schedules);
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body: CreateScheduleRequest = await request.json();
@@ -178,28 +179,19 @@ export async function POST(request: Request) {
 
   // Validations
   if (!name) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   if (!frequency) {
-    return NextResponse.json(
-      { error: "Frequency is required" },
-      { status: 400 }
-    );
+    return createValidationError("Frequency is required");
   }
 
   if (!chore_template_id && !routine_id) {
-    return NextResponse.json(
-      { error: "Either chore_template_id or routine_id is required" },
-      { status: 400 }
-    );
+    return createValidationError("Either chore_template_id or routine_id is required");
   }
 
   if (!child_profile_id && !rotation_id) {
-    return NextResponse.json(
-      { error: "Either child_profile_id or rotation_id is required" },
-      { status: 400 }
-    );
+    return createValidationError("Either child_profile_id or rotation_id is required");
   }
 
   // Calculate next occurrence
@@ -258,7 +250,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating chore schedule:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create chore schedule");
   }
 
   return NextResponse.json(schedule, { status: 201 });

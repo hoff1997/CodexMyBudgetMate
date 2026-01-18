@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 // GET /api/shopping/envelopes - Get envelopes suitable for shopping list linking
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Get spending and tracking envelopes (most suitable for shopping)
@@ -33,7 +34,7 @@ export async function GET() {
     .order("name");
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch envelopes");
   }
 
   // Group by category and suggest "Groceries" type envelopes first

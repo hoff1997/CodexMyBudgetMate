@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -8,17 +9,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { child_id, minutes_requested } = body;
 
   if (!child_id || !minutes_requested) {
-    return NextResponse.json(
-      { error: "child_id and minutes_requested required" },
-      { status: 400 }
-    );
+    return createValidationError("child_id and minutes_requested required");
   }
 
   // Check balance
@@ -29,7 +27,7 @@ export async function POST(request: Request) {
     .single();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   if ((child.screen_time_balance || 0) < minutes_requested) {
@@ -55,7 +53,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create screen time request");
   }
 
   return NextResponse.json({ request: data });

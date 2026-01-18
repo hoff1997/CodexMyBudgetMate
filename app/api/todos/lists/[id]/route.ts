@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 interface RouteParams {
   params: { id: string };
@@ -14,7 +19,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -32,11 +37,11 @@ export async function GET(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error fetching todo list:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch todo list");
   }
 
   if (!list) {
-    return NextResponse.json({ error: "List not found" }, { status: 404 });
+    return createNotFoundError("List");
   }
 
   // Filter and sort items
@@ -64,7 +69,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -87,7 +92,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error updating todo list:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update todo list");
   }
 
   return NextResponse.json(list);
@@ -102,7 +107,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Items will be deleted via cascade
@@ -114,7 +119,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
   if (error) {
     console.error("Error deleting todo list:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete todo list");
   }
 
   return NextResponse.json({ success: true });

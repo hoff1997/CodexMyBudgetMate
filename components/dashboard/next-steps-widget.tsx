@@ -44,7 +44,7 @@ export function NextStepsWidget({
     'Track your first transaction': '/transactions',
     'Set your first goal': '/goals',
     'Set up recurring income': '/recurring-income',
-    'Connect your bank': '/akahu/callback',
+    'Connect your bank': '/settings#bank-connections',
     'Check your progress': '/goals',
     'Explore analytics': '/reports',
   };

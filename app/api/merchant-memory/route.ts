@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 /**
  * Merchant Memory API
@@ -17,17 +18,14 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
   const merchant = searchParams.get("merchant");
 
   if (!merchant || merchant.trim().length < 2) {
-    return NextResponse.json(
-      { error: "Merchant name must be at least 2 characters" },
-      { status: 400 },
-    );
+    return createValidationError("Merchant name must be at least 2 characters");
   }
 
   // Find the most recent transaction for this merchant with an assigned envelope
@@ -48,7 +46,7 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch merchant memory");
   }
 
   // No matching transactions found

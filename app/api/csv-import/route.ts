@@ -18,6 +18,12 @@ import {
   MAX_FILE_SIZE,
 } from "@/lib/csv";
 import type { CSVImportParseRequest, CSVImportParseResponse } from "@/lib/csv";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 export async function POST(request: Request) {
   try {
@@ -29,10 +35,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return createUnauthorizedError();
     }
 
     // Parse request body
@@ -41,17 +44,11 @@ export async function POST(request: Request) {
 
     // Validate request
     if (!csvContent) {
-      return NextResponse.json(
-        { success: false, error: "CSV content is required" },
-        { status: 400 }
-      );
+      return createValidationError("CSV content is required");
     }
 
     if (!accountId) {
-      return NextResponse.json(
-        { success: false, error: "Account ID is required" },
-        { status: 400 }
-      );
+      return createValidationError("Account ID is required");
     }
 
     // Verify account belongs to user
@@ -63,10 +60,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (accountError || !account) {
-      return NextResponse.json(
-        { success: false, error: "Account not found or access denied" },
-        { status: 404 }
-      );
+      return createNotFoundError("Account");
     }
 
     // Calculate file size
@@ -74,39 +68,26 @@ export async function POST(request: Request) {
 
     // Check file size
     if (fileSize > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `File size (${Math.round(fileSize / 1024 / 1024)}MB) exceeds the 5MB limit`,
-        },
-        { status: 400 }
+      return createValidationError(
+        `File size (${Math.round(fileSize / 1024 / 1024)}MB) exceeds the 5MB limit`
       );
     }
 
     // Validate CSV content
     const validation = validateCSVContent(csvContent, fileSize);
     if (!validation.valid) {
-      return NextResponse.json(
-        { success: false, error: validation.errors.join("; ") },
-        { status: 400 }
-      );
+      return createValidationError(validation.errors.join("; "));
     }
 
     // Parse CSV
     const parsed = parseCSV(csvContent);
 
     if (parsed.headers.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Could not parse CSV headers" },
-        { status: 400 }
-      );
+      return createValidationError("Could not parse CSV headers");
     }
 
     if (parsed.rowCount === 0) {
-      return NextResponse.json(
-        { success: false, error: "CSV file contains no data rows" },
-        { status: 400 }
-      );
+      return createValidationError("CSV file contains no data rows");
     }
 
     // Auto-detect column mapping
@@ -129,12 +110,10 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     console.error("CSV import parse error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to parse CSV",
-      },
-      { status: 500 }
+    return createErrorResponse(
+      error instanceof Error ? { message: error.message } : null,
+      500,
+      "Failed to parse CSV"
     );
   }
 }

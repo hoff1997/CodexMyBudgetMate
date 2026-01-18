@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkBetaAccess } from "@/lib/utils/beta-access";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 // GET: Get a specific child profile
 export async function GET(
@@ -15,7 +20,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check beta access
@@ -49,7 +54,7 @@ export async function GET(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch child profile");
   }
 
   if (!child) {
@@ -72,7 +77,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check beta access
@@ -96,7 +101,7 @@ export async function PATCH(
       .maybeSingle();
 
     if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 400 });
+      return createErrorResponse(fetchError, 400, "Failed to verify child profile");
     }
 
     if (!existing) {
@@ -139,10 +144,7 @@ export async function PATCH(
     }
 
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
+      return createValidationError("No valid fields to update");
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -154,10 +156,7 @@ export async function PATCH(
 
     if (updateError) {
       console.error("Error updating child profile:", updateError);
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 400 }
-      );
+      return createErrorResponse(updateError, 400, "Failed to update child profile");
     }
 
     // Return without sensitive fields
@@ -186,7 +185,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check beta access
@@ -207,7 +206,7 @@ export async function DELETE(
     .maybeSingle();
 
   if (fetchError) {
-    return NextResponse.json({ error: fetchError.message }, { status: 400 });
+    return createErrorResponse(fetchError, 400, "Failed to verify child profile");
   }
 
   if (!existing) {
@@ -221,10 +220,7 @@ export async function DELETE(
 
   if (deleteError) {
     console.error("Error deleting child profile:", deleteError);
-    return NextResponse.json(
-      { error: deleteError.message },
-      { status: 400 }
-    );
+    return createErrorResponse(deleteError, 400, "Failed to delete child profile");
   }
 
   return NextResponse.json({ success: true });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 // POST - Restore archived envelope
 export async function POST(
@@ -13,7 +14,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -32,7 +33,7 @@ export async function POST(
 
     if (error) {
       console.error("Failed to restore envelope:", error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to restore envelope");
     }
 
     return NextResponse.json({ envelope: data });

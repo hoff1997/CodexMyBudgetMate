@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 import type { GiftRecipientInput } from "@/lib/types/celebrations";
 
 interface RouteParams {
@@ -19,7 +20,7 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data, error } = await supabase
@@ -31,7 +32,7 @@ export async function GET(
 
   if (error) {
     console.error("[gift-recipients] GET error:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch gift recipients");
   }
 
   const totalBudget = (data || []).reduce(
@@ -59,7 +60,7 @@ export async function PUT(
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -86,7 +87,7 @@ export async function PUT(
 
   if (deleteError) {
     console.error("[gift-recipients] DELETE error:", deleteError);
-    return NextResponse.json({ error: deleteError.message }, { status: 400 });
+    return createErrorResponse(deleteError, 400, "Failed to update gift recipients");
   }
 
   // Insert new recipients if any
@@ -112,7 +113,7 @@ export async function PUT(
 
     if (insertError) {
       console.error("[gift-recipients] INSERT error:", insertError);
-      return NextResponse.json({ error: insertError.message }, { status: 400 });
+      return createErrorResponse(insertError, 400, "Failed to save gift recipients");
     }
 
     insertedRecipients = inserted || [];
@@ -160,14 +161,14 @@ export async function POST(
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const recipient: GiftRecipientInput = body;
 
   if (!recipient.recipient_name?.trim()) {
-    return NextResponse.json({ error: "Recipient name is required" }, { status: 400 });
+    return createValidationError("Recipient name is required");
   }
 
   // Verify envelope belongs to user
@@ -207,7 +208,7 @@ export async function POST(
         { status: 409 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to add gift recipient");
   }
 
   // Update envelope target amount

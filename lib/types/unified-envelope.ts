@@ -3,10 +3,12 @@
  * Shared types for envelope configuration across onboarding and maintenance pages
  */
 
-export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
+export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
 export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annual' | 'annually';
 export type PriorityType = 'essential' | 'important' | 'discretionary';
 export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net';
+// Seasonal patterns are for bills that vary by season (power, gas, water)
+// Celebrations (birthdays, Christmas) are handled separately via GiftAllocationDialog and is_celebration flag
 export type SeasonalPatternType = 'winter-peak' | 'summer-peak' | 'custom';
 
 /**
@@ -102,6 +104,11 @@ export interface UnifiedEnvelopeData {
   // Celebration envelope fields
   is_celebration?: boolean; // True for celebration envelopes (Birthdays, Christmas, etc.)
   gift_recipient_count?: number; // Number of gift recipients for this envelope
+
+  // Debt envelope fields
+  is_debt?: boolean; // True for debt envelopes that track multiple debts (credit cards, loans, etc.)
+  debt_item_count?: number; // Number of debt items in this envelope
+  total_debt_amount?: number; // Sum of all debt item balances
 
   // Suggested envelope fields ("The My Budget Way")
   is_suggested?: boolean; // True for system-suggested envelopes

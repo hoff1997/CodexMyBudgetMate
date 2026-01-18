@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/chores/assignments - List chore assignments
 export async function GET(request: Request) {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching chore assignments:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch chore assignments");
   }
 
   return NextResponse.json(assignments);
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -107,10 +108,7 @@ export async function POST(request: Request) {
 
   // Required fields
   if (!child_profile_id || !chore_template_id || !week_starting) {
-    return NextResponse.json(
-      { error: "child_profile_id, chore_template_id, and week_starting are required" },
-      { status: 400 }
-    );
+    return createValidationError("child_profile_id, chore_template_id, and week_starting are required");
   }
 
   // Verify parent owns this child
@@ -169,7 +167,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating chore assignment:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to create chore assignment");
   }
 
   return NextResponse.json(assignment, { status: 201 });

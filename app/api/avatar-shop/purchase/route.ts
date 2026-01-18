@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+  createForbiddenError,
+} from "@/lib/utils/api-error";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -9,17 +15,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { child_id, item_id } = body;
 
   if (!child_id || !item_id) {
-    return NextResponse.json(
-      { error: "child_id and item_id required" },
-      { status: 400 }
-    );
+    return createValidationError("child_id and item_id required");
   }
 
   // Get child's star balance (verify ownership)
@@ -30,12 +33,12 @@ export async function POST(request: Request) {
     .single();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Verify parent owns this child
   if (child.parent_user_id !== user.id) {
-    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    return createForbiddenError();
   }
 
   // Get item cost
@@ -46,7 +49,7 @@ export async function POST(request: Request) {
     .single();
 
   if (!item) {
-    return NextResponse.json({ error: "Item not found" }, { status: 404 });
+    return createNotFoundError("Item");
   }
 
   // Check if already owned
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
     .single();
 
   if (existing) {
-    return NextResponse.json({ error: "Already owned" }, { status: 400 });
+    return createValidationError("Already owned");
   }
 
   // Check sufficient balance

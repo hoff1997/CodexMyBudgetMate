@@ -3,8 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { checkBetaAccess } from "@/lib/utils/beta-access";
 import {
   generateUniqueFamilyAccessCode,
+  generateSecureFamilyCode,
   hashPin,
 } from "@/lib/utils/family-code-generator";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 // GET: List all child profiles for the current parent
 export async function GET() {
@@ -15,7 +20,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check beta access
@@ -36,6 +41,9 @@ export async function GET() {
       date_of_birth,
       avatar_url,
       family_access_code,
+      login_key,
+      login_key_created_at,
+      login_key_last_used_at,
       money_mode,
       distribution_spend_pct,
       distribution_save_pct,
@@ -50,7 +58,7 @@ export async function GET() {
     .order("created_at", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch child profiles");
   }
 
   return NextResponse.json({ data: children });
@@ -65,7 +73,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check beta access
@@ -105,8 +113,11 @@ export async function POST(request: Request) {
 
     const parentName = profile?.preferred_name || user.email?.split("@")[0] || "USER";
 
-    // Generate unique family access code
+    // Generate unique family access code (legacy, kept for backwards compatibility)
     const familyAccessCode = generateUniqueFamilyAccessCode(parentName);
+
+    // Generate secure login key (new system - unique per child)
+    const loginKey = generateSecureFamilyCode();
 
     // Hash the PIN
     const pinHash = await hashPin(pin);
@@ -120,6 +131,8 @@ export async function POST(request: Request) {
         date_of_birth: dateOfBirth || null,
         avatar_url: avatarUrl || null,
         family_access_code: familyAccessCode,
+        login_key: loginKey,
+        login_key_created_at: new Date().toISOString(),
         pin_hash: pinHash,
       })
       .select()
@@ -127,10 +140,7 @@ export async function POST(request: Request) {
 
     if (insertError) {
       console.error("Error creating child profile:", insertError);
-      return NextResponse.json(
-        { error: insertError.message },
-        { status: 400 }
-      );
+      return createErrorResponse(insertError, 400, "Failed to create child profile");
     }
 
     // Create default bank accounts (virtual)

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { RefreshCw, ChevronDown, ChevronRight, StickyNote, Plus, ArrowUpDown, ArrowUp, ArrowDown, X, GripVertical, CheckCircle2, AlertCircle, TrendingUp, MinusCircle, DollarSign, Receipt, ArrowUpRight, Archive, Printer, Target } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronRight, StickyNote, Plus, ArrowUpDown, ArrowUp, ArrowDown, X, GripVertical, CheckCircle2, AlertCircle, TrendingUp, MinusCircle, DollarSign, Receipt, ArrowUpRight, Archive, Printer, Target, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { CoachingWidget } from "@/components/coaching/coaching-widget";
@@ -53,8 +53,10 @@ import { MilestoneCompletionDialog } from "@/components/milestones/milestone-com
 import type { DetectedMilestone } from "@/lib/utils/milestone-detector";
 import { SortButton, type SortColumn, type SortDirection } from "@/components/allocation/sort-banner";
 import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-dialog";
-import { Gift } from "lucide-react";
+import { DebtAllocationDialog } from "@/components/debt/debt-allocation-dialog";
+import { Gift, CreditCard } from "lucide-react";
 import type { GiftRecipient, GiftRecipientInput } from "@/lib/types/celebrations";
+import type { DebtItem, DebtItemInput, LinkedCreditCard } from "@/lib/types/debt";
 
 type PriorityLevel = 'essential' | 'important' | 'discretionary';
 
@@ -90,6 +92,7 @@ const SUBTYPE_OPTIONS = [
   { value: 'savings', label: 'Savings' },
   { value: 'goal', label: 'Goal' },
   { value: 'tracking', label: 'Tracking' },
+  { value: 'debt', label: 'Debt' },
 ];
 
 const FREQUENCY_OPTIONS = [
@@ -106,18 +109,21 @@ function formatFrequencyAbbrev(frequency: string): string {
   return freq?.abbrev || frequency;
 }
 
-// Get envelope status icon and tooltip
+// Get envelope status info including icon, tooltip, and shortfall amount
 function getEnvelopeStatusIcon(envelope: {
   is_tracking_only?: boolean;
   subtype?: string;
   targetAmount?: number;
   currentAmount?: number;
-}): { icon: React.ReactNode; tooltip: string } {
+}): { icon: React.ReactNode; tooltip: string; status: 'tracking' | 'spending' | 'no-target' | 'surplus' | 'on-track' | 'underfunded'; shortfall: number; surplus: number } {
   // Tracking envelopes
   if (envelope.is_tracking_only || envelope.subtype === 'tracking') {
     return {
       icon: <Receipt className="h-4 w-4 text-[#9CA3AF]" />,
-      tooltip: "Tracking only"
+      tooltip: "Tracking only",
+      status: 'tracking',
+      shortfall: 0,
+      surplus: 0
     };
   }
 
@@ -125,7 +131,10 @@ function getEnvelopeStatusIcon(envelope: {
   if (envelope.subtype === 'spending') {
     return {
       icon: <DollarSign className="h-4 w-4 text-[#9CA3AF]" />,
-      tooltip: "Spending envelope"
+      tooltip: "Spending envelope",
+      status: 'spending',
+      shortfall: 0,
+      surplus: 0
     };
   }
 
@@ -134,19 +143,26 @@ function getEnvelopeStatusIcon(envelope: {
   if (!target || target === 0) {
     return {
       icon: <MinusCircle className="h-4 w-4 text-[#9CA3AF]" />,
-      tooltip: "No target set"
+      tooltip: "No target set",
+      status: 'no-target',
+      shortfall: 0,
+      surplus: 0
     };
   }
 
   // Calculate funding ratio
   const current = Number(envelope.currentAmount ?? 0);
   const ratio = current / target;
+  const difference = current - target;
 
   // Surplus (≥105%)
   if (ratio >= 1.05) {
     return {
-      icon: <TrendingUp className="h-4 w-4 text-[#5A7E7A]" />,
-      tooltip: "Surplus - over funded"
+      icon: <Sparkles className="h-4 w-4 text-[#7A9E9A]" />,
+      tooltip: `Surplus - $${difference.toFixed(2)} over target`,
+      status: 'surplus',
+      shortfall: 0,
+      surplus: difference
     };
   }
 
@@ -154,14 +170,20 @@ function getEnvelopeStatusIcon(envelope: {
   if (ratio >= 0.8) {
     return {
       icon: <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />,
-      tooltip: "On track - 80%+ funded"
+      tooltip: "On track - 80%+ funded",
+      status: 'on-track',
+      shortfall: Math.max(0, target - current),
+      surplus: 0
     };
   }
 
   // Needs attention (<80%)
   return {
     icon: <AlertCircle className="h-4 w-4 text-[#6B9ECE]" />,
-    tooltip: "Needs attention - under funded"
+    tooltip: `Needs $${(target - current).toFixed(2)} more`,
+    status: 'underfunded',
+    shortfall: target - current,
+    surplus: 0
   };
 }
 
@@ -280,6 +302,11 @@ export function AllocationClient() {
   const [giftEnvelope, setGiftEnvelope] = useState<UnifiedEnvelopeData | null>(null);
   const [giftRecipients, setGiftRecipients] = useState<GiftRecipient[]>([]);
 
+  // Debt allocation dialog state (for debt envelopes)
+  const [debtDialogOpen, setDebtDialogOpen] = useState(false);
+  const [debtEnvelope, setDebtEnvelope] = useState<UnifiedEnvelopeData | null>(null);
+  const [debtItems, setDebtItems] = useState<DebtItem[]>([]);
+  const [availableCreditCards, setAvailableCreditCards] = useState<LinkedCreditCard[]>([]);
 
   // ========================
   // ENHANCED VIEW FEATURE FLAG
@@ -467,6 +494,85 @@ export function AllocationClient() {
     // Refresh data
     // Could also do: queryClient.invalidateQueries(['envelopes']);
   }, [giftEnvelope]);
+
+  // Handle opening debt allocation dialog for debt envelopes
+  const handleDebtAllocationClick = useCallback(async (envelope: UnifiedEnvelopeData) => {
+    // Set envelope and open dialog immediately
+    setDebtEnvelope(envelope);
+    setDebtItems([]);
+    setAvailableCreditCards([]);
+    setDebtDialogOpen(true);
+
+    // Fetch existing debt items and available credit cards in parallel
+    try {
+      const [debtRes, accountsRes] = await Promise.all([
+        fetch(`/api/envelopes/${envelope.id}/debt-items`),
+        fetch('/api/accounts?type=debt'),
+      ]);
+
+      if (debtRes.ok) {
+        const data = await debtRes.json();
+        setDebtItems(data.items || []);
+      }
+
+      if (accountsRes.ok) {
+        const accountsData = await accountsRes.json();
+        // Map accounts to LinkedCreditCard format
+        const linkedAccountIds = (debtItems || []).map(d => d.linked_account_id).filter(Boolean);
+        const creditCards: LinkedCreditCard[] = (accountsData.accounts || [])
+          .filter((acc: any) => acc.type === 'debt' || acc.is_credit_card)
+          .map((acc: any) => ({
+            id: acc.id,
+            name: acc.name,
+            current_balance: Math.abs(acc.current_balance || 0),
+            is_already_linked: linkedAccountIds.includes(acc.id),
+          }));
+        setAvailableCreditCards(creditCards);
+      }
+    } catch (error) {
+      console.error('Failed to fetch debt data:', error);
+    }
+  }, [debtItems]);
+
+  // Handle saving debt items
+  const handleSaveDebtItems = useCallback(async (
+    items: DebtItemInput[],
+    budgetChange: number
+  ) => {
+    if (!debtEnvelope) return;
+
+    // Save debt items
+    const res = await fetch(`/api/envelopes/${debtEnvelope.id}/debt-items`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error('Debt items save failed:', res.status, errorData);
+      throw new Error(errorData.error || 'Failed to save debt items');
+    }
+
+    const data = await res.json();
+
+    // Update local envelope state with new target amount (sum of minimum payments)
+    setEnvelopes(prev => prev.map(env => {
+      if (env.id !== debtEnvelope.id) return env;
+
+      const totalMinPayments = (data.items || []).reduce(
+        (sum: number, item: DebtItem) => sum + Number(item.minimum_payment || 0), 0
+      );
+
+      return {
+        ...env,
+        targetAmount: totalMinPayments,
+        is_debt: true,
+        debt_item_count: data.items?.length || 0,
+        total_debt_amount: data.summary?.total_debt || 0,
+      };
+    }));
+  }, [debtEnvelope]);
 
   // Handle opening leveling dialog
   const handleLevelBillClick = useCallback((envelope: UnifiedEnvelopeData) => {
@@ -954,20 +1060,29 @@ export function AllocationClient() {
    * Calculate milestone progress for My Budget Way widget
    */
   const milestoneProgress = useMemo<MilestoneProgress>(() => {
-    const regularEnvelopes = envelopes.filter(e => !e.is_suggested);
-    const totalTarget = regularEnvelopes.reduce((sum, e) => sum + (e.targetAmount || 0), 0);
-    const totalCurrent = regularEnvelopes.reduce((sum, e) => sum + (e.currentAmount || 0), 0);
+    // Filter to regular envelopes (exclude suggested and tracking-only)
+    // Include spending envelopes as they still have budget allocations
+    const regularEnvelopes = envelopes.filter(e =>
+      !e.is_suggested &&
+      !e.is_tracking_only &&
+      e.subtype !== 'tracking'
+    );
+
+    // Only count envelopes with actual targets for totals
+    const envelopesWithTargets = regularEnvelopes.filter(e => (e.targetAmount || 0) > 0);
+    const totalTarget = envelopesWithTargets.reduce((sum, e) => sum + (e.targetAmount || 0), 0);
+    const totalCurrent = envelopesWithTargets.reduce((sum, e) => sum + (e.currentAmount || 0), 0);
     const overallProgress = totalTarget > 0 ? Math.min(100, (totalCurrent / totalTarget) * 100) : 100;
 
-    // Count funded vs total
-    const fundedCount = regularEnvelopes.filter(e => {
+    // Count funded vs total (for envelopes with targets)
+    const fundedCount = envelopesWithTargets.filter(e => {
       const target = e.targetAmount || 0;
       const current = e.currentAmount || 0;
-      return target === 0 || current >= target * 0.8; // 80% or more = funded
+      return current >= target * 0.8; // 80% or more = funded
     }).length;
 
     // Check if essentials are underfunded
-    const essentials = regularEnvelopes.filter(e => e.priority === 'essential');
+    const essentials = envelopesWithTargets.filter(e => e.priority === 'essential');
     const essentialsUnderfunded = essentials.some(e => {
       const target = e.targetAmount || 0;
       const current = e.currentAmount || 0;
@@ -980,9 +1095,9 @@ export function AllocationClient() {
       totalCurrent,
       fundingGap: Math.max(0, totalTarget - totalCurrent),
       fundedCount,
-      totalCount: regularEnvelopes.length,
-      needsFunding: regularEnvelopes.length - fundedCount,
-      shouldShowEnvelopeRow: regularEnvelopes.length > 0,
+      totalCount: envelopesWithTargets.length,
+      needsFunding: envelopesWithTargets.length - fundedCount,
+      shouldShowEnvelopeRow: envelopesWithTargets.length > 0,
       essentialsUnderfunded,
     };
   }, [envelopes]);
@@ -1506,6 +1621,7 @@ export function AllocationClient() {
                     onArchiveClick={handleArchiveClick}
                     onLevelBillClick={handleLevelBillClick}
                     onGiftAllocationClick={handleGiftAllocationClick}
+                    onDebtAllocationClick={handleDebtAllocationClick}
                   />
                 ))}
               </tbody>
@@ -1866,6 +1982,7 @@ export function AllocationClient() {
                   onArchiveClick={options.onArchiveClick}
                   onLevelBillClick={handleLevelBillClick}
                   onGiftAllocationClick={handleGiftAllocationClick}
+                  onDebtAllocationClick={handleDebtAllocationClick}
                 />
               )}
             />
@@ -2122,6 +2239,32 @@ export function AllocationClient() {
           categories={categories}
         />
       )}
+
+      {/* Debt Allocation Dialog for Debt Envelopes */}
+      {debtEnvelope && (
+        <DebtAllocationDialog
+          open={debtDialogOpen}
+          onOpenChange={(open) => {
+            setDebtDialogOpen(open);
+            if (!open) {
+              setDebtEnvelope(null);
+              setDebtItems([]);
+              setAvailableCreditCards([]);
+            }
+          }}
+          envelope={{
+            id: debtEnvelope.id,
+            name: debtEnvelope.name,
+            icon: debtEnvelope.icon,
+            is_debt: true,
+            target_amount: debtEnvelope.targetAmount || 0,
+            current_amount: debtEnvelope.currentAmount || 0,
+          }}
+          existingDebtItems={debtItems}
+          availableCreditCards={availableCreditCards}
+          onSave={handleSaveDebtItems}
+        />
+      )}
     </div>
   );
 }
@@ -2249,6 +2392,7 @@ function EnvelopeRow({
   onArchiveClick,
   onLevelBillClick,
   onGiftAllocationClick,
+  onDebtAllocationClick,
 }: {
   envelope: UnifiedEnvelopeData;
   incomeSources: IncomeSource[];
@@ -2266,6 +2410,7 @@ function EnvelopeRow({
   onArchiveClick?: (envelope: UnifiedEnvelopeData) => void;
   onLevelBillClick?: (envelope: UnifiedEnvelopeData) => void;
   onGiftAllocationClick?: (envelope: UnifiedEnvelopeData) => void;
+  onDebtAllocationClick?: (envelope: UnifiedEnvelopeData) => void;
 }) {
   const perPay = calculatePerPay(envelope);
   const annual = calculateAnnual(envelope);
@@ -2273,8 +2418,8 @@ function EnvelopeRow({
   const totalAllocated = Object.values(envelope.incomeAllocations || {}).reduce((sum, amt) => sum + amt, 0);
   const isFullyFunded = perPay > 0 && totalAllocated >= perPay - 0.01;
 
-  const iconBg = priority === 'essential' ? 'bg-sage-very-light' :
-                 priority === 'important' ? 'bg-blue-light' : 'bg-silver-very-light';
+  // No background color for icons - keep transparent to match page
+  const iconBg = '';
 
   const fundedByClass = fundedBy === 'primary' ? 'bg-sage-very-light text-sage-dark' :
                         fundedBy === 'secondary' ? 'bg-sage-light text-sage-dark' :
@@ -2413,9 +2558,27 @@ function EnvelopeRow({
             className={cn(inputClass, "font-medium text-text-dark text-[12px] py-0.5")}
             readOnly={envelope.is_suggested}
           />
-          {/* Show leveled indicator for seasonal bills */}
-          {envelope.is_leveled && envelope.seasonal_pattern && (
-            <LeveledIndicator seasonalPattern={envelope.seasonal_pattern} />
+          {/* Show leveled indicator for seasonal bills - clickable to edit */}
+          {envelope.is_leveled && onLevelBillClick && (
+            <button
+              type="button"
+              onClick={() => onLevelBillClick(envelope)}
+              className="flex-shrink-0 hover:opacity-70 transition-opacity"
+              title="Click to edit leveling settings"
+            >
+              <LeveledIndicator seasonalPattern={envelope.seasonal_pattern || 'custom'} />
+            </button>
+          )}
+          {/* Show snowflake icon for bills that can be leveled */}
+          {!envelope.is_leveled && envelope.subtype === 'bill' && onLevelBillClick && (
+            <button
+              type="button"
+              onClick={() => onLevelBillClick(envelope)}
+              className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-light text-blue flex items-center justify-center text-[10px] hover:bg-blue hover:text-white transition-colors"
+              title="Level this bill for seasonal variation"
+            >
+              ❄
+            </button>
           )}
           {/* Show gift recipients indicator for celebration envelopes */}
           {(envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0 && (
@@ -2459,10 +2622,10 @@ function EnvelopeRow({
             type="number"
             step="0.01"
             min="0"
-            value={envelope.targetAmount || ''}
+            value={envelope.targetAmount ? Number(envelope.targetAmount).toFixed(2) : ''}
             onChange={(e) => onEnvelopeChange(envelope.id, 'targetAmount', parseFloat(e.target.value) || 0)}
             className={cn(inputClass, "text-right pl-3 text-text-dark text-[11px] py-0.5")}
-            placeholder="0"
+            placeholder="0.00"
           />
         </div>
       </td>
@@ -2523,7 +2686,7 @@ function EnvelopeRow({
           value={fundedBy || ''}
           onChange={(e) => onFundedByChange(envelope.id, e.target.value)}
           className={cn(
-            "px-1.5 py-0.5 rounded text-[10px] font-medium border-0 cursor-pointer w-full",
+            "px-1.5 py-0.5 rounded text-[11px] font-medium border-0 cursor-pointer w-full",
             fundedByClass || "bg-silver-very-light text-text-medium"
           )}
         >
@@ -2536,13 +2699,13 @@ function EnvelopeRow({
 
       {/* 10. Per Pay (Calculated - read only) */}
       <td className="px-2 py-1.5 text-right bg-white">
-        <span className="text-[11px] font-semibold" style={{ color: '#7A9E9A' }}>${perPay.toFixed(0)}</span>
+        <span className="text-[11px] font-semibold" style={{ color: '#7A9E9A' }}>${perPay.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
       </td>
 
       {/* 11. Annual (Calculated - read only) */}
       <td className="px-2 py-1.5 text-right bg-white">
-        <span className="text-[10px] text-text-medium">
-          ${annual.toLocaleString('en-AU', { maximumFractionDigits: 0 })}
+        <span className="text-[11px] text-text-medium">
+          ${annual.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       </td>
 
@@ -2561,7 +2724,7 @@ function EnvelopeRow({
           {/* 13. Current Balance (read only) */}
           <td className="px-2 py-1.5 text-right bg-white">
             <span className="text-[11px] font-semibold text-sage">
-              ${(envelope.currentAmount || 0).toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              ${(envelope.currentAmount || 0).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </td>
 
@@ -2581,7 +2744,7 @@ function EnvelopeRow({
                 );
               })()
             ) : (
-              <span className="text-text-light text-[10px]">—</span>
+              <span className="text-text-light text-[11px]">—</span>
             )}
           </td>
         </>
@@ -2600,7 +2763,19 @@ function EnvelopeRow({
       {/* 16. Status Icon (with tooltip) */}
       <td className="px-1 py-1.5 text-center">
         <div className="inline-flex items-center justify-center" title={statusInfo.tooltip}>
-          {statusInfo.icon}
+          {statusInfo.status === 'underfunded' ? (
+            <span className="text-[11px] font-semibold text-[#6B9ECE]">
+              -${statusInfo.shortfall.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          ) : statusInfo.status === 'surplus' ? (
+            <span className="text-[11px] font-semibold text-[#7A9E9A]">
+              +${statusInfo.surplus.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          ) : statusInfo.status === 'on-track' ? (
+            <CheckCircle2 className="h-4 w-4 text-[#7A9E9A]" />
+          ) : (
+            statusInfo.icon
+          )}
         </div>
       </td>
 
@@ -2653,6 +2828,16 @@ function EnvelopeRow({
                 >
                   <Gift className="h-3.5 w-3.5" />
                   Gift Recipients
+                </DropdownMenuItem>
+              )}
+              {/* Manage Debts - only show for debt envelopes (by flag or subtype) */}
+              {(envelope.is_debt || envelope.subtype === 'debt') && onDebtAllocationClick && (
+                <DropdownMenuItem
+                  onClick={() => onDebtAllocationClick(envelope)}
+                  className="text-xs gap-2"
+                >
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Manage Debts
                 </DropdownMenuItem>
               )}
               {/* Level this bill - only show for bill envelopes that aren't already leveled */}

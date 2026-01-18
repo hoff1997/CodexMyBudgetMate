@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 // POST /api/chores/routines/[id]/items - Add items to a routine
 export async function POST(
@@ -14,7 +15,7 @@ export async function POST(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -26,17 +27,14 @@ export async function POST(
     .single();
 
   if (!routine) {
-    return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    return createNotFoundError("Routine");
   }
 
   const body = await request.json();
   const { items } = body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
-    return NextResponse.json(
-      { error: "Items array is required" },
-      { status: 400 }
-    );
+    return createValidationError("Items array is required");
   }
 
   // Get current max sort_order
@@ -88,7 +86,7 @@ export async function POST(
 
   if (error) {
     console.error("Error adding routine items:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to add routine items");
   }
 
   return NextResponse.json(insertedItems, { status: 201 });
@@ -107,7 +105,7 @@ export async function PUT(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -119,17 +117,14 @@ export async function PUT(
     .single();
 
   if (!routine) {
-    return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    return createNotFoundError("Routine");
   }
 
   const body = await request.json();
   const { items } = body;
 
   if (!items || !Array.isArray(items)) {
-    return NextResponse.json(
-      { error: "Items array is required" },
-      { status: 400 }
-    );
+    return createValidationError("Items array is required");
   }
 
   // Delete existing items
@@ -185,7 +180,7 @@ export async function PUT(
 
   if (error) {
     console.error("Error replacing routine items:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to replace routine items");
   }
 
   // Update routine timestamp
@@ -210,7 +205,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -222,17 +217,14 @@ export async function DELETE(
     .single();
 
   if (!routine) {
-    return NextResponse.json({ error: "Routine not found" }, { status: 404 });
+    return createNotFoundError("Routine");
   }
 
   const { searchParams } = new URL(request.url);
   const itemIds = searchParams.get("item_ids")?.split(",");
 
   if (!itemIds || itemIds.length === 0) {
-    return NextResponse.json(
-      { error: "item_ids query parameter is required" },
-      { status: 400 }
-    );
+    return createValidationError("item_ids query parameter is required");
   }
 
   const { error } = await supabase
@@ -243,7 +235,7 @@ export async function DELETE(
 
   if (error) {
     console.error("Error deleting routine items:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete routine items");
   }
 
   return NextResponse.json({ success: true, deleted: itemIds });

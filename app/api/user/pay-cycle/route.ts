@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 export async function PATCH(request: NextRequest) {
   try {
@@ -9,16 +14,13 @@ export async function PATCH(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     const { payCycle } = await request.json();
 
     if (!payCycle || !["weekly", "fortnightly", "monthly"].includes(payCycle)) {
-      return NextResponse.json(
-        { error: "Invalid pay cycle. Must be 'weekly', 'fortnightly', or 'monthly'" },
-        { status: 400 }
-      );
+      return createValidationError("Invalid pay cycle. Must be 'weekly', 'fortnightly', or 'monthly'");
     }
 
     // Update user profile with pay cycle
@@ -29,18 +31,12 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error("Error updating pay cycle:", error);
-      return NextResponse.json(
-        { error: "Failed to update pay cycle" },
-        { status: 500 }
-      );
+      return createErrorResponse(error, 500, "Failed to update pay cycle");
     }
 
     return NextResponse.json({ success: true, payCycle });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error in pay-cycle endpoint:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error as { message: string }, 500, "Failed to update pay cycle");
   }
 }

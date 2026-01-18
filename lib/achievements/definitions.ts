@@ -10,6 +10,19 @@ export interface AchievementDefinition {
 }
 
 export const ACHIEVEMENTS: Record<string, AchievementDefinition> = {
+  "budget-tutorial-complete": {
+    id: "budget-tutorial-complete",
+    name: "Budget Learner",
+    description: "Complete the Budget Allocation tutorial",
+    icon: "🎓",
+    celebrationTitle: "Budget Learner!",
+    celebrationMessage:
+      "You've completed the Budget Allocation tutorial. You now understand how your budget works!",
+    remyMessage:
+      "You've learned the basics of budget allocation. Understanding how your money flows is the first step to taking control. You're on your way!",
+    category: "budgeting",
+  },
+
   "starter-stash": {
     id: "starter-stash",
     name: "Starter Stash",

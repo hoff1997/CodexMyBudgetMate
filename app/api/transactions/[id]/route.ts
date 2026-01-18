@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 const updateTransactionSchema = z.object({
   merchant_name: z.string().min(1).optional(),
@@ -24,7 +25,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const parsed = updateTransactionSchema.safeParse(await request.json());
@@ -96,7 +97,7 @@ export async function PATCH(
     .single();
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
+    return createErrorResponse(updateError, 400, "Failed to update transaction");
   }
 
   return NextResponse.json({ transaction });
@@ -112,7 +113,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify transaction belongs to user
@@ -138,7 +139,7 @@ export async function DELETE(
     .eq("user_id", user.id);
 
   if (deleteError) {
-    return NextResponse.json({ error: deleteError.message }, { status: 400 });
+    return createErrorResponse(deleteError, 400, "Failed to delete transaction");
   }
 
   return NextResponse.json({ success: true }, { status: 200 });
@@ -154,7 +155,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Fetch transaction with related data

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -9,14 +15,14 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
   const childId = searchParams.get("child_id");
 
   if (!childId) {
-    return NextResponse.json({ error: "child_id required" }, { status: 400 });
+    return createValidationError("child_id required");
   }
 
   // Get room layout
@@ -49,7 +55,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("Error fetching room:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to fetch room");
   }
 
   // Get child's inventory
@@ -77,14 +83,14 @@ export async function PATCH(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const { child_id, updates } = body;
 
   if (!child_id) {
-    return NextResponse.json({ error: "child_id required" }, { status: 400 });
+    return createValidationError("child_id required");
   }
 
   // Verify parent ownership
@@ -96,7 +102,7 @@ export async function PATCH(request: Request) {
     .single();
 
   if (!child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   const { data, error } = await supabase
@@ -111,7 +117,7 @@ export async function PATCH(request: Request) {
 
   if (error) {
     console.error("Error updating room:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update room");
   }
 
   return NextResponse.json({ room: data });

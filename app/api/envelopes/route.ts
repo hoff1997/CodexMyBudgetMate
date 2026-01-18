@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { recalculateSafetyNetTarget } from "@/lib/utils/suggested-envelopes";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 const frequencySchema = z.enum(["weekly", "fortnightly", "monthly", "quarterly", "annually", "none"]).optional();
 const envelopeTypeSchema = z.enum(["income", "expense"]).optional();
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check for include_archived query param
@@ -112,7 +113,7 @@ export async function GET(request: Request) {
   }
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to load envelopes");
   }
 
   // Transform gift_recipients count from nested object to flat field
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
@@ -144,9 +145,9 @@ export async function POST(request: Request) {
     // Check specifically for priority errors
     const priorityError = parsed.error.errors.find(e => e.path.includes('priority'));
     if (priorityError) {
-      return NextResponse.json({ error: "Priority is required" }, { status: 400 });
+      return createValidationError("Priority is required");
     }
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+    return createValidationError("Invalid payload");
   }
 
   const payload = parsed.data;
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (categoryError) {
-        return NextResponse.json({ error: categoryError.message }, { status: 400 });
+        return createErrorResponse(categoryError, 400, "Failed to create category");
       }
       categoryId = categoryInsert?.id ?? undefined;
     }
@@ -205,7 +206,7 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create envelope");
   }
 
   // Recalculate Safety Net target if an essential envelope was created

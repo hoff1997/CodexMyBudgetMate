@@ -36,6 +36,16 @@ export const ACHIEVEMENTS: Record<string, Achievement> = {
   // ============================================
   // GETTING STARTED - First steps on the journey
   // ============================================
+  'budget-tutorial-complete': {
+    key: 'budget-tutorial-complete',
+    category: 'getting_started',
+    title: 'Budget Learner',
+    description: 'You completed the Budget Allocation tutorial! You understand how your budget works.',
+    icon: '🎓',
+    points: 10,
+    discordEmoji: '🎓',
+  },
+
   onboarding_complete: {
     key: 'onboarding_complete',
     category: 'getting_started',

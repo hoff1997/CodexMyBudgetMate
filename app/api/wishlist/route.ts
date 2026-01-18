@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 // GET /api/wishlist - List all wishlist items
 export async function GET() {
@@ -11,7 +12,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Fetch wishlist items with converted envelope details
@@ -31,7 +32,7 @@ export async function GET() {
 
   if (error) {
     console.error("Error fetching wishlist:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch wishlist");
   }
 
   return NextResponse.json({ items: items || [] });
@@ -54,14 +55,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return createValidationError("Invalid JSON");
   }
 
   const parsed = createSchema.safeParse(body);
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Error creating wishlist item:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create wishlist item");
   }
 
   return NextResponse.json({ item }, { status: 201 });

@@ -131,7 +131,16 @@
       "Bash(timeout 30 npx tsc:*)",
       "Bash(nslookup:*)",
       "Bash(git diff:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Read(//c/Users/hoff1/My Budget Mate/Cloned Codex/CodexMyBudgetMate/**)",
+      "Bash(xargs:*)",
+      "Bash(npx next lint:*)",
+      "Bash(npx next build:*)",
+      "Bash(powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(ping:*)",
+      "Bash(cmd //c \"type .env.local | findstr SUPABASE\")",
+      "Bash(git check-ignore:*)",
+      "Bash(del \"c:\\\\Users\\\\hoff1\\\\My Budget Mate\\\\Cloned Codex\\\\CodexMyBudgetMate\\\\reset-password.js\")"
     ],
     "deny": [],
     "ask": []

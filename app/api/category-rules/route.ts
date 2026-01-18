@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { CategoryRule } from "@/lib/types/rules";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 const MATCH_TYPES = new Set(["contains", "starts_with", "exact"]);
 
@@ -11,17 +16,17 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
   const pattern = (body.pattern ?? "").trim();
   const envelopeId = body.envelopeId ? String(body.envelopeId) : "";
   if (!pattern) {
-    return NextResponse.json({ error: "Pattern is required" }, { status: 400 });
+    return createValidationError("Pattern is required");
   }
   if (!envelopeId) {
-    return NextResponse.json({ error: "Envelope is required" }, { status: 400 });
+    return createValidationError("Envelope is required");
   }
 
   const matchType = MATCH_TYPES.has(body.matchType) ? body.matchType : "contains";
@@ -45,7 +50,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error || !inserted) {
-    return NextResponse.json({ error: error?.message ?? "Unable to create rule" }, { status: 400 });
+    return createErrorResponse(error, 400, "Unable to create rule");
   }
 
   const { data: envelope } = await supabase

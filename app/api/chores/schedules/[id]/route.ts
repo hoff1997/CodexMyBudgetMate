@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createNotFoundError } from "@/lib/utils/api-error";
 import type { UpdateScheduleRequest } from "@/lib/types/chores";
 
 // GET /api/chores/schedules/[id] - Get a single schedule
@@ -15,7 +16,7 @@ export async function GET(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: schedule, error } = await supabase
@@ -72,7 +73,7 @@ export async function GET(
     .single();
 
   if (error || !schedule) {
-    return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
+    return createNotFoundError("Schedule");
   }
 
   return NextResponse.json(schedule);
@@ -91,7 +92,7 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -103,7 +104,7 @@ export async function PATCH(
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
+    return createNotFoundError("Schedule");
   }
 
   const body: UpdateScheduleRequest = await request.json();
@@ -141,7 +142,7 @@ export async function PATCH(
 
   if (error) {
     console.error("Error updating schedule:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to update schedule");
   }
 
   return NextResponse.json(schedule);
@@ -160,7 +161,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify ownership
@@ -172,7 +173,7 @@ export async function DELETE(
     .single();
 
   if (!existing) {
-    return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
+    return createNotFoundError("Schedule");
   }
 
   const { error } = await supabase
@@ -182,7 +183,7 @@ export async function DELETE(
 
   if (error) {
     console.error("Error deleting schedule:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return createErrorResponse(error, 500, "Failed to delete schedule");
   }
 
   return NextResponse.json({ success: true });

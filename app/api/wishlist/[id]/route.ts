@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -16,7 +17,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { data: item, error } = await supabase
@@ -35,7 +36,7 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch wishlist item");
   }
 
   if (!item) {
@@ -65,14 +66,14 @@ export async function PATCH(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return createValidationError("Invalid JSON");
   }
 
   const parsed = updateSchema.safeParse(body);
@@ -106,7 +107,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (parsed.data.priority !== undefined) updateData.priority = parsed.data.priority;
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+    return createValidationError("No fields to update");
   }
 
   const { data: item, error } = await supabase
@@ -118,7 +119,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update wishlist item");
   }
 
   return NextResponse.json({ item });
@@ -134,7 +135,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error } = await supabase
@@ -144,7 +145,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete wishlist item");
   }
 
   return NextResponse.json({ success: true });

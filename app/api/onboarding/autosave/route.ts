@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/onboarding/autosave
@@ -14,7 +18,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     // Get the draft
@@ -26,7 +30,7 @@ export async function GET() {
 
     if (error) {
       console.error("Error fetching onboarding draft:", error);
-      return NextResponse.json({ error: "Failed to fetch draft" }, { status: 500 });
+      return createErrorResponse(error, 500, "Failed to fetch draft");
     }
 
     if (!draft) {
@@ -49,7 +53,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Autosave GET error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return createErrorResponse(error as { message: string }, 500, "Internal server error");
   }
 }
 
@@ -66,7 +70,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     const body = await request.json();
@@ -103,7 +107,7 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Error saving onboarding draft:", error);
-      return NextResponse.json({ error: "Failed to save draft" }, { status: 500 });
+      return createErrorResponse(error, 500, "Failed to save draft");
     }
 
     // Update profile to mark that there's a draft
@@ -118,7 +122,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Autosave POST error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return createErrorResponse(error as { message: string }, 500, "Internal server error");
   }
 }
 
@@ -135,7 +139,7 @@ export async function DELETE() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     // Delete the draft
@@ -146,7 +150,7 @@ export async function DELETE() {
 
     if (error) {
       console.error("Error deleting onboarding draft:", error);
-      return NextResponse.json({ error: "Failed to delete draft" }, { status: 500 });
+      return createErrorResponse(error, 500, "Failed to delete draft");
     }
 
     // Update profile to mark that there's no draft
@@ -161,6 +165,6 @@ export async function DELETE() {
     });
   } catch (error) {
     console.error("Autosave DELETE error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return createErrorResponse(error as { message: string }, 500, "Internal server error");
   }
 }

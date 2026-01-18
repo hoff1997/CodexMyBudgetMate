@@ -1,10 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Target, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import { TrendingUp, AlertTriangle, CheckCircle, HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { EnvelopeRow } from "@/lib/auth/types";
 
 interface User {
@@ -138,35 +142,61 @@ export function ZeroBudgetStatusWidget({ className }: ZeroBudgetStatusWidgetProp
     totalIncome > 0 ? Math.min((totalExpenses / totalIncome) * 100, 100) : 0;
 
   return (
-    <Card className={`${status.bgColor} ${status.borderColor} border ${className}`}>
-      <CardHeader className="pb-2 pt-3">
+    <div className={`rounded-xl border border-sage-light overflow-hidden shadow-sm ${className}`}>
+      {/* Header - matching My Budget Way style */}
+      <div className="bg-sage-very-light border-b border-sage-light px-4 py-2">
         <div className="flex items-center justify-between">
-          <CardTitle className={`text-base md:text-sm font-medium flex items-center gap-2 ${status.color}`}>
-            <status.icon className="h-5 w-5 md:h-4 md:w-4" />
-            Budget Status
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <status.icon className="h-5 w-5 md:h-4 md:w-4 text-sage-dark" />
+            <h3 className="text-base md:text-sm font-bold text-text-dark uppercase tracking-wide">
+              Budget Status
+            </h3>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="p-1 rounded-full text-sage hover:text-sage-dark hover:bg-sage-light/50 transition-colors"
+                    aria-label="About Budget Status"
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="bottom"
+                  className="max-w-xs bg-sage-very-light border-sage-light text-sage-dark"
+                >
+                  <p className="text-sm">
+                    Your budget status shows whether your income covers all your planned expenses.
+                    A zero budget means every dollar is allocated - the goal of envelope budgeting.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <Badge className={`${status.badgeColor} text-sm md:text-xs px-2 py-1`}>
             {status.badge}
           </Badge>
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="py-2 pb-3">
+      {/* Content */}
+      <div className="bg-white px-4 py-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center text-base md:text-sm">
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Income</span>
-            <span className="font-medium text-green-600">${totalIncome.toFixed(2)}</span>
+            <span className="font-medium text-sage">${totalIncome.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Expenses</span>
-            <span className="font-medium text-red-600">${totalExpenses.toFixed(2)}</span>
+            <span className="font-medium text-blue">${totalExpenses.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-muted-foreground">Difference</span>
             <span
-              className={`font-medium ${surplus >= 0 ? "text-green-600" : "text-red-600"}`}
+              className={`font-medium ${surplus >= 0 ? "text-sage" : "text-blue"}`}
             >
               {surplus >= 0 ? "+" : ""}${surplus.toFixed(2)}
             </span>
@@ -174,22 +204,21 @@ export function ZeroBudgetStatusWidget({ className }: ZeroBudgetStatusWidgetProp
         </div>
 
         <div className="mt-3">
-          <Progress
-            value={budgetProgress}
-            className={`h-4 ${
-              isOverspent
-                ? "[&>div]:bg-red-500"
-                : isZeroBudget
-                  ? "[&>div]:bg-green-500"
-                  : "[&>div]:bg-yellow-500"
-            }`}
-          />
+          <div className="h-2 bg-sage-very-light rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${budgetProgress}%`,
+                backgroundColor: isOverspent ? '#6B9ECE' : isZeroBudget ? '#7A9E9A' : '#D4A853'
+              }}
+            />
+          </div>
           <div className="flex justify-between text-sm text-muted-foreground mt-1">
             <span>{budgetProgress.toFixed(1)}% utilised</span>
             <span>{status.badge}</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

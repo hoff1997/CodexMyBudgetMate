@@ -54,25 +54,25 @@ export function IncomeProgressCard({
   const remainingColor = isOverAllocated ? 'text-blue' : 'text-text-medium';
 
   return (
-    <div className="bg-white border border-silver-light rounded-xl px-4 py-3 shadow-sm">
-      {/* Top Row: Icon + Name/Frequency | Per Pay | Allocated */}
-      <div className="flex items-center justify-between mb-3">
-        {/* Left: Icon, Name & Frequency */}
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{isPrimary ? "💵" : "💰"}</span>
-          <div>
-            <div className="font-semibold text-text-dark">
-              {isPrimary ? "PRIMARY: " : ""}{name}
-            </div>
-            <div className="text-xs text-text-medium">
-              {getFrequencyLabel(frequency)}
-            </div>
-          </div>
+    <div className="rounded-xl border border-sage-light overflow-hidden shadow-sm">
+      {/* Header - matching My Budget Way style */}
+      <div className="bg-sage-very-light border-b border-sage-light px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{isPrimary ? "💵" : "💰"}</span>
+          <span className="font-semibold text-text-dark text-sm">
+            {isPrimary ? "PRIMARY: " : ""}{name}
+          </span>
+          <span className="text-xs text-sage-dark">
+            {getFrequencyLabel(frequency)}
+          </span>
         </div>
+      </div>
 
-        {/* Right: Per Pay & Allocated */}
-        <div className="flex items-center gap-6">
-          <div className="text-right">
+      {/* Content */}
+      <div className="bg-white px-4 py-3">
+        {/* Per Pay & Allocated Row */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
             <div className="text-xs text-text-medium">Per Pay</div>
             <div className="text-lg font-semibold text-text-dark">
               ${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -88,34 +88,34 @@ export function IncomeProgressCard({
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Progress Bar - full width */}
-      <div className="h-2 bg-[#E5E7EB] rounded-full overflow-hidden mb-2">
-        <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{
-            width: `${Math.min(percentUsed, 100)}%`,
-            backgroundColor: progressBgColor
-          }}
-        />
-      </div>
+        {/* Progress Bar - full width */}
+        <div className="h-2 bg-sage-very-light rounded-full overflow-hidden mb-2">
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${Math.min(percentUsed, 100)}%`,
+              backgroundColor: progressBgColor
+            }}
+          />
+        </div>
 
-      {/* Bottom Row: Percentage | Remaining */}
-      <div className="flex items-center justify-between text-sm">
-        <span className={cn(
-          "font-medium",
-          isOverAllocated ? "text-blue" : "text-sage"
-        )}>
-          {percentUsed.toFixed(0)}% allocated
-        </span>
-        <span className={remainingColor}>
-          {isOverAllocated ? (
-            <>${Math.abs(remaining).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over</>
-          ) : (
-            <>${remaining.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remaining</>
-          )}
-        </span>
+        {/* Bottom Row: Percentage | Remaining */}
+        <div className="flex items-center justify-between text-sm">
+          <span className={cn(
+            "font-medium",
+            isOverAllocated ? "text-blue" : "text-sage"
+          )}>
+            {percentUsed.toFixed(0)}% allocated
+          </span>
+          <span className={remainingColor}>
+            {isOverAllocated ? (
+              <>${Math.abs(remaining).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} over</>
+            ) : (
+              <>${remaining.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} remaining</>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );

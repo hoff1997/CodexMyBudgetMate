@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createNotFoundError,
+} from "@/lib/utils/api-error";
 
 /**
  * POST /api/demo/dismiss-conversion
@@ -12,7 +17,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -27,10 +32,7 @@ export async function POST(request: Request) {
       .single();
 
     if (!demoSession) {
-      return NextResponse.json(
-        { error: "No active demo session found" },
-        { status: 404 }
-      );
+      return createNotFoundError("Demo session");
     }
 
     // Increment dismissal count in metadata
@@ -52,11 +54,8 @@ export async function POST(request: Request) {
       ok: true,
       dismissalCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Demo dismissal tracking error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse(error as { message: string }, 500, "Failed to track demo dismissal");
   }
 }

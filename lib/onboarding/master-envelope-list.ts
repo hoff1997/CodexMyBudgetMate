@@ -145,12 +145,12 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   },
   {
     id: 'credit-card-historic-debt',
-    name: 'Credit Card Historic Debt',
+    name: 'CC Legacy Debt',
     icon: '📊',
     category: 'bank',
     priority: 'essential',
     subtype: 'goal',
-    description: 'Legacy credit card debt from before budgeting started. Part of debt payoff journey (separate from current CC spending). Pay down to zero as part of My Budget Way Step 2.',
+    description: 'Credit card debt from before budgeting. Pay down to zero as part of My Budget Way Step 2.',
   },
   {
     id: 'surplus',
@@ -295,22 +295,13 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
 
   // ========== CLOTHING ==========
   {
-    id: 'name-1-clothing',
-    name: 'Name 1 Clothing',
+    id: 'clothing',
+    name: 'Clothing',
     icon: '👔',
     category: 'clothing',
     priority: 'important',
     subtype: 'spending',
-    allowMultiple: true,
-    multipleLabel: 'person',
-  },
-  {
-    id: 'name-2-clothing',
-    name: 'Name 2 Clothing',
-    icon: '👗',
-    category: 'clothing',
-    priority: 'important',
-    subtype: 'spending',
+    description: 'General clothing budget. Add more envelopes if you want to track per person.',
   },
   {
     id: 'kids-clothing',
@@ -332,24 +323,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     priority: 'discretionary',
     subtype: 'spending',
     defaultSelected: true,
-  },
-  {
-    id: 'name-1-personal',
-    name: 'Name 1 Personal',
-    icon: '🛍️',
-    category: 'extras',
-    priority: 'discretionary',
-    subtype: 'spending',
-    allowMultiple: true,
-    multipleLabel: 'person',
-  },
-  {
-    id: 'name-2-personal',
-    name: 'Name 2 Personal',
-    icon: '🛍️',
-    category: 'extras',
-    priority: 'discretionary',
-    subtype: 'spending',
   },
   {
     id: 'eyebrows',
@@ -405,22 +378,13 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
 
   // ========== HAIR ==========
   {
-    id: 'name-1-hair',
-    name: 'Name 1 Hair',
+    id: 'hair',
+    name: 'Hair',
     icon: '💇',
     category: 'hair',
     priority: 'important',
     subtype: 'spending',
-    allowMultiple: true,
-    multipleLabel: 'person',
-  },
-  {
-    id: 'name-2-hair',
-    name: 'Name 2 Hair',
-    icon: '💇‍♀️',
-    category: 'hair',
-    priority: 'important',
-    subtype: 'spending',
+    description: 'General hair care budget. Add more envelopes if you want to track per person.',
   },
   {
     id: 'kids-hair',
@@ -814,7 +778,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   },
   {
     id: 'vehicle-maintenance',
-    name: 'Maintenance',
+    name: 'Car Maintenance',
     icon: '🔧',
     category: 'vehicles',
     priority: 'essential',
@@ -822,7 +786,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   },
   {
     id: 'registration',
-    name: 'Registration',
+    name: 'Car Registration',
     icon: '📋',
     category: 'vehicles',
     priority: 'essential',

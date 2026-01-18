@@ -3,9 +3,12 @@
  *
  * NZ-focused utilities for detecting and handling seasonal expenses
  * like power, gas, and water bills that vary throughout the year.
+ *
+ * NOTE: Celebrations (birthdays, Christmas, etc.) are handled separately
+ * via the GiftAllocationDialog - see lib/types/celebrations.ts
  */
 
-// Keywords that indicate a bill might be seasonal
+// Keywords that indicate a bill might be seasonal (varies by season)
 export const SEASONAL_BILL_KEYWORDS = [
   'power',
   'electricity',
@@ -20,7 +23,7 @@ export const SEASONAL_BILL_KEYWORDS = [
   'bottled gas',
 ] as const;
 
-// NZ seasonal patterns
+// NZ seasonal patterns (for bills that vary by season)
 export type SeasonalPattern = 'winter-peak' | 'summer-peak' | 'custom';
 
 // Months indexed 0-11 (Jan=0, Dec=11)
@@ -60,7 +63,10 @@ export const SEASONAL_PATTERNS: Record<SeasonalPattern, {
 };
 
 /**
- * Detects if an envelope name suggests a seasonal bill
+ * Detects if an envelope name suggests a seasonal bill (power, gas, water, etc.)
+ *
+ * NOTE: This does NOT detect celebrations (birthdays, Christmas, etc.)
+ * Use detectCelebration() from lib/utils/celebrations.ts for those.
  *
  * @param envelopeName - The name of the envelope to check
  * @returns Object with detection result and suggested pattern
@@ -73,7 +79,7 @@ export function detectSeasonalBill(envelopeName: string): {
 } {
   const lowerName = envelopeName.toLowerCase().trim();
 
-  // Check for exact or partial keyword matches
+  // Check for seasonal bill keywords only (NOT celebrations)
   for (const keyword of SEASONAL_BILL_KEYWORDS) {
     if (lowerName.includes(keyword.toLowerCase())) {
       // Determine pattern based on keyword

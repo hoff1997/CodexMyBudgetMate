@@ -12,6 +12,7 @@ import {
   getRateLimitKey,
 } from "@/lib/utils/rate-limiter";
 import { validateCsrfRequest, extractCsrfToken } from "@/lib/utils/csrf";
+import { createErrorResponse, createValidationError } from "@/lib/utils/api-error";
 
 // Helper to get client IP
 function getClientIP(request: NextRequest): string {
@@ -48,17 +49,11 @@ export async function POST(request: NextRequest) {
 
     // Validate inputs
     if (!childId) {
-      return NextResponse.json(
-        { error: "Child ID is required" },
-        { status: 400 }
-      );
+      return createValidationError("Child ID is required");
     }
 
     if (!pin || !/^\d{4}$/.test(pin)) {
-      return NextResponse.json(
-        { error: "PIN must be exactly 4 digits" },
-        { status: 400 }
-      );
+      return createValidationError("PIN must be exactly 4 digits");
     }
 
     // Check global IP rate limit first (prevents distributed attacks)
@@ -208,9 +203,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (err) {
     console.error("Error in POST /api/kids/auth/login:", err);
-    return NextResponse.json(
-      { error: "Failed to process login" },
-      { status: 500 }
-    );
+    return createErrorResponse(err as Error, 500, "Failed to process login");
   }
 }

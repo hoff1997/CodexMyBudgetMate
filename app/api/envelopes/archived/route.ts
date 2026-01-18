@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError } from "@/lib/utils/api-error";
 
 // GET - Fetch all archived envelopes
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -27,7 +28,7 @@ export async function GET() {
         return NextResponse.json({ envelopes: [] });
       }
       console.error("Failed to fetch archived envelopes:", error);
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return createErrorResponse(error, 400, "Failed to fetch archived envelopes");
     }
 
     return NextResponse.json({ envelopes: data || [] });

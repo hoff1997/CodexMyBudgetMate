@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError } from "@/lib/utils/api-error";
 
 export async function GET(request: Request) {
   const supabase = await createClient();
@@ -8,14 +9,14 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
   const child_id = searchParams.get("child_id");
 
   if (!child_id) {
-    return NextResponse.json({ error: "child_id required" }, { status: 400 });
+    return createValidationError("child_id required");
   }
 
   const { data, error } = await supabase
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
     .limit(50);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch screen time history");
   }
 
   return NextResponse.json({ transactions: data });

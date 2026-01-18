@@ -5,6 +5,10 @@ import {
   calculateIdealAllocationMultiIncome,
   type PayCycle,
 } from "@/lib/utils/ideal-allocation-calculator";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/envelope-allocations/gap-analysis
@@ -19,7 +23,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   try {
@@ -140,11 +144,12 @@ export async function GET(request: Request) {
       gaps,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error calculating gap analysis:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to calculate gap analysis" },
-      { status: 500 }
+    return createErrorResponse(
+      error as { message: string; code?: string },
+      500,
+      "Failed to calculate gap analysis"
     );
   }
 }

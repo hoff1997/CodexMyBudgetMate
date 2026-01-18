@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -23,19 +24,19 @@ export async function PATCH(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = schema.safeParse(await request.json());
   if (!body.success) {
     const message = body.error.flatten().formErrors[0] ?? "Invalid payload";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return createValidationError(message);
   }
 
   const payload = body.data;
 
   if (!Object.keys(payload).length) {
-    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+    return createValidationError("Nothing to update");
   }
 
   const updates: Record<string, unknown> = {};
@@ -52,11 +53,11 @@ export async function PATCH(
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to update label");
   }
 
   if (!data) {
-    return NextResponse.json({ error: "Label not found" }, { status: 404 });
+    return createNotFoundError("Label");
   }
 
   return NextResponse.json({ label: data });
@@ -72,7 +73,7 @@ export async function DELETE(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { error, count } = await supabase
@@ -82,11 +83,11 @@ export async function DELETE(
     .eq("user_id", user.id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to delete label");
   }
 
   if (!count) {
-    return NextResponse.json({ error: "Label not found" }, { status: 404 });
+    return createNotFoundError("Label");
   }
 
   return NextResponse.json({ ok: true });

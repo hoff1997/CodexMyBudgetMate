@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/freezer-meals
@@ -12,7 +17,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const { searchParams } = new URL(request.url);
@@ -33,7 +38,7 @@ export async function GET(request: Request) {
 
   if (error) {
     console.error("[freezer-meals] GET error:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to fetch freezer meals");
   }
 
   return NextResponse.json({ freezerMeals: data || [] });
@@ -50,13 +55,13 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   const body = await request.json();
 
   if (!body.name?.trim()) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    return createValidationError("Name is required");
   }
 
   const { data, error } = await supabase
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("[freezer-meals] POST error:", error);
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return createErrorResponse(error, 400, "Failed to create freezer meal");
   }
 
   return NextResponse.json({ freezerMeal: data });

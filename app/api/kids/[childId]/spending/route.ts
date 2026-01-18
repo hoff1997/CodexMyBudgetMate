@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createErrorResponse, createUnauthorizedError, createValidationError, createNotFoundError } from "@/lib/utils/api-error";
 
 interface RouteContext {
   params: Promise<{ childId: string }>;
@@ -15,7 +16,7 @@ export async function GET(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -34,13 +35,15 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (childError || !child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   // Get spending transactions
   const { searchParams } = new URL(request.url);
-  const limit = parseInt(searchParams.get("limit") || "50");
-  const offset = parseInt(searchParams.get("offset") || "0");
+  // SECURITY: Cap limit to prevent DoS via unbounded queries
+  const MAX_LIMIT = 100;
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50"), MAX_LIMIT);
+  const offset = Math.max(0, parseInt(searchParams.get("offset") || "0"));
   const status = searchParams.get("status");
 
   let query = supabase
@@ -137,7 +140,7 @@ export async function POST(request: Request, context: RouteContext) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Verify parent owns this child
@@ -156,14 +159,14 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (childError || !child) {
-    return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    return createNotFoundError("Child");
   }
 
   const body = await request.json();
   const { amount, description, category, from_envelope_type, force_approval } = body;
 
   if (!amount || amount <= 0) {
-    return NextResponse.json({ error: "Amount is required and must be positive" }, { status: 400 });
+    return createValidationError("Amount is required and must be positive");
   }
 
   // Get the source account
@@ -175,14 +178,11 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!account) {
-    return NextResponse.json({ error: "Spending account not found" }, { status: 400 });
+    return createValidationError("Spending account not found");
   }
 
   if (Number(account.current_balance) < amount) {
-    return NextResponse.json(
-      { error: "Insufficient balance" },
-      { status: 400 }
-    );
+    return createValidationError("Insufficient balance");
   }
 
   // Check spending limits
@@ -230,7 +230,7 @@ export async function POST(request: Request, context: RouteContext) {
     .single();
 
   if (txError) {
-    return NextResponse.json({ error: txError.message }, { status: 400 });
+    return createErrorResponse(txError, 400, "Failed to create spending transaction");
   }
 
   // If approved immediately, deduct from balance

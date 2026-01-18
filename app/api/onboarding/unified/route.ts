@@ -4,6 +4,11 @@ import type { EnvelopeData, BankAccount, IncomeSource } from "@/app/(app)/onboar
 import type { CreditCardConfig } from "@/lib/types/credit-card-onboarding";
 import { createOpeningBalanceTransactions } from "@/lib/server/create-opening-balance-transactions";
 import { getCurrentBillingCycle, findOrCreateDebtCategory } from "@/lib/utils/credit-card-onboarding-utils";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+  createValidationError,
+} from "@/lib/utils/api-error";
 
 // Interface for custom categories from onboarding
 interface CustomCategoryInput {
@@ -22,7 +27,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     const userId = user.id;
@@ -55,24 +60,15 @@ export async function POST(request: Request) {
 
     // Validate required data
     if (!fullName) {
-      return NextResponse.json(
-        { error: "Missing required profile data" },
-        { status: 400 }
-      );
+      return createValidationError("Missing required profile data");
     }
 
     if (!envelopes || envelopes.length === 0) {
-      return NextResponse.json(
-        { error: "At least one envelope is required" },
-        { status: 400 }
-      );
+      return createValidationError("At least one envelope is required");
     }
 
     if (!incomeSources || incomeSources.length === 0) {
-      return NextResponse.json(
-        { error: "At least one income source is required" },
-        { status: 400 }
-      );
+      return createValidationError("At least one income source is required");
     }
 
     console.log("Processing onboarding for user:", userId, {
@@ -95,7 +91,7 @@ export async function POST(request: Request) {
 
     if (profileError) {
       console.error("Profile update error:", profileError);
-      return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+      return createErrorResponse(profileError, 500, "Failed to update profile");
     }
 
     // 2. Create bank accounts and map temp IDs to real IDs
@@ -201,14 +197,15 @@ export async function POST(request: Request) {
           // Calculate minimum payment (use provided or default to 2% of balance)
           const minimumPayment = ccConfig.minimumPayment || Math.ceil(ccConfig.startingDebtAmount * 0.02);
 
-          // Create payoff envelope
+          // Create payoff envelope with debt subtype
           const { data: payoffEnvelope, error: payoffError } = await supabase
             .from("envelopes")
             .insert({
               user_id: userId,
               name: `${ccConfig.accountName} Payoff`,
               icon: "💳",
-              subtype: "bill",
+              subtype: "debt",
+              is_debt: true,
               target_amount: minimumPayment,
               current_amount: 0,
               frequency: "monthly",
@@ -233,6 +230,26 @@ export async function POST(request: Request) {
               envelope_id: payoffEnvelope.id,
               minimum_payment: minimumPayment,
             });
+
+            // Create debt_item entry for this credit card debt
+            const { error: debtItemError } = await supabase
+              .from("debt_items")
+              .insert({
+                user_id: userId,
+                envelope_id: payoffEnvelope.id,
+                name: ccConfig.accountName,
+                debt_type: 'credit_card',
+                linked_account_id: realAccountId,
+                starting_balance: ccConfig.startingDebtAmount,
+                current_balance: ccConfig.startingDebtAmount,
+                interest_rate: ccConfig.apr || null,
+                minimum_payment: minimumPayment,
+                display_order: 0,
+              });
+
+            if (debtItemError) {
+              console.error("Debt item creation error:", debtItemError);
+            }
           }
 
           // Create payoff projection
@@ -425,7 +442,7 @@ export async function POST(request: Request) {
 
         if (envelopeError || !createdEnvelope) {
           console.error("Envelope creation error:", envelopeError);
-          return NextResponse.json({ error: "Failed to create envelopes" }, { status: 500 });
+          return createErrorResponse(envelopeError, 500, "Failed to create envelopes");
         }
 
         envelopeIdMap.set(envelope.id, createdEnvelope.id);
@@ -513,7 +530,7 @@ export async function POST(request: Request) {
 
         if (incomeError) {
           console.error("Income source error:", incomeError);
-          return NextResponse.json({ error: "Failed to create income sources" }, { status: 500 });
+          return createErrorResponse(incomeError, 500, "Failed to create income sources");
         }
       }
 
@@ -566,9 +583,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Onboarding error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error as { message: string }, 500, "Internal server error");
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Lightbulb, DollarSign, Info } from "lucide-react";
+import { X, Lightbulb, DollarSign, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -13,11 +13,11 @@ export function IncomeInfoButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="p-1 rounded-full text-text-light hover:text-blue hover:bg-blue-light/50 transition-colors flex-shrink-0"
+      className="p-1.5 rounded-full text-sage hover:text-sage-dark hover:bg-sage-light/50 transition-colors flex-shrink-0"
       title="About Income Cards"
       aria-label="Show income coaching information"
     >
-      <Info className="h-3.5 w-3.5" />
+      <HelpCircle className="h-4 w-4" />
     </button>
   );
 }

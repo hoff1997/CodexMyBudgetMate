@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createErrorResponse,
+  createUnauthorizedError,
+} from "@/lib/utils/api-error";
 
 /**
  * GET /api/2fa/status
@@ -15,7 +19,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return createUnauthorizedError();
     }
 
     // Get user's MFA factors
@@ -24,10 +28,7 @@ export async function GET() {
 
     if (factorsError) {
       console.error("MFA list factors error:", factorsError);
-      return NextResponse.json(
-        { error: factorsError.message || "Failed to get MFA status" },
-        { status: 400 }
-      );
+      return createErrorResponse(factorsError, 400, "Failed to get MFA status");
     }
 
     // Check for verified TOTP factor

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createUnauthorizedError } from "@/lib/utils/api-error";
 
 /**
  * GET /api/akahu/oauth/start
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return createUnauthorizedError();
   }
 
   // Check if request is coming from onboarding

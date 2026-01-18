@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { setCsrfToken } from "@/lib/utils/csrf";
+import { createErrorResponse } from "@/lib/utils/api-error";
 
 // GET: Generate and return a CSRF token for kid login forms
 export async function GET() {
@@ -9,9 +10,6 @@ export async function GET() {
     return NextResponse.json({ csrfToken: token });
   } catch (err) {
     console.error("Error generating CSRF token:", err);
-    return NextResponse.json(
-      { error: "Failed to generate CSRF token" },
-      { status: 500 }
-    );
+    return createErrorResponse(err as Error, 500, "Failed to generate CSRF token");
   }
 }

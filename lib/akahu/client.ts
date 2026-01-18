@@ -80,18 +80,22 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
   // Use AKAHU_APP_TOKEN as client_id (they're the same value)
   // Fall back to AKAHU_CLIENT_ID for backwards compatibility
   const clientId = process.env.AKAHU_APP_TOKEN || process.env.AKAHU_CLIENT_ID;
+  const clientSecret = process.env.AKAHU_CLIENT_SECRET;
 
   // Log the parameters being sent (without secrets)
   console.log("[Akahu Token Exchange] Params:", {
     grant_type: "authorization_code",
     client_id: clientId?.substring(0, 20) + "...",
     redirect_uri: finalRedirectUri,
-    hasSecret: !!process.env.AKAHU_CLIENT_SECRET,
+    hasSecret: !!clientSecret,
+    secretPrefix: clientSecret?.substring(0, 4) + "...",
     hasCode: !!code,
+    codePrefix: code?.substring(0, 10) + "...",
   });
 
-  // Token exchange uses standard OAuth2 format - NO app token header
+  // Akahu OAuth2 token exchange
   // See: https://developers.akahu.nz/docs/authorizing-with-oauth2
+  // Akahu expects 'id' and 'secret' fields (not 'client_id' and 'client_secret')
   const response = await fetch(`${AKAHU_BASE_URL}/token`, {
     method: "POST",
     headers: {
@@ -101,14 +105,15 @@ export async function exchangeAkahuCode(code: string, redirectUri?: string) {
       grant_type: "authorization_code",
       code,
       redirect_uri: finalRedirectUri,
-      client_id: clientId,
-      client_secret: process.env.AKAHU_CLIENT_SECRET,
+      id: clientId,
+      secret: clientSecret,
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
     console.error("[Akahu Token Exchange] Failed:", response.status, error);
+    console.error("[Akahu Token Exchange] Request was to:", `${AKAHU_BASE_URL}/token`);
     throw new Error(`Akahu code exchange failed: ${response.status} ${error}`);
   }
 

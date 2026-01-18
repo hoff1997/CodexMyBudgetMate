@@ -24,7 +24,6 @@ export async function GET(request: Request) {
 
   // Check for required environment variables
   const clientId = process.env.AKAHU_CLIENT_ID;
-  const redirectUri = process.env.AKAHU_REDIRECT_URI;
 
   if (!clientId) {
     return NextResponse.json(
@@ -33,12 +32,12 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!redirectUri) {
-    return NextResponse.json(
-      { error: "Akahu redirect URI is not configured." },
-      { status: 500 }
-    );
-  }
+  // Construct redirect URI dynamically from the request origin
+  // This ensures consistency between authorization and token exchange
+  // The redirect URI MUST be registered with Akahu
+  const origin = new URL(request.url).origin;
+  const redirectUri = `${origin}/akahu/callback`;
+  console.log("[Akahu OAuth Start] Using redirect_uri:", redirectUri);
 
   // Build the Akahu authorization URL
   // See: https://developers.akahu.nz/docs/authorizing-your-app

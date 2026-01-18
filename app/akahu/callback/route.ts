@@ -107,8 +107,11 @@ export async function GET(request: Request) {
 
   try {
     // Exchange code for tokens
-    console.log("[Akahu Callback] Exchanging code for tokens...");
-    const tokens = await exchangeAkahuCode(code);
+    // The redirect_uri in token exchange MUST match exactly what was used in authorization
+    // We construct it from the current request URL to ensure consistency
+    const callbackUrl = `${baseUrl}/akahu/callback`;
+    console.log("[Akahu Callback] Exchanging code for tokens with redirect_uri:", callbackUrl);
+    const tokens = await exchangeAkahuCode(code, callbackUrl);
     console.log("[Akahu Callback] Token exchange successful");
 
     // Store tokens using service client (bypasses RLS issues)

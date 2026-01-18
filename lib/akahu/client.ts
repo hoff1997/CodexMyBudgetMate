@@ -73,12 +73,15 @@ export async function akahuRequest<T>({
   return response.json();
 }
 
-export async function exchangeAkahuCode(code: string) {
+export async function exchangeAkahuCode(code: string, redirectUri?: string) {
+  // Use provided redirectUri or fall back to environment variable
+  const finalRedirectUri = redirectUri || process.env.AKAHU_REDIRECT_URI;
+
   // Log the parameters being sent (without secrets)
   console.log("[Akahu Token Exchange] Params:", {
     grant_type: "authorization_code",
     client_id: process.env.AKAHU_CLIENT_ID?.substring(0, 20) + "...",
-    redirect_uri: process.env.AKAHU_REDIRECT_URI,
+    redirect_uri: finalRedirectUri,
     hasSecret: !!process.env.AKAHU_CLIENT_SECRET,
     hasCode: !!code,
   });
@@ -93,7 +96,7 @@ export async function exchangeAkahuCode(code: string) {
     body: JSON.stringify({
       grant_type: "authorization_code",
       code,
-      redirect_uri: process.env.AKAHU_REDIRECT_URI,
+      redirect_uri: finalRedirectUri,
       client_id: process.env.AKAHU_CLIENT_ID,
       client_secret: process.env.AKAHU_CLIENT_SECRET,
     }),

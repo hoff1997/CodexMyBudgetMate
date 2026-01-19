@@ -115,15 +115,12 @@ export async function GET(request: Request) {
     console.log("[Akahu Callback] Token exchange successful");
 
     // Store tokens using service client (bypasses RLS issues)
+    // Note: akahu_tokens table has: user_id, access_token, refresh_token, created_at, updated_at
     const { error: upsertError } = await serviceClient.from("akahu_tokens").upsert(
       {
         user_id: stateUserId,
         access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: tokens.expires_in
-          ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-          : null,
-        created_at: new Date().toISOString(),
+        refresh_token: tokens.refresh_token || "",
         updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }

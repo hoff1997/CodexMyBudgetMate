@@ -34,7 +34,7 @@ const usageOptions: UsageOption[] = [
     title: 'I pay this off in full each month',
     description: 'You clear the balance every statement',
     icon: CreditCard,
-    details: "We'll move money to your credit card holding account each pay cycle, ready for when the bill is due. You're in control of making sure it stays there until payment day.",
+    details: "We'll move money to your credit card holding account each time you reconcile a transaction that used your credit card, ready for when the bill is due. You're in control of making sure it stays there until payment day.",
   },
   {
     type: 'paying_down',

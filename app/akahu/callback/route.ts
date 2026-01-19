@@ -130,9 +130,14 @@ export async function GET(request: Request) {
     );
 
     if (upsertError) {
-      console.error("[Akahu Callback] Failed to store tokens:", upsertError);
+      console.error("[Akahu Callback] Failed to store tokens:", JSON.stringify(upsertError, null, 2));
+      console.error("[Akahu Callback] Upsert details:", {
+        user_id: stateUserId,
+        has_access_token: !!tokens.access_token,
+        access_token_length: tokens.access_token?.length,
+      });
       return NextResponse.redirect(
-        new URL("/settings/bank-connections?error=token_storage_failed", baseUrl)
+        new URL(`/settings/bank-connections?error=token_storage_failed&details=${encodeURIComponent(upsertError.message || upsertError.code || 'unknown')}`, baseUrl)
       );
     }
 

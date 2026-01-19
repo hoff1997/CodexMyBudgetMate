@@ -760,7 +760,40 @@ export function EnvelopeAllocationStep({
         {/* Envelope Name */}
         <td className="px-2 py-2" {...(isFirstRow ? { 'data-tutorial': 'envelope-name' } : {})}>
           <div className="flex items-center gap-2">
-            <span className="text-base">{env.icon}</span>
+            {/* Icon - clickable to edit */}
+            {editingCell?.id === env.id && editingCell?.field === 'icon' ? (
+              <Popover open={true} onOpenChange={(open) => !open && setEditingCell(null)}>
+                <PopoverTrigger asChild>
+                  <button className="text-base cursor-pointer hover:scale-110 transition-transform">
+                    {env.icon}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-2" align="start">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Choose an icon</p>
+                    <div className="grid grid-cols-8 gap-1">
+                      {['💰', '🏠', '🚗', '⚡', '📱', '🎬', '🍔', '☕', '🛒', '💊', '🏥', '🎓', '✈️', '🎁', '🎄', '🎂', '👔', '💇', '🐕', '🐱', '🏋️', '📚', '🎮', '💻', '🔧', '🏦', '💳', '📦', '🎉', '❤️', '🏛️', '📝'].map((icon) => (
+                        <button
+                          key={icon}
+                          onClick={() => handleEnvelopeChange(env.id, 'icon', icon)}
+                          className="p-1.5 text-base hover:bg-muted rounded transition-colors"
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <button
+                onClick={() => setEditingCell({ id: env.id, field: 'icon' })}
+                className="text-base cursor-pointer hover:scale-110 transition-transform"
+                title="Click to change icon"
+              >
+                {env.icon}
+              </button>
+            )}
             {editingCell?.id === env.id && editingCell?.field === 'name' ? (
               <Input
                 type="text"

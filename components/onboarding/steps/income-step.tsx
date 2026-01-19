@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Plus, Trash2, DollarSign, Calendar } from "lucide-react";
+import { Plus, Trash2, DollarSign, Calendar, Pencil, X, Check } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
 import type { IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
 
@@ -45,6 +45,16 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
     irregularIncome: false,
   });
 
+  // Editing state for existing income sources
+  const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
+  const [editingIncome, setEditingIncome] = useState<{
+    name: string;
+    amount: number;
+    frequency: "weekly" | "fortnightly" | "twice_monthly" | "monthly";
+    nextPayDate: string;
+    irregularIncome: boolean;
+  } | null>(null);
+
   const handleAddIncome = () => {
     if (!newIncome.name.trim() || newIncome.amount <= 0) {
       return;
@@ -73,6 +83,48 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
 
   const handleRemoveIncome = (id: string) => {
     onIncomeSourcesChange(incomeSources.filter((inc) => inc.id !== id));
+  };
+
+  const handleStartEditIncome = (income: IncomeSource) => {
+    setEditingIncomeId(income.id);
+    setEditingIncome({
+      name: income.name,
+      amount: income.amount,
+      frequency: income.frequency,
+      nextPayDate: income.nextPayDate
+        ? (income.nextPayDate instanceof Date
+            ? income.nextPayDate.toISOString().split('T')[0]
+            : new Date(income.nextPayDate).toISOString().split('T')[0])
+        : "",
+      irregularIncome: income.irregularIncome || false,
+    });
+  };
+
+  const handleCancelEditIncome = () => {
+    setEditingIncomeId(null);
+    setEditingIncome(null);
+  };
+
+  const handleSaveEditIncome = () => {
+    if (!editingIncomeId || !editingIncome || !editingIncome.name.trim() || editingIncome.amount <= 0) {
+      return;
+    }
+
+    const updatedSources = incomeSources.map((inc) => {
+      if (inc.id !== editingIncomeId) return inc;
+      return {
+        ...inc,
+        name: editingIncome.name,
+        amount: editingIncome.amount,
+        frequency: editingIncome.irregularIncome ? "monthly" as const : editingIncome.frequency,
+        nextPayDate: editingIncome.nextPayDate ? new Date(editingIncome.nextPayDate) : new Date(),
+        irregularIncome: editingIncome.irregularIncome,
+      };
+    });
+
+    onIncomeSourcesChange(updatedSources);
+    setEditingIncomeId(null);
+    setEditingIncome(null);
   };
 
   // Calculate total annual income
@@ -110,22 +162,139 @@ export function IncomeStep({ incomeSources, onIncomeSourcesChange }: IncomeStepP
           <div className="space-y-2">
             {incomeSources.map((income) => (
               <Card key={income.id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{income.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      ${income.amount.toFixed(2)} • {FREQUENCY_LABELS[income.frequency]}
-                      {income.irregularIncome && " (Irregular)"}
-                    </p>
+                {editingIncomeId === income.id && editingIncome ? (
+                  /* Edit Mode */
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sage">Editing Income</span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCancelEditIncome}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSaveEditIncome}
+                          disabled={!editingIncome.name.trim() || editingIncome.amount <= 0}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Check className="h-4 w-4 text-sage" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit-name-${income.id}`} className="text-xs">Name</Label>
+                        <Input
+                          id={`edit-name-${income.id}`}
+                          type="text"
+                          value={editingIncome.name}
+                          onChange={(e) => setEditingIncome({ ...editingIncome, name: e.target.value })}
+                          className="h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit-amount-${income.id}`} className="text-xs">Amount (after tax)</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id={`edit-amount-${income.id}`}
+                            type="number"
+                            step="0.01"
+                            value={editingIncome.amount || ""}
+                            onChange={(e) =>
+                              setEditingIncome({ ...editingIncome, amount: parseFloat(e.target.value) || 0 })
+                            }
+                            className="h-9 pl-9"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2 p-2 bg-muted/50 rounded">
+                        <Checkbox
+                          id={`edit-irregular-${income.id}`}
+                          checked={editingIncome.irregularIncome}
+                          onCheckedChange={(checked) =>
+                            setEditingIncome({ ...editingIncome, irregularIncome: checked as boolean })
+                          }
+                        />
+                        <Label htmlFor={`edit-irregular-${income.id}`} className="text-xs cursor-pointer">
+                          Irregular income
+                        </Label>
+                      </div>
+
+                      {!editingIncome.irregularIncome && (
+                        <div className="space-y-1">
+                          <Label htmlFor={`edit-frequency-${income.id}`} className="text-xs">Pay Frequency</Label>
+                          <Select
+                            value={editingIncome.frequency}
+                            onValueChange={(value: any) => setEditingIncome({ ...editingIncome, frequency: value })}
+                          >
+                            <SelectTrigger id={`edit-frequency-${income.id}`} className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                              <SelectItem value="twice_monthly">Twice Monthly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <Label htmlFor={`edit-date-${income.id}`} className="text-xs">Next Pay Date</Label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id={`edit-date-${income.id}`}
+                            type="date"
+                            value={editingIncome.nextPayDate}
+                            onChange={(e) => setEditingIncome({ ...editingIncome, nextPayDate: e.target.value })}
+                            className="h-9 pl-9"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveIncome(income.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
+                ) : (
+                  /* View Mode */
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{income.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        ${income.amount.toFixed(2)} • {FREQUENCY_LABELS[income.frequency]}
+                        {income.irregularIncome && " (Irregular)"}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleStartEditIncome(income)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Pencil className="h-4 w-4 text-muted-foreground hover:text-sage" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveIncome(income.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </Card>
             ))}
           </div>

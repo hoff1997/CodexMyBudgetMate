@@ -5,12 +5,12 @@ const AKAHU_BASE_URL = "https://api.akahu.io/v1";
 // Get an Akahu client configured for token exchange (requires appSecret)
 function getAkahuClientForAuth(): AkahuClient {
   const appToken = process.env.AKAHU_APP_TOKEN?.trim();
-  const appSecret = process.env.AKAHU_CLIENT_SECRET?.trim();
+  const appSecret = process.env.AKAHU_APP_SECRET?.trim();
 
   // Debug: log env var status
   console.log("[Akahu Client] Env check:", {
     AKAHU_APP_TOKEN_exists: !!process.env.AKAHU_APP_TOKEN,
-    AKAHU_CLIENT_SECRET_exists: !!process.env.AKAHU_CLIENT_SECRET,
+    AKAHU_APP_SECRET_exists: !!process.env.AKAHU_APP_SECRET,
     appToken_length: appToken?.length,
     appSecret_length: appSecret?.length,
   });
@@ -19,7 +19,7 @@ function getAkahuClientForAuth(): AkahuClient {
     throw new Error("AKAHU_APP_TOKEN is not configured");
   }
   if (!appSecret) {
-    throw new Error("AKAHU_CLIENT_SECRET is not configured");
+    throw new Error("AKAHU_APP_SECRET is not configured");
   }
 
   return new AkahuClient({ appToken, appSecret });
@@ -141,7 +141,7 @@ export async function refreshAkahuToken(refreshToken: string) {
     },
     body: JSON.stringify({
       id: process.env.AKAHU_CLIENT_ID,
-      secret: process.env.AKAHU_CLIENT_SECRET,
+      secret: process.env.AKAHU_APP_SECRET,
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),

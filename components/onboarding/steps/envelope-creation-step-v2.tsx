@@ -26,9 +26,9 @@ import {
   Copy,
   Pencil,
   Info,
+  Lock,
 } from "lucide-react";
-import type { EnvelopeData } from "@/app/(app)/onboarding/unified-onboarding-client";
-import type { IncomeSource } from "@/app/(app)/onboarding/unified-onboarding-client";
+import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 import {
   MASTER_ENVELOPE_LIST,
   CATEGORY_LABELS,
@@ -49,6 +49,9 @@ interface EnvelopeCreationStepV2Props {
   useTemplate: boolean | undefined;
   incomeSources: IncomeSource[];
   bankBalance?: number;
+  // New props for bank-first onboarding flow
+  hasCreditCardDebt?: boolean; // Auto-include CC Legacy Debt envelope
+  bankAccounts?: BankAccount[]; // For Starter Stash funding suggestion
 }
 
 // Priority types
@@ -161,6 +164,8 @@ export function EnvelopeCreationStepV2({
   useTemplate,
   incomeSources,
   bankBalance = 0,
+  hasCreditCardDebt = false,
+  bankAccounts = [],
 }: EnvelopeCreationStepV2Props) {
   // Track which master envelope IDs are selected (for non-multiple items)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -315,6 +320,28 @@ export function EnvelopeCreationStepV2({
     setPriorityOverrides(initialPriorityOverrides);
     setInitialized(true);
   }, [envelopes, initialized]);
+
+  // Auto-include CC Legacy Debt when user has credit card debt
+  useEffect(() => {
+    if (!initialized) return;
+    if (hasCreditCardDebt && !selectedIds.has('credit-card-historic-debt')) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.add('credit-card-historic-debt');
+        return next;
+      });
+    }
+  }, [hasCreditCardDebt, initialized, selectedIds]);
+
+  // Calculate available cash from bank accounts (non-credit card accounts)
+  const availableCash = useMemo(() => {
+    return bankAccounts
+      .filter(acc => acc.type !== 'credit_card')
+      .reduce((sum, acc) => sum + acc.balance, 0);
+  }, [bankAccounts]);
+
+  // Check if user can fund Starter Stash now
+  const canFundStarterStash = availableCash >= 1000;
 
   // Memoized callback for updating parent
   const updateParent = useCallback((
@@ -733,7 +760,8 @@ export function EnvelopeCreationStepV2({
   // Render envelope row
   const renderEnvelopeRow = (envelope: MasterEnvelope) => {
     const isSelected = isEnvelopeSelected(envelope);
-    const isLocked = envelope.alwaysInclude;
+    const isAlwaysInclude = envelope.alwaysInclude;
+    const isEnvelopeLocked = envelope.isLocked; // My Budget Way locked state
     const instances = multipleInstances.get(envelope.id) || [];
     const hasMultiple = envelope.allowMultiple;
     const customName = customNames.get(envelope.id);
@@ -741,27 +769,46 @@ export function EnvelopeCreationStepV2({
     const displayIcon = customName?.icon || envelope.icon;
     const effectivePriority = getEffectivePriority(envelope);
 
+    // Check if this is Starter Stash and user can fund it
+    const showStarterStashHint = envelope.id === 'starter-stash' && canFundStarterStash && isSelected;
+
     return (
       <div key={envelope.id} className="space-y-1">
         <div
           className={`
             flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
-            ${isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : 'bg-white border-gray-200 hover:border-[#B8D4D0]'}
+            ${isEnvelopeLocked ? 'bg-gray-50 border-gray-200 opacity-70' : ''}
+            ${!isEnvelopeLocked && isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : ''}
+            ${!isEnvelopeLocked && !isSelected ? 'bg-white border-gray-200 hover:border-[#B8D4D0]' : ''}
           `}
         >
           {/* Checkbox */}
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => toggleEnvelope(envelope.id)}
-            disabled={isLocked}
+            disabled={isAlwaysInclude || isEnvelopeLocked}
             className="data-[state=checked]:bg-[#7A9E9A] data-[state=checked]:border-[#7A9E7A]"
           />
 
-          {/* Icon + Name + Edit */}
+          {/* Icon + Name + Edit + Lock indicator */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <span className="text-lg flex-shrink-0">{displayIcon}</span>
-            <span className="font-medium text-sm truncate">{displayName}</span>
-            {!isLocked && (
+            <span className={`font-medium text-sm truncate ${isEnvelopeLocked ? 'text-muted-foreground' : ''}`}>
+              {displayName}
+            </span>
+            {/* Lock icon for My Budget Way locked envelopes */}
+            {isEnvelopeLocked && (
+              <span className="flex items-center gap-1 text-muted-foreground" title={envelope.lockedReason}>
+                <Lock className="h-3.5 w-3.5" />
+              </span>
+            )}
+            {/* Starter Stash funding hint */}
+            {showStarterStashHint && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#E2EEEC] border border-[#B8D4D0] text-[#5A7E7A] font-medium">
+                You can fund this now!
+              </span>
+            )}
+            {!isAlwaysInclude && !isEnvelopeLocked && (
               <>
                 <button
                   type="button"
@@ -803,18 +850,25 @@ export function EnvelopeCreationStepV2({
             )}
           </div>
 
-          {/* Description */}
+          {/* Description or Locked Reason */}
           <div className="hidden sm:block flex-1 min-w-0">
-            <span className="text-xs text-muted-foreground truncate">
-              {envelope.description}
-            </span>
+            {isEnvelopeLocked ? (
+              <span className="text-xs text-muted-foreground italic truncate flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                {envelope.lockedReason}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground truncate">
+                {envelope.description}
+              </span>
+            )}
           </div>
 
           {/* Priority Dropdown */}
           <PriorityDropdown
             priority={effectivePriority}
             onChange={(newPriority) => changeEnvelopePriority(envelope.id, newPriority)}
-            disabled={!isSelected}
+            disabled={!isSelected || isEnvelopeLocked}
           />
         </div>
 

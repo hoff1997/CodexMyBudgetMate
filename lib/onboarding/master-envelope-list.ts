@@ -19,6 +19,10 @@ export interface MasterEnvelope {
   alwaysInclude?: boolean; // Cannot be deselected (e.g., Surplus)
   allowMultiple?: boolean; // Can have multiple instances (e.g., cars, phones)
   multipleLabel?: string; // Label for "Add another X" button
+  // Locked envelope fields (for My Budget Way progression)
+  isLocked?: boolean; // Cannot be edited/funded until conditions met
+  lockedReason?: string; // Explanation shown to user
+  unlockConditions?: string[]; // Conditions that must be met to unlock
 }
 
 /**
@@ -182,6 +186,9 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     subtype: 'goal',
     description: '3 months essential expenses (My Budget Way Step 3)',
     defaultSelected: true,
+    isLocked: true,
+    lockedReason: 'Unlocks after Starter Stash is funded ($1,000) and all debt is paid off',
+    unlockConditions: ['starter-stash-funded', 'debt-paid-off'],
   },
   {
     id: 'kids-pocket-money',

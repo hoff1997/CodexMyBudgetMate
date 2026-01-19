@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Loader2, Save, CheckCircle2, Check } from "lucide-react";
@@ -110,13 +110,13 @@ const STEPS: OnboardingStep[] = [
   { id: 1, title: "Welcome", description: "Set expectations" },
   { id: 2, title: "About You", description: "Your name" },
   { id: 3, title: "Income", description: "Set up pay cycle" },
-  { id: 4, title: "Approach", description: "Template or custom" },
-  { id: 5, title: "Learn", description: "Envelope budgeting" },
-  { id: 6, title: "Envelopes", description: "Create your budget" },
-  { id: 7, title: "Budget Manager", description: "Set targets & allocate" },
-  { id: 8, title: "Review", description: "Validate & adjust" },
-  { id: 9, title: "Bank Accounts", description: "Connect accounts" },
-  { id: 10, title: "Credit Cards", description: "Configure cards" },
+  { id: 4, title: "Bank Accounts", description: "Connect accounts" },
+  { id: 5, title: "Credit Cards", description: "Configure cards" },
+  { id: 6, title: "Approach", description: "Template or custom" },
+  { id: 7, title: "Learn", description: "Envelope budgeting" },
+  { id: 8, title: "Envelopes", description: "Create your budget" },
+  { id: 9, title: "Budget Manager", description: "Set targets & allocate" },
+  { id: 10, title: "Review", description: "Validate & adjust" },
   { id: 11, title: "Opening Balance", description: "Initial funds" },
   { id: 12, title: "Complete", description: "You're all set!" },
 ];
@@ -296,10 +296,17 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const creditCardAccounts = bankAccounts.filter(acc => acc.type === "credit_card");
   const hasCreditCards = creditCardAccounts.length > 0;
 
-  // Auto-skip step 10 (Credit Cards) if user lands on it with no credit cards
+  // Check if user has credit card debt (paying_down or minimum_only usage type)
+  const hasCreditCardDebt = useMemo(() => {
+    return creditCardConfigs.some(
+      config => config.usageType === 'paying_down' || config.usageType === 'minimum_only'
+    );
+  }, [creditCardConfigs]);
+
+  // Auto-skip step 5 (Credit Cards) if user lands on it with no credit cards
   useEffect(() => {
-    if (!isLoadingDraft && currentStep === 10 && !hasCreditCards) {
-      setCurrentStep(11); // Skip to Opening Balance
+    if (!isLoadingDraft && currentStep === 5 && !hasCreditCards) {
+      setCurrentStep(6); // Skip to Approach
     }
   }, [currentStep, hasCreditCards, isLoadingDraft]);
 
@@ -316,28 +323,25 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
       return;
     }
 
-    // Step 4: Approach
-    if (currentStep === 4 && useTemplate === undefined) {
+    // Step 4: Bank Accounts - optional, can proceed without
+    // (User can skip bank connection and add manually later)
+
+    // Step 5: Credit Cards - skip if no credit cards
+    if (currentStep === 5 && !hasCreditCards) {
+      // Auto-skip to Approach step if no credit cards
+      setCurrentStep(6);
+      return;
+    }
+
+    // Step 6: Approach
+    if (currentStep === 6 && useTemplate === undefined) {
       toast.error("Please choose how you'd like to set up your budget");
       return;
     }
 
-    // Step 6: Envelopes
-    if (currentStep === 6 && envelopes.length === 0) {
+    // Step 8: Envelopes
+    if (currentStep === 8 && envelopes.length === 0) {
       toast.error("Please create at least one envelope");
-      return;
-    }
-
-    // Step 9: Bank Accounts
-    if (currentStep === 9 && bankAccounts.length === 0) {
-      toast.error("Please add at least one bank account");
-      return;
-    }
-
-    // Step 10: Credit Cards - skip if no credit cards
-    if (currentStep === 10 && !hasCreditCards) {
-      // Auto-skip to Opening Balance step if no credit cards
-      setCurrentStep(11);
       return;
     }
 
@@ -353,9 +357,9 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const handleBack = () => {
     setCurrentStep((prev) => {
       const newStep = Math.max(prev - 1, 1);
-      // Skip step 10 (Credit Cards) if going backward and no credit cards
-      if (newStep === 10 && !hasCreditCards) {
-        return 9; // Go to Bank Accounts step instead
+      // Skip step 5 (Credit Cards) if going backward and no credit cards
+      if (newStep === 5 && !hasCreditCards) {
+        return 4; // Go to Bank Accounts step instead
       }
       return newStep;
     });
@@ -456,7 +460,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   // Handle credit card config completion
   const handleCreditCardConfigComplete = (configs: CreditCardConfig[]) => {
     setCreditCardConfigs(configs);
-    setCurrentStep(11); // Move to Opening Balance step
+    setCurrentStep(6); // Move to Approach step
   };
 
   const renderStep = () => {
@@ -481,50 +485,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         );
 
       case 4:
-        return (
-          <BudgetingApproachStep
-            useTemplate={useTemplate}
-            onUseTemplateChange={setUseTemplate}
-          />
-        );
-
-      case 5:
-        return <EnvelopeEducationStep onContinue={handleNext} onBack={handleBack} />;
-
-      case 6:
-        return (
-          <EnvelopeCreationStep
-            envelopes={envelopes}
-            onEnvelopesChange={setEnvelopes}
-            customCategories={customCategories}
-            onCustomCategoriesChange={setCustomCategories}
-            categoryOrder={categoryOrder}
-            onCategoryOrderChange={setCategoryOrder}
-            useTemplate={useTemplate}
-            incomeSources={incomeSources}
-          />
-        );
-
-      case 7:
-        return (
-          <EnvelopeAllocationStep
-            envelopes={envelopes}
-            incomeSources={incomeSources}
-            onAllocationsChange={setEnvelopeAllocations}
-            onEnvelopesChange={setEnvelopes}
-          />
-        );
-
-      case 8:
-        return (
-          <BudgetReviewStep
-            envelopes={envelopes}
-            incomeSources={incomeSources}
-            onEditEnvelopes={() => setCurrentStep(6)}
-          />
-        );
-
-      case 9:
+        // Bank Accounts step (moved from step 9)
         return (
           <BankAccountsStep
             accounts={bankAccounts}
@@ -532,8 +493,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           />
         );
 
-      case 10:
-        // Credit Cards step - only shown if there are credit cards
+      case 5:
+        // Credit Cards step - only shown if there are credit cards (moved from step 10)
         if (!hasCreditCards) {
           // Auto-advance if no credit cards (shouldn't reach here due to handleNext logic)
           return null;
@@ -547,6 +508,52 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
             }))}
             onComplete={handleCreditCardConfigComplete}
             onBack={handleBack}
+          />
+        );
+
+      case 6:
+        return (
+          <BudgetingApproachStep
+            useTemplate={useTemplate}
+            onUseTemplateChange={setUseTemplate}
+          />
+        );
+
+      case 7:
+        return <EnvelopeEducationStep onContinue={handleNext} onBack={handleBack} />;
+
+      case 8:
+        return (
+          <EnvelopeCreationStep
+            envelopes={envelopes}
+            onEnvelopesChange={setEnvelopes}
+            customCategories={customCategories}
+            onCustomCategoriesChange={setCustomCategories}
+            categoryOrder={categoryOrder}
+            onCategoryOrderChange={setCategoryOrder}
+            useTemplate={useTemplate}
+            incomeSources={incomeSources}
+            hasCreditCardDebt={hasCreditCardDebt}
+            bankAccounts={bankAccounts}
+          />
+        );
+
+      case 9:
+        return (
+          <EnvelopeAllocationStep
+            envelopes={envelopes}
+            incomeSources={incomeSources}
+            onAllocationsChange={setEnvelopeAllocations}
+            onEnvelopesChange={setEnvelopes}
+          />
+        );
+
+      case 10:
+        return (
+          <BudgetReviewStep
+            envelopes={envelopes}
+            incomeSources={incomeSources}
+            onEditEnvelopes={() => setCurrentStep(8)}
           />
         );
 
@@ -571,8 +578,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   };
 
   // Determine if "Continue" button should be shown
-  // Steps with their own continue buttons: Welcome (1), Envelope Education (5), Credit Cards (10), Complete (12)
-  const showContinueButton = ![1, 5, 10, 12].includes(currentStep);
+  // Steps with their own continue buttons: Welcome (1), Credit Cards (5), Envelope Education (7), Complete (12)
+  const showContinueButton = ![1, 5, 7, 12].includes(currentStep);
 
   // Show loading state while fetching draft
   if (isLoadingDraft) {
@@ -631,7 +638,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
                 const isCompleted = stepNumber < currentStep;
                 const isCurrent = stepNumber === currentStep;
                 const isClickable = stepNumber < currentStep; // Can only go back
-                const isSkipped = stepNumber === 10 && !hasCreditCards; // Skip CC step if no cards
+                const isSkipped = stepNumber === 5 && !hasCreditCards; // Skip CC step if no cards
 
                 if (isSkipped) return null;
 
@@ -640,9 +647,9 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
                     key={step.id}
                     onClick={() => {
                       if (isClickable) {
-                        // Handle skipping step 10 when going back if no credit cards
-                        if (stepNumber === 10 && !hasCreditCards) {
-                          setCurrentStep(9);
+                        // Handle skipping step 5 when going back if no credit cards
+                        if (stepNumber === 5 && !hasCreditCards) {
+                          setCurrentStep(4);
                         } else {
                           setCurrentStep(stepNumber);
                         }

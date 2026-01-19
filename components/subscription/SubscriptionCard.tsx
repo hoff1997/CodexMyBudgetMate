@@ -44,13 +44,21 @@ export function SubscriptionCard() {
   if (isBetaMode) {
     return (
       <div className="bg-gold-light border border-gold rounded-xl p-6">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-3">
           <Crown className="w-5 h-5 text-gold-dark" />
           <h3 className="font-semibold text-gold-dark">Beta Access</h3>
         </div>
-        <p className="text-sm text-gold-dark">
+        <p className="text-sm text-gold-dark mb-3">
           You have full access to all features during the beta period. Enjoy!
         </p>
+        <div className="bg-white/50 rounded-lg p-3 border border-gold/30">
+          <p className="text-xs text-gold-dark font-medium">
+            No subscription required during beta
+          </p>
+          <p className="text-xs text-gold-dark/80 mt-1">
+            All Pro features are unlocked for free while we're in beta. We'll let you know before any changes.
+          </p>
+        </div>
       </div>
     );
   }

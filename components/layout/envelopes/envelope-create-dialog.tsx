@@ -131,14 +131,19 @@ export function EnvelopeCreateDialog({
   onOpenChange,
   categories: initialCategories = [],
   onCreated,
+  defaultPriority,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
   categories?: CategoryOption[];
   onCreated?: () => void;
+  defaultPriority?: "essential" | "important" | "discretionary";
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [form, setForm] = useState<FormState>(() => ({
+    ...DEFAULT_FORM,
+    priority: defaultPriority || "",
+  }));
   const [submitting, setSubmitting] = useState(false);
   const [categories, setCategories] = useState<CategoryOption[]>(initialCategories);
   const [showNewCategory, setShowNewCategory] = useState(false);
@@ -194,6 +199,16 @@ export function EnvelopeCreateDialog({
       fetchIncomeReality();
     }
   }, [open, fetchIncomeReality]);
+
+  // Reset form with default priority when dialog opens
+  useEffect(() => {
+    if (open) {
+      setForm({
+        ...DEFAULT_FORM,
+        priority: defaultPriority || "",
+      });
+    }
+  }, [open, defaultPriority]);
 
   const handleCreateCategory = async () => {
     if (!newCategoryName.trim()) return;

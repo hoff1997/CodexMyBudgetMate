@@ -212,6 +212,7 @@ export function AllocationClient() {
     discretionary: true,
   });
   const [createOpen, setCreateOpen] = useState(false);
+  const [createDefaultPriority, setCreateDefaultPriority] = useState<"essential" | "important" | "discretionary" | undefined>(undefined);
   const [categories, setCategories] = useState<{
     id: string;
     name: string;
@@ -1512,8 +1513,7 @@ export function AllocationClient() {
     return (
       <div key={priority} className="mb-5">
         {/* Group Header */}
-        <button
-          type="button"
+        <div
           onClick={() => toggleGroup(priority)}
           className={cn(
             "w-full flex items-center justify-between px-4 py-2.5 rounded-t-md cursor-pointer",
@@ -1531,8 +1531,21 @@ export function AllocationClient() {
             <span className="text-xs text-text-medium font-normal">
               ({group.length} {group.length === 1 ? 'envelope' : 'envelopes'})
             </span>
+            {/* Add Envelope Button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCreateDefaultPriority(priority);
+                setCreateOpen(true);
+              }}
+              className="flex items-center gap-1 text-xs text-sage hover:text-sage-dark hover:bg-white/50 px-2 py-1 rounded transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              <span>Add</span>
+            </button>
           </div>
-        </button>
+        </div>
 
         {/* Table */}
         {isExpanded && (
@@ -2094,9 +2107,15 @@ export function AllocationClient() {
       {/* Create Envelope Dialog */}
       <EnvelopeCreateDialog
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) {
+            setCreateDefaultPriority(undefined);
+          }
+        }}
         categories={categories}
         onCreated={fetchData}
+        defaultPriority={createDefaultPriority}
       />
 
       {/* Change Category Dialog */}

@@ -585,6 +585,13 @@ export function EnvelopeAllocationStep({
     });
   };
 
+  // Handle opening add envelope dialog with pre-selected category
+  const handleAddEnvelopeToCategory = (category: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent category toggle
+    setNewEnvelope(prev => ({ ...prev, category }));
+    setAddEnvelopeOpen(true);
+  };
+
   // Handle deleting an envelope
   const handleDeleteEnvelope = useCallback((envelopeId: string) => {
     // Find the envelope to check if it can be deleted
@@ -1289,10 +1296,9 @@ export function EnvelopeAllocationStep({
           return (
             <div key={category} className="border rounded-lg overflow-hidden">
               {/* Category Header */}
-              <button
-                type="button"
+              <div
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
                 onClick={() => toggleCategory(category)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
                 {...(category === CATEGORY_ORDER[0] ? { 'data-tutorial': 'category-header' } : {})}
               >
                 <div className="flex items-center gap-3">
@@ -1306,11 +1312,20 @@ export function EnvelopeAllocationStep({
                   <span className="text-sm text-muted-foreground">
                     ({countInCategory(category)})
                   </span>
+                  {/* Add Envelope Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleAddEnvelopeToCategory(category, e)}
+                    className="flex items-center gap-1 text-xs text-sage hover:text-sage-dark hover:bg-sage-very-light px-2 py-1 rounded transition-colors"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add</span>
+                  </button>
                 </div>
                 <span className="font-semibold text-[#5A7E7A]">
                   {formatCurrency(categoryTotal)}
                 </span>
-              </button>
+              </div>
 
               {/* Category Content - Table */}
               {isExpanded && (
@@ -1344,10 +1359,9 @@ export function EnvelopeAllocationStep({
         {/* Other/Uncategorized */}
         {envelopesByCategory['other']?.length > 0 && (
           <div className="border rounded-lg overflow-hidden">
-            <button
-              type="button"
+            <div
               onClick={() => toggleCategory('other')}
-              className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 {expandedCategories.has('other') ? (
@@ -1360,11 +1374,20 @@ export function EnvelopeAllocationStep({
                 <span className="text-sm text-muted-foreground">
                   ({envelopesByCategory['other'].length})
                 </span>
+                {/* Add Envelope Button */}
+                <button
+                  type="button"
+                  onClick={(e) => handleAddEnvelopeToCategory('other', e)}
+                  className="flex items-center gap-1 text-xs text-sage hover:text-sage-dark hover:bg-sage-very-light px-2 py-1 rounded transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Add</span>
+                </button>
               </div>
               <span className="font-semibold text-[#5A7E7A]">
                 {formatCurrency(sumPerPayInCategory('other'))}
               </span>
-            </button>
+            </div>
 
             {expandedCategories.has('other') && (
               <div className="overflow-x-auto">

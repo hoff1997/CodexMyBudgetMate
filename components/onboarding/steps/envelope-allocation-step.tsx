@@ -173,16 +173,25 @@ const TYPE_LABELS: Record<string, string> = {
   tracking: 'Tracking',
 };
 
-// Frequency labels
+// Frequency labels - used for display (maps stored values to labels)
 const FREQUENCY_LABELS: Record<string, string> = {
   weekly: 'Weekly',
   fortnightly: 'Fortnightly',
   monthly: 'Monthly',
   quarterly: 'Quarterly',
   annual: 'Annual',
-  annually: 'Annual',
+  annually: 'Annual', // Legacy value - both map to same label
   custom: 'Custom',
 };
+
+// Frequency options - used for dropdown (no duplicates)
+const FREQUENCY_OPTIONS = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'fortnightly', label: 'Fortnightly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'annually', label: 'Annual' },
+];
 
 export function EnvelopeAllocationStep({
   envelopes,
@@ -948,8 +957,8 @@ export function EnvelopeAllocationStep({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(FREQUENCY_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                {FREQUENCY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -987,7 +996,15 @@ export function EnvelopeAllocationStep({
                 mode="single"
                 selected={env.dueDate ? new Date(env.dueDate) : undefined}
                 onSelect={(date) => {
-                  handleEnvelopeChange(env.id, 'dueDate', date ? date.toISOString().split('T')[0] : null);
+                  if (date) {
+                    // Format as local date to avoid timezone issues
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    handleEnvelopeChange(env.id, 'dueDate', `${year}-${month}-${day}`);
+                  } else {
+                    handleEnvelopeChange(env.id, 'dueDate', null);
+                  }
                 }}
               />
             </PopoverContent>

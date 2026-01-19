@@ -140,6 +140,42 @@ export async function GET(request: Request) {
 
     console.log("[Akahu Callback] Tokens stored successfully");
 
+    // Create/update bank_connection record for the settings page
+    try {
+      // Check if Akahu connection already exists
+      const { data: existingConnection } = await serviceClient
+        .from("bank_connections")
+        .select("id")
+        .eq("user_id", stateUserId)
+        .eq("provider", "Akahu")
+        .maybeSingle();
+
+      if (existingConnection) {
+        // Update existing connection
+        await serviceClient
+          .from("bank_connections")
+          .update({
+            status: "connected",
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingConnection.id);
+      } else {
+        // Create new connection
+        await serviceClient.from("bank_connections").insert({
+          user_id: stateUserId,
+          provider: "Akahu",
+          status: "connected",
+          last_synced_at: new Date().toISOString(),
+          sync_frequency: "15m",
+        });
+      }
+      console.log("[Akahu Callback] Bank connection record created/updated");
+    } catch (bankConnectionError) {
+      // Non-blocking - the token is stored, settings just won't show the connection
+      console.warn("[Akahu Callback] Bank connection record failed (non-critical):", bankConnectionError);
+    }
+
     // Award bank_connected achievement (non-blocking)
     try {
       await serviceClient.from("achievements").upsert(

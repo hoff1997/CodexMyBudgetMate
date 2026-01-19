@@ -34,7 +34,7 @@ const usageOptions: UsageOption[] = [
     title: 'I pay this off in full each month',
     description: 'You clear the balance every statement',
     icon: CreditCard,
-    details: "We'll track your spending and make sure you always have money set aside to pay the bill.",
+    details: "We'll move money to your credit card holding account each pay cycle, ready for when the bill is due. You're in control of making sure it stays there until payment day.",
   },
   {
     type: 'paying_down',
@@ -48,7 +48,7 @@ const usageOptions: UsageOption[] = [
     title: 'I just want to track minimum payments',
     description: 'Focus on the payment obligation',
     icon: DollarSign,
-    details: "We'll make sure you never miss a minimum payment.",
+    details: "We'll track your minimum payment as a bill so you can budget for it.",
   },
 ];
 

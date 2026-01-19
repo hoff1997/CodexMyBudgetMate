@@ -7,6 +7,14 @@ function getAkahuClientForAuth(): AkahuClient {
   const appToken = process.env.AKAHU_APP_TOKEN?.trim();
   const appSecret = process.env.AKAHU_CLIENT_SECRET?.trim();
 
+  // Debug: log env var status
+  console.log("[Akahu Client] Env check:", {
+    AKAHU_APP_TOKEN_exists: !!process.env.AKAHU_APP_TOKEN,
+    AKAHU_CLIENT_SECRET_exists: !!process.env.AKAHU_CLIENT_SECRET,
+    appToken_length: appToken?.length,
+    appSecret_length: appSecret?.length,
+  });
+
   if (!appToken) {
     throw new Error("AKAHU_APP_TOKEN is not configured");
   }

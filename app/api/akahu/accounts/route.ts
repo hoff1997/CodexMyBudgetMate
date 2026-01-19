@@ -42,11 +42,10 @@ export async function GET(request: Request) {
     // Cache miss or stale - fetch from Akahu
     console.log(`[Akahu] ❌ Cache miss - fetching accounts from API`);
 
+    // Note: akahu_tokens table has: user_id, access_token, refresh_token, created_at, updated_at
     const { data: tokenRecord, error: tokenError } = await supabase
       .from("akahu_tokens")
-      .select(
-        "access_token, refresh_token, access_token_expires_at",
-      )
+      .select("access_token, refresh_token")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -58,45 +57,9 @@ export async function GET(request: Request) {
       return createNotFoundError("Akahu connection");
     }
 
-    let accessToken = tokenRecord.access_token;
-    const now = Date.now();
-    const needsRefresh =
-      !tokenRecord.access_token_expires_at ||
-      new Date(tokenRecord.access_token_expires_at).getTime() - 60_000 < now;
-
-    // Refresh token if needed
-    if (needsRefresh) {
-      try {
-        const refreshed = await refreshAkahuToken(tokenRecord.refresh_token);
-        accessToken = refreshed.access_token;
-
-        const expiresAt = refreshed.expires_in
-          ? new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
-          : null;
-        const refreshExpiresIn =
-          refreshed.refresh_expires_in ??
-          (refreshed as { refresh_token_expires_in?: number })
-            .refresh_token_expires_in;
-        const refreshExpiresAt = refreshExpiresIn
-          ? new Date(Date.now() + refreshExpiresIn * 1000).toISOString()
-          : null;
-
-        await supabase
-          .from("akahu_tokens")
-          .update({
-            access_token: refreshed.access_token,
-            refresh_token: refreshed.refresh_token ?? tokenRecord.refresh_token,
-            access_token_expires_at: expiresAt,
-            refresh_token_expires_at: refreshExpiresAt,
-            scopes: refreshed.scope ? refreshed.scope.split(" ") : null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", user.id);
-      } catch (error) {
-        console.error("Akahu token refresh failed", error);
-        return createErrorResponse(error as { message: string }, 502, "Token refresh failed");
-      }
-    }
+    // Use the stored access token directly
+    // Akahu access tokens don't expire, so no refresh logic needed
+    const accessToken = tokenRecord.access_token;
 
     const payload = await akahuRequest<{ items: AkahuAccount[] }>({
       endpoint: "/accounts",

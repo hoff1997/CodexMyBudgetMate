@@ -972,43 +972,56 @@ export function EnvelopeAllocationStep({
           )}
         </td>
 
-        {/* Due Date */}
+        {/* Due Date - only bills have due dates */}
         <td className="px-1 py-2 text-center hidden lg:table-cell">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                className="text-muted-foreground text-xs hover:text-sage-dark flex items-center gap-1 mx-auto"
-              >
-                {env.dueDate ? (
-                  <>
-                    <CalendarIcon className="h-3 w-3" />
-                    {typeof env.dueDate === 'number'
-                      ? `${env.dueDate.toString().padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`
-                      : new Date(env.dueDate).toLocaleDateString('en-NZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                  </>
-                ) : (
-                  <span className="text-muted-foreground/50">—</span>
-                )}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              <Calendar
-                mode="single"
-                selected={env.dueDate ? new Date(env.dueDate) : undefined}
-                onSelect={(date) => {
-                  if (date) {
-                    // Format as local date to avoid timezone issues
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    handleEnvelopeChange(env.id, 'dueDate', `${year}-${month}-${day}`);
-                  } else {
-                    handleEnvelopeChange(env.id, 'dueDate', null);
-                  }
-                }}
-              />
-            </PopoverContent>
-          </Popover>
+          {env.type === 'bill' ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="text-muted-foreground text-xs hover:text-sage-dark flex items-center gap-1 mx-auto"
+                >
+                  {env.dueDate ? (
+                    <>
+                      <CalendarIcon className="h-3 w-3" />
+                      {typeof env.dueDate === 'number'
+                        ? `${env.dueDate.toString().padStart(2, '0')}/${String(new Date().getMonth() + 1).padStart(2, '0')}/${new Date().getFullYear()}`
+                        : new Date(env.dueDate).toLocaleDateString('en-NZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground/50">Set date</span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center">
+                <Calendar
+                  mode="single"
+                  selected={env.dueDate ? new Date(env.dueDate) : undefined}
+                  onSelect={(date) => {
+                    if (date) {
+                      // Format as local date to avoid timezone issues
+                      const year = date.getFullYear();
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      handleEnvelopeChange(env.id, 'dueDate', `${year}-${month}-${day}`);
+                    } else {
+                      handleEnvelopeChange(env.id, 'dueDate', null);
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-muted-foreground/40 text-xs">N/A</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Only bills have due dates</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </td>
 
         {/* Funded By */}

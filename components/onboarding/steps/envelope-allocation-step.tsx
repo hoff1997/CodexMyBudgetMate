@@ -41,6 +41,7 @@ import {
   HelpCircle,
   Plus,
   Gift,
+  Trash2,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -294,10 +295,17 @@ export function EnvelopeAllocationStep({
     });
   }, [celebrationEnvelope?.giftRecipients, celebrationEnvelope?.id]);
 
-  // Detection info for celebration envelope
+  // Detection info for celebration envelope - now based on category
   const celebrationDetection = useMemo(() => {
     if (!celebrationEnvelope) return null;
-    return detectCelebration(celebrationEnvelope.name);
+    // Use category-based detection combined with keyword detection for festival type
+    const isCelebrationCategory = celebrationEnvelope.category === 'celebrations';
+    const keywordDetection = detectCelebration(celebrationEnvelope.name);
+    return {
+      isCelebration: isCelebrationCategory,
+      matchedKeyword: keywordDetection.matchedKeyword,
+      isFestival: keywordDetection.isFestival,
+    };
   }, [celebrationEnvelope]);
 
   // Get primary income (first one) for calculations
@@ -568,24 +576,40 @@ export function EnvelopeAllocationStep({
     });
   };
 
+  // Handle deleting an envelope
+  const handleDeleteEnvelope = useCallback((envelopeId: string) => {
+    // Find the envelope to check if it can be deleted
+    const envelope = envelopes.find(e => e.id === envelopeId);
+    if (!envelope) return;
+
+    // Don't allow deleting always-included envelopes (Surplus, Credit Card Holding)
+    if (envelope.id === 'surplus' || envelope.id === 'credit-card-holding') {
+      return;
+    }
+
+    // Remove the envelope
+    const updated = envelopes.filter(e => e.id !== envelopeId);
+    onEnvelopesChange(updated);
+  }, [envelopes, onEnvelopesChange]);
+
   // Check for seasonal bills that haven't been leveled (power, gas, water)
   const unleveledSeasonalBills = useMemo(() => {
     return envelopes.filter(env => {
       if (env.isLeveled) return false;
-      // Don't include celebrations - those are handled separately
-      const celebrationCheck = detectCelebration(env.name);
-      if (celebrationCheck.isCelebration) return false;
+      // Don't include celebrations - those are handled separately (based on category)
+      if (env.category === 'celebrations') return false;
       const detection = detectSeasonalBill(env.name);
       return detection.isLikelySeasonal && detection.confidence !== 'low';
     });
   }, [envelopes]);
 
   // Check for celebration envelopes that haven't been configured
+  // Celebrations are determined by being in the 'celebrations' category
   const unconfiguredCelebrations = useMemo(() => {
     return envelopes.filter(env => {
       if (env.isCelebration) return false; // Already configured
-      const detection = detectCelebration(env.name);
-      return detection.isCelebration;
+      // Check if envelope is in the celebrations category
+      return env.category === 'celebrations';
     });
   }, [envelopes]);
 
@@ -689,12 +713,12 @@ export function EnvelopeAllocationStep({
     const priority = env.priority as Priority || 'discretionary';
     const config = PRIORITY_CONFIG[priority];
 
-    // Check for celebration first (birthdays, Christmas, etc.)
-    const celebrationCheck = detectCelebration(env.name);
-    const showCelebrationPrompt = celebrationCheck.isCelebration && !env.isCelebration;
+    // Check for celebration based on category (birthdays, Christmas, etc.)
+    const isCelebrationCategory = env.category === 'celebrations';
+    const showCelebrationPrompt = isCelebrationCategory && !env.isCelebration;
 
     // Check for seasonal bills (power, gas, water) - only if NOT a celebration
-    const seasonalDetection = celebrationCheck.isCelebration ? null : detectSeasonalBill(env.name);
+    const seasonalDetection = isCelebrationCategory ? null : detectSeasonalBill(env.name);
     const showLevelingPrompt = seasonalDetection?.isLikelySeasonal && !env.isLeveled && seasonalDetection.confidence !== 'low';
 
     const isFirstRow = index === 0;
@@ -725,7 +749,7 @@ export function EnvelopeAllocationStep({
           ) : (
             <button
               onClick={() => setEditingCell({ id: env.id, field: 'priority' })}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${config.bgColor} hover:ring-1 hover:ring-sage cursor-pointer`}
+              className="inline-flex items-center justify-center p-1 hover:bg-muted/50 rounded cursor-pointer"
               title={`${config.label} - Click to change`}
             >
               <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
@@ -1026,6 +1050,30 @@ export function EnvelopeAllocationStep({
             </PopoverContent>
           </Popover>
         </td>
+
+        {/* Delete */}
+        <td className="px-1 py-2 text-center">
+          {/* Don't allow deleting system envelopes */}
+          {env.id !== 'surplus' && env.id !== 'credit-card-holding' ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleDeleteEnvelope(env.id)}
+                    className="text-muted-foreground/50 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Remove envelope</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <span className="w-4 h-4 inline-block" />
+          )}
+        </td>
       </tr>
     );
   };
@@ -1217,6 +1265,7 @@ export function EnvelopeAllocationStep({
                         <th className="text-right px-1 py-2 font-medium text-[#5A7E7A] w-20">Per Pay</th>
                         <th className="text-right px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-20">Annual</th>
                         <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden xl:table-cell w-10">Notes</th>
+                        <th className="text-center px-1 py-2 font-medium text-muted-foreground w-8"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1269,6 +1318,7 @@ export function EnvelopeAllocationStep({
                       <th className="text-right px-1 py-2 font-medium text-[#5A7E7A] w-20">Per Pay</th>
                       <th className="text-right px-1 py-2 font-medium text-muted-foreground hidden lg:table-cell w-20">Annual</th>
                       <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden xl:table-cell w-10">Notes</th>
+                      <th className="text-center px-1 py-2 font-medium text-muted-foreground w-8"></th>
                     </tr>
                   </thead>
                   <tbody>

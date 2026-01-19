@@ -50,7 +50,7 @@ import {
   type EnvelopeForAllocation,
 } from "@/lib/utils/waterfall-allocator";
 import { detectSeasonalBill } from "@/lib/utils/seasonal-bills";
-import { detectCelebration } from "@/lib/types/celebrations";
+// Note: Celebration detection is now category-based (env.category === 'celebrations')
 import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 
 interface OpeningBalanceStepProps {
@@ -291,9 +291,9 @@ export function OpeningBalanceStep({
     const current = openingBalances[env.id] || 0;
     const isFullyFunded = current >= suggested && suggested > 0;
 
-    // Check for celebration/seasonal indicators
-    const celebrationCheck = detectCelebration(env.name);
-    const seasonalDetection = celebrationCheck.isCelebration ? null : detectSeasonalBill(env.name);
+    // Check for celebration/seasonal indicators (category-based, not keyword-based)
+    const isCelebrationCategory = env.category === 'celebrations';
+    const seasonalDetection = isCelebrationCategory ? null : detectSeasonalBill(env.name);
 
     return (
       <tr key={env.id} className="border-b last:border-0 hover:bg-muted/20 group">

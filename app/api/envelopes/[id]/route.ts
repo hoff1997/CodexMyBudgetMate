@@ -44,6 +44,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "is_leveled",
     "leveling_data",
     "seasonal_pattern",
+    // Celebration fields
+    "is_celebration",
   ];
 
   const payload = Object.fromEntries(

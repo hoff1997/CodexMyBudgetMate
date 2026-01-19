@@ -225,8 +225,8 @@ export const CELEBRATION_KEYWORDS = [
   'present',
   'presents',
   'celebration',
-  'holiday',
   'festival',
+  // Note: 'holiday' intentionally excluded - conflicts with travel/vacation "Holidays" envelope
 ] as const;
 
 /**

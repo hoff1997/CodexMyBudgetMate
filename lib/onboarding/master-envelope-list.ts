@@ -292,6 +292,15 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     priority: 'discretionary',
     subtype: 'savings',
   },
+  {
+    id: 'gifts-general',
+    name: 'Gifts',
+    icon: '🎁',
+    category: 'celebrations',
+    priority: 'important',
+    subtype: 'savings',
+    description: "Anniversaries, housewarmings, weddings, new baby",
+  },
 
   // ========== CLOTHING ==========
   {
@@ -343,11 +352,12 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   },
   {
     id: 'holidays',
-    name: 'Holidays',
+    name: 'Holiday Goal',
     icon: '✈️',
     category: 'extras',
     priority: 'important',
     subtype: 'goal',
+    description: 'Save for travel and vacations',
   },
   {
     id: 'books-learning',
@@ -366,14 +376,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'giving',
     priority: 'discretionary',
     subtype: 'spending',
-  },
-  {
-    id: 'gifts-general',
-    name: 'Gifts (General/Not Birthdays)',
-    icon: '🎁',
-    category: 'giving',
-    priority: 'important',
-    subtype: 'savings',
   },
 
   // ========== HAIR ==========

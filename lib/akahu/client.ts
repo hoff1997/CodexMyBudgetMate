@@ -70,13 +70,22 @@ export async function akahuRequest<T>({
   accessToken,
   body,
 }: AkahuRequestOptions): Promise<T> {
+  const appToken = process.env.AKAHU_APP_TOKEN?.trim();
+
+  console.log("[Akahu Request]", method, endpoint, {
+    hasAppToken: !!appToken,
+    appTokenLength: appToken?.length,
+    hasUserToken: !!accessToken,
+    userTokenLength: accessToken?.length,
+  });
+
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    "X-Akahu-App-Token": process.env.AKAHU_APP_TOKEN!,
+    "X-Akahu-Id": appToken!, // SDK uses X-Akahu-Id header
   };
 
   if (accessToken) {
-    headers["X-Akahu-User-Token"] = accessToken;
+    headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
   const response = await fetch(`${AKAHU_BASE_URL}${endpoint}`, {

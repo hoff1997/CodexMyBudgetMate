@@ -61,10 +61,14 @@ export async function GET(request: Request) {
     // Akahu access tokens don't expire, so no refresh logic needed
     const accessToken = tokenRecord.access_token;
 
+    console.log("[Akahu Accounts] Fetching with token length:", accessToken?.length);
+
     const payload = await akahuRequest<{ items: AkahuAccount[] }>({
       endpoint: "/accounts",
       accessToken,
     });
+
+    console.log("[Akahu Accounts] Success, got", payload.items?.length, "accounts");
 
     // Cache the response
     await setCachedAccounts(user.id, payload.items);
@@ -75,6 +79,7 @@ export async function GET(request: Request) {
       timestamp: Date.now(),
     });
   } catch (error) {
+    console.error("[Akahu Accounts] Error:", error);
     return createErrorResponse(error as { message: string }, 500, "Akahu request failed");
   }
 }

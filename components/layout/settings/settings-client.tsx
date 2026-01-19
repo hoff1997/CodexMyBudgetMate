@@ -1570,22 +1570,44 @@ async function simulateUpload(file: File) {
 
 // Simple Connect Bank Button
 function ConnectBankButton() {
-  function handleConnect() {
-    const akahuAuthUrl = process.env.NEXT_PUBLIC_AKAHU_AUTH_URL;
-    if (!akahuAuthUrl) {
-      toast.error("Akahu configuration missing. Please check environment variables.");
-      return;
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  async function handleConnect() {
+    setIsConnecting(true);
+    try {
+      // Call our OAuth start endpoint to get the authorization URL
+      const response = await fetch("/api/akahu/oauth/start");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to start bank connection");
+      }
+
+      if (!data.authUrl) {
+        throw new Error("No authorization URL returned");
+      }
+
+      // Redirect to Akahu OAuth
+      window.location.href = data.authUrl;
+    } catch (error) {
+      console.error("Failed to connect bank:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to connect bank");
+      setIsConnecting(false);
     }
-    window.location.href = akahuAuthUrl;
   }
 
   return (
     <button
       onClick={handleConnect}
-      className="flex items-center gap-1 px-2.5 py-1 text-sm bg-[#7A9E9A] text-white rounded-lg hover:bg-[#5A7E7A]"
+      disabled={isConnecting}
+      className="flex items-center gap-1 px-2.5 py-1 text-sm bg-[#7A9E9A] text-white rounded-lg hover:bg-[#5A7E7A] disabled:opacity-50"
     >
-      <Link2 className="w-3.5 h-3.5" />
-      Connect
+      {isConnecting ? (
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+      ) : (
+        <Link2 className="w-3.5 h-3.5" />
+      )}
+      {isConnecting ? "Connecting..." : "Connect"}
     </button>
   );
 }

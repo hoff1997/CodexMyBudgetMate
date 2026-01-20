@@ -101,10 +101,14 @@ const FREQUENCY_OPTIONS = [
   { value: 'monthly', label: 'Monthly', abbrev: 'Mth', multiplier: 12 },
   { value: 'quarterly', label: 'Quarterly', abbrev: 'Q', multiplier: 4 },
   { value: 'annually', label: 'Annually', abbrev: 'Yr', multiplier: 1 },
+  { value: 'custom_weeks', label: 'Every X Weeks', abbrev: 'Custom', multiplier: 0 }, // multiplier calculated dynamically
 ];
 
 // Format frequency as abbreviation for display
-function formatFrequencyAbbrev(frequency: string): string {
+function formatFrequencyAbbrev(frequency: string, customWeeks?: number): string {
+  if (frequency === 'custom_weeks' && customWeeks) {
+    return `${customWeeks}wk`;
+  }
   const freq = FREQUENCY_OPTIONS.find(f => f.value === frequency.toLowerCase());
   return freq?.abbrev || frequency;
 }
@@ -906,6 +910,10 @@ export function AllocationClient() {
    */
   const calculateAnnual = useCallback((envelope: UnifiedEnvelopeData): number => {
     if (!envelope.targetAmount) return 0;
+    // Handle custom weeks frequency (e.g., every 8 weeks = 52/8 = 6.5 times per year)
+    if (envelope.frequency === 'custom_weeks' && envelope.custom_weeks && envelope.custom_weeks > 0) {
+      return envelope.targetAmount * (52 / envelope.custom_weeks);
+    }
     const freq = FREQUENCY_OPTIONS.find(f => f.value === envelope.frequency);
     return envelope.targetAmount * (freq?.multiplier || 12);
   }, []);
@@ -2657,16 +2665,22 @@ function EnvelopeRow({
               type="button"
               className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
             >
-              {formatFrequencyAbbrev(envelope.frequency || 'monthly')}
+              {formatFrequencyAbbrev(envelope.frequency || 'monthly', envelope.custom_weeks)}
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-32 p-1" align="center">
+          <PopoverContent className="w-44 p-1" align="center">
             <div className="space-y-0.5">
               {FREQUENCY_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => onEnvelopeChange(envelope.id, 'frequency', opt.value)}
+                  onClick={() => {
+                    onEnvelopeChange(envelope.id, 'frequency', opt.value);
+                    // Set default custom_weeks if switching to custom_weeks
+                    if (opt.value === 'custom_weeks' && !envelope.custom_weeks) {
+                      onEnvelopeChange(envelope.id, 'custom_weeks', 8);
+                    }
+                  }}
                   className={cn(
                     "w-full text-left px-2 py-1 text-[11px] rounded hover:bg-sage-very-light",
                     envelope.frequency === opt.value && "bg-sage-very-light font-medium"
@@ -2675,6 +2689,22 @@ function EnvelopeRow({
                   {opt.label}
                 </button>
               ))}
+              {envelope.frequency === 'custom_weeks' && (
+                <div className="border-t border-silver-light pt-1 mt-1 px-2">
+                  <label className="text-[10px] text-text-medium">Every</label>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={envelope.custom_weeks || 8}
+                      onChange={(e) => onEnvelopeChange(envelope.id, 'custom_weeks', parseInt(e.target.value) || 8)}
+                      className="w-12 h-6 text-[11px] text-center border rounded px-1"
+                    />
+                    <span className="text-[10px] text-text-medium">weeks</span>
+                  </div>
+                </div>
+              )}
             </div>
           </PopoverContent>
         </Popover>

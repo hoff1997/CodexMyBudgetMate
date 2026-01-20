@@ -103,7 +103,8 @@ function calculatePerPayAmount(
   billFrequency: string | undefined,
   payFrequency: string,
   isLeveled?: boolean,
-  levelingData?: LevelingData
+  levelingData?: LevelingData,
+  customWeeks?: number
 ): number {
   if (!targetAmount && !isLeveled) return 0;
 
@@ -115,7 +116,14 @@ function calculatePerPayAmount(
     );
   }
 
-  const billCycles = BILL_FREQUENCY_CYCLES[billFrequency || 'monthly'] || 12;
+  // Handle custom weeks frequency (e.g., every 8 weeks = 52/8 = 6.5 times per year)
+  let billCycles: number;
+  if (billFrequency === 'custom_weeks' && customWeeks && customWeeks > 0) {
+    billCycles = 52 / customWeeks;
+  } else {
+    billCycles = BILL_FREQUENCY_CYCLES[billFrequency || 'monthly'] || 12;
+  }
+
   const payCycles = PAY_FREQUENCY_CYCLES[payFrequency] || 26;
 
   const annualAmount = targetAmount * billCycles;
@@ -127,14 +135,23 @@ function calculateAnnualAmount(
   targetAmount: number,
   billFrequency: string | undefined,
   isLeveled?: boolean,
-  levelingData?: LevelingData
+  levelingData?: LevelingData,
+  customWeeks?: number
 ): number {
   if (isLeveled && levelingData) {
     return levelingData.yearlyAverage * 12 * (1 + levelingData.bufferPercent / 100);
   }
 
   if (!targetAmount) return 0;
-  const billCycles = BILL_FREQUENCY_CYCLES[billFrequency || 'monthly'] || 12;
+
+  // Handle custom weeks frequency
+  let billCycles: number;
+  if (billFrequency === 'custom_weeks' && customWeeks && customWeeks > 0) {
+    billCycles = 52 / customWeeks;
+  } else {
+    billCycles = BILL_FREQUENCY_CYCLES[billFrequency || 'monthly'] || 12;
+  }
+
   return targetAmount * billCycles;
 }
 
@@ -182,7 +199,16 @@ const FREQUENCY_LABELS: Record<string, string> = {
   annual: 'Annual',
   annually: 'Annual', // Legacy value - both map to same label
   custom: 'Custom',
+  custom_weeks: 'Custom',
 };
+
+// Helper to get display label for frequency with custom weeks
+function getFrequencyLabel(frequency: string | undefined, customWeeks?: number): string {
+  if (frequency === 'custom_weeks' && customWeeks) {
+    return `Every ${customWeeks} wks`;
+  }
+  return FREQUENCY_LABELS[frequency || 'monthly'] || 'Monthly';
+}
 
 // Frequency options - used for dropdown (no duplicates)
 const FREQUENCY_OPTIONS = [
@@ -191,6 +217,7 @@ const FREQUENCY_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'quarterly', label: 'Quarterly' },
   { value: 'annually', label: 'Annual' },
+  { value: 'custom_weeks', label: 'Custom Weeks' },
 ];
 
 export function EnvelopeAllocationStep({
@@ -239,7 +266,8 @@ export function EnvelopeAllocationStep({
     type: 'bill' as 'bill' | 'spending' | 'savings' | 'goal' | 'tracking',
     icon: '📁',
     billAmount: 0,
-    frequency: 'monthly' as 'monthly' | 'weekly' | 'fortnightly' | 'quarterly' | 'annual',
+    frequency: 'monthly' as 'monthly' | 'weekly' | 'fortnightly' | 'quarterly' | 'annual' | 'custom_weeks',
+    customWeeks: 8 as number, // Default to 8 weeks for custom frequency
     priority: 'important' as 'essential' | 'important' | 'discretionary',
     category: 'other',
   });
@@ -330,14 +358,16 @@ export function EnvelopeAllocationStep({
         env.frequency,
         payFrequency,
         env.isLeveled,
-        env.levelingData
+        env.levelingData,
+        env.customWeeks
       ),
       targetAmount: env.billAmount || env.monthlyBudget || env.savingsAmount || 0,
       annualAmount: calculateAnnualAmount(
         env.billAmount || env.monthlyBudget || env.savingsAmount || 0,
         env.frequency,
         env.isLeveled,
-        env.levelingData
+        env.levelingData,
+        env.customWeeks
       ),
     }));
   }, [envelopes, payFrequency]);
@@ -568,6 +598,7 @@ export function EnvelopeAllocationStep({
       monthlyBudget: newEnvelope.type === 'spending' ? newEnvelope.billAmount : undefined,
       savingsAmount: newEnvelope.type === 'savings' || newEnvelope.type === 'goal' ? newEnvelope.billAmount : undefined,
       frequency: newEnvelope.frequency,
+      customWeeks: newEnvelope.frequency === 'custom_weeks' ? newEnvelope.customWeeks : undefined,
       priority: newEnvelope.priority,
       category: newEnvelope.category,
     };
@@ -580,6 +611,7 @@ export function EnvelopeAllocationStep({
       icon: '📁',
       billAmount: 0,
       frequency: 'monthly',
+      customWeeks: 8,
       priority: 'important',
       category: 'other',
     });
@@ -956,25 +988,44 @@ export function EnvelopeAllocationStep({
         {/* Frequency */}
         <td className="px-1 py-2 text-center hidden sm:table-cell" {...(isFirstRow ? { 'data-tutorial': 'frequency-cell' } : {})}>
           {editingCell?.id === env.id && editingCell?.field === 'frequency' ? (
-            <Select
-              value={env.frequency || 'monthly'}
-              onValueChange={(val) => handleEnvelopeChange(env.id, 'frequency', val)}
-            >
-              <SelectTrigger className="h-7 w-24 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {FREQUENCY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-1">
+              <Select
+                value={env.frequency || 'monthly'}
+                onValueChange={(val) => {
+                  handleEnvelopeChange(env.id, 'frequency', val);
+                  // Set default customWeeks if switching to custom_weeks
+                  if (val === 'custom_weeks' && !env.customWeeks) {
+                    handleEnvelopeChange(env.id, 'customWeeks', 8);
+                  }
+                }}
+              >
+                <SelectTrigger className="h-7 w-24 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FREQUENCY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {env.frequency === 'custom_weeks' && (
+                <Input
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={env.customWeeks || 8}
+                  onChange={(e) => handleEnvelopeChange(env.id, 'customWeeks', parseInt(e.target.value) || 8)}
+                  className="h-7 w-12 text-xs text-center"
+                  title="Number of weeks"
+                />
+              )}
+            </div>
           ) : (
             <button
               onClick={() => setEditingCell({ id: env.id, field: 'frequency' })}
               className="text-muted-foreground text-xs hover:text-sage-dark"
             >
-              {FREQUENCY_LABELS[env.frequency || 'monthly'] || 'Monthly'}
+              {getFrequencyLabel(env.frequency, env.customWeeks)}
             </button>
           )}
         </td>
@@ -1556,21 +1607,42 @@ export function EnvelopeAllocationStep({
             {/* Frequency */}
             <div className="space-y-2">
               <Label htmlFor="envelope-frequency">Frequency</Label>
-              <Select
-                value={newEnvelope.frequency}
-                onValueChange={(val) => setNewEnvelope(prev => ({ ...prev, frequency: val as typeof prev.frequency }))}
-              >
-                <SelectTrigger id="envelope-frequency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="annual">Annual</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select
+                  value={newEnvelope.frequency}
+                  onValueChange={(val) => setNewEnvelope(prev => ({ ...prev, frequency: val as typeof prev.frequency }))}
+                >
+                  <SelectTrigger id="envelope-frequency" className={newEnvelope.frequency === 'custom_weeks' ? 'flex-1' : 'w-full'}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="annual">Annual</SelectItem>
+                    <SelectItem value="custom_weeks">Every X Weeks</SelectItem>
+                  </SelectContent>
+                </Select>
+                {newEnvelope.frequency === 'custom_weeks' && (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="52"
+                      value={newEnvelope.customWeeks}
+                      onChange={(e) => setNewEnvelope(prev => ({ ...prev, customWeeks: parseInt(e.target.value) || 8 }))}
+                      className="w-16 text-center"
+                    />
+                    <span className="text-sm text-muted-foreground">wks</span>
+                  </div>
+                )}
+              </div>
+              {newEnvelope.frequency === 'custom_weeks' && (
+                <p className="text-xs text-muted-foreground">
+                  e.g., haircuts every {newEnvelope.customWeeks} weeks = {Math.round(52 / newEnvelope.customWeeks * 10) / 10} times/year
+                </p>
+              )}
             </div>
 
             {/* Priority */}

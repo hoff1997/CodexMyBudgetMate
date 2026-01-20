@@ -3,7 +3,7 @@
  */
 
 export type PayFrequency = "weekly" | "fortnightly" | "twice_monthly" | "monthly";
-export type BillFrequency = "monthly" | "quarterly" | "annual" | "custom";
+export type BillFrequency = "monthly" | "quarterly" | "annual" | "custom" | "custom_weeks";
 
 // Pay cycles per year
 const PAY_CYCLES_PER_YEAR: Record<PayFrequency, number> = {
@@ -14,10 +14,13 @@ const PAY_CYCLES_PER_YEAR: Record<PayFrequency, number> = {
 };
 
 // Bill frequency to months conversion
-const BILL_FREQUENCY_MONTHS: Record<BillFrequency, number> = {
+const BILL_FREQUENCY_MONTHS: Record<string, number> = {
+  weekly: 1/4.33,     // ~4.33 weeks in a month
+  fortnightly: 1/2.17, // ~2.17 fortnights in a month
   monthly: 1,
   quarterly: 3,
   annual: 12,
+  annually: 12,
   custom: 1, // Default to monthly for custom
 };
 
@@ -26,21 +29,31 @@ const BILL_FREQUENCY_MONTHS: Record<BillFrequency, number> = {
  * @param amount - The bill/budget amount
  * @param billFrequency - How often the bill occurs
  * @param payFrequency - How often the user gets paid
+ * @param customWeeks - Number of weeks for custom_weeks frequency (e.g., 8 for every 8 weeks)
  * @returns Amount to allocate per paycheck
  */
 export function calculatePayCycleAmount(
   amount: number,
   billFrequency: BillFrequency | string,
-  payFrequency: PayFrequency
+  payFrequency: PayFrequency,
+  customWeeks?: number
 ): number {
   if (amount <= 0) return 0;
 
   // Get cycles per year
   const payCyclesPerYear = PAY_CYCLES_PER_YEAR[payFrequency];
 
-  // Convert bill amount to annual amount
-  const months = BILL_FREQUENCY_MONTHS[billFrequency as BillFrequency] || 1;
-  const annualAmount = (amount * 12) / months;
+  let annualAmount: number;
+
+  // Handle custom weeks frequency (e.g., every 8 weeks = 52/8 = 6.5 times per year)
+  if (billFrequency === 'custom_weeks' && customWeeks && customWeeks > 0) {
+    const timesPerYear = 52 / customWeeks;
+    annualAmount = amount * timesPerYear;
+  } else {
+    // Convert bill amount to annual amount using months conversion
+    const months = BILL_FREQUENCY_MONTHS[billFrequency as BillFrequency] || 1;
+    annualAmount = (amount * 12) / months;
+  }
 
   // Divide annual amount by pay cycles
   const payCycleAmount = annualAmount / payCyclesPerYear;

@@ -4,7 +4,7 @@
  */
 
 export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
-export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annual' | 'annually';
+export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'annual' | 'annually' | 'custom_weeks';
 export type PriorityType = 'essential' | 'important' | 'discretionary';
 export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net';
 // Seasonal patterns are for bills that vary by season (power, gas, water)
@@ -72,6 +72,7 @@ export interface UnifiedEnvelopeData {
 
   // Bill-specific fields
   frequency?: FrequencyType;
+  custom_weeks?: number; // Number of weeks for custom_weeks frequency (e.g., 8 for every 8 weeks)
   dueDate?: number | Date; // Day of month (1-31) or full date for savings goals
 
   // Priority (for bills and spending)

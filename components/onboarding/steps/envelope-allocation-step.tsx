@@ -1001,63 +1001,71 @@ export function EnvelopeAllocationStep({
 
         {/* Frequency */}
         <td className="px-1 py-2 text-center hidden sm:table-cell" {...(isFirstRow ? { 'data-tutorial': 'frequency-cell' } : {})}>
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                className="text-muted-foreground text-xs hover:text-sage-dark px-1.5 py-0.5 rounded hover:bg-sage-very-light"
-              >
-                {getFrequencyLabel(env.frequency, env.customWeeks)}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-44 p-1" align="center">
-              <div className="space-y-0.5">
-                {FREQUENCY_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      handleEnvelopeChange(env.id, 'frequency', opt.value);
-                      // Set default customWeeks if switching to custom_weeks
-                      if (opt.value === 'custom_weeks' && !env.customWeeks) {
-                        handleEnvelopeChange(env.id, 'customWeeks', 8);
-                      }
-                    }}
-                    className={`w-full text-left px-2 py-1 text-xs rounded hover:bg-sage-very-light ${
-                      env.frequency === opt.value ? 'bg-sage-very-light font-medium' : ''
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          {/* Custom Weeks Popup - separate popover for number selection */}
-          {env.frequency === 'custom_weeks' && (
+          {env.frequency === 'custom_weeks' ? (
+            /* Custom weeks - single popover with "Every X wks" display */
             <Popover>
               <PopoverTrigger asChild>
                 <button
-                  className="ml-1 text-sage-dark text-xs font-medium hover:text-sage px-1.5 py-0.5 rounded bg-sage-very-light hover:bg-sage-light"
+                  className="text-muted-foreground text-xs hover:text-sage-dark px-1.5 py-0.5 rounded hover:bg-sage-very-light"
                 >
-                  {env.customWeeks || 8}wk
+                  Every {env.customWeeks || 8} wks
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-36 p-3" align="center">
+              <PopoverContent className="w-44 p-2" align="center">
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-text-dark">Number of weeks</label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 justify-center">
+                    <span className="text-xs text-text-medium">Every</span>
                     <Input
                       type="number"
                       min="1"
                       max="52"
                       value={env.customWeeks || 8}
                       onChange={(e) => handleEnvelopeChange(env.id, 'customWeeks', parseInt(e.target.value) || 8)}
-                      className="h-8 w-16 text-sm text-center"
+                      className="h-7 w-14 text-xs text-center"
                       autoFocus
                     />
-                    <span className="text-sm text-muted-foreground">weeks</span>
+                    <span className="text-xs text-text-medium">wks</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">e.g., haircuts every 8 weeks</p>
+                  <button
+                    type="button"
+                    onClick={() => handleEnvelopeChange(env.id, 'frequency', 'monthly')}
+                    className="w-full text-left px-2 py-1 text-xs text-muted-foreground hover:text-sage-dark hover:bg-sage-very-light rounded"
+                  >
+                    ← Back to standard frequency
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            /* Standard frequency selector */
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="text-muted-foreground text-xs hover:text-sage-dark px-1.5 py-0.5 rounded hover:bg-sage-very-light"
+                >
+                  {getFrequencyLabel(env.frequency, env.customWeeks)}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-44 p-1" align="center">
+                <div className="space-y-0.5">
+                  {FREQUENCY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        handleEnvelopeChange(env.id, 'frequency', opt.value);
+                        // Set default customWeeks if switching to custom_weeks
+                        if (opt.value === 'custom_weeks' && !env.customWeeks) {
+                          handleEnvelopeChange(env.id, 'customWeeks', 8);
+                        }
+                      }}
+                      className={`w-full text-left px-2 py-1 text-xs rounded hover:bg-sage-very-light ${
+                        env.frequency === opt.value ? 'bg-sage-very-light font-medium' : ''
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </PopoverContent>
             </Popover>
@@ -1084,7 +1092,7 @@ export function EnvelopeAllocationStep({
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center">
+              <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={4}>
                 <Calendar
                   mode="single"
                   selected={env.dueDate ? new Date(env.dueDate) : undefined}

@@ -42,6 +42,8 @@ import {
   Plus,
   Gift,
   Trash2,
+  Search,
+  X,
 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -230,6 +232,9 @@ export function EnvelopeAllocationStep({
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORY_ORDER));
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Tutorial state
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [tutorialMounted, setTutorialMounted] = useState(false);
@@ -372,7 +377,16 @@ export function EnvelopeAllocationStep({
     }));
   }, [envelopes, payFrequency]);
 
-  // Group envelopes by category
+  // Filter envelopes based on search query
+  const filteredEnvelopes = useMemo(() => {
+    if (!searchQuery.trim()) return envelopesWithPerPay;
+    const query = searchQuery.toLowerCase().trim();
+    return envelopesWithPerPay.filter(env =>
+      env.name.toLowerCase().includes(query)
+    );
+  }, [envelopesWithPerPay, searchQuery]);
+
+  // Group envelopes by category (uses filtered list if search is active)
   const envelopesByCategory = useMemo(() => {
     const grouped: Record<string, typeof envelopesWithPerPay> = {};
 
@@ -382,7 +396,7 @@ export function EnvelopeAllocationStep({
     });
     grouped['other'] = [];
 
-    envelopesWithPerPay.forEach((env) => {
+    filteredEnvelopes.forEach((env) => {
       const category = env.category || 'other';
       if (!grouped[category]) {
         grouped[category] = [];
@@ -391,7 +405,7 @@ export function EnvelopeAllocationStep({
     });
 
     return grouped;
-  }, [envelopesWithPerPay]);
+  }, [filteredEnvelopes]);
 
   // Calculate totals per income source
   const incomeStats = useMemo(() => {
@@ -1230,16 +1244,49 @@ export function EnvelopeAllocationStep({
         <p className="text-muted-foreground">
           The goal is simple: make sure what goes out isn't more than what comes in.
         </p>
-        {/* Add Envelope Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setAddEnvelopeOpen(true)}
-          className="mt-2 gap-1 border-sage text-sage hover:bg-sage-very-light"
+        {/* Search and Add Envelope */}
+        <div className="mt-3 flex items-center gap-3 justify-center">
+          {/* Search Box */}
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search envelopes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-9 text-sm"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-muted rounded"
+              >
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          {/* Add Envelope Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAddEnvelopeOpen(true)}
+            className="gap-1 border-sage text-sage hover:bg-sage-very-light"
         >
           <Plus className="h-4 w-4" />
           Add Envelope
         </Button>
+        </div>
+        {/* Search Results Indicator */}
+        {searchQuery && (
+          <p className="text-sm text-muted-foreground">
+            {filteredEnvelopes.length === 0 ? (
+              <>No envelopes found matching "<span className="font-medium">{searchQuery}</span>"</>
+            ) : (
+              <>Showing {filteredEnvelopes.length} of {envelopesWithPerPay.length} envelopes</>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Remy's Coaching - Context aware */}

@@ -29,6 +29,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     "annual_amount",
     "pay_cycle_amount",
     "frequency",
+    "custom_weeks", // For custom_weeks frequency (e.g., every 8 weeks)
     "next_payment_due",
     "due_date",
     "notes",

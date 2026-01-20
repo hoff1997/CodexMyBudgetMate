@@ -423,7 +423,18 @@ export async function POST(request: Request) {
           baseData.bill_amount = envelope.billAmount || 0;
           baseData.target_amount = envelope.billAmount || 0;
           baseData.frequency = envelope.frequency || "monthly";
-          baseData.due_date = envelope.dueDate ? new Date(new Date().getFullYear(), new Date().getMonth(), envelope.dueDate) : null;
+          // Handle dueDate which can be a number (day of month) or an ISO date string
+          if (envelope.dueDate) {
+            if (typeof envelope.dueDate === 'string') {
+              // ISO date string - use directly
+              baseData.due_date = new Date(envelope.dueDate);
+            } else {
+              // Number (day of month) - create date in current month
+              baseData.due_date = new Date(new Date().getFullYear(), new Date().getMonth(), envelope.dueDate);
+            }
+          } else {
+            baseData.due_date = null;
+          }
           baseData.priority = envelope.priority || "important";
         } else if (envelope.type === "spending") {
           baseData.target_amount = envelope.monthlyBudget || 0;

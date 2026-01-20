@@ -667,7 +667,10 @@ export function EnvelopeCreationStep({
                         <Button variant="outline" className="h-7 w-full justify-start text-xs px-2 border-0 hover:bg-muted" type="button">
                           <CalendarIcon className="h-3 w-3 mr-1" />
                           {envelope.dueDate
-                            ? `${envelope.dueDate}${envelope.dueDate === 1 ? 'st' : envelope.dueDate === 2 ? 'nd' : envelope.dueDate === 3 ? 'rd' : 'th'}`
+                            ? (() => {
+                                const day = typeof envelope.dueDate === 'string' ? new Date(envelope.dueDate).getDate() : envelope.dueDate;
+                                return `${day}${day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}`;
+                              })()
                             : "Date"
                           }
                         </Button>
@@ -675,7 +678,7 @@ export function EnvelopeCreationStep({
                       <PopoverContent className="w-auto p-0">
                         <Calendar
                           mode="single"
-                          selected={envelope.dueDate ? new Date(2024, 0, envelope.dueDate) : undefined}
+                          selected={envelope.dueDate ? (typeof envelope.dueDate === 'string' ? new Date(envelope.dueDate) : new Date(2024, 0, envelope.dueDate)) : undefined}
                           onSelect={(date) => handleUpdateEnvelope(envelope.id, 'dueDate', date ? date.getDate() : undefined)}
                         />
                       </PopoverContent>

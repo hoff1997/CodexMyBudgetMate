@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   // so the client can show the "Restore" button for hidden envelopes
   let query = supabase
     .from("envelopes")
-    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, category_display_order, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_suggested, suggestion_type, is_dismissed, auto_calculate_target, description, snoozed_until, is_tracking_only, is_archived, archived_at, archive_reason, is_leveled, leveling_data, seasonal_pattern, is_celebration, gift_recipients(count)")
+    .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, custom_weeks, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, category_display_order, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_suggested, suggestion_type, is_dismissed, auto_calculate_target, description, snoozed_until, is_tracking_only, is_archived, archived_at, archive_reason, is_leveled, leveling_data, seasonal_pattern, is_celebration, gift_recipients(count)")
     .eq("user_id", user.id);
 
   // Filter out archived unless explicitly requested
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     // Fallback to query without archive columns (before migration)
     let fallbackQuery = supabase
       .from("envelopes")
-      .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, category_display_order, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_tracking_only, is_celebration")
+      .select("id, name, envelope_type, subtype, priority, target_amount, annual_amount, pay_cycle_amount, opening_balance, current_amount, frequency, custom_weeks, next_payment_due, due_date, notes, icon, is_spending, is_monitored, category_id, category_display_order, is_goal, goal_type, goal_target_date, goal_completed_at, interest_rate, sort_order, is_tracking_only, is_celebration")
       .eq("user_id", user.id);
 
     const fallback = await fallbackQuery

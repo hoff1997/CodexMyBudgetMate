@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { RefreshCw, ChevronDown, ChevronRight, StickyNote, Plus, ArrowUpDown, ArrowUp, ArrowDown, X, GripVertical, CheckCircle2, AlertCircle, TrendingUp, MinusCircle, DollarSign, Receipt, ArrowUpRight, Archive, Printer, Target, Sparkles } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronRight, StickyNote, Plus, ArrowUpDown, ArrowUp, ArrowDown, X, GripVertical, CheckCircle2, AlertCircle, TrendingUp, MinusCircle, DollarSign, Receipt, ArrowUpRight, Archive, Printer, Target, Sparkles, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { CoachingWidget } from "@/components/coaching/coaching-widget";
 import { getTopSuggestions, type SmartSuggestion } from "@/lib/utils/smart-suggestion-generator";
@@ -227,6 +228,9 @@ export function AllocationClient() {
   }[]>([]);
   const [highlightedEnvelopeId, setHighlightedEnvelopeId] = useState<string | null>(null);
   const [showIncomeCoaching, setShowIncomeCoaching] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
 
   // View mode: priority (default), category, or snapshot
   const [viewMode, setViewMode] = useState<'priority' | 'category' | 'snapshot'>(() => {
@@ -1033,17 +1037,27 @@ export function AllocationClient() {
   }, []);
 
   /**
+   * Search-filtered envelopes
+   * Filters by name when search query is active
+   */
+  const searchFilteredEnvelopes = useMemo(() => {
+    if (!searchQuery.trim()) return envelopes;
+    const query = searchQuery.toLowerCase().trim();
+    return envelopes.filter(env => env.name.toLowerCase().includes(query));
+  }, [envelopes, searchQuery]);
+
+  /**
    * Group envelopes by priority (excluding suggested and tracking-only)
    * Applies sorting within each priority group
    */
   const envelopesByPriority = useMemo(() => {
-    const nonTrackingNonSuggested = envelopes.filter(e => !e.is_tracking_only && !e.is_suggested);
+    const nonTrackingNonSuggested = searchFilteredEnvelopes.filter(e => !e.is_tracking_only && !e.is_suggested);
     return {
       essential: sortEnvelopes(nonTrackingNonSuggested.filter(e => e.priority === 'essential'), sortColumn, sortDirection),
       important: sortEnvelopes(nonTrackingNonSuggested.filter(e => e.priority === 'important'), sortColumn, sortDirection),
       discretionary: sortEnvelopes(nonTrackingNonSuggested.filter(e => e.priority === 'discretionary'), sortColumn, sortDirection),
     };
-  }, [envelopes, sortColumn, sortDirection, sortEnvelopes]);
+  }, [searchFilteredEnvelopes, sortColumn, sortDirection, sortEnvelopes]);
 
   /**
    * Get suggested envelopes for My Budget Way widget
@@ -1154,9 +1168,9 @@ export function AllocationClient() {
    * within each priority group.
    */
   const filteredEnvelopesByPriority = useMemo(() => {
-    // For tracking/spending filters, we need to look at ALL envelopes
+    // For tracking/spending filters, we need to look at ALL envelopes (but filtered by search)
     if (activeFilter === "tracking") {
-      const trackingEnvelopes = envelopes.filter(env => env.is_tracking_only && !env.is_suggested);
+      const trackingEnvelopes = searchFilteredEnvelopes.filter(env => env.is_tracking_only && !env.is_suggested);
       return {
         essential: sortEnvelopes(trackingEnvelopes.filter(e => e.priority === 'essential'), sortColumn, sortDirection),
         important: sortEnvelopes(trackingEnvelopes.filter(e => e.priority === 'important'), sortColumn, sortDirection),
@@ -1165,7 +1179,7 @@ export function AllocationClient() {
     }
 
     if (activeFilter === "spending") {
-      const spendingEnvelopes = envelopes.filter(env => env.subtype === 'spending' && !env.is_tracking_only && !env.is_suggested);
+      const spendingEnvelopes = searchFilteredEnvelopes.filter(env => env.subtype === 'spending' && !env.is_tracking_only && !env.is_suggested);
       return {
         essential: sortEnvelopes(spendingEnvelopes.filter(e => e.priority === 'essential'), sortColumn, sortDirection),
         important: sortEnvelopes(spendingEnvelopes.filter(e => e.priority === 'important'), sortColumn, sortDirection),
@@ -1199,19 +1213,20 @@ export function AllocationClient() {
       important: filterEnvelopes(envelopesByPriority.important),
       discretionary: filterEnvelopes(envelopesByPriority.discretionary),
     };
-  }, [envelopes, envelopesByPriority, activeFilter, sortEnvelopes, sortColumn, sortDirection]);
+  }, [searchFilteredEnvelopes, envelopesByPriority, activeFilter, sortEnvelopes, sortColumn, sortDirection]);
 
   /**
    * Filtered envelopes for category and snapshot views
    * Applies the same filter logic as priority view, plus sorting
+   * Now also respects search query filter
    */
   const filteredEnvelopes = useMemo(() => {
     let result: UnifiedEnvelopeData[];
 
     if (activeFilter === "all") {
-      result = envelopes.filter(e => !e.is_suggested);
+      result = searchFilteredEnvelopes.filter(e => !e.is_suggested);
     } else {
-      result = envelopes.filter(env => {
+      result = searchFilteredEnvelopes.filter(env => {
         if (env.is_suggested) return false;
 
         const bucket = getStatusBucket({
@@ -1226,7 +1241,7 @@ export function AllocationClient() {
 
     // Apply sorting
     return sortEnvelopes(result, sortColumn, sortDirection);
-  }, [envelopes, activeFilter, sortEnvelopes, sortColumn, sortDirection]);
+  }, [searchFilteredEnvelopes, activeFilter, sortEnvelopes, sortColumn, sortDirection]);
 
   /**
    * Check if any envelopes match the current filter (for empty state)
@@ -1300,6 +1315,7 @@ export function AllocationClient() {
           subtype: envelope.subtype,
           target_amount: envelope.targetAmount,
           frequency: envelope.frequency,
+          custom_weeks: envelope.custom_weeks,
           due_date: envelope.dueDate,
           priority: envelope.priority,
           notes: envelope.notes,
@@ -1845,11 +1861,39 @@ export function AllocationClient() {
       {/* Filter Tabs and View Toggle (Enhanced View) */}
       {enhancedView && (
         <div className="flex items-center justify-between gap-2 mb-4">
-          <EnvelopeFilterTabs
-            activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
-            envelopeCounts={statusCounts}
-          />
+          <div className="flex items-center gap-4">
+            <EnvelopeFilterTabs
+              activeFilter={activeFilter}
+              onFilterChange={setActiveFilter}
+              envelopeCounts={statusCounts}
+            />
+
+            {/* Search Box */}
+            <div className="relative w-56">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search envelopes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-8 h-8 text-sm"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-0.5 rounded hover:bg-gray-100"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <span className="text-xs text-muted-foreground">
+                {searchFilteredEnvelopes.length} of {envelopes.length} envelopes
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Add Envelope Button */}
@@ -1939,8 +1983,32 @@ export function AllocationClient() {
       {/* Envelope Groups - Horizontal scroll on mobile */}
       <div ref={printableAreaRef} className="overflow-x-auto -mx-6 px-6 lg:mx-0 lg:px-0 bg-white min-h-[300px]">
         <div className="min-w-[900px] lg:min-w-0">
+          {/* Empty state when search returns no results */}
+          {searchQuery && searchFilteredEnvelopes.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-silver-very-light flex items-center justify-center mb-4">
+                <Search className="h-8 w-8 text-silver" />
+              </div>
+              <h3 className="text-lg font-semibold text-text-dark mb-2">
+                No envelopes found
+              </h3>
+              <p className="text-sm text-text-medium max-w-md">
+                No envelopes match &ldquo;{searchQuery}&rdquo;.
+                Try a different search term.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchQuery('')}
+                className="mt-4"
+              >
+                Clear Search
+              </Button>
+            </div>
+          )}
+
           {/* Empty state when no envelopes match the current filter */}
-          {!hasFilteredEnvelopes && activeFilter !== "all" && (
+          {!hasFilteredEnvelopes && activeFilter !== "all" && !searchQuery && (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-16 h-16 rounded-full bg-silver-very-light flex items-center justify-center mb-4">
                 <Target className="h-8 w-8 text-silver" />

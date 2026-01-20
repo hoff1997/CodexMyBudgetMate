@@ -73,8 +73,9 @@ export interface EnvelopeData {
   type: "bill" | "spending" | "savings" | "goal" | "tracking";
   // Bill fields
   billAmount?: number;
-  frequency?: "monthly" | "quarterly" | "annual" | "custom" | "weekly" | "fortnightly";
-  dueDate?: number; // day of month
+  frequency?: "monthly" | "quarterly" | "annual" | "custom" | "weekly" | "fortnightly" | "annually" | "custom_weeks";
+  customWeeks?: number; // Number of weeks for custom_weeks frequency (e.g., 8 for every 8 weeks)
+  dueDate?: number | string; // day of month or ISO date string
   priority?: "essential" | "important" | "discretionary";
   // Spending fields
   monthlyBudget?: number;

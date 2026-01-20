@@ -1244,49 +1244,6 @@ export function EnvelopeAllocationStep({
         <p className="text-muted-foreground">
           The goal is simple: make sure what goes out isn't more than what comes in.
         </p>
-        {/* Search and Add Envelope */}
-        <div className="mt-3 flex items-center gap-3 justify-center">
-          {/* Search Box */}
-          <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search envelopes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-8 h-9 text-sm"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-muted rounded"
-              >
-                <X className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            )}
-          </div>
-          {/* Add Envelope Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAddEnvelopeOpen(true)}
-            className="gap-1 border-sage text-sage hover:bg-sage-very-light"
-        >
-          <Plus className="h-4 w-4" />
-          Add Envelope
-        </Button>
-        </div>
-        {/* Search Results Indicator */}
-        {searchQuery && (
-          <p className="text-sm text-muted-foreground">
-            {filteredEnvelopes.length === 0 ? (
-              <>No envelopes found matching "<span className="font-medium">{searchQuery}</span>"</>
-            ) : (
-              <>Showing {filteredEnvelopes.length} of {envelopesWithPerPay.length} envelopes</>
-            )}
-          </p>
-        )}
       </div>
 
       {/* Remy's Coaching - Context aware */}
@@ -1378,6 +1335,50 @@ export function EnvelopeAllocationStep({
           </div>
         ))}
       </div>
+
+      {/* Search and Add Envelope */}
+      <div className="flex items-center gap-3 justify-center">
+        {/* Search Box */}
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search envelopes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-8 h-9 text-sm"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-muted rounded"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        {/* Add Envelope Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAddEnvelopeOpen(true)}
+          className="gap-1 border-sage text-sage hover:bg-sage-very-light"
+        >
+          <Plus className="h-4 w-4" />
+          Add Envelope
+        </Button>
+      </div>
+      {/* Search Results Indicator */}
+      {searchQuery && (
+        <p className="text-sm text-muted-foreground text-center">
+          {filteredEnvelopes.length === 0 ? (
+            <>No envelopes found matching "<span className="font-medium">{searchQuery}</span>"</>
+          ) : (
+            <>Showing {filteredEnvelopes.length} of {envelopesWithPerPay.length} envelopes</>
+          )}
+        </p>
+      )}
 
       {/* Allocation Table by Category */}
       <div className="space-y-3">

@@ -2727,55 +2727,74 @@ function EnvelopeRow({
 
       {/* 7. Frequency (abbreviated display) */}
       <td className={cn("px-2 py-1.5 text-center", editableCellBg)}>
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
-            >
-              {formatFrequencyAbbrev(envelope.frequency || 'monthly', envelope.custom_weeks)}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-44 p-1" align="center">
-            <div className="space-y-0.5">
-              {FREQUENCY_OPTIONS.map(opt => (
+        <div className="flex items-center justify-center gap-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
+              >
+                {envelope.frequency === 'custom_weeks'
+                  ? 'Every'
+                  : formatFrequencyAbbrev(envelope.frequency || 'monthly', envelope.custom_weeks)}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-44 p-1" align="center">
+              <div className="space-y-0.5">
+                {FREQUENCY_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onEnvelopeChange(envelope.id, 'frequency', opt.value);
+                      // Set default custom_weeks if switching to custom_weeks
+                      if (opt.value === 'custom_weeks' && !envelope.custom_weeks) {
+                        onEnvelopeChange(envelope.id, 'custom_weeks', 8);
+                      }
+                    }}
+                    className={cn(
+                      "w-full text-left px-2 py-1 text-[11px] rounded hover:bg-sage-very-light",
+                      envelope.frequency === opt.value && "bg-sage-very-light font-medium"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          {/* Custom Weeks Popup - separate popover for number selection */}
+          {envelope.frequency === 'custom_weeks' && (
+            <Popover>
+              <PopoverTrigger asChild>
                 <button
-                  key={opt.value}
                   type="button"
-                  onClick={() => {
-                    onEnvelopeChange(envelope.id, 'frequency', opt.value);
-                    // Set default custom_weeks if switching to custom_weeks
-                    if (opt.value === 'custom_weeks' && !envelope.custom_weeks) {
-                      onEnvelopeChange(envelope.id, 'custom_weeks', 8);
-                    }
-                  }}
-                  className={cn(
-                    "w-full text-left px-2 py-1 text-[11px] rounded hover:bg-sage-very-light",
-                    envelope.frequency === opt.value && "bg-sage-very-light font-medium"
-                  )}
+                  className="text-[11px] text-sage-dark font-medium hover:text-sage px-1.5 py-0.5 rounded bg-sage-very-light hover:bg-sage-light"
                 >
-                  {opt.label}
+                  {envelope.custom_weeks || 8}wk
                 </button>
-              ))}
-              {envelope.frequency === 'custom_weeks' && (
-                <div className="border-t border-silver-light pt-1 mt-1 px-2">
-                  <label className="text-[10px] text-text-medium">Every</label>
-                  <div className="flex items-center gap-1 mt-0.5">
+              </PopoverTrigger>
+              <PopoverContent className="w-36 p-3" align="center">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-text-dark">Number of weeks</label>
+                  <div className="flex items-center gap-2">
                     <input
                       type="number"
                       min="1"
                       max="52"
                       value={envelope.custom_weeks || 8}
                       onChange={(e) => onEnvelopeChange(envelope.id, 'custom_weeks', parseInt(e.target.value) || 8)}
-                      className="w-12 h-6 text-[11px] text-center border rounded px-1"
+                      className="w-16 h-8 text-sm text-center border rounded px-1"
+                      autoFocus
                     />
-                    <span className="text-[10px] text-text-medium">weeks</span>
+                    <span className="text-sm text-muted-foreground">weeks</span>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">e.g., haircuts every 8 weeks</p>
                 </div>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
       </td>
 
       {/* 8. Due Date (clickable, no calendar icon) */}

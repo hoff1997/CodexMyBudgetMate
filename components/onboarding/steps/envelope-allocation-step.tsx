@@ -1064,9 +1064,9 @@ export function EnvelopeAllocationStep({
           )}
         </td>
 
-        {/* Due Date - only bills have due dates */}
+        {/* Due Date - bills and custom_weeks frequency */}
         <td className="px-1 py-2 text-center hidden lg:table-cell">
-          {env.type === 'bill' ? (
+          {env.type === 'bill' || env.frequency === 'custom_weeks' ? (
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -1080,7 +1080,7 @@ export function EnvelopeAllocationStep({
                         : new Date(env.dueDate).toLocaleDateString('en-NZ', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </>
                   ) : (
-                    <span className="text-muted-foreground/50">Set date</span>
+                    <span className="text-muted-foreground/50">{env.frequency === 'custom_weeks' ? 'Next due' : 'Set date'}</span>
                   )}
                 </button>
               </PopoverTrigger>
@@ -1106,10 +1106,10 @@ export function EnvelopeAllocationStep({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="text-muted-foreground/40 text-xs">N/A</span>
+                  <span className="text-muted-foreground/40 text-xs">—</span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Only bills have due dates</p>
+                  <p className="text-xs">Due dates for bills and custom frequency</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

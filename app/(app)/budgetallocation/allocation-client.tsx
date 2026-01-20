@@ -2812,7 +2812,7 @@ function EnvelopeRow({
           }}
           className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
         >
-          {formatDueDateDisplay() || 'dd/mm/yy'}
+          {formatDueDateDisplay() || (envelope.frequency === 'custom_weeks' ? 'Next due' : 'dd/mm/yy')}
         </button>
       </td>
 

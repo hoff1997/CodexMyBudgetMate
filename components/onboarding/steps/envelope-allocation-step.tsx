@@ -1541,10 +1541,7 @@ export function EnvelopeAllocationStep({
 
             {/* Amount */}
             <div className="space-y-2">
-              <Label htmlFor="envelope-amount">
-                {newEnvelope.type === 'bill' ? 'Bill Amount' :
-                 newEnvelope.type === 'spending' ? 'Monthly Budget' : 'Target Amount'}
-              </Label>
+              <Label htmlFor="envelope-amount">Amount</Label>
               <Input
                 id="envelope-amount"
                 type="number"

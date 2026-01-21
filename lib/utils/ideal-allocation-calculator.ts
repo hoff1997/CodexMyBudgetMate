@@ -42,6 +42,8 @@ export function getCyclesPerYear(frequency: PayCycle | BillFrequency | string): 
       return 12;
     case 'quarterly':
       return 4;
+    case '6_monthly':
+      return 2;
     case 'annual':
     case 'annually':
       return 1;
@@ -103,6 +105,8 @@ export function getFrequencyShortLabel(frequency: string): string {
       return 'Mthly';
     case 'quarterly':
       return 'Qtly';
+    case '6_monthly':
+      return '6M';
     case 'annual':
     case 'annually':
       return 'Ann';
@@ -138,13 +142,14 @@ export function calculateIdealAllocation(
   const billCyclesPerYear = getCyclesPerYear(envelope.frequency);
   const userPayCyclesPerYear = getCyclesPerYear(userPayCycle);
 
-  // For monthly bills, annualize first
-  const annualAmount = envelope.frequency === 'monthly'
-    ? targetAmount * 12
-    : targetAmount;
+  // Annual amount = target amount per occurrence × occurrences per year
+  // e.g., $100 monthly = $100 × 12 = $1200/year
+  // e.g., $600 6-monthly = $600 × 2 = $1200/year
+  // e.g., $1200 annually = $1200 × 1 = $1200/year
+  const annualAmount = targetAmount * billCyclesPerYear;
 
-  const billAmountPerYear = annualAmount / billCyclesPerYear;
-  const idealPerPay = billAmountPerYear / userPayCyclesPerYear;
+  // Per pay = annual amount / pay cycles per year
+  const idealPerPay = annualAmount / userPayCyclesPerYear;
 
   return Math.round(idealPerPay * 100) / 100; // Round to 2 decimal places
 }

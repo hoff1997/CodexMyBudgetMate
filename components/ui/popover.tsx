@@ -149,11 +149,15 @@ export function PopoverContent({
       // getBoundingClientRect() returns viewport-relative coordinates which is what we need for fixed positioning
       let top = triggerRect.bottom + sideOffset;
 
+      // Use actual content dimensions, or reasonable defaults if not yet measured
+      const contentHeight = contentRect.height || 300;
+      const contentWidth = contentRect.width || 280;
+
       // Check if popover would go off screen at bottom
       const viewportHeight = window.innerHeight;
-      if (top + contentRect.height > viewportHeight - 10) {
+      if (top + contentHeight > viewportHeight - 10) {
         // Position above the trigger instead
-        top = triggerRect.top - contentRect.height - sideOffset;
+        top = triggerRect.top - contentHeight - sideOffset;
       }
 
       // Calculate left position based on alignment
@@ -161,16 +165,16 @@ export function PopoverContent({
       if (align === "start") {
         left = triggerRect.left;
       } else if (align === "end") {
-        left = triggerRect.right - contentRect.width;
+        left = triggerRect.right - contentWidth;
       } else {
         // center alignment
-        left = triggerRect.left + (triggerRect.width - contentRect.width) / 2;
+        left = triggerRect.left + (triggerRect.width - contentWidth) / 2;
       }
 
       // Ensure popover doesn't go off screen horizontally
       const viewportWidth = window.innerWidth;
-      if (left + contentRect.width > viewportWidth - 10) {
-        left = viewportWidth - contentRect.width - 10;
+      if (left + contentWidth > viewportWidth - 10) {
+        left = viewportWidth - contentWidth - 10;
       }
       if (left < 10) {
         left = 10;
@@ -183,13 +187,18 @@ export function PopoverContent({
       contentRef.current.style.zIndex = "99999"; // Higher than dialogs (z-50)
     };
 
+    // Initial position update
     updatePosition();
+
+    // Re-position after a short delay to account for content rendering
+    const initialTimeout = setTimeout(updatePosition, 0);
 
     const handleResize = () => updatePosition();
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleResize, true);
 
     return () => {
+      clearTimeout(initialTimeout);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleResize, true);
     };

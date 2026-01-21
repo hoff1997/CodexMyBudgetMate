@@ -753,15 +753,16 @@ function SortableTableRow({
                 envelope.priority === 'essential' ? 'Essential' :
                 envelope.priority === 'discretionary' ? 'Flexible' : 'Important'
               }>
+                {/* Priority colors: Blue (essential) → Sage (important) → Silver (flexible) */}
                 <span className={`inline-block h-2 w-2 rounded-full ${
-                  envelope.priority === 'essential' ? 'bg-sage-dark' :
-                  envelope.priority === 'discretionary' ? 'bg-blue' : 'bg-silver'
+                  envelope.priority === 'essential' ? 'bg-blue' :
+                  envelope.priority === 'discretionary' ? 'bg-silver' : 'bg-sage'
                 }`} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="essential"><span className="inline-block h-2 w-2 rounded-full bg-sage-dark mr-2" />Essential</SelectItem>
-                <SelectItem value="important"><span className="inline-block h-2 w-2 rounded-full bg-silver mr-2" />Important</SelectItem>
-                <SelectItem value="discretionary"><span className="inline-block h-2 w-2 rounded-full bg-blue mr-2" />Flexible</SelectItem>
+                <SelectItem value="essential"><span className="inline-block h-2 w-2 rounded-full bg-blue mr-2" />Essential</SelectItem>
+                <SelectItem value="important"><span className="inline-block h-2 w-2 rounded-full bg-sage mr-2" />Important</SelectItem>
+                <SelectItem value="discretionary"><span className="inline-block h-2 w-2 rounded-full bg-silver mr-2" />Flexible</SelectItem>
               </SelectContent>
             </Select>
           ) : (

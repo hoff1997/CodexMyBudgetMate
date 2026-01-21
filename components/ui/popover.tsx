@@ -144,24 +144,43 @@ export function PopoverContent({
       if (!contentRef.current || !triggerRef.current) return;
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const contentRect = contentRef.current.getBoundingClientRect();
-      const top = triggerRect.bottom + sideOffset + window.scrollY;
+
+      // Use fixed positioning (relative to viewport) for better compatibility with dialogs
+      // getBoundingClientRect() returns viewport-relative coordinates which is what we need for fixed positioning
+      let top = triggerRect.bottom + sideOffset;
+
+      // Check if popover would go off screen at bottom
+      const viewportHeight = window.innerHeight;
+      if (top + contentRect.height > viewportHeight - 10) {
+        // Position above the trigger instead
+        top = triggerRect.top - contentRect.height - sideOffset;
+      }
 
       // Calculate left position based on alignment
       let left: number;
       if (align === "start") {
-        left = triggerRect.left + window.scrollX;
+        left = triggerRect.left;
       } else if (align === "end") {
-        left = triggerRect.right - contentRect.width + window.scrollX;
+        left = triggerRect.right - contentRect.width;
       } else {
         // center alignment
-        left = triggerRect.left + (triggerRect.width - contentRect.width) / 2 + window.scrollX;
+        left = triggerRect.left + (triggerRect.width - contentRect.width) / 2;
       }
 
-      contentRef.current.style.position = "absolute";
+      // Ensure popover doesn't go off screen horizontally
+      const viewportWidth = window.innerWidth;
+      if (left + contentRect.width > viewportWidth - 10) {
+        left = viewportWidth - contentRect.width - 10;
+      }
+      if (left < 10) {
+        left = 10;
+      }
+
+      contentRef.current.style.position = "fixed";
       contentRef.current.style.top = `${top}px`;
       contentRef.current.style.left = `${left}px`;
       contentRef.current.style.minWidth = `${Math.max(180, triggerRect.width)}px`;
-      contentRef.current.style.zIndex = "9999";
+      contentRef.current.style.zIndex = "99999"; // Higher than dialogs (z-50)
     };
 
     updatePosition();

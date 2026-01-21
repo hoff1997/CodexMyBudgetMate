@@ -75,6 +75,8 @@ interface EnvelopeCreationStepV2Props {
 type Priority = 'essential' | 'important' | 'discretionary';
 
 // Priority configuration with style guide colors
+// Color progression: Blue (essential) → Sage (important) → Silver (flexible)
+// This creates a calming hierarchy without anxiety-inducing red/amber colors
 const PRIORITY_CONFIG: Record<Priority, {
   label: string;
   dotColor: string;
@@ -84,24 +86,24 @@ const PRIORITY_CONFIG: Record<Priority, {
 }> = {
   essential: {
     label: 'Essential',
-    dotColor: 'bg-[#5A7E7A]',
-    bgColor: 'bg-[#E2EEEC]',
-    borderColor: 'border-[#B8D4D0]',
-    textColor: 'text-[#5A7E7A]',
+    dotColor: 'bg-[#6B9ECE]',      // Blue - draws attention calmly
+    bgColor: 'bg-[#DDEAF5]',        // Blue light
+    borderColor: 'border-[#6B9ECE]',
+    textColor: 'text-[#4A7BA8]',
   },
   important: {
     label: 'Important',
-    dotColor: 'bg-[#9CA3AF]',
-    bgColor: 'bg-[#F3F4F6]',
-    borderColor: 'border-[#E5E7EB]',
-    textColor: 'text-[#6B6B6B]',
+    dotColor: 'bg-[#7A9E9A]',      // Sage - middle ground
+    bgColor: 'bg-[#E2EEEC]',        // Sage very light
+    borderColor: 'border-[#B8D4D0]',
+    textColor: 'text-[#5A7E7A]',
   },
   discretionary: {
     label: 'Flexible',
-    dotColor: 'bg-[#6B9ECE]',
-    bgColor: 'bg-[#DDEAF5]',
-    borderColor: 'border-[#6B9ECE]',
-    textColor: 'text-[#4A7BA8]',
+    dotColor: 'bg-[#9CA3AF]',      // Silver - fades into background
+    bgColor: 'bg-[#F3F4F6]',        // Silver very light
+    borderColor: 'border-[#E5E7EB]',
+    textColor: 'text-[#6B6B6B]',
   },
 };
 
@@ -123,7 +125,7 @@ interface CustomEnvelope {
   icon: string;
   category: string;
   priority: Priority;
-  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
+  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
   sortOrder: number;
 }
 
@@ -145,7 +147,7 @@ function PriorityDropdown({
         <button
           type="button"
           className={`
-            inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium
+            inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium min-w-[85px]
             ${config.bgColor} ${config.borderColor} border ${config.textColor}
             hover:opacity-80 transition-opacity
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -328,6 +330,9 @@ export function EnvelopeCreationStepV2({
   // Track which category to add envelope to (for per-category add button)
   const [addEnvelopeToCategory, setAddEnvelopeToCategory] = useState<string | null>(null);
 
+  // Collapsible state for the entire Configure Envelopes section
+  const [isConfigureExpanded, setIsConfigureExpanded] = useState(true);
+
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -367,10 +372,10 @@ export function EnvelopeCreationStepV2({
   }, [priorityOverrides]);
 
   // Pre-selected system envelope IDs (shown separately at top)
-  // Always includes: Surplus, CC Holding, Starter Stash
+  // Always includes: Surplus, CC Holding, Starter Stash, Safety Net
   // Conditionally includes: CC Legacy Debt (if user has credit card debt)
   const preSelectedSystemIds = useMemo(() => {
-    const ids = new Set(['surplus', 'credit-card-holding', 'starter-stash']);
+    const ids = new Set(['surplus', 'credit-card-holding', 'starter-stash', 'safety-net']);
     if (hasCreditCardDebt) {
       ids.add('credit-card-historic-debt');
     }
@@ -418,6 +423,7 @@ export function EnvelopeCreationStepV2({
     initialSelected.add("surplus");
     initialSelected.add("credit-card-holding");
     initialSelected.add("starter-stash");
+    initialSelected.add("safety-net");
 
     // Include CC Legacy Debt if user has credit card debt
     if (hasCreditCardDebt) {
@@ -528,7 +534,7 @@ export function EnvelopeCreationStepV2({
             id: master.id,
             name: customName?.name || master.name,
             icon: customName?.icon || master.icon,
-            type: master.subtype === "savings" ? "savings" : master.subtype === "spending" ? "spending" : "bill",
+            type: master.subtype === "savings" ? "savings" : master.subtype === "spending" ? "spending" : master.subtype === "debt" ? "debt" : master.subtype === "tracking" ? "tracking" : master.subtype === "goal" ? "goal" : "bill",
             priority: effectivePriority,
             frequency: master.subtype === "bill" ? "monthly" : undefined,
             category: effectiveCategory,
@@ -546,7 +552,7 @@ export function EnvelopeCreationStepV2({
                 id: instance.instanceId,
                 name: instance.name,
                 icon: instance.icon,
-                type: master.subtype === "savings" ? "savings" : master.subtype === "spending" ? "spending" : "bill",
+                type: master.subtype === "savings" ? "savings" : master.subtype === "spending" ? "spending" : master.subtype === "debt" ? "debt" : master.subtype === "tracking" ? "tracking" : master.subtype === "goal" ? "goal" : "bill",
                 priority: instancePriority,
                 frequency: master.subtype === "bill" ? "monthly" : undefined,
                 category: effectiveCategory,
@@ -1072,10 +1078,10 @@ export function EnvelopeCreationStepV2({
     return (
       <DraggableEnvelope key={envelope.id} id={`builtin-${envelope.id}`} disabled={isDragDisabled}>
         {({ attributes, listeners, disabled: dragDisabled }) => (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           <div
             className={`
-              flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors
+              flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-colors
               ${isEnvelopeLocked ? 'bg-gray-50 border-gray-200 opacity-70' : ''}
               ${!isEnvelopeLocked && isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : ''}
               ${!isEnvelopeLocked && !isSelected ? 'bg-white border-gray-200 hover:border-[#B8D4D0]' : ''}
@@ -1220,7 +1226,7 @@ export function EnvelopeCreationStepV2({
       <DraggableEnvelope key={customEnv.id} id={customEnv.id}>
         {({ attributes, listeners, disabled: dragDisabled }) => (
         <div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-[#E2EEEC] border-[#B8D4D0]">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg border bg-[#E2EEEC] border-[#B8D4D0]">
             {/* Drag Handle */}
             <DragHandle attributes={attributes} listeners={listeners} disabled={dragDisabled} />
 
@@ -1278,56 +1284,82 @@ export function EnvelopeCreationStepV2({
 
   return (
     <div className="w-full space-y-3 px-1">
-      {/* Compact Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#7A9E9A] rounded-lg flex items-center justify-center flex-shrink-0">
-            <Sparkles className="h-5 w-5 text-white" />
+      {/* Collapsible Header */}
+      <div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setIsConfigureExpanded(!isConfigureExpanded)}
+          className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-[#d8e8e5] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            {isConfigureExpanded ? (
+              <ChevronDown className="h-5 w-5 text-[#5A7E7A]" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-[#5A7E7A]" />
+            )}
+            <div className="w-10 h-10 bg-[#7A9E9A] rounded-lg flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-xl font-bold">Configure Your Envelopes</h2>
+              {!isConfigureExpanded && (
+                <p className="text-sm text-muted-foreground">
+                  <strong>{totalSelected}</strong> envelopes selected - click to expand
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold">Configure Your Envelopes</h2>
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">
+              <strong>{totalSelected}</strong> selected
+            </span>
+          </div>
+        </button>
+
+        {isConfigureExpanded && (
+          <div className="px-4 pb-3 border-t border-[#B8D4D0]">
+            <p className="text-sm text-muted-foreground py-2">
               This is just a starting point - everything's fully customisable once you're in the app. Drag envelopes to reorganise, click priorities to adjust, and make it yours!
             </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); openAddCustomDialog(); }}
+                className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Add Envelope
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); setAddCategoryDialogOpen(true); }}
+                className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
+              >
+                <FolderPlus className="h-3 w-3 mr-1" />
+                Add Category
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm">
-            <strong>{totalSelected}</strong> selected
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openAddCustomDialog}
-            className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
-          >
-            <Plus className="h-3 w-3 mr-1" />
-            Add Envelope
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAddCategoryDialogOpen(true)}
-            className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
-          >
-            <FolderPlus className="h-3 w-3 mr-1" />
-            Add Category
-          </Button>
-        </div>
+        )}
       </div>
 
+      {/* Collapsible Content */}
+      {isConfigureExpanded && (
+      <>
       {/* Priority Legend */}
       <div className="flex items-center justify-end gap-2 text-xs px-1">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#E2EEEC] border border-[#B8D4D0] text-[#5A7E7A]">
-          <span className="w-2 h-2 rounded-full bg-[#5A7E7A]" />
+        <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded min-w-[85px] bg-[#DDEAF5] border border-[#6B9ECE] text-[#4A7BA8]">
+          <span className="w-2 h-2 rounded-full bg-[#6B9ECE]" />
           Essential
         </span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#F3F4F6] border border-[#E5E7EB] text-[#6B6B6B]">
-          <span className="w-2 h-2 rounded-full bg-[#9CA3AF]" />
+        <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded min-w-[85px] bg-[#E2EEEC] border border-[#B8D4D0] text-[#5A7E7A]">
+          <span className="w-2 h-2 rounded-full bg-[#7A9E9A]" />
           Important
         </span>
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#DDEAF5] border border-[#6B9ECE] text-[#4A7BA8]">
-          <span className="w-2 h-2 rounded-full bg-[#6B9ECE]" />
+        <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded min-w-[85px] bg-[#F3F4F6] border border-[#E5E7EB] text-[#6B6B6B]">
+          <span className="w-2 h-2 rounded-full bg-[#9CA3AF]" />
           Flexible
         </span>
       </div>
@@ -1343,7 +1375,7 @@ export function EnvelopeCreationStepV2({
             </p>
           </div>
         </div>
-        <div className="p-3 space-y-2 bg-white">
+        <div className="p-2 space-y-1 bg-white">
           {/* System envelopes - always included */}
           {MASTER_ENVELOPE_LIST.filter(e => preSelectedSystemIds.has(e.id)).map((envelope) => {
             const isSelected = selectedIds.has(envelope.id);
@@ -1352,14 +1384,17 @@ export function EnvelopeCreationStepV2({
             const displayIcon = customName?.icon || envelope.icon;
             const effectivePriority = getEffectivePriority(envelope);
             const config = PRIORITY_CONFIG[effectivePriority];
-            const isNonNegotiable = envelope.id === 'surplus' || envelope.id === 'starter-stash' || envelope.id === 'credit-card-historic-debt';
+            const isNonNegotiable = envelope.id === 'surplus' || envelope.id === 'starter-stash' || envelope.id === 'safety-net' || envelope.id === 'credit-card-historic-debt';
+            const isLocked = envelope.isLocked;
 
             return (
               <div
                 key={envelope.id}
                 className={`
-                  flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
-                  ${isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : 'bg-white border-gray-200 hover:border-[#B8D4D0]'}
+                  flex items-center gap-2 px-2 py-1 rounded-lg border transition-colors
+                  ${isLocked ? 'bg-gray-50 border-gray-200 opacity-60' : ''}
+                  ${!isLocked && isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : ''}
+                  ${!isLocked && !isSelected ? 'bg-white border-gray-200 hover:border-[#B8D4D0]' : ''}
                 `}
               >
                 <Checkbox
@@ -1371,17 +1406,25 @@ export function EnvelopeCreationStepV2({
                 <span className="text-lg flex-shrink-0">{displayIcon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{displayName}</span>
-                    {isNonNegotiable && (
+                    <span className={`font-medium text-sm ${isLocked ? 'text-muted-foreground' : ''}`}>{displayName}</span>
+                    {isLocked && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 border border-gray-200 text-muted-foreground">
+                        <Lock className="h-2.5 w-2.5" />
+                        Locked
+                      </span>
+                    )}
+                    {!isLocked && isNonNegotiable && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sage-very-light border border-sage-light text-sage-dark">
                         <Lock className="h-2.5 w-2.5" />
                         Required
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-text-medium italic">{envelope.description}</p>
+                  <p className={`text-xs italic ${isLocked ? 'text-muted-foreground' : 'text-text-medium'}`}>
+                    {isLocked && envelope.lockedReason ? envelope.lockedReason : envelope.description}
+                  </p>
                 </div>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.borderColor} border ${config.textColor}`}>
+                <span className={`inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium min-w-[85px] ${config.bgColor} ${config.borderColor} border ${config.textColor}`}>
                   <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
                   {config.label}
                 </span>
@@ -1417,7 +1460,7 @@ export function EnvelopeCreationStepV2({
               <DroppableCategory key={category} id={`category-${category}`} isOver={overId === `category-${category}`}>
                 <div className="border rounded-lg overflow-hidden">
               {/* Category Header */}
-              <div className="flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-[#F3F4F6] border-b border-gray-200">
                 <button
                   type="button"
                   onClick={() => toggleCategory(category)}
@@ -1456,7 +1499,7 @@ export function EnvelopeCreationStepV2({
 
               {/* Category Content */}
               {isExpanded && (
-                <div className="p-3 space-y-2 bg-white">
+                <div className="p-2 space-y-1 bg-white">
                   {categoryEnvelopes.map((envelope) => renderEnvelopeRow(envelope))}
                   {categoryCustomEnvelopes.map((customEnv) => renderCustomEnvelopeRow(customEnv))}
                 </div>
@@ -1475,7 +1518,7 @@ export function EnvelopeCreationStepV2({
               <DroppableCategory key={category.id} id={`category-${category.id}`} isOver={overId === `category-${category.id}`}>
                 <div className="border rounded-lg overflow-hidden border-[#B8D4D0]">
               {/* Custom Category Header */}
-              <div className="flex items-center justify-between px-4 py-2.5 bg-[#E2EEEC] border-b border-[#B8D4D0]">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-[#E2EEEC] border-b border-[#B8D4D0]">
                 <button
                   type="button"
                   onClick={() => toggleCategory(category.id)}
@@ -1510,9 +1553,9 @@ export function EnvelopeCreationStepV2({
 
               {/* Custom Category Content */}
               {isExpanded && (
-                <div className="p-3 space-y-2 bg-white">
+                <div className="p-2 space-y-1 bg-white">
                   {categoryCustomEnvelopes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="text-sm text-muted-foreground text-center py-3">
                       No envelopes yet. Click the + button to add one.
                     </p>
                   ) : (
@@ -1536,6 +1579,8 @@ export function EnvelopeCreationStepV2({
           )}
         </DragOverlay>
       </DndContext>
+      </>
+      )}
 
       {/* Add Instance Dialog */}
       <Dialog open={addInstanceDialogOpen} onOpenChange={setAddInstanceDialogOpen}>

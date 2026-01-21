@@ -13,7 +13,7 @@ export interface MasterEnvelope {
   icon: string;
   category: EnvelopeCategory;
   priority: 'essential' | 'important' | 'discretionary' | null; // null for tracking envelopes
-  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking';
+  subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
   description?: string;
   defaultSelected?: boolean; // Pre-selected by default
   alwaysInclude?: boolean; // Cannot be deselected (e.g., Surplus)
@@ -62,6 +62,7 @@ export type BuiltInCategory =
   | 'bank'
   | 'celebrations'
   | 'clothing'
+  | 'debt'
   | 'extras'
   | 'giving'
   | 'goals'
@@ -89,6 +90,7 @@ export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
   bank: { label: 'Bank', icon: '🏦' },
   celebrations: { label: 'Celebrations', icon: '🎉' },
   clothing: { label: 'Clothing', icon: '👔' },
+  debt: { label: 'Debt Payoff', icon: '📉' },
   extras: { label: 'Extras', icon: '🛍️' },
   giving: { label: 'Giving', icon: '❤️' },
   goals: { label: 'Goals', icon: '🎯' },
@@ -151,9 +153,9 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     id: 'credit-card-historic-debt',
     name: 'CC Legacy Debt',
     icon: '📊',
-    category: 'bank',
+    category: 'debt',
     priority: 'essential',
-    subtype: 'goal',
+    subtype: 'debt',
     description: 'Credit card debt from before budgeting. Pay down to zero as part of My Budget Way Step 2.',
   },
   {
@@ -859,6 +861,7 @@ export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelop
  */
 export const CATEGORY_ORDER: EnvelopeCategory[] = [
   'bank',
+  'debt',
   'household',
   'insurance',
   'phone-internet',

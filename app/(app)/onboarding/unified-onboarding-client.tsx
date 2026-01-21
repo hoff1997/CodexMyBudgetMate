@@ -70,7 +70,7 @@ export interface EnvelopeData {
   id: string;
   name: string;
   icon: string;
-  type: "bill" | "spending" | "savings" | "goal" | "tracking";
+  type: "bill" | "spending" | "savings" | "goal" | "tracking" | "debt";
   // Bill fields
   billAmount?: number;
   frequency?: "monthly" | "quarterly" | "annual" | "custom" | "weekly" | "fortnightly" | "annually" | "custom_weeks";

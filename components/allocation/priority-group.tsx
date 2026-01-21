@@ -17,6 +17,9 @@ interface PriorityGroupProps {
   calculatePerPay: (envelope: UnifiedEnvelopeData) => number;
 }
 
+// Priority configuration with style guide colors
+// Color progression: Blue (essential) → Sage (important) → Silver (flexible)
+// This creates a calming hierarchy without anxiety-inducing red/amber colors
 const PRIORITY_CONFIG: Record<PriorityLevel, {
   label: string;
   icon: string;
@@ -27,24 +30,24 @@ const PRIORITY_CONFIG: Record<PriorityLevel, {
 }> = {
   essential: {
     label: "ESSENTIAL",
-    icon: "🔴",
-    dotColor: "bg-[#5A7E7A]", // sage-dark
-    color: "text-text-dark",
-    bgColor: "bg-[#E2EEEC]", // sage-very-light
-    borderColor: "border-[#B8D4D0]", // sage-light
-  },
-  important: {
-    label: "IMPORTANT",
-    icon: "🟡",
-    dotColor: "bg-[#6B9ECE]", // blue
+    icon: "🔵",
+    dotColor: "bg-[#6B9ECE]", // blue - draws attention calmly
     color: "text-text-dark",
     bgColor: "bg-[#DDEAF5]", // blue-light
     borderColor: "border-[#6B9ECE]", // blue
   },
+  important: {
+    label: "IMPORTANT",
+    icon: "🟢",
+    dotColor: "bg-[#7A9E9A]", // sage - middle ground
+    color: "text-text-dark",
+    bgColor: "bg-[#E2EEEC]", // sage-very-light
+    borderColor: "border-[#B8D4D0]", // sage-light
+  },
   discretionary: {
     label: "FLEXIBLE",
-    icon: "🟢",
-    dotColor: "bg-[#9CA3AF]", // silver
+    icon: "⚪",
+    dotColor: "bg-[#9CA3AF]", // silver - fades into background
     color: "text-text-dark",
     bgColor: "bg-[#F3F4F6]", // silver-very-light
     borderColor: "border-[#E5E7EB]", // silver-light

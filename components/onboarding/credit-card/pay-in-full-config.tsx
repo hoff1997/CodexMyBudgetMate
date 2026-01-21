@@ -4,30 +4,27 @@
  * Pay In Full Config
  *
  * Configuration form for Option A: Users who pay their card off in full each month.
- * Collects current outstanding and expected monthly spending.
+ * Collects current outstanding amount.
  */
 
-import { Wallet, TrendingUp } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 
 interface PayInFullConfigProps {
   currentOutstanding: number | null;
-  expectedMonthlySpending: number | null;
+  expectedMonthlySpending?: number | null; // Deprecated - kept for backwards compatibility
   onCurrentOutstandingChange: (amount: number | null) => void;
-  onExpectedMonthlySpendingChange: (amount: number | null) => void;
+  onExpectedMonthlySpendingChange?: (amount: number | null) => void; // Deprecated - kept for backwards compatibility
   cardName: string;
   errors?: {
     currentOutstanding?: string;
-    expectedMonthlySpending?: string;
   };
 }
 
 export function PayInFullConfig({
   currentOutstanding,
-  expectedMonthlySpending,
   onCurrentOutstandingChange,
-  onExpectedMonthlySpendingChange,
   cardName,
   errors,
 }: PayInFullConfigProps) {
@@ -80,36 +77,6 @@ export function PayInFullConfig({
           <p className="text-xs text-text-light">
             The amount currently charged to your card that you'll need to pay off.
             This will be set aside in your {cardName} Holding envelope.
-          </p>
-        </div>
-
-        {/* Expected Monthly Spending */}
-        <div className="space-y-2">
-          <Label htmlFor="expectedMonthly" className="text-sm text-text-medium flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Expected monthly spending
-          </Label>
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-medium">
-              $
-            </span>
-            <Input
-              id="expectedMonthly"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={expectedMonthlySpending ?? ''}
-              onChange={(e) => handleAmountChange(e.target.value, onExpectedMonthlySpendingChange)}
-              className={`pl-7 ${errors?.expectedMonthlySpending ? 'border-red-500' : ''}`}
-            />
-          </div>
-          {errors?.expectedMonthlySpending && (
-            <p className="text-xs text-red-500">{errors.expectedMonthlySpending}</p>
-          )}
-          <p className="text-xs text-text-light">
-            Roughly how much you typically spend on this card each month.
-            This helps us set up your payment budget.
           </p>
         </div>
       </div>

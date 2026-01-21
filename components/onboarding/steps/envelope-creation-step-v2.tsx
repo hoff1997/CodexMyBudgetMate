@@ -41,7 +41,9 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
+  type DraggableAttributes,
 } from "@dnd-kit/core";
+import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import { cn } from "@/lib/cn";
 import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 import {
@@ -173,6 +175,13 @@ function PriorityDropdown({
   );
 }
 
+// Type for drag handle render prop
+type DragHandleRenderProps = {
+  attributes: DraggableAttributes;
+  listeners: SyntheticListenerMap | undefined;
+  disabled: boolean;
+};
+
 // Draggable envelope wrapper
 function DraggableEnvelope({
   id,
@@ -181,7 +190,7 @@ function DraggableEnvelope({
 }: {
   id: string;
   disabled?: boolean;
-  children: React.ReactNode;
+  children: React.ReactNode | ((props: DragHandleRenderProps) => React.ReactNode);
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id,
@@ -194,29 +203,49 @@ function DraggableEnvelope({
       }
     : undefined;
 
+  // Pass drag handle props to children via render prop pattern
+  // The drag handle is now rendered inline with the row content
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative transition-opacity",
+        "transition-opacity",
         isDragging && "opacity-50"
       )}
     >
-      {/* Drag handle */}
-      {!disabled && (
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 p-1 cursor-grab hover:bg-muted rounded opacity-50 hover:opacity-100 transition-opacity"
-          title="Drag to move to another category"
-        >
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </button>
-      )}
-      {children}
+      {/* Render children with drag handle props available */}
+      {typeof children === 'function'
+        ? children({ attributes, listeners, disabled: !!disabled })
+        : children}
     </div>
+  );
+}
+
+// Drag handle component to be used inside rows
+function DragHandle({
+  attributes,
+  listeners,
+  disabled
+}: {
+  attributes: DraggableAttributes;
+  listeners: SyntheticListenerMap | undefined;
+  disabled?: boolean;
+}) {
+  if (disabled) {
+    return <div className="w-5 flex-shrink-0" />; // Placeholder for alignment
+  }
+
+  return (
+    <button
+      type="button"
+      {...attributes}
+      {...listeners}
+      className="p-0.5 cursor-grab hover:bg-muted rounded opacity-40 hover:opacity-100 transition-opacity flex-shrink-0"
+      title="Drag to move to another category"
+    >
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
+    </button>
   );
 }
 
@@ -1042,15 +1071,19 @@ export function EnvelopeCreationStepV2({
 
     return (
       <DraggableEnvelope key={envelope.id} id={`builtin-${envelope.id}`} disabled={isDragDisabled}>
-        <div className="space-y-1 pl-6">
+        {({ attributes, listeners, disabled: dragDisabled }) => (
+        <div className="space-y-1">
           <div
             className={`
-              flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
+              flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors
               ${isEnvelopeLocked ? 'bg-gray-50 border-gray-200 opacity-70' : ''}
               ${!isEnvelopeLocked && isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : ''}
               ${!isEnvelopeLocked && !isSelected ? 'bg-white border-gray-200 hover:border-[#B8D4D0]' : ''}
             `}
           >
+          {/* Drag Handle */}
+          <DragHandle attributes={attributes} listeners={listeners} disabled={dragDisabled} />
+
           {/* Checkbox */}
           <Checkbox
             checked={isSelected}
@@ -1127,7 +1160,7 @@ export function EnvelopeCreationStepV2({
                 {envelope.lockedReason}
               </span>
             ) : (
-              <span className="text-xs text-muted-foreground truncate block">
+              <span className="text-xs text-muted-foreground italic truncate block">
                 {envelope.description}
               </span>
             )}
@@ -1176,6 +1209,7 @@ export function EnvelopeCreationStepV2({
             </div>
           )}
         </div>
+        )}
       </DraggableEnvelope>
     );
   };
@@ -1184,8 +1218,12 @@ export function EnvelopeCreationStepV2({
   const renderCustomEnvelopeRow = (customEnv: CustomEnvelope) => {
     return (
       <DraggableEnvelope key={customEnv.id} id={customEnv.id}>
-        <div className="pl-6">
-          <div className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-[#E2EEEC] border-[#B8D4D0]">
+        {({ attributes, listeners, disabled: dragDisabled }) => (
+        <div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-[#E2EEEC] border-[#B8D4D0]">
+            {/* Drag Handle */}
+            <DragHandle attributes={attributes} listeners={listeners} disabled={dragDisabled} />
+
             {/* Checkbox (always checked for custom) */}
             <Checkbox checked={true} disabled className="data-[state=checked]:bg-[#7A9E9A] data-[state=checked]:border-[#7A9E9A]" />
 
@@ -1221,7 +1259,7 @@ export function EnvelopeCreationStepV2({
 
             {/* Description */}
             <div className="hidden sm:block flex-[2] min-w-0">
-              <span className="text-xs text-muted-foreground truncate block">Custom envelope</span>
+              <span className="text-xs text-muted-foreground italic truncate block">Custom envelope</span>
             </div>
 
             {/* Priority Dropdown */}
@@ -1233,6 +1271,7 @@ export function EnvelopeCreationStepV2({
             </div>
           </div>
         </div>
+        )}
       </DraggableEnvelope>
     );
   };
@@ -1340,7 +1379,7 @@ export function EnvelopeCreationStepV2({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-text-medium">{envelope.description}</p>
+                  <p className="text-xs text-text-medium italic">{envelope.description}</p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.borderColor} border ${config.textColor}`}>
                   <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />

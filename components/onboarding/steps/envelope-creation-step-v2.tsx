@@ -1360,8 +1360,13 @@ export function EnvelopeCreationStepV2({
         </button>
         {isEssentialsExpanded && (
         <div className="p-2 space-y-1 bg-white">
-          {/* System envelopes - always included */}
-          {MASTER_ENVELOPE_LIST.filter(e => preSelectedSystemIds.has(e.id)).map((envelope) => {
+          {/* System envelopes - always included, in specific order */}
+          {/* Order: Surplus, CC Holding, Starter Stash, Debt Destroyer, Safety Net, CC Legacy Debt, My Budget Mate */}
+          {['surplus', 'credit-card-holding', 'starter-stash', 'debt-destroyer', 'safety-net', 'credit-card-historic-debt', 'my-budget-mate']
+            .filter(id => preSelectedSystemIds.has(id))
+            .map(id => MASTER_ENVELOPE_LIST.find(e => e.id === id))
+            .filter((envelope): envelope is NonNullable<typeof envelope> => envelope !== undefined)
+            .map((envelope) => {
             const isSelected = selectedIds.has(envelope.id);
             const customName = customNames.get(envelope.id);
             const displayName = customName?.name || envelope.name;

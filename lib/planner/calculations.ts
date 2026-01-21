@@ -6,6 +6,7 @@ export type PlannerFrequency =
   | "fortnightly"
   | "monthly"
   | "quarterly"
+  | "6_monthly"
   | "annually";
 
 export const frequencyOptions: { value: PlannerFrequency; label: string }[] = [
@@ -13,6 +14,7 @@ export const frequencyOptions: { value: PlannerFrequency; label: string }[] = [
   { value: "fortnightly", label: "Fortnightly" },
   { value: "monthly", label: "Monthly" },
   { value: "quarterly", label: "Quarterly" },
+  { value: "6_monthly", label: "6 Monthly" },
   { value: "annually", label: "Annually" },
   { value: "none", label: "No schedule" },
 ];
@@ -28,6 +30,8 @@ export function calculateAnnualFromTarget(targetAmount: number, frequency: Plann
       return targetAmount * 12;
     case "quarterly":
       return targetAmount * 4;
+    case "6_monthly":
+      return targetAmount * 2;
     case "annually":
     case "none":
     default:
@@ -49,6 +53,8 @@ export function calculateRequiredContribution(
       return annualAmount / 12;
     case "quarterly":
       return annualAmount / 4;
+    case "6_monthly":
+      return annualAmount / 2;
     case "annually":
       return annualAmount;
     case "none":

@@ -102,6 +102,7 @@ const FREQUENCY_OPTIONS = [
   { value: 'fortnightly', label: 'Fortnightly', abbrev: 'FN', multiplier: 26 },
   { value: 'monthly', label: 'Monthly', abbrev: 'Mth', multiplier: 12 },
   { value: 'quarterly', label: 'Quarterly', abbrev: 'Q', multiplier: 4 },
+  { value: '6_monthly', label: '6 Monthly', abbrev: '6M', multiplier: 2 },
   { value: 'annually', label: 'Annually', abbrev: 'Yr', multiplier: 1 },
   { value: 'custom_weeks', label: 'Every X Weeks', abbrev: 'Custom', multiplier: 0 }, // multiplier calculated dynamically
 ];

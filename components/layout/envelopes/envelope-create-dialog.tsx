@@ -111,6 +111,7 @@ const PAY_FREQUENCY_CYCLES: Record<string, number> = {
   twice_monthly: 24,
   monthly: 12,
   quarterly: 4,
+  '6_monthly': 2,
   annually: 1,
 };
 

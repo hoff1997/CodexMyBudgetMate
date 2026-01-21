@@ -233,6 +233,7 @@ const FREQUENCY_OPTIONS = [
   { value: 'fortnightly', label: 'Fortnightly' },
   { value: 'monthly', label: 'Monthly' },
   { value: 'quarterly', label: 'Quarterly' },
+  { value: '6_monthly', label: '6 Monthly' },
   { value: 'annually', label: 'Annual' },
   { value: 'custom_weeks', label: 'Custom Weeks' },
 ];

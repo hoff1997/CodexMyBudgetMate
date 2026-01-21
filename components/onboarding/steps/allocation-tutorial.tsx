@@ -326,7 +326,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
         </div>
         <div className="border-t pt-2 mt-2 flex justify-between text-sm">
           <span className="text-muted-foreground">Annual total:</span>
-          <span className="font-bold text-sage-dark">$380 = ~$32/month</span>
+          <span className="font-bold text-sage-dark">$380/year</span>
         </div>
       </div>
     ),

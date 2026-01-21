@@ -1039,18 +1039,21 @@ export function EnvelopeAllocationStep({
                   {env.name}
                   <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 </button>
-                {/* Celebration indicator - shows gift icon when configured */}
+                {/* Celebration indicator - shows gift icon when configured (clickable to edit) */}
                 {env.isCelebration && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold-light text-gold text-[10px]">
+                        <button
+                          onClick={() => handleStartCelebration(env.id)}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold text-white hover:bg-gold/80 transition-colors"
+                        >
                           🎁
-                        </span>
+                        </button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">
-                          Celebration envelope - click to edit gift recipients
+                          Click to edit gift recipients
                         </p>
                       </TooltipContent>
                     </Tooltip>

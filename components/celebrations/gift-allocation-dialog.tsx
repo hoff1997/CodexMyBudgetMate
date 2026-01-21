@@ -229,17 +229,27 @@ export function GiftAllocationDialog({
     }
   };
 
-  // For festivals: only need gift amount (party is at envelope level)
-  // For birthdays: need either gift or party amount
-  const isValid = recipients.every(
-    (r) => r.recipient_name.trim() && (
+  // Validation: Allow saving with no recipients if there's an event cost (party budget for festivals)
+  // For festivals: can save with just party budget OR with recipients that have gift amounts
+  // For birthdays: need either gift or party amount per recipient
+  const hasValidRecipients = recipients.some((r) => r.recipient_name.trim());
+  const allRecipientsValid = recipients.every(
+    (r) => !r.recipient_name.trim() || ( // Empty recipients are OK (will be filtered out)
       r.gift_amount > 0 || (!isFestival && r.party_amount > 0)
     )
+  );
+  const isValid = allRecipientsValid && (
+    hasValidRecipients || // Has at least one named recipient
+    (isFestival && envelopePartyBudget > 0) // OR festival with event-only cost
   );
 
   const handleSave = () => {
     if (!isValid) {
-      toast.error("Please fill in all recipient names and amounts");
+      if (isFestival && !hasValidRecipients && envelopePartyBudget <= 0) {
+        toast.error("Please add recipients or an event budget");
+      } else {
+        toast.error("Please fill in all recipient names and amounts");
+      }
       return;
     }
 
@@ -341,7 +351,7 @@ export function GiftAllocationDialog({
                       : ""}
                   </p>
                   <p className="text-xs text-text-medium">
-                    We'll spread these costs across the year, giving you an average amount to set aside each pay. Your envelope will go up and down throughout the year as celebrations come and go - that's completely normal!</p>
+                    We'll spread these costs across the year so you're always prepared. Your envelope will go up and down throughout the year as celebrations come and go - that's completely normal!</p>
                 </div>
               </div>
 
@@ -559,6 +569,9 @@ export function GiftAllocationDialog({
                             onSelect={(date) =>
                               updateRecipient(recipient.tempId, "celebration_date", date || null)
                             }
+                            captionLayout="dropdown-buttons"
+                            fromYear={1920}
+                            toYear={new Date().getFullYear() + 1}
                             initialFocus
                           />
                         </PopoverContent>
@@ -683,12 +696,6 @@ export function GiftAllocationDialog({
                     {formatCurrency(newTotal)}/year
                   </span>
                 </div>
-                {/* Monthly average */}
-                {newTotal > 0 && (
-                  <div className="text-sm text-sage-dark font-medium mt-1">
-                    ~{formatCurrency(newTotal / 12)}/month average
-                  </div>
-                )}
                 {/* Breakdown by type */}
                 <div className="flex items-center gap-4 mt-2 text-sm text-text-medium">
                   <span className="flex items-center gap-1">

@@ -438,6 +438,14 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     subtype: 'spending',
   },
   {
+    id: 'doctor',
+    name: 'Doctor',
+    icon: '🩺',
+    category: 'health',
+    priority: 'essential',
+    subtype: 'spending',
+  },
+  {
     id: 'dentist',
     name: 'Dentist',
     icon: '🦷',

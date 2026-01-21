@@ -407,6 +407,9 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
                           onSelect={(date) =>
                             setEditForm({ ...editForm, date: date || null })
                           }
+                          captionLayout="dropdown-buttons"
+                          fromYear={1920}
+                          toYear={new Date().getFullYear() + 1}
                           initialFocus
                         />
                       </PopoverContent>
@@ -692,6 +695,9 @@ export function BirthdaysClient({ initialBirthdays }: BirthdaysClientProps) {
                       mode="single"
                       selected={addForm.date || undefined}
                       onSelect={(date) => setAddForm({ ...addForm, date: date || null })}
+                      captionLayout="dropdown-buttons"
+                      fromYear={1920}
+                      toYear={new Date().getFullYear() + 1}
                       initialFocus
                     />
                   </PopoverContent>

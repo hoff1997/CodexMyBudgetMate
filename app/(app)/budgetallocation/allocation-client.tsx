@@ -2678,14 +2678,15 @@ function EnvelopeRow({
               ❄
             </button>
           )}
-          {/* Show gift recipients indicator for celebration envelopes */}
-          {(envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0 && (
-            <span
-              title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''}`}
-              className="flex-shrink-0"
+          {/* Show gift recipients indicator for celebration envelopes - clickable to edit */}
+          {(envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0 && onGiftAllocationClick && (
+            <button
+              onClick={() => onGiftAllocationClick(envelope)}
+              title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''} - click to edit`}
+              className="flex-shrink-0 p-0.5 rounded hover:bg-gold-light transition-colors"
             >
               <Gift className="h-3.5 w-3.5 text-gold" />
-            </span>
+            </button>
           )}
         </div>
       </td>

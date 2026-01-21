@@ -253,6 +253,10 @@ export function PopoverContent({
         "rounded-xl border border-border/60 bg-background p-4 text-sm shadow-xl",
         className,
       )}
+      // Stop all mouse events from propagating to parent elements (like Dialog backdrop)
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {children}
     </div>,

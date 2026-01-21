@@ -2739,7 +2739,7 @@ function EnvelopeRow({
                 Every {envelope.custom_weeks || 8} wks
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-40 p-2" align="center">
+            <PopoverContent className="w-40 p-2" align="center" onOpenAutoFocus={(e) => e.preventDefault()}>
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5 justify-center whitespace-nowrap">
                   <span className="text-[11px] text-text-medium">Every</span>
@@ -2750,7 +2750,6 @@ function EnvelopeRow({
                     value={envelope.custom_weeks || 8}
                     onChange={(e) => onEnvelopeChange(envelope.id, 'custom_weeks', parseInt(e.target.value) || 8)}
                     className="w-12 h-6 text-[11px] text-center border rounded px-1"
-                    autoFocus
                   />
                   <span className="text-[11px] text-text-medium">wks</span>
                 </div>

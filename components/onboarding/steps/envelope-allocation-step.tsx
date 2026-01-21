@@ -1026,7 +1026,7 @@ export function EnvelopeAllocationStep({
                   Every {env.customWeeks || 8} wks
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-40 p-2" align="center">
+              <PopoverContent className="w-40 p-2" align="center" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5 justify-center whitespace-nowrap">
                     <span className="text-xs text-text-medium">Every</span>
@@ -1037,7 +1037,6 @@ export function EnvelopeAllocationStep({
                       value={env.customWeeks || 8}
                       onChange={(e) => handleEnvelopeChange(env.id, 'customWeeks', parseInt(e.target.value) || 8)}
                       className="h-6 w-12 text-xs text-center"
-                      autoFocus
                     />
                     <span className="text-xs text-text-medium">wks</span>
                   </div>

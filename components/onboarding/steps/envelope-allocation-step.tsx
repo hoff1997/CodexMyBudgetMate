@@ -212,6 +212,21 @@ function getFrequencyLabel(frequency: string | undefined, customWeeks?: number):
   return FREQUENCY_LABELS[frequency || 'monthly'] || 'Monthly';
 }
 
+// Helper to format next pay date as dd/mm/yyyy
+function formatNextPayDate(date: Date | string | undefined): string {
+  if (!date) return '';
+  try {
+    const d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return '';
+  }
+}
+
 // Frequency options - used for dropdown (no duplicates)
 const FREQUENCY_OPTIONS = [
   { value: 'weekly', label: 'Weekly' },
@@ -1330,7 +1345,14 @@ export function EnvelopeAllocationStep({
                     <AlertCircle className="h-5 w-5 text-[#6B9ECE]" />
                   )}
                   <div>
-                    <h3 className="font-semibold text-text-dark">{stats.income.name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-text-dark">{stats.income.name}</h3>
+                      {stats.income.nextPayDate && (
+                        <span className="text-xs text-muted-foreground italic">
+                          next payment {formatNextPayDate(stats.income.nextPayDate)}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-text-medium">
                       {formatCurrency(stats.income.amount)} {getPayFrequencyLabel(stats.income.frequency)}
                     </p>

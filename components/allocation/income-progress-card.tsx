@@ -8,6 +8,7 @@ interface IncomeProgressCardProps {
   allocated: number;
   frequency: string;
   isPrimary?: boolean;
+  nextPayDate?: string; // ISO date string for next payment
 }
 
 /**
@@ -36,12 +37,30 @@ function getFrequencyLabel(frequency: string): string {
  * - "over" = committed more than income allows
  * - "allocated" = percentage assigned to envelopes
  */
+/**
+ * Format date as dd/mm/yyyy
+ */
+function formatNextPayDate(dateStr: string | undefined): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '';
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return '';
+  }
+}
+
 export function IncomeProgressCard({
   name,
   amount,
   allocated,
   frequency,
   isPrimary = false,
+  nextPayDate,
 }: IncomeProgressCardProps) {
   const remaining = amount - allocated;
   const percentUsed = amount > 0 ? (allocated / amount) * 100 : 0;
@@ -62,6 +81,11 @@ export function IncomeProgressCard({
           <span className="font-semibold text-text-dark text-sm">
             {isPrimary ? "PRIMARY: " : ""}{name}
           </span>
+          {nextPayDate && (
+            <span className="text-xs text-text-medium italic">
+              next payment {formatNextPayDate(nextPayDate)}
+            </span>
+          )}
           <span className="text-xs text-sage-dark">
             {getFrequencyLabel(frequency)}
           </span>

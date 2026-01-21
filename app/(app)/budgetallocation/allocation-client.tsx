@@ -1851,6 +1851,7 @@ export function AllocationClient() {
               allocated={income.allocated}
               frequency={income.frequency}
               isPrimary={index === 0}
+              nextPayDate={income.nextPayDate}
             />
           ))}
         </div>

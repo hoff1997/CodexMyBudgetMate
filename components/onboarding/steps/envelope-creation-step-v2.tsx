@@ -20,7 +20,6 @@ import {
 import {
   ChevronDown,
   ChevronRight,
-  Sparkles,
   Plus,
   Trash2,
   Copy,
@@ -54,6 +53,7 @@ import {
   type BuiltInCategory,
 } from "@/lib/onboarding/master-envelope-list";
 import { IconPicker } from "@/components/onboarding/icon-picker";
+import { RemyAvatar } from "@/components/onboarding/remy-tip";
 
 interface EnvelopeCreationStepV2Props {
   envelopes: EnvelopeData[];
@@ -1287,9 +1287,7 @@ export function EnvelopeCreationStepV2({
       <div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#7A9E9A] rounded-lg flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
+            <RemyAvatar pose="small" size="sm" className="!w-10 !h-10 !border-2 !shadow-none" />
             <div className="text-left">
               <h2 className="text-xl font-bold">Configure Your Envelopes</h2>
               <p className="text-sm text-muted-foreground">

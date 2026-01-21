@@ -20,6 +20,7 @@ import { PayingDownConfig } from './paying-down-config';
 import { StillUsingToggle } from './still-using-toggle';
 import { EnvelopePreview } from './envelope-preview';
 import { PayoffPreview } from './payoff-preview';
+import { RemyTip } from '@/components/onboarding/remy-tip';
 
 import type { CreditCardUsageType, CreditCardConfig } from '@/lib/types/credit-card-onboarding';
 import { validateCreditCardConfig } from '@/lib/utils/credit-card-onboarding-utils';
@@ -233,6 +234,16 @@ export function CreditCardForkStep({
           </div>
         </div>
       )}
+
+      {/* Remy's encouragement about honesty */}
+      <RemyTip pose="encouraging">
+        <p className="font-medium mb-1">Being honest with yourself is the first step to financial freedom.</p>
+        <p>
+          At My Budget Mate, we believe in facing reality head-on - no judgement, just support.
+          Your answers here are completely private and help us set you up for success.
+          The more honest you are, the better we can help you reach your goals.
+        </p>
+      </RemyTip>
 
       {/* Main card configuration */}
       <Card>

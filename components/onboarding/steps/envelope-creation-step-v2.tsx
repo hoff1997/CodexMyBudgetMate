@@ -1284,19 +1284,19 @@ export function EnvelopeCreationStepV2({
   return (
     <div className="w-full space-y-3 px-1">
       {/* Static Header */}
-      <div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg overflow-hidden">
+      <div className="bg-sage-very-light border border-sage-light rounded-lg overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
-            <RemyAvatar pose="small" size="sm" className="!w-10 !h-10 !border-2 !shadow-none" />
+            <RemyAvatar pose="small" size="md" className="border-2 border-white shadow-sm" />
             <div className="text-left">
-              <h2 className="text-xl font-bold">Configure Your Envelopes</h2>
+              <h2 className="text-xl font-bold text-text-dark">Configure Your Envelopes</h2>
               <p className="text-sm text-muted-foreground">
                 <strong>{totalSelected}</strong> envelopes selected
               </p>
             </div>
           </div>
         </div>
-        <div className="px-4 pb-3 border-t border-[#B8D4D0]">
+        <div className="px-4 pb-3 border-t border-sage-light">
           <p className="text-sm text-muted-foreground py-2">
             This is just a starting point - everything's fully customisable once you're in the app. Drag envelopes to reorganise, click priorities to adjust, and make it yours!
           </p>

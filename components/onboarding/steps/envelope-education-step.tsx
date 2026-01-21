@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowRight, ArrowLeft, Zap, ShoppingBag, Target, PlayCircle } from "lucide-react";
-import { RemyAvatar, RemyTip } from "@/components/onboarding/remy-tip";
+import { RemyTip } from "@/components/onboarding/remy-tip";
 
 interface EnvelopeEducationStepProps {
   onContinue: () => void;
@@ -13,17 +13,6 @@ interface EnvelopeEducationStepProps {
 export function EnvelopeEducationStep({ onContinue, onBack }: EnvelopeEducationStepProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header with Remy */}
-      <div className="flex items-center gap-4 mb-6">
-        <RemyAvatar pose="small" size="md" />
-        <div>
-          <h2 className="text-2xl font-bold text-text-dark">Here's how envelopes work</h2>
-          <p className="text-muted-foreground">
-            This is the key to getting sorted
-          </p>
-        </div>
-      </div>
-
       {/* Remy's explanation */}
       <RemyTip pose="thinking">
         Envelopes are how you tell your money where to go. Each envelope has

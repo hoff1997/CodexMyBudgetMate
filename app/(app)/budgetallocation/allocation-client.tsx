@@ -2726,21 +2726,21 @@ function EnvelopeRow({
       </td>
 
       {/* 7. Frequency (abbreviated display) */}
-      <td className={cn("px-2 py-1.5 text-center", editableCellBg)}>
+      <td className={cn("px-2 py-1.5 text-center whitespace-nowrap", editableCellBg)}>
         {envelope.frequency === 'custom_weeks' ? (
           /* Custom weeks - single popover with "Every X wks" display */
           <Popover>
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
+                className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light whitespace-nowrap"
               >
                 Every {envelope.custom_weeks || 8} wks
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-44 p-2" align="center">
+            <PopoverContent className="w-40 p-2" align="center">
               <div className="space-y-2">
-                <div className="flex items-center gap-2 justify-center">
+                <div className="flex items-center gap-1.5 justify-center whitespace-nowrap">
                   <span className="text-[11px] text-text-medium">Every</span>
                   <input
                     type="number"
@@ -2748,7 +2748,7 @@ function EnvelopeRow({
                     max="52"
                     value={envelope.custom_weeks || 8}
                     onChange={(e) => onEnvelopeChange(envelope.id, 'custom_weeks', parseInt(e.target.value) || 8)}
-                    className="w-14 h-7 text-[11px] text-center border rounded px-1"
+                    className="w-12 h-6 text-[11px] text-center border rounded px-1"
                     autoFocus
                   />
                   <span className="text-[11px] text-text-medium">wks</span>
@@ -2756,9 +2756,9 @@ function EnvelopeRow({
                 <button
                   type="button"
                   onClick={() => onEnvelopeChange(envelope.id, 'frequency', 'monthly')}
-                  className="w-full text-left px-2 py-1 text-[11px] text-muted-foreground hover:text-text-dark hover:bg-sage-very-light rounded"
+                  className="w-full text-left px-2 py-1 text-[10px] text-muted-foreground hover:text-text-dark hover:bg-sage-very-light rounded"
                 >
-                  ← Back to standard frequency
+                  ← Standard frequency
                 </button>
               </div>
             </PopoverContent>

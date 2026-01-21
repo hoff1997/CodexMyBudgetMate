@@ -1000,20 +1000,20 @@ export function EnvelopeAllocationStep({
         </td>
 
         {/* Frequency */}
-        <td className="px-1 py-2 text-center hidden sm:table-cell" {...(isFirstRow ? { 'data-tutorial': 'frequency-cell' } : {})}>
+        <td className="px-1 py-2 text-center hidden sm:table-cell whitespace-nowrap" {...(isFirstRow ? { 'data-tutorial': 'frequency-cell' } : {})}>
           {env.frequency === 'custom_weeks' ? (
             /* Custom weeks - single popover with "Every X wks" display */
             <Popover>
               <PopoverTrigger asChild>
                 <button
-                  className="text-muted-foreground text-xs hover:text-sage-dark px-1.5 py-0.5 rounded hover:bg-sage-very-light"
+                  className="text-muted-foreground text-xs hover:text-sage-dark px-1.5 py-0.5 rounded hover:bg-sage-very-light whitespace-nowrap"
                 >
                   Every {env.customWeeks || 8} wks
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-44 p-2" align="center">
+              <PopoverContent className="w-40 p-2" align="center">
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2 justify-center">
+                  <div className="flex items-center gap-1.5 justify-center whitespace-nowrap">
                     <span className="text-xs text-text-medium">Every</span>
                     <Input
                       type="number"
@@ -1021,7 +1021,7 @@ export function EnvelopeAllocationStep({
                       max="52"
                       value={env.customWeeks || 8}
                       onChange={(e) => handleEnvelopeChange(env.id, 'customWeeks', parseInt(e.target.value) || 8)}
-                      className="h-7 w-14 text-xs text-center"
+                      className="h-6 w-12 text-xs text-center"
                       autoFocus
                     />
                     <span className="text-xs text-text-medium">wks</span>
@@ -1029,9 +1029,9 @@ export function EnvelopeAllocationStep({
                   <button
                     type="button"
                     onClick={() => handleEnvelopeChange(env.id, 'frequency', 'monthly')}
-                    className="w-full text-left px-2 py-1 text-xs text-muted-foreground hover:text-sage-dark hover:bg-sage-very-light rounded"
+                    className="w-full text-left px-2 py-1 text-[10px] text-muted-foreground hover:text-sage-dark hover:bg-sage-very-light rounded"
                   >
-                    ← Back to standard frequency
+                    ← Standard frequency
                   </button>
                 </div>
               </PopoverContent>

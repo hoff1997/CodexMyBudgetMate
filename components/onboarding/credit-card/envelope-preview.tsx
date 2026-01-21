@@ -3,11 +3,18 @@
 /**
  * Envelope Preview
  *
- * Shows a preview of the envelopes that will be created based on the
- * credit card configuration. Helps users understand what's being set up.
+ * Shows a preview of what will be set up based on the credit card configuration.
+ *
+ * Important: The system uses a SINGLE consolidated "CC Holding" envelope for ALL
+ * credit cards (created via suggested-envelopes.ts), NOT per-card holding envelopes.
+ *
+ * For pay-in-full users: No additional envelopes needed - the CC Holding system
+ * tracks their spending and the payment is reconciled automatically.
+ *
+ * For debt users: A "{CardName} Payoff" envelope is created to track debt elimination.
  */
 
-import { CreditCard, Wallet, Lock, TrendingDown } from 'lucide-react';
+import { CreditCard, TrendingDown, CheckCircle } from 'lucide-react';
 import type { CreditCardUsageType } from '@/lib/types/credit-card-onboarding';
 
 interface EnvelopePreviewProps {
@@ -19,12 +26,12 @@ interface EnvelopePreviewProps {
   startingDebtAmount?: number;
 }
 
-interface PreviewEnvelope {
+interface PreviewItem {
   name: string;
   description: string;
   icon: React.ReactNode;
   initialAmount?: number;
-  type: 'holding' | 'payment' | 'debt';
+  type: 'system' | 'debt';
 }
 
 export function EnvelopePreview({
@@ -32,103 +39,84 @@ export function EnvelopePreview({
   usageType,
   stillUsing,
   currentOutstanding,
-  expectedMonthlySpending,
   startingDebtAmount,
 }: EnvelopePreviewProps) {
-  const envelopes: PreviewEnvelope[] = [];
+  const items: PreviewItem[] = [];
 
-  // CC Holding envelope - for all types that have active spending
-  // Pay-in-full always gets holding; paying_down/minimum_only only if still using card
-  const needsHolding = usageType === 'pay_in_full' || stillUsing;
-  if (needsHolding) {
-    const holdingAmount = usageType === 'pay_in_full'
-      ? currentOutstanding || 0
-      : 0; // Hybrid mode starts at 0 for new spending
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NZ', {
+      style: 'currency',
+      currency: 'NZD',
+    }).format(amount);
+  };
 
-    envelopes.push({
-      name: `${cardName} Holding`,
-      description: usageType === 'pay_in_full'
-        ? 'Holds money for your current statement balance'
-        : 'Tracks money set aside for new purchases',
-      icon: <Wallet className="w-4 h-4 text-blue" />,
-      initialAmount: holdingAmount,
-      type: 'holding',
-    });
-  }
-
-  // CC Payment envelope - for tracking payment obligations
+  // For pay-in-full users: explain the CC Holding system (no extra envelopes needed)
   if (usageType === 'pay_in_full') {
-    envelopes.push({
-      name: `${cardName} Payment`,
-      description: 'Monthly bill envelope for scheduling payments',
-      icon: <CreditCard className="w-4 h-4 text-sage" />,
-      type: 'payment',
+    items.push({
+      name: 'CC Holding System',
+      description: `Your spending is tracked automatically. Keep ${formatCurrency(currentOutstanding || 0)} in your account to cover the current balance.`,
+      icon: <CheckCircle className="w-4 h-4 text-sage" />,
+      type: 'system',
     });
   }
 
-  // Debt paydown tracking - for Options B/C
+  // For debt users: show the payoff envelope that will be created
   if (usageType === 'paying_down' || usageType === 'minimum_only') {
-    envelopes.push({
-      name: `${cardName} Debt`,
+    // Debt payoff envelope
+    items.push({
+      name: `${cardName} Payoff`,
       description: stillUsing
-        ? 'Tracks your legacy debt separate from new spending'
-        : 'Tracks your debt payoff progress',
+        ? 'Tracks your debt payoff progress while new spending is tracked separately'
+        : 'Tracks your journey to becoming debt-free',
       icon: <TrendingDown className="w-4 h-4 text-blue" />,
       initialAmount: startingDebtAmount || 0,
       type: 'debt',
     });
 
-    // Minimum payment envelope for paying_down and minimum_only
-    envelopes.push({
-      name: `${cardName} Payment`,
-      description: 'Ensures minimum payments are always covered',
-      icon: <CreditCard className="w-4 h-4 text-sage" />,
-      type: 'payment',
-    });
+    // If still using the card, explain CC Holding tracks new spending
+    if (stillUsing) {
+      items.push({
+        name: 'CC Holding System',
+        description: 'New purchases are tracked separately from your legacy debt',
+        icon: <CheckCircle className="w-4 h-4 text-sage" />,
+        type: 'system',
+      });
+    }
   }
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-sm font-medium text-text-dark">
         <CreditCard className="w-4 h-4" />
-        <span>Envelopes to be created</span>
+        <span>What we'll set up</span>
       </div>
 
       <div className="space-y-2">
-        {envelopes.map((envelope, index) => (
+        {items.map((item, index) => (
           <div
             key={index}
             className="flex items-center justify-between p-3 bg-background rounded-lg border border-border"
           >
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${
-                envelope.type === 'holding'
+                item.type === 'debt'
                   ? 'bg-blue-light/50'
-                  : envelope.type === 'debt'
-                    ? 'bg-blue-light/30'
-                    : 'bg-sage-light/50'
+                  : 'bg-sage-light/50'
               }`}>
-                {envelope.icon}
+                {item.icon}
               </div>
               <div>
-                <p className="text-sm font-medium text-text-dark">{envelope.name}</p>
-                <p className="text-xs text-text-light">{envelope.description}</p>
+                <p className="text-sm font-medium text-text-dark">{item.name}</p>
+                <p className="text-xs text-text-light">{item.description}</p>
               </div>
             </div>
-            {envelope.initialAmount !== undefined && envelope.initialAmount > 0 && (
+            {item.initialAmount !== undefined && item.initialAmount > 0 && (
               <div className="text-right">
                 <p className="text-sm font-medium text-text-dark">
-                  {formatCurrency(envelope.initialAmount)}
+                  {formatCurrency(item.initialAmount)}
                 </p>
-                <p className="text-xs text-text-light">starting</p>
+                <p className="text-xs text-text-light">to pay off</p>
               </div>
             )}
           </div>
@@ -140,27 +128,27 @@ export function EnvelopePreview({
         <p className="text-xs text-text-medium">
           {usageType === 'pay_in_full' && (
             <>
-              Your holding envelope will be pre-funded with your current statement balance
-              ({formatCurrency(currentOutstanding || 0)}). New purchases will automatically
-              add to this envelope.
+              <strong>How it works:</strong> When you spend on this card, the CC Holding
+              envelope automatically tracks how much you need to keep in your account.
+              When you pay your card, the money comes from CC Holding - no extra budgeting needed!
             </>
           )}
           {usageType === 'paying_down' && stillUsing && (
             <>
-              New purchases will be tracked separately from your {formatCurrency(startingDebtAmount || 0)} starting
-              debt. This lets you see your true payoff progress.
+              <strong>Hybrid mode:</strong> Your {formatCurrency(startingDebtAmount || 0)} legacy debt
+              is tracked separately. New purchases go to CC Holding so you can see your true payoff progress.
             </>
           )}
           {usageType === 'paying_down' && !stillUsing && (
             <>
-              Your {formatCurrency(startingDebtAmount || 0)} debt will be tracked as you pay it down.
-              Watch your progress toward being debt-free!
+              <strong>Debt payoff mode:</strong> We'll track your {formatCurrency(startingDebtAmount || 0)} debt
+              as you pay it down. Watch your progress toward being debt-free!
             </>
           )}
           {usageType === 'minimum_only' && (
             <>
-              We'll ensure your minimum payments are always budgeted. When you're ready
-              to pay off faster, you can upgrade to active paydown mode.
+              <strong>Minimum payments:</strong> We'll help you track minimum payments. When you're ready
+              to pay off faster, you can switch to active paydown mode.
             </>
           )}
         </p>

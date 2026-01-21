@@ -15,24 +15,27 @@ interface IconPickerProps {
   disabled?: boolean;
 }
 
-// Group icons by category for easier browsing
-const ICON_CATEGORIES = {
-  "Transport": ['🚗', '🚙', '🚕', '🏍️', '🚲', '🛵', '🚌', '🚂', '✈️', '🚁', '⛵', '🛳️'],
-  "Tech": ['📱', '💻', '🖥️', '📺', '🎮', '📷', '🎧', '⌚', '💾', '🖨️'],
-  "Home": ['🏠', '🏡', '🏢', '🏗️', '🔧', '🔨', '🛠️', '🔌', '💡', '🚿', '🛁'],
-  "Money": ['💰', '💵', '💳', '🏦', '💎', '📈', '📉', '💸'],
-  "Animals": ['🐕', '🐈', '🐇', '🐠', '🐦', '🐾', '🦜', '🐢', '🐹'],
-  "People": ['👶', '👧', '👦', '👨', '👩', '👴', '👵', '👨‍👩‍👧', '👨‍👧', '👩‍👧'],
-  "Health": ['🏥', '💊', '🩺', '🦷', '👓', '🏋️', '🧘', '🏃'],
-  "Food": ['🛒', '🍕', '🍽️', '☕', '🍷', '🥪', '🍔', '🥗'],
-  "Activities": ['🎬', '🎭', '🎨', '🎯', '⚽', '🎾', '🏈', '🎸', '🎹', '📚', '✏️'],
-  "Nature": ['🌴', '🏖️', '⛰️', '🏕️', '🌺', '🌳'],
-  "Other": ['🎁', '❤️', '⭐', '🔔', '📦', '🗂️', '📁', '🏷️', '🔒', '🎓'],
+// Group icons by category for easier browsing - expanded selection
+const ICON_CATEGORIES: Record<string, string[]> = {
+  "Home": ['🏠', '🏡', '🏢', '🏗️', '🔧', '🔨', '🛠️', '🔌', '💡', '🚿', '🛁', '🪑', '🛋️', '🛏️', '🚪', '🪟', '🧹', '🧺', '🧴', '🪥'],
+  "Transport": ['🚗', '🚙', '🚕', '🏍️', '🚲', '🛵', '🚌', '🚂', '✈️', '🚁', '⛵', '🛳️', '⛽', '🅿️', '🚦', '🛞'],
+  "Tech": ['📱', '💻', '🖥️', '📺', '🎮', '📷', '🎧', '⌚', '💾', '🖨️', '🔋', '📡', '🎙️', '📻', '🖱️', '⌨️'],
+  "Money": ['💰', '💵', '💳', '🏦', '💎', '📈', '📉', '💸', '🪙', '💲', '🧾', '📊', '🏧'],
+  "Animals": ['🐕', '🐈', '🐇', '🐠', '🐦', '🐾', '🦜', '🐢', '🐹', '🐎', '🦮', '🐩', '🐈‍⬛', '🦴', '🐟', '🦎'],
+  "People": ['👶', '👧', '👦', '👨', '👩', '👴', '👵', '👨‍👩‍👧', '👨‍👧', '👩‍👧', '👨‍👩‍👧‍👦', '👪', '🧑', '🧒', '👫', '👭'],
+  "Health": ['🏥', '💊', '🩺', '🦷', '👓', '🏋️', '🧘', '🏃', '💉', '🩹', '🧬', '🫀', '🧠', '💆', '🧖', '🏊'],
+  "Food": ['🛒', '🍕', '🍽️', '☕', '🍷', '🥪', '🍔', '🥗', '🍳', '🥛', '🍞', '🧁', '🍰', '🍜', '🥡', '🍱'],
+  "Activities": ['🎬', '🎭', '🎨', '🎯', '⚽', '🎾', '🏈', '🎸', '🎹', '📚', '✏️', '🎤', '🎲', '🎳', '⛳', '🎿'],
+  "Nature": ['🌴', '🏖️', '⛰️', '🏕️', '🌺', '🌳', '🌸', '🌻', '🌾', '🍃', '🌈', '☀️', '🌙', '⭐', '🌊', '🔥'],
+  "Shopping": ['👕', '👗', '👠', '👟', '👜', '🎒', '💄', '✂️', '💅', '👔', '🧥', '👒', '🧢', '👙', '🩱', '🥾'],
+  "Education": ['🎓', '📚', '📖', '📝', '✏️', '🖊️', '📐', '📏', '🎒', '🏫', '📓', '📑', '🔬', '🔭', '🎯'],
+  "Celebrations": ['🎁', '🎂', '🎉', '🎊', '🎈', '🪅', '🎄', '🎃', '💐', '💝', '🥳', '🎇', '🎆', '🍾', '🥂'],
+  "Other": ['❤️', '⭐', '🔔', '📦', '🗂️', '📁', '🏷️', '🔒', '🌱', '♻️', '📬', '🔑', '⏰', '📅', '✅', '🎯'],
 };
 
 export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerProps) {
   const [open, setOpen] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<string>("Transport");
+  const [activeCategory, setActiveCategory] = useState<string>("Home");
 
   const handleIconSelect = useCallback((icon: string) => {
     onIconSelect(icon);
@@ -59,6 +62,7 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerP
           {Object.keys(ICON_CATEGORIES).map((category) => (
             <button
               key={category}
+              type="button"
               onClick={() => setActiveCategory(category)}
               className={`
                 px-2 py-1 text-xs rounded-md transition-colors
@@ -73,11 +77,12 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerP
           ))}
         </div>
         {/* Icon grid */}
-        <div className="p-3 max-h-48 overflow-y-auto">
+        <div className="p-3 max-h-60 overflow-y-auto">
           <div className="grid grid-cols-8 gap-1">
-            {ICON_CATEGORIES[activeCategory as keyof typeof ICON_CATEGORIES]?.map((icon) => (
+            {(ICON_CATEGORIES[activeCategory] || []).map((icon) => (
               <button
                 key={icon}
+                type="button"
                 onClick={() => handleIconSelect(icon)}
                 className={`
                   h-8 w-8 flex items-center justify-center text-lg rounded transition-colors

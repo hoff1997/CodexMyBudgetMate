@@ -27,6 +27,7 @@ import {
   Pencil,
   Info,
   Lock,
+  FolderPlus,
 } from "lucide-react";
 import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 import {
@@ -161,6 +162,10 @@ function PriorityDropdown({
 export function EnvelopeCreationStepV2({
   envelopes,
   onEnvelopesChange,
+  customCategories = [],
+  onCustomCategoriesChange,
+  categoryOrder = [],
+  onCategoryOrderChange,
   useTemplate,
   incomeSources,
   bankBalance = 0,
@@ -193,8 +198,16 @@ export function EnvelopeCreationStepV2({
   // Dialog states
   const [addInstanceDialogOpen, setAddInstanceDialogOpen] = useState(false);
   const [addCustomDialogOpen, setAddCustomDialogOpen] = useState(false);
+  const [addCategoryDialogOpen, setAddCategoryDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [currentMasterForInstance, setCurrentMasterForInstance] = useState<MasterEnvelope | null>(null);
+
+  // Add category dialog state
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryIcon, setNewCategoryIcon] = useState("📁");
+
+  // Track which category to add envelope to (for per-category add button)
+  const [addEnvelopeToCategory, setAddEnvelopeToCategory] = useState<string | null>(null);
 
   // Rename dialog state
   const [renameTarget, setRenameTarget] = useState<{
@@ -645,7 +658,7 @@ export function EnvelopeCreationStepV2({
       id: customId,
       name: newCustomName.trim(),
       icon: newCustomIcon,
-      category: 'other', // Default to "Other" category
+      category: addEnvelopeToCategory || 'other', // Use selected category or default to "Other"
       priority: newCustomPriority,
       subtype: newCustomSubtype,
       sortOrder: customEnvelopes.length,
@@ -653,6 +666,59 @@ export function EnvelopeCreationStepV2({
 
     setCustomEnvelopes((prev) => [...prev, newCustom]);
     setAddCustomDialogOpen(false);
+    setAddEnvelopeToCategory(null); // Reset category selection
+  };
+
+  // Add custom category
+  const addCustomCategory = () => {
+    if (!newCategoryName.trim()) return;
+
+    const categoryId = `custom-cat-${Date.now()}`;
+    const newCategory: CustomCategory = {
+      id: categoryId,
+      label: newCategoryName.trim(),
+      icon: newCategoryIcon,
+    };
+
+    // Add to custom categories
+    if (onCustomCategoriesChange) {
+      onCustomCategoriesChange([...customCategories, newCategory]);
+    }
+
+    // Add to category order (at the end, before 'other')
+    if (onCategoryOrderChange) {
+      const currentOrder = categoryOrder.length > 0 ? categoryOrder : [...CATEGORY_ORDER];
+      const otherIndex = currentOrder.indexOf('other');
+      if (otherIndex !== -1) {
+        const newOrder = [...currentOrder];
+        newOrder.splice(otherIndex, 0, categoryId);
+        onCategoryOrderChange(newOrder);
+      } else {
+        onCategoryOrderChange([...currentOrder, categoryId]);
+      }
+    }
+
+    // Expand the new category
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      next.add(categoryId);
+      return next;
+    });
+
+    // Reset and close dialog
+    setNewCategoryName("");
+    setNewCategoryIcon("📁");
+    setAddCategoryDialogOpen(false);
+  };
+
+  // Open add custom envelope dialog with optional pre-selected category
+  const openAddCustomDialogForCategory = (category: string) => {
+    setAddEnvelopeToCategory(category);
+    setNewCustomName("");
+    setNewCustomIcon("📦");
+    setNewCustomPriority('discretionary');
+    setNewCustomSubtype('spending');
+    setAddCustomDialogOpen(true);
   };
 
   // Remove custom envelope
@@ -791,7 +857,7 @@ export function EnvelopeCreationStepV2({
           />
 
           {/* Icon + Name + Edit + Lock indicator */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 max-w-[200px]">
             <span className="text-lg flex-shrink-0">{displayIcon}</span>
             <span className={`font-medium text-sm truncate ${isEnvelopeLocked ? 'text-muted-foreground' : ''}`}>
               {displayName}
@@ -851,25 +917,27 @@ export function EnvelopeCreationStepV2({
           </div>
 
           {/* Description or Locked Reason */}
-          <div className="hidden sm:block flex-1 min-w-0">
+          <div className="hidden sm:block flex-[2] min-w-0">
             {isEnvelopeLocked ? (
-              <span className="text-xs text-muted-foreground italic truncate flex items-center gap-1">
-                <Lock className="h-3 w-3" />
+              <span className="text-xs text-muted-foreground italic truncate block">
+                <Lock className="h-3 w-3 inline mr-1" />
                 {envelope.lockedReason}
               </span>
             ) : (
-              <span className="text-xs text-muted-foreground truncate">
+              <span className="text-xs text-muted-foreground truncate block">
                 {envelope.description}
               </span>
             )}
           </div>
 
           {/* Priority Dropdown */}
-          <PriorityDropdown
-            priority={effectivePriority}
-            onChange={(newPriority) => changeEnvelopePriority(envelope.id, newPriority)}
-            disabled={!isSelected || isEnvelopeLocked}
-          />
+          <div className="flex-shrink-0">
+            <PriorityDropdown
+              priority={effectivePriority}
+              onChange={(newPriority) => changeEnvelopePriority(envelope.id, newPriority)}
+              disabled={!isSelected || isEnvelopeLocked}
+            />
+          </div>
         </div>
 
         {/* Show instances for multiple envelopes */}
@@ -919,7 +987,7 @@ export function EnvelopeCreationStepV2({
         <Checkbox checked={true} disabled className="data-[state=checked]:bg-[#7A9E9A] data-[state=checked]:border-[#7A9E9A]" />
 
         {/* Icon + Name + Edit */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 max-w-[200px]">
           <span className="text-lg flex-shrink-0">{customEnv.icon}</span>
           <span className="font-medium text-sm truncate">{customEnv.name}</span>
           <button
@@ -949,15 +1017,17 @@ export function EnvelopeCreationStepV2({
         </div>
 
         {/* Description */}
-        <div className="hidden sm:block flex-1 min-w-0">
-          <span className="text-xs text-muted-foreground">Custom envelope</span>
+        <div className="hidden sm:block flex-[2] min-w-0">
+          <span className="text-xs text-muted-foreground truncate block">Custom envelope</span>
         </div>
 
         {/* Priority Dropdown */}
-        <PriorityDropdown
-          priority={customEnv.priority}
-          onChange={(newPriority) => changeCustomPriority(customEnv.id, newPriority)}
-        />
+        <div className="flex-shrink-0">
+          <PriorityDropdown
+            priority={customEnv.priority}
+            onChange={(newPriority) => changeCustomPriority(customEnv.id, newPriority)}
+          />
+        </div>
       </div>
     );
   };
@@ -988,7 +1058,16 @@ export function EnvelopeCreationStepV2({
             className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
           >
             <Plus className="h-3 w-3 mr-1" />
-            Add Custom
+            Add Envelope
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAddCategoryDialogOpen(true)}
+            className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
+          >
+            <FolderPlus className="h-3 w-3 mr-1" />
+            Add Category
           </Button>
         </div>
       </div>
@@ -1060,6 +1139,7 @@ export function EnvelopeCreationStepV2({
 
       {/* Category Groups */}
       <div className="space-y-3">
+        {/* Render built-in categories */}
         {CATEGORY_ORDER.map((category) => {
           const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
           if (!categoryInfo) return null;
@@ -1075,12 +1155,12 @@ export function EnvelopeCreationStepV2({
           return (
             <div key={category} className="border rounded-lg overflow-hidden">
               {/* Category Header */}
-              <button
-                type="button"
-                onClick={() => toggleCategory(category)}
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  className="flex items-center gap-3 hover:opacity-70 transition-opacity flex-1"
+                >
                   {isExpanded ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   ) : (
@@ -1091,19 +1171,89 @@ export function EnvelopeCreationStepV2({
                   <span className="text-sm text-muted-foreground">
                     ({categoryEnvelopes.length + categoryCustomEnvelopes.length} envelopes)
                   </span>
+                </button>
+                <div className="flex items-center gap-2">
+                  {selectedCount > 0 && (
+                    <span className="text-xs bg-[#7A9E9A] text-white px-2 py-0.5 rounded-full">
+                      {selectedCount} selected
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openAddCustomDialogForCategory(category);
+                    }}
+                    className="p-1.5 rounded hover:bg-[#E2EEEC] text-[#5A7E7A] transition-colors"
+                    title={`Add envelope to ${categoryInfo.label}`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
-                {selectedCount > 0 && (
-                  <span className="text-xs bg-[#7A9E9A] text-white px-2 py-0.5 rounded-full">
-                    {selectedCount} selected
-                  </span>
-                )}
-              </button>
+              </div>
 
               {/* Category Content */}
               {isExpanded && (
                 <div className="p-3 space-y-2 bg-white">
                   {categoryEnvelopes.map((envelope) => renderEnvelopeRow(envelope))}
                   {categoryCustomEnvelopes.map((customEnv) => renderCustomEnvelopeRow(customEnv))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Render custom categories */}
+        {customCategories.map((category) => {
+          const isExpanded = expandedCategories.has(category.id);
+          const categoryCustomEnvelopes = customEnvelopes.filter((e) => e.category === category.id);
+
+          return (
+            <div key={category.id} className="border rounded-lg overflow-hidden border-[#B8D4D0]">
+              {/* Custom Category Header */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-[#E2EEEC] border-b border-[#B8D4D0]">
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category.id)}
+                  className="flex items-center gap-3 hover:opacity-70 transition-opacity flex-1"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-[#5A7E7A]" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-[#5A7E7A]" />
+                  )}
+                  <span className="text-lg">{category.icon}</span>
+                  <span className="font-semibold text-[#5A7E7A]">{category.label}</span>
+                  <span className="text-sm text-[#5A7E7A]/70">
+                    ({categoryCustomEnvelopes.length} envelopes)
+                  </span>
+                  <span className="text-xs bg-[#7A9E9A] text-white px-2 py-0.5 rounded">Custom</span>
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openAddCustomDialogForCategory(category.id);
+                    }}
+                    className="p-1.5 rounded hover:bg-white text-[#5A7E7A] transition-colors"
+                    title={`Add envelope to ${category.label}`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Custom Category Content */}
+              {isExpanded && (
+                <div className="p-3 space-y-2 bg-white">
+                  {categoryCustomEnvelopes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No envelopes yet. Click the + button to add one.
+                    </p>
+                  ) : (
+                    categoryCustomEnvelopes.map((customEnv) => renderCustomEnvelopeRow(customEnv))
+                  )}
                 </div>
               )}
             </div>
@@ -1303,6 +1453,45 @@ export function EnvelopeCreationStepV2({
             </Button>
             <Button onClick={saveRename} className="bg-[#7A9E9A] hover:bg-[#5A7E7A]" disabled={!renameName.trim()}>
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Category Dialog */}
+      <Dialog open={addCategoryDialogOpen} onOpenChange={setAddCategoryDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-4">
+              <IconPicker selectedIcon={newCategoryIcon} onIconSelect={setNewCategoryIcon} />
+              <div className="flex-1">
+                <label className="text-sm font-medium">Category Name</label>
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Enter category name"
+                  className="mt-1"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Create a custom category to organize your envelopes. You can add envelopes to this category later.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddCategoryDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={addCustomCategory}
+              className="bg-[#7A9E9A] hover:bg-[#5A7E7A]"
+              disabled={!newCategoryName.trim()}
+            >
+              Add Category
             </Button>
           </DialogFooter>
         </DialogContent>

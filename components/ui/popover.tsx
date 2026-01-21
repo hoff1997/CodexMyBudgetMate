@@ -106,6 +106,7 @@ type PopoverContentProps = {
   side?: "top" | "bottom" | "left" | "right"; // Not fully implemented but accepted for API compatibility
   avoidCollisions?: boolean; // Not fully implemented but accepted for API compatibility
   collisionPadding?: number; // Not fully implemented but accepted for API compatibility
+  onOpenAutoFocus?: (event: Event) => void; // Handler for auto-focus behavior
 };
 
 export function PopoverContent({
@@ -116,6 +117,7 @@ export function PopoverContent({
   side: _side,
   avoidCollisions: _avoidCollisions,
   collisionPadding: _collisionPadding,
+  onOpenAutoFocus,
 }: PopoverContentProps) {
   const { open, setOpen, triggerRef } = usePopoverContext("PopoverContent");
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -195,6 +197,15 @@ export function PopoverContent({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open, setOpen, triggerRef]);
+
+  // Handle auto-focus behavior when popover opens
+  useLayoutEffect(() => {
+    if (!open || !onOpenAutoFocus) return;
+
+    // Create a synthetic event to allow prevention
+    const event = new Event('focus', { cancelable: true });
+    onOpenAutoFocus(event);
+  }, [open, onOpenAutoFocus]);
 
   if (!open || !container) {
     return null;

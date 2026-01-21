@@ -25,7 +25,6 @@ import {
   Trash2,
   Copy,
   Pencil,
-  Info,
   Lock,
   FolderPlus,
   GripVertical,
@@ -147,7 +146,7 @@ function PriorityDropdown({
         <button
           type="button"
           className={`
-            inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium min-w-[85px]
+            inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-xs font-medium min-w-[85px]
             ${config.bgColor} ${config.borderColor} border ${config.textColor}
             hover:opacity-80 transition-opacity
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -155,7 +154,6 @@ function PriorityDropdown({
         >
           <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
           {config.label}
-          <ChevronDown className="h-3 w-3" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-36">
@@ -330,8 +328,8 @@ export function EnvelopeCreationStepV2({
   // Track which category to add envelope to (for per-category add button)
   const [addEnvelopeToCategory, setAddEnvelopeToCategory] = useState<string | null>(null);
 
-  // Collapsible state for the entire Configure Envelopes section
-  const [isConfigureExpanded, setIsConfigureExpanded] = useState(true);
+  // Collapsible state for My Budget Way Essentials section
+  const [isEssentialsExpanded, setIsEssentialsExpanded] = useState(true);
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -372,10 +370,10 @@ export function EnvelopeCreationStepV2({
   }, [priorityOverrides]);
 
   // Pre-selected system envelope IDs (shown separately at top)
-  // Always includes: Surplus, CC Holding, Starter Stash, Safety Net
+  // Always includes: Surplus, CC Holding, Starter Stash, Debt Destroyer, Safety Net, My Budget Mate
   // Conditionally includes: CC Legacy Debt (if user has credit card debt)
   const preSelectedSystemIds = useMemo(() => {
-    const ids = new Set(['surplus', 'credit-card-holding', 'starter-stash', 'safety-net']);
+    const ids = new Set(['surplus', 'credit-card-holding', 'starter-stash', 'debt-destroyer', 'safety-net', 'my-budget-mate']);
     if (hasCreditCardDebt) {
       ids.add('credit-card-historic-debt');
     }
@@ -423,6 +421,7 @@ export function EnvelopeCreationStepV2({
     initialSelected.add("surplus");
     initialSelected.add("credit-card-holding");
     initialSelected.add("starter-stash");
+    initialSelected.add("debt-destroyer");
     initialSelected.add("safety-net");
 
     // Include CC Legacy Debt if user has credit card debt
@@ -1284,70 +1283,48 @@ export function EnvelopeCreationStepV2({
 
   return (
     <div className="w-full space-y-3 px-1">
-      {/* Collapsible Header */}
+      {/* Static Header */}
       <div className="bg-[#E2EEEC] border border-[#B8D4D0] rounded-lg overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setIsConfigureExpanded(!isConfigureExpanded)}
-          className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-[#d8e8e5] transition-colors"
-        >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
-            {isConfigureExpanded ? (
-              <ChevronDown className="h-5 w-5 text-[#5A7E7A]" />
-            ) : (
-              <ChevronRight className="h-5 w-5 text-[#5A7E7A]" />
-            )}
             <div className="w-10 h-10 bg-[#7A9E9A] rounded-lg flex items-center justify-center flex-shrink-0">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div className="text-left">
               <h2 className="text-xl font-bold">Configure Your Envelopes</h2>
-              {!isConfigureExpanded && (
-                <p className="text-sm text-muted-foreground">
-                  <strong>{totalSelected}</strong> envelopes selected - click to expand
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground">
+                <strong>{totalSelected}</strong> envelopes selected
+              </p>
             </div>
           </div>
+        </div>
+        <div className="px-4 pb-3 border-t border-[#B8D4D0]">
+          <p className="text-sm text-muted-foreground py-2">
+            This is just a starting point - everything's fully customisable once you're in the app. Drag envelopes to reorganise, click priorities to adjust, and make it yours!
+          </p>
           <div className="flex items-center gap-2">
-            <span className="text-sm">
-              <strong>{totalSelected}</strong> selected
-            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openAddCustomDialog()}
+              className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add Envelope
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddCategoryDialogOpen(true)}
+              className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
+            >
+              <FolderPlus className="h-3 w-3 mr-1" />
+              Add Category
+            </Button>
           </div>
-        </button>
-
-        {isConfigureExpanded && (
-          <div className="px-4 pb-3 border-t border-[#B8D4D0]">
-            <p className="text-sm text-muted-foreground py-2">
-              This is just a starting point - everything's fully customisable once you're in the app. Drag envelopes to reorganise, click priorities to adjust, and make it yours!
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => { e.stopPropagation(); openAddCustomDialog(); }}
-                className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add Envelope
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => { e.stopPropagation(); setAddCategoryDialogOpen(true); }}
-                className="h-7 text-xs border-[#7A9E9A] text-[#5A7E7A] hover:bg-white"
-              >
-                <FolderPlus className="h-3 w-3 mr-1" />
-                Add Category
-              </Button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* Collapsible Content */}
-      {isConfigureExpanded && (
-      <>
       {/* Priority Legend */}
       <div className="flex items-center justify-end gap-2 text-xs px-1">
         <span className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded min-w-[85px] bg-[#DDEAF5] border border-[#6B9ECE] text-[#4A7BA8]">
@@ -1364,17 +1341,26 @@ export function EnvelopeCreationStepV2({
         </span>
       </div>
 
-      {/* Pre-selected System Envelopes */}
+      {/* Collapsible My Budget Way Essentials */}
       <div className="border border-sage-light rounded-lg overflow-hidden bg-sage-very-light">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-sage-light">
-          <Info className="h-4 w-4 text-sage-dark flex-shrink-0" />
-          <div className="flex-1">
+        <button
+          type="button"
+          onClick={() => setIsEssentialsExpanded(!isEssentialsExpanded)}
+          className="w-full flex items-center gap-3 px-4 py-3 border-b border-sage-light hover:bg-[#d8e8e5] transition-colors"
+        >
+          {isEssentialsExpanded ? (
+            <ChevronDown className="h-4 w-4 text-sage-dark flex-shrink-0" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-sage-dark flex-shrink-0" />
+          )}
+          <div className="flex-1 text-left">
             <span className="font-semibold text-sage-dark text-sm">My Budget Way Essentials</span>
             <p className="text-xs text-text-medium mt-0.5">
               These non-negotiable envelopes are the foundation of your budget - they help you build financial security step by step.
             </p>
           </div>
-        </div>
+        </button>
+        {isEssentialsExpanded && (
         <div className="p-2 space-y-1 bg-white">
           {/* System envelopes - always included */}
           {MASTER_ENVELOPE_LIST.filter(e => preSelectedSystemIds.has(e.id)).map((envelope) => {
@@ -1384,7 +1370,7 @@ export function EnvelopeCreationStepV2({
             const displayIcon = customName?.icon || envelope.icon;
             const effectivePriority = getEffectivePriority(envelope);
             const config = PRIORITY_CONFIG[effectivePriority];
-            const isNonNegotiable = envelope.id === 'surplus' || envelope.id === 'starter-stash' || envelope.id === 'safety-net' || envelope.id === 'credit-card-historic-debt';
+            const isNonNegotiable = envelope.id === 'surplus' || envelope.id === 'credit-card-holding' || envelope.id === 'starter-stash' || envelope.id === 'debt-destroyer' || envelope.id === 'safety-net' || envelope.id === 'credit-card-historic-debt' || envelope.id === 'my-budget-mate';
             const isLocked = envelope.isLocked;
 
             return (
@@ -1424,7 +1410,7 @@ export function EnvelopeCreationStepV2({
                     {isLocked && envelope.lockedReason ? envelope.lockedReason : envelope.description}
                   </p>
                 </div>
-                <span className={`inline-flex items-center justify-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium min-w-[85px] ${config.bgColor} ${config.borderColor} border ${config.textColor}`}>
+                <span className={`inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded text-xs font-medium min-w-[85px] ${config.bgColor} ${config.borderColor} border ${config.textColor}`}>
                   <span className={`w-2 h-2 rounded-full ${config.dotColor}`} />
                   {config.label}
                 </span>
@@ -1432,6 +1418,7 @@ export function EnvelopeCreationStepV2({
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Category Groups - Wrapped with DnD Context */}
@@ -1579,8 +1566,6 @@ export function EnvelopeCreationStepV2({
           )}
         </DragOverlay>
       </DndContext>
-      </>
-      )}
 
       {/* Add Instance Dialog */}
       <Dialog open={addInstanceDialogOpen} onOpenChange={setAddInstanceDialogOpen}>

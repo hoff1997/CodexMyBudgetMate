@@ -61,16 +61,15 @@ export const AVAILABLE_ICONS = [
 export type BuiltInCategory =
   | 'bank'
   | 'celebrations'
-  | 'clothing'
   | 'debt'
   | 'extras'
   | 'giving'
   | 'goals'
-  | 'hair'
   | 'health'
   | 'hobbies'
   | 'household'
   | 'insurance'
+  | 'personal'
   | 'phone-internet'
   | 'school'
   | 'subscriptions'
@@ -89,16 +88,15 @@ export interface CategoryInfo {
 export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
   bank: { label: 'Bank', icon: '🏦' },
   celebrations: { label: 'Celebrations', icon: '🎉' },
-  clothing: { label: 'Clothing', icon: '👔' },
   debt: { label: 'Debt Payoff', icon: '📉' },
   extras: { label: 'Extras', icon: '🛍️' },
   giving: { label: 'Giving', icon: '❤️' },
   goals: { label: 'Goals', icon: '🎯' },
-  hair: { label: 'Hair', icon: '💇' },
   health: { label: 'Health', icon: '🏥' },
   hobbies: { label: 'Hobbies', icon: '🏉' },
   household: { label: 'Household', icon: '🏠' },
   insurance: { label: 'Insurance', icon: '🛡️' },
+  personal: { label: 'Personal', icon: '💅' },
   'phone-internet': { label: 'Phone/Internet', icon: '📱' },
   school: { label: 'School', icon: '🏫' },
   subscriptions: { label: 'Subscriptions', icon: '📺' },
@@ -193,6 +191,19 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     unlockConditions: ['starter-stash-funded', 'debt-paid-off'],
   },
   {
+    id: 'debt-destroyer',
+    name: 'Debt Destroyer',
+    icon: '💪',
+    category: 'debt',
+    priority: 'essential',
+    subtype: 'debt',
+    description: 'Pay off all debt as fast as possible (My Budget Way Step 2)',
+    defaultSelected: true,
+    isLocked: true,
+    lockedReason: 'Unlocks after Starter Stash is funded ($1,000)',
+    unlockConditions: ['starter-stash-funded'],
+  },
+  {
     id: 'kids-pocket-money',
     name: 'Kids Pocket Money',
     icon: '👧',
@@ -275,7 +286,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'celebrations',
     priority: 'discretionary',
     subtype: 'savings',
-    defaultSelected: true,
   },
   {
     id: 'easter',
@@ -311,12 +321,48 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     description: "Anniversaries, housewarmings, weddings, new baby",
   },
 
-  // ========== CLOTHING ==========
+  // ========== PERSONAL ==========
+  {
+    id: 'hair',
+    name: 'Hair',
+    icon: '💇',
+    category: 'personal',
+    priority: 'important',
+    subtype: 'spending',
+    description: 'General hair care budget. Add more envelopes if you want to track per person.',
+  },
+  {
+    id: 'kids-hair',
+    name: "Kid's Hair",
+    icon: '💇‍♀️',
+    category: 'personal',
+    priority: 'important',
+    subtype: 'spending',
+    allowMultiple: true,
+    multipleLabel: 'child',
+  },
+  {
+    id: 'beauty-treatments',
+    name: 'Beauty Treatments',
+    icon: '💅',
+    category: 'personal',
+    priority: 'discretionary',
+    subtype: 'spending',
+    description: 'Nails, tanning, eyebrows, facials, etc.',
+  },
+  {
+    id: 'makeup',
+    name: 'Makeup',
+    icon: '💄',
+    category: 'personal',
+    priority: 'discretionary',
+    subtype: 'spending',
+  },
   {
     id: 'clothing',
     name: 'Clothing',
     icon: '👔',
-    category: 'clothing',
+    category: 'personal',
     priority: 'important',
     subtype: 'spending',
     description: 'General clothing budget. Add more envelopes if you want to track per person.',
@@ -325,7 +371,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     id: 'kids-clothing',
     name: "Kid's Clothing",
     icon: '👕',
-    category: 'clothing',
+    category: 'personal',
     priority: 'important',
     subtype: 'spending',
     allowMultiple: true,
@@ -340,15 +386,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'extras',
     priority: 'discretionary',
     subtype: 'spending',
-    defaultSelected: true,
-  },
-  {
-    id: 'eyebrows',
-    name: 'Eyebrows',
-    icon: '✨',
-    category: 'extras',
-    priority: 'discretionary',
-    subtype: 'spending',
   },
   {
     id: 'takeaways-restaurants',
@@ -357,7 +394,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'extras',
     priority: 'discretionary',
     subtype: 'spending',
-    defaultSelected: true,
   },
   {
     id: 'holidays',
@@ -385,27 +421,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'giving',
     priority: 'discretionary',
     subtype: 'spending',
-  },
-
-  // ========== HAIR ==========
-  {
-    id: 'hair',
-    name: 'Hair',
-    icon: '💇',
-    category: 'hair',
-    priority: 'important',
-    subtype: 'spending',
-    description: 'General hair care budget. Add more envelopes if you want to track per person.',
-  },
-  {
-    id: 'kids-hair',
-    name: "Kid's Hair",
-    icon: '💇‍♀️',
-    category: 'hair',
-    priority: 'important',
-    subtype: 'spending',
-    allowMultiple: true,
-    multipleLabel: 'child',
   },
 
   // ========== HEALTH ==========
@@ -494,7 +509,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'household',
     priority: 'essential',
     subtype: 'spending',
-    defaultSelected: true,
   },
   {
     id: 'electricity',
@@ -772,9 +786,10 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     id: 'my-budget-mate',
     name: 'My Budget Mate',
     icon: '✨',
-    category: 'subscriptions',
-    priority: 'important',
+    category: 'bank',
+    priority: 'essential',
     subtype: 'bill',
+    description: 'Your budgeting subscription - 14 day free trial, then $9.99/month',
     defaultSelected: true,
   },
 
@@ -868,8 +883,7 @@ export const CATEGORY_ORDER: EnvelopeCategory[] = [
   'vehicles',
   'health',
   'school',
-  'clothing',
-  'hair',
+  'personal',
   'extras',
   'hobbies',
   'celebrations',

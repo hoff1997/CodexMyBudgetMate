@@ -257,6 +257,17 @@ export function BankAccountsStep({ accounts, onAccountsChange }: BankAccountsSte
             </div>
           </div>
 
+          {/* What to expect */}
+          <div className="bg-[#E2EEEC] rounded-lg p-4 border border-[#B8D4D0]">
+            <p className="text-sm font-medium text-[#5A7E7A] mb-2">What to expect when you click Connect:</p>
+            <ol className="text-sm text-[#5A7E7A] space-y-1.5 list-decimal list-inside">
+              <li>You&apos;ll be taken to Akahu&apos;s secure website</li>
+              <li>Select your bank and log in with your banking credentials</li>
+              <li>Approve the connection in your banking app (look out for a notification)</li>
+              <li>You&apos;ll be redirected back here once connected</li>
+            </ol>
+          </div>
+
           {/* Error Display */}
           {connectionError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">

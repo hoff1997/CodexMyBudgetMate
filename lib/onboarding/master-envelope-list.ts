@@ -199,9 +199,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     subtype: 'debt',
     description: 'Pay off all debt as fast as possible (My Budget Way Step 2)',
     defaultSelected: true,
-    isLocked: true,
-    lockedReason: 'Unlocks after Starter Stash is funded ($1,000)',
-    unlockConditions: ['starter-stash-funded'],
   },
   {
     id: 'kids-pocket-money',

@@ -28,7 +28,21 @@ import {
   Info,
   Lock,
   FolderPlus,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  useDraggable,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core";
+import { cn } from "@/lib/cn";
 import type { EnvelopeData, IncomeSource, BankAccount } from "@/app/(app)/onboarding/unified-onboarding-client";
 import {
   MASTER_ENVELOPE_LIST,
@@ -159,6 +173,82 @@ function PriorityDropdown({
   );
 }
 
+// Draggable envelope wrapper
+function DraggableEnvelope({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    disabled,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "relative transition-opacity",
+        isDragging && "opacity-50"
+      )}
+    >
+      {/* Drag handle */}
+      {!disabled && (
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 p-1 cursor-grab hover:bg-muted rounded opacity-50 hover:opacity-100 transition-opacity"
+          title="Drag to move to another category"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+      )}
+      {children}
+    </div>
+  );
+}
+
+// Droppable category wrapper
+function DroppableCategory({
+  id,
+  children,
+  isOver,
+}: {
+  id: string;
+  children: React.ReactNode;
+  isOver?: boolean;
+}) {
+  const { setNodeRef, isOver: isOverCategory } = useDroppable({
+    id,
+  });
+
+  const showHighlight = isOver || isOverCategory;
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "transition-all duration-200",
+        showHighlight && "ring-2 ring-[#7A9E9A] ring-offset-2 rounded-lg"
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function EnvelopeCreationStepV2({
   envelopes,
   onEnvelopesChange,
@@ -209,6 +299,17 @@ export function EnvelopeCreationStepV2({
   // Track which category to add envelope to (for per-category add button)
   const [addEnvelopeToCategory, setAddEnvelopeToCategory] = useState<string | null>(null);
 
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+
+  // DnD sensors - require a minimum drag distance to prevent accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
+  );
+
   // Rename dialog state
   const [renameTarget, setRenameTarget] = useState<{
     type: 'builtin' | 'instance' | 'custom';
@@ -237,7 +338,15 @@ export function EnvelopeCreationStepV2({
   }, [priorityOverrides]);
 
   // Pre-selected system envelope IDs (shown separately at top)
-  const preSelectedSystemIds = useMemo(() => new Set(['surplus', 'credit-card-holding']), []);
+  // Always includes: Surplus, CC Holding, Starter Stash
+  // Conditionally includes: CC Legacy Debt (if user has credit card debt)
+  const preSelectedSystemIds = useMemo(() => {
+    const ids = new Set(['surplus', 'credit-card-holding', 'starter-stash']);
+    if (hasCreditCardDebt) {
+      ids.add('credit-card-historic-debt');
+    }
+    return ids;
+  }, [hasCreditCardDebt]);
 
   // Group envelopes by category (excluding pre-selected system envelopes)
   const envelopesByCategory = useMemo(() => {
@@ -267,7 +376,7 @@ export function EnvelopeCreationStepV2({
     return grouped;
   }, [categoryOverrides, preSelectedSystemIds]);
 
-  // Initialize selections - include Surplus and Credit Card Holding by default
+  // Initialize selections - include My Budget Way essentials by default
   useEffect(() => {
     if (initialized) return;
 
@@ -276,9 +385,15 @@ export function EnvelopeCreationStepV2({
     const initialCustomEnvelopes: CustomEnvelope[] = [];
     const initialPriorityOverrides = new Map<string, Priority>();
 
-    // Always include surplus and credit card holding
+    // Always include My Budget Way essentials (non-negotiable)
     initialSelected.add("surplus");
     initialSelected.add("credit-card-holding");
+    initialSelected.add("starter-stash");
+
+    // Include CC Legacy Debt if user has credit card debt
+    if (hasCreditCardDebt) {
+      initialSelected.add("credit-card-historic-debt");
+    }
 
     // Include all defaultSelected envelopes when starting fresh
     if (envelopes.length === 0) {
@@ -332,7 +447,7 @@ export function EnvelopeCreationStepV2({
     setCustomEnvelopes(initialCustomEnvelopes);
     setPriorityOverrides(initialPriorityOverrides);
     setInitialized(true);
-  }, [envelopes, initialized]);
+  }, [envelopes, initialized, hasCreditCardDebt]);
 
   // Auto-include CC Legacy Debt when user has credit card debt
   useEffect(() => {
@@ -771,6 +886,90 @@ export function EnvelopeCreationStepV2({
     );
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event;
+    setOverId(over?.id as string | null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    setOverId(null);
+
+    if (!over) return;
+
+    const activeIdStr = active.id as string;
+    const overIdStr = over.id as string;
+
+    // Check if dropping on a category (category IDs start with "category-")
+    if (overIdStr.startsWith('category-')) {
+      const targetCategory = overIdStr.replace('category-', '');
+
+      // Check if it's a built-in envelope being moved
+      if (activeIdStr.startsWith('builtin-')) {
+        const envelopeId = activeIdStr.replace('builtin-', '');
+        const envelope = MASTER_ENVELOPE_LIST.find(e => e.id === envelopeId);
+        if (envelope && envelope.category !== targetCategory) {
+          // Don't allow moving locked envelopes
+          if (envelope.isLocked) return;
+
+          setCategoryOverrides((prev) => {
+            const next = new Map(prev);
+            next.set(envelopeId, targetCategory);
+            return next;
+          });
+        }
+      }
+
+      // Check if it's a custom envelope being moved
+      if (activeIdStr.startsWith('custom-')) {
+        const customId = activeIdStr;
+        setCustomEnvelopes((prev) =>
+          prev.map((env) => (env.id === customId ? { ...env, category: targetCategory } : env))
+        );
+      }
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
+  };
+
+  // Get the active item for drag overlay
+  const getActiveItem = () => {
+    if (!activeId) return null;
+
+    if (activeId.startsWith('builtin-')) {
+      const envelopeId = activeId.replace('builtin-', '');
+      const envelope = MASTER_ENVELOPE_LIST.find(e => e.id === envelopeId);
+      if (envelope) {
+        const customName = customNames.get(envelope.id);
+        return {
+          icon: customName?.icon || envelope.icon,
+          name: customName?.name || envelope.name,
+        };
+      }
+    }
+
+    if (activeId.startsWith('custom-')) {
+      const customEnv = customEnvelopes.find(e => e.id === activeId);
+      if (customEnv) {
+        return {
+          icon: customEnv.icon,
+          name: customEnv.name,
+        };
+      }
+    }
+
+    return null;
+  };
+
   // Toggle category expansion
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) => {
@@ -838,16 +1037,20 @@ export function EnvelopeCreationStepV2({
     // Check if this is Starter Stash and user can fund it
     const showStarterStashHint = envelope.id === 'starter-stash' && canFundStarterStash && isSelected;
 
+    // Determine if dragging is allowed for this envelope
+    const isDragDisabled = isAlwaysInclude || isEnvelopeLocked;
+
     return (
-      <div key={envelope.id} className="space-y-1">
-        <div
-          className={`
-            flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
-            ${isEnvelopeLocked ? 'bg-gray-50 border-gray-200 opacity-70' : ''}
-            ${!isEnvelopeLocked && isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : ''}
-            ${!isEnvelopeLocked && !isSelected ? 'bg-white border-gray-200 hover:border-[#B8D4D0]' : ''}
-          `}
-        >
+      <DraggableEnvelope key={envelope.id} id={`builtin-${envelope.id}`} disabled={isDragDisabled}>
+        <div className="space-y-1 pl-6">
+          <div
+            className={`
+              flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors
+              ${isEnvelopeLocked ? 'bg-gray-50 border-gray-200 opacity-70' : ''}
+              ${!isEnvelopeLocked && isSelected ? 'bg-[#E2EEEC] border-[#B8D4D0]' : ''}
+              ${!isEnvelopeLocked && !isSelected ? 'bg-white border-gray-200 hover:border-[#B8D4D0]' : ''}
+            `}
+          >
           {/* Checkbox */}
           <Checkbox
             checked={isSelected}
@@ -940,95 +1143,97 @@ export function EnvelopeCreationStepV2({
           </div>
         </div>
 
-        {/* Show instances for multiple envelopes */}
-        {hasMultiple && instances.length > 1 && (
-          <div className="ml-8 space-y-1">
-            {instances.map((instance, idx) => (
-              <div
-                key={instance.instanceId}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[#E2EEEC]/50 rounded border border-[#B8D4D0]"
-              >
-                <span className="text-base">{instance.icon}</span>
-                <span className="flex-1 truncate">{instance.name}</span>
-                <button
-                  type="button"
-                  onClick={() => openRenameInstance(envelope.id, instance)}
-                  className="p-1 rounded hover:bg-[#B8D4D0] text-[#5A7E7A]"
-                  title="Rename"
+          {/* Show instances for multiple envelopes */}
+          {hasMultiple && instances.length > 1 && (
+            <div className="ml-8 space-y-1">
+              {instances.map((instance, idx) => (
+                <div
+                  key={instance.instanceId}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[#E2EEEC]/50 rounded border border-[#B8D4D0]"
                 >
-                  <Pencil className="h-3 w-3" />
-                </button>
-                {idx > 0 && (
+                  <span className="text-base">{instance.icon}</span>
+                  <span className="flex-1 truncate">{instance.name}</span>
                   <button
                     type="button"
-                    onClick={() => removeInstance(envelope.id, instance.instanceId)}
-                    className="p-1 rounded hover:bg-red-100 text-red-500"
-                    title="Remove"
+                    onClick={() => openRenameInstance(envelope.id, instance)}
+                    className="p-1 rounded hover:bg-[#B8D4D0] text-[#5A7E7A]"
+                    title="Rename"
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Pencil className="h-3 w-3" />
                   </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  {idx > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => removeInstance(envelope.id, instance.instanceId)}
+                      className="p-1 rounded hover:bg-red-100 text-red-500"
+                      title="Remove"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DraggableEnvelope>
     );
   };
 
   // Render custom envelope row
   const renderCustomEnvelopeRow = (customEnv: CustomEnvelope) => {
     return (
-      <div
-        key={customEnv.id}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-[#E2EEEC] border-[#B8D4D0]"
-      >
-        {/* Checkbox (always checked for custom) */}
-        <Checkbox checked={true} disabled className="data-[state=checked]:bg-[#7A9E9A] data-[state=checked]:border-[#7A9E9A]" />
+      <DraggableEnvelope key={customEnv.id} id={customEnv.id}>
+        <div className="pl-6">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-[#E2EEEC] border-[#B8D4D0]">
+            {/* Checkbox (always checked for custom) */}
+            <Checkbox checked={true} disabled className="data-[state=checked]:bg-[#7A9E9A] data-[state=checked]:border-[#7A9E9A]" />
 
-        {/* Icon + Name + Edit */}
-        <div className="flex items-center gap-2 min-w-0 max-w-[200px]">
-          <span className="text-lg flex-shrink-0">{customEnv.icon}</span>
-          <span className="font-medium text-sm truncate">{customEnv.name}</span>
-          <button
-            type="button"
-            onClick={() => openRenameCustom(customEnv)}
-            className="p-1 rounded hover:bg-[#B8D4D0] text-[#5A7E7A] flex-shrink-0"
-            title="Edit"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => duplicateCustomEnvelope(customEnv)}
-            className="p-1 rounded hover:bg-[#B8D4D0] text-[#5A7E7A] flex-shrink-0"
-            title="Duplicate"
-          >
-            <Copy className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            onClick={() => removeCustomEnvelope(customEnv.id)}
-            className="p-1 rounded hover:bg-red-100 text-red-500 flex-shrink-0"
-            title="Remove"
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </div>
+            {/* Icon + Name + Edit */}
+            <div className="flex items-center gap-2 min-w-0 max-w-[200px]">
+              <span className="text-lg flex-shrink-0">{customEnv.icon}</span>
+              <span className="font-medium text-sm truncate">{customEnv.name}</span>
+              <button
+                type="button"
+                onClick={() => openRenameCustom(customEnv)}
+                className="p-1 rounded hover:bg-[#B8D4D0] text-[#5A7E7A] flex-shrink-0"
+                title="Edit"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => duplicateCustomEnvelope(customEnv)}
+                className="p-1 rounded hover:bg-[#B8D4D0] text-[#5A7E7A] flex-shrink-0"
+                title="Duplicate"
+              >
+                <Copy className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                onClick={() => removeCustomEnvelope(customEnv.id)}
+                className="p-1 rounded hover:bg-red-100 text-red-500 flex-shrink-0"
+                title="Remove"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
 
-        {/* Description */}
-        <div className="hidden sm:block flex-[2] min-w-0">
-          <span className="text-xs text-muted-foreground truncate block">Custom envelope</span>
-        </div>
+            {/* Description */}
+            <div className="hidden sm:block flex-[2] min-w-0">
+              <span className="text-xs text-muted-foreground truncate block">Custom envelope</span>
+            </div>
 
-        {/* Priority Dropdown */}
-        <div className="flex-shrink-0">
-          <PriorityDropdown
-            priority={customEnv.priority}
-            onChange={(newPriority) => changeCustomPriority(customEnv.id, newPriority)}
-          />
+            {/* Priority Dropdown */}
+            <div className="flex-shrink-0">
+              <PriorityDropdown
+                priority={customEnv.priority}
+                onChange={(newPriority) => changeCustomPriority(customEnv.id, newPriority)}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      </DraggableEnvelope>
     );
   };
 
@@ -1043,7 +1248,7 @@ export function EnvelopeCreationStepV2({
           <div>
             <h2 className="text-xl font-bold">Configure Your Envelopes</h2>
             <p className="text-sm text-muted-foreground">
-              Select expenses for your household • Click priority badge to change • Add custom envelopes
+              This is just a starting point - everything's fully customisable once you're in the app. Drag envelopes to reorganise, click priorities to adjust, and make it yours!
             </p>
           </div>
         </div>
@@ -1093,21 +1298,22 @@ export function EnvelopeCreationStepV2({
         <div className="flex items-center gap-3 px-4 py-3 border-b border-sage-light">
           <Info className="h-4 w-4 text-sage-dark flex-shrink-0" />
           <div className="flex-1">
-            <span className="font-semibold text-sage-dark text-sm">Pre-selected System Envelopes</span>
+            <span className="font-semibold text-sage-dark text-sm">My Budget Way Essentials</span>
             <p className="text-xs text-text-medium mt-0.5">
-              These envelopes are included by default to help manage your budget effectively.
+              These non-negotiable envelopes are the foundation of your budget - they help you build financial security step by step.
             </p>
           </div>
         </div>
         <div className="p-3 space-y-2 bg-white">
-          {/* Surplus */}
-          {MASTER_ENVELOPE_LIST.filter(e => e.id === 'surplus' || e.id === 'credit-card-holding').map((envelope) => {
+          {/* System envelopes - always included */}
+          {MASTER_ENVELOPE_LIST.filter(e => preSelectedSystemIds.has(e.id)).map((envelope) => {
             const isSelected = selectedIds.has(envelope.id);
             const customName = customNames.get(envelope.id);
             const displayName = customName?.name || envelope.name;
             const displayIcon = customName?.icon || envelope.icon;
             const effectivePriority = getEffectivePriority(envelope);
             const config = PRIORITY_CONFIG[effectivePriority];
+            const isNonNegotiable = envelope.id === 'surplus' || envelope.id === 'starter-stash' || envelope.id === 'credit-card-historic-debt';
 
             return (
               <div
@@ -1119,12 +1325,21 @@ export function EnvelopeCreationStepV2({
               >
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={() => toggleEnvelope(envelope.id)}
+                  onCheckedChange={() => !isNonNegotiable && toggleEnvelope(envelope.id)}
+                  disabled={isNonNegotiable}
                   className="data-[state=checked]:bg-[#7A9E9A] data-[state=checked]:border-[#7A9E7A]"
                 />
                 <span className="text-lg flex-shrink-0">{displayIcon}</span>
                 <div className="flex-1 min-w-0">
-                  <span className="font-medium text-sm">{displayName}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">{displayName}</span>
+                    {isNonNegotiable && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-sage-very-light border border-sage-light text-sage-dark">
+                        <Lock className="h-2.5 w-2.5" />
+                        Required
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-text-medium">{envelope.description}</p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.borderColor} border ${config.textColor}`}>
@@ -1137,23 +1352,31 @@ export function EnvelopeCreationStepV2({
         </div>
       </div>
 
-      {/* Category Groups */}
-      <div className="space-y-3">
-        {/* Render built-in categories */}
-        {CATEGORY_ORDER.map((category) => {
-          const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
-          if (!categoryInfo) return null;
+      {/* Category Groups - Wrapped with DnD Context */}
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
+        <div className="space-y-3">
+          {/* Render built-in categories */}
+          {CATEGORY_ORDER.map((category) => {
+            const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
+            if (!categoryInfo) return null;
 
-          const isExpanded = expandedCategories.has(category);
-          const selectedCount = countSelectedInCategory(category);
-          const categoryEnvelopes = envelopesByCategory[category] || [];
-          const categoryCustomEnvelopes = customEnvelopes.filter((e) => e.category === category);
+            const isExpanded = expandedCategories.has(category);
+            const selectedCount = countSelectedInCategory(category);
+            const categoryEnvelopes = envelopesByCategory[category] || [];
+            const categoryCustomEnvelopes = customEnvelopes.filter((e) => e.category === category);
 
-          // Skip empty categories
-          if (categoryEnvelopes.length === 0 && categoryCustomEnvelopes.length === 0) return null;
+            // Skip empty categories
+            if (categoryEnvelopes.length === 0 && categoryCustomEnvelopes.length === 0) return null;
 
-          return (
-            <div key={category} className="border rounded-lg overflow-hidden">
+            return (
+              <DroppableCategory key={category} id={`category-${category}`} isOver={overId === `category-${category}`}>
+                <div className="border rounded-lg overflow-hidden">
               {/* Category Header */}
               <div className="flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200">
                 <button
@@ -1199,17 +1422,19 @@ export function EnvelopeCreationStepV2({
                   {categoryCustomEnvelopes.map((customEnv) => renderCustomEnvelopeRow(customEnv))}
                 </div>
               )}
-            </div>
-          );
-        })}
+                </div>
+              </DroppableCategory>
+            );
+          })}
 
-        {/* Render custom categories */}
-        {customCategories.map((category) => {
-          const isExpanded = expandedCategories.has(category.id);
-          const categoryCustomEnvelopes = customEnvelopes.filter((e) => e.category === category.id);
+          {/* Render custom categories */}
+          {customCategories.map((category) => {
+            const isExpanded = expandedCategories.has(category.id);
+            const categoryCustomEnvelopes = customEnvelopes.filter((e) => e.category === category.id);
 
-          return (
-            <div key={category.id} className="border rounded-lg overflow-hidden border-[#B8D4D0]">
+            return (
+              <DroppableCategory key={category.id} id={`category-${category.id}`} isOver={overId === `category-${category.id}`}>
+                <div className="border rounded-lg overflow-hidden border-[#B8D4D0]">
               {/* Custom Category Header */}
               <div className="flex items-center justify-between px-4 py-2.5 bg-[#E2EEEC] border-b border-[#B8D4D0]">
                 <button
@@ -1256,10 +1481,22 @@ export function EnvelopeCreationStepV2({
                   )}
                 </div>
               )}
+                </div>
+              </DroppableCategory>
+            );
+          })}
+        </div>
+
+        {/* Drag Overlay - Shows the dragged item */}
+        <DragOverlay>
+          {activeId && getActiveItem() && (
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg border bg-white border-[#7A9E9A] shadow-lg opacity-90">
+              <span className="text-lg">{getActiveItem()!.icon}</span>
+              <span className="font-medium text-sm">{getActiveItem()!.name}</span>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {/* Add Instance Dialog */}
       <Dialog open={addInstanceDialogOpen} onOpenChange={setAddInstanceDialogOpen}>

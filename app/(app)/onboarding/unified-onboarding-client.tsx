@@ -133,6 +133,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
+  const [highestStepReached, setHighestStepReached] = useState(1); // Track furthest progress for navigation
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingDraft, setIsLoadingDraft] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -198,7 +199,10 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         const data = await response.json();
         if (data.hasDraft && data.draft) {
           const draft = data.draft;
-          setCurrentStep(draft.currentStep || 1);
+          const savedStep = draft.currentStep || 1;
+          const savedHighest = draft.highestStepReached || savedStep;
+          setCurrentStep(savedStep);
+          setHighestStepReached(savedHighest);
           setFullName(draft.fullName || "");
           setBankAccounts(draft.bankAccounts || []);
           setCreditCardConfigs(draft.creditCardConfigs || []);
@@ -213,7 +217,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           setOpeningBalances(draft.openingBalances || {});
           setLastSaved(draft.lastSavedAt ? new Date(draft.lastSavedAt) : null);
 
-          if (draft.currentStep > 1) {
+          if (savedStep > 1) {
             toast.success("Welcome back! Your progress has been restored.");
           }
         }
@@ -239,6 +243,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           currentStep,
+          highestStepReached,
           fullName,
           bankAccounts,
           creditCardConfigs,
@@ -263,7 +268,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
     } finally {
       setIsSaving(false);
     }
-  }, [currentStep, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances]);
+  }, [currentStep, highestStepReached, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances]);
 
   // Debounced autosave on data changes
   useEffect(() => {
@@ -352,7 +357,10 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
       return;
     }
 
-    setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
+    // Move to next step and update highest reached
+    const nextStep = Math.min(currentStep + 1, STEPS.length);
+    setCurrentStep(nextStep);
+    setHighestStepReached((prev) => Math.max(prev, nextStep));
   };
 
   const handleBack = () => {
@@ -636,9 +644,9 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
             <div className="flex items-center justify-between gap-1 overflow-x-auto pb-1">
               {STEPS.map((step, index) => {
                 const stepNumber = index + 1;
-                const isCompleted = stepNumber < currentStep;
+                const isVisited = stepNumber <= highestStepReached; // Has been reached before
                 const isCurrent = stepNumber === currentStep;
-                const isClickable = stepNumber < currentStep; // Can only go back
+                const isClickable = stepNumber <= highestStepReached && stepNumber !== currentStep; // Can navigate to any visited step
                 const isSkipped = stepNumber === 5 && !hasCreditCards; // Skip CC step if no cards
 
                 if (isSkipped) return null;
@@ -648,9 +656,10 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
                     key={step.id}
                     onClick={() => {
                       if (isClickable) {
-                        // Handle skipping step 5 when going back if no credit cards
+                        // Handle skipping step 5 if no credit cards
                         if (stepNumber === 5 && !hasCreditCards) {
-                          setCurrentStep(4);
+                          // If trying to go to step 5, go to step 4 or 6 depending on direction
+                          setCurrentStep(currentStep > 5 ? 4 : 6);
                         } else {
                           setCurrentStep(stepNumber);
                         }
@@ -662,18 +671,18 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
                       isClickable && "hover:bg-[#E2EEEC] cursor-pointer",
                       !isClickable && !isCurrent && "opacity-50 cursor-not-allowed"
                     )}
-                    title={isClickable ? `Go back to ${step.title}` : step.title}
+                    title={isClickable ? `Go to ${step.title}` : step.title}
                   >
                     {/* Step Circle */}
                     <div
                       className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all",
-                        isCompleted && "bg-[#7A9E9A] text-white",
+                        isVisited && !isCurrent && "bg-[#7A9E9A] text-white",
                         isCurrent && "bg-[#7A9E9A] text-white ring-2 ring-[#B8D4D0] ring-offset-1",
-                        !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
+                        !isVisited && !isCurrent && "bg-muted text-muted-foreground"
                       )}
                     >
-                      {isCompleted ? (
+                      {isVisited && !isCurrent ? (
                         <Check className="h-4 w-4" />
                       ) : (
                         stepNumber
@@ -684,8 +693,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
                       className={cn(
                         "text-[10px] mt-1 text-center leading-tight hidden sm:block",
                         isCurrent && "font-medium text-[#5A7E7A]",
-                        isCompleted && "text-[#7A9E9A]",
-                        !isCompleted && !isCurrent && "text-muted-foreground"
+                        isVisited && !isCurrent && "text-[#7A9E9A]",
+                        !isVisited && !isCurrent && "text-muted-foreground"
                       )}
                     >
                       {step.title}

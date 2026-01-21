@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +44,21 @@ import {
   Trash2,
   Search,
   X,
+  GripVertical,
 } from "lucide-react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DraggableAttributes,
+} from "@dnd-kit/core";
+import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
+import { cn } from "@/lib/cn";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
@@ -238,6 +252,80 @@ const FREQUENCY_OPTIONS = [
   { value: 'custom_weeks', label: 'Custom Weeks' },
 ];
 
+// Drag handle render props type
+type DragHandleRenderProps = {
+  attributes: DraggableAttributes;
+  listeners: SyntheticListenerMap | undefined;
+  disabled: boolean;
+};
+
+// Draggable table row wrapper
+function DraggableRow({
+  id,
+  disabled,
+  children,
+}: {
+  id: string;
+  disabled?: boolean;
+  children: React.ReactNode | ((props: DragHandleRenderProps) => React.ReactNode);
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id,
+    disabled,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: isDragging ? 50 : undefined,
+      }
+    : undefined;
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "border-b last:border-0 hover:bg-muted/20 group transition-opacity",
+        isDragging && "opacity-50 bg-muted/30"
+      )}
+    >
+      {typeof children === 'function'
+        ? children({ attributes, listeners, disabled: !!disabled })
+        : children}
+    </tr>
+  );
+}
+
+// Drag handle component for table rows
+function DragHandle({
+  attributes,
+  listeners,
+  disabled,
+}: {
+  attributes: DraggableAttributes;
+  listeners: SyntheticListenerMap | undefined;
+  disabled?: boolean;
+}) {
+  if (disabled) {
+    return <td className="w-6 px-1 py-2" />; // Placeholder for alignment
+  }
+
+  return (
+    <td className="w-6 px-1 py-2">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="p-0.5 cursor-grab hover:bg-muted rounded opacity-40 hover:opacity-100 transition-opacity"
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </button>
+    </td>
+  );
+}
+
 export function EnvelopeAllocationStep({
   envelopes,
   incomeSources,
@@ -279,6 +367,16 @@ export function EnvelopeAllocationStep({
 
   // Celebration/gift dialog state (for birthdays, Christmas, etc.)
   const [celebrationEnvelopeId, setCelebrationEnvelopeId] = useState<string | null>(null);
+
+  // Drag and drop state
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Start drag after 8px movement
+      },
+    })
+  );
 
   // Add envelope dialog state
   const [addEnvelopeOpen, setAddEnvelopeOpen] = useState(false);
@@ -670,6 +768,44 @@ export function EnvelopeAllocationStep({
     onEnvelopesChange(updated);
   }, [envelopes, onEnvelopesChange]);
 
+  // Handle drag start
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  }, []);
+
+  // Handle drag end - reorder within category
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    setActiveDragId(null);
+
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    // Find the dragged envelope and target envelope
+    const draggedIndex = envelopes.findIndex(e => e.id === active.id);
+    const targetIndex = envelopes.findIndex(e => e.id === over.id);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const draggedEnvelope = envelopes[draggedIndex];
+    const targetEnvelope = envelopes[targetIndex];
+
+    // Only allow reordering within the same category
+    if (draggedEnvelope.category !== targetEnvelope.category) return;
+
+    // Create new array with reordered elements
+    const newEnvelopes = [...envelopes];
+    newEnvelopes.splice(draggedIndex, 1);
+    newEnvelopes.splice(targetIndex, 0, draggedEnvelope);
+
+    onEnvelopesChange(newEnvelopes);
+  }, [envelopes, onEnvelopesChange]);
+
+  // Get the envelope being dragged for the overlay
+  const activeDragEnvelope = useMemo(() => {
+    if (!activeDragId) return null;
+    return envelopesWithPerPay.find(e => e.id === activeDragId);
+  }, [activeDragId, envelopesWithPerPay]);
+
   // Check for seasonal bills that haven't been leveled (power, gas, water)
   const unleveledSeasonalBills = useMemo(() => {
     return envelopes.filter(env => {
@@ -801,10 +937,17 @@ export function EnvelopeAllocationStep({
 
     const isFirstRow = index === 0;
 
+    // Don't allow dragging Surplus or Credit Card Holding (they're fixed)
+    const isDragDisabled = env.id === 'surplus' || env.id === 'credit-card-holding';
+
     return (
-      <tr key={env.id} className="border-b last:border-0 hover:bg-muted/20 group">
-        {/* Priority */}
-        <td className="px-1 py-2 text-center" {...(isFirstRow ? { 'data-tutorial': 'priority-cell' } : {})}>
+      <DraggableRow key={env.id} id={env.id} disabled={isDragDisabled}>
+        {({ attributes, listeners, disabled }) => (
+          <Fragment>
+            {/* Drag Handle */}
+            <DragHandle attributes={attributes} listeners={listeners} disabled={disabled} />
+            {/* Priority */}
+            <td className="px-1 py-2 text-center" {...(isFirstRow ? { 'data-tutorial': 'priority-cell' } : {})}>
           {editingCell?.id === env.id && editingCell?.field === 'priority' ? (
             <Select
               value={priority}
@@ -1252,11 +1395,18 @@ export function EnvelopeAllocationStep({
             <span className="w-4 h-4 inline-block" />
           )}
         </td>
-      </tr>
+          </Fragment>
+        )}
+      </DraggableRow>
     );
   };
 
   return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
     <div className="w-full space-y-6">
       {/* Interactive Tutorial Overlay */}
       {tutorialMounted && (
@@ -1482,6 +1632,7 @@ export function EnvelopeAllocationStep({
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b bg-muted/30">
+                        <th className="w-6 px-1 py-2"></th>{/* Drag handle column */}
                         <th className="text-center px-1 py-2 font-medium text-muted-foreground w-10">Pri</th>
                         <th className="text-left px-2 py-2 font-medium text-muted-foreground">Envelope</th>
                         <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden md:table-cell w-16">Type</th>
@@ -1543,6 +1694,7 @@ export function EnvelopeAllocationStep({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30">
+                      <th className="w-6 px-1 py-2"></th>{/* Drag handle column */}
                       <th className="text-center px-1 py-2 font-medium text-muted-foreground w-10">Pri</th>
                       <th className="text-left px-2 py-2 font-medium text-muted-foreground">Envelope</th>
                       <th className="text-center px-1 py-2 font-medium text-muted-foreground hidden md:table-cell w-16">Type</th>
@@ -1801,5 +1953,18 @@ export function EnvelopeAllocationStep({
         </DialogContent>
       </Dialog>
     </div>
+
+      {/* Drag Overlay - shows what's being dragged */}
+      <DragOverlay>
+        {activeDragEnvelope ? (
+          <div className="bg-white border rounded-lg shadow-lg p-2 opacity-90">
+            <div className="flex items-center gap-2">
+              <span className="text-base">{activeDragEnvelope.icon}</span>
+              <span className="text-sm font-medium">{activeDragEnvelope.name}</span>
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

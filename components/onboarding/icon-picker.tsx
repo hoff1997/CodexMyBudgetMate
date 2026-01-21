@@ -63,7 +63,11 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerP
             <button
               key={category}
               type="button"
-              onClick={() => setActiveCategory(category)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveCategory(category);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
               className={`
                 px-2 py-1 text-xs rounded-md transition-colors
                 ${activeCategory === category
@@ -83,7 +87,11 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerP
               <button
                 key={icon}
                 type="button"
-                onClick={() => handleIconSelect(icon)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleIconSelect(icon);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
                 className={`
                   h-8 w-8 flex items-center justify-center text-lg rounded transition-colors
                   ${selectedIcon === icon

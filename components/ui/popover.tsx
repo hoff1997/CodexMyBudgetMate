@@ -200,19 +200,35 @@ export function PopoverContent({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (
-        target &&
-        contentRef.current &&
-        !contentRef.current.contains(target) &&
-        triggerRef.current &&
-        !triggerRef.current.contains(target as Node)
-      ) {
-        setOpen(false);
+      if (!target) return;
+
+      // Check if click is inside the popover content
+      if (contentRef.current && contentRef.current.contains(target)) {
+        return; // Click is inside popover, don't close
       }
+
+      // Check if click is on the trigger
+      if (triggerRef.current && triggerRef.current.contains(target)) {
+        return; // Click is on trigger, let toggle logic handle it
+      }
+
+      // Check if click is inside the popover container (portal)
+      const popoverContainer = (target as Element).closest?.('[data-popover-container="true"]');
+      if (popoverContainer) {
+        return; // Click is somewhere in a popover portal, don't close
+      }
+
+      // Click is outside, close the popover
+      setOpen(false);
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // Use a small delay to avoid race conditions with click events
+    const timeoutId = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 0);
+
     return () => {
+      clearTimeout(timeoutId);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open, setOpen, triggerRef]);

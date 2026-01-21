@@ -1059,18 +1059,21 @@ export function EnvelopeAllocationStep({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {/* Leveled indicator - shows seasonal pattern for seasonal bills */}
+                {/* Leveled indicator - shows seasonal pattern for seasonal bills - clickable to edit */}
                 {env.isLeveled && !env.isCelebration && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-light text-blue text-[10px]">
+                        <button
+                          onClick={() => handleStartLeveling(env.id)}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue text-white text-[10px] hover:bg-blue/80 transition-colors"
+                        >
                           {env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}
-                        </span>
+                        </button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="text-xs">
-                          Leveled ({env.seasonalPattern === 'winter-peak' ? 'Winter Peak' : 'Summer Peak'})
+                          Click to edit leveling ({env.seasonalPattern === 'winter-peak' ? 'Winter Peak' : 'Summer Peak'})
                         </p>
                       </TooltipContent>
                     </Tooltip>

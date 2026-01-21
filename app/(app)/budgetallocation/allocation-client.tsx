@@ -59,6 +59,8 @@ import { DebtAllocationDialog } from "@/components/debt/debt-allocation-dialog";
 import { Gift, CreditCard } from "lucide-react";
 import type { GiftRecipient, GiftRecipientInput } from "@/lib/types/celebrations";
 import type { DebtItem, DebtItemInput, LinkedCreditCard } from "@/lib/types/debt";
+import { useCelebrationReadiness, getEnvelopeReadiness, type CelebrationReadinessData } from "@/lib/hooks/use-celebration-readiness";
+import { CelebrationReadinessBadge, CelebrationReadinessPlaceholder } from "@/components/shared/celebration-readiness-badge";
 
 type PriorityLevel = 'essential' | 'important' | 'discretionary';
 
@@ -318,6 +320,9 @@ export function AllocationClient() {
   const [debtEnvelope, setDebtEnvelope] = useState<UnifiedEnvelopeData | null>(null);
   const [debtItems, setDebtItems] = useState<DebtItem[]>([]);
   const [availableCreditCards, setAvailableCreditCards] = useState<LinkedCreditCard[]>([]);
+
+  // Celebration readiness data for celebration envelopes
+  const { data: celebrationReadinessMap } = useCelebrationReadiness();
 
   // ========================
   // ENHANCED VIEW FEATURE FLAG
@@ -1661,6 +1666,7 @@ export function AllocationClient() {
                     onLevelBillClick={handleLevelBillClick}
                     onGiftAllocationClick={handleGiftAllocationClick}
                     onDebtAllocationClick={handleDebtAllocationClick}
+                    celebrationReadiness={getEnvelopeReadiness(celebrationReadinessMap, envelope.id)}
                   />
                 ))}
               </tbody>
@@ -2075,6 +2081,7 @@ export function AllocationClient() {
                   onLevelBillClick={handleLevelBillClick}
                   onGiftAllocationClick={handleGiftAllocationClick}
                   onDebtAllocationClick={handleDebtAllocationClick}
+                  celebrationReadiness={getEnvelopeReadiness(celebrationReadinessMap, envelope.id)}
                 />
               )}
             />
@@ -2491,6 +2498,7 @@ function EnvelopeRow({
   onLevelBillClick,
   onGiftAllocationClick,
   onDebtAllocationClick,
+  celebrationReadiness,
 }: {
   envelope: UnifiedEnvelopeData;
   incomeSources: IncomeSource[];
@@ -2509,6 +2517,7 @@ function EnvelopeRow({
   onLevelBillClick?: (envelope: UnifiedEnvelopeData) => void;
   onGiftAllocationClick?: (envelope: UnifiedEnvelopeData) => void;
   onDebtAllocationClick?: (envelope: UnifiedEnvelopeData) => void;
+  celebrationReadiness?: CelebrationReadinessData | null;
 }) {
   const perPay = calculatePerPay(envelope);
   const annual = calculateAnnual(envelope);
@@ -2891,6 +2900,16 @@ function EnvelopeRow({
                   />
                 );
               })()
+            ) : (envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && celebrationReadiness ? (
+              <CelebrationReadinessBadge
+                status={celebrationReadiness.status}
+                shortfall={celebrationReadiness.shortfall}
+                nextEventName={celebrationReadiness.nextEventName ?? undefined}
+                daysUntil={celebrationReadiness.daysUntil ?? undefined}
+                paysUntil={celebrationReadiness.paysUntil ?? undefined}
+              />
+            ) : (envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') ? (
+              <CelebrationReadinessPlaceholder />
             ) : (
               <span className="text-text-light text-[11px]">—</span>
             )}

@@ -33,6 +33,7 @@ import { CompactProgressBar } from "@/components/shared/envelope-progress-bar";
 import { EnvelopeStatusBadge, calculateEnvelopeStatus } from "@/components/shared/envelope-status-badge";
 import { MyBudgetWayWidget, type CreditCardDebtData, type SuggestedEnvelope, type MilestoneProgress } from "@/components/my-budget-way/my-budget-way-widget";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { MobileGuidanceBanner } from "@/components/allocation/mobile-guidance-banner";
 import { ChangeCategoryDialog } from "@/components/allocation/change-category-dialog";
 import { CategoryGroups } from "@/components/allocation/category-groups";
@@ -2801,23 +2802,28 @@ function EnvelopeRow({
         )}
       </td>
 
-      {/* 8. Due Date (clickable, no calendar icon) */}
+      {/* 8. Due Date (clickable with calendar popover) */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
-        <button
-          type="button"
-          onClick={() => {
-            const input = document.createElement('input');
-            input.type = 'date';
-            input.value = formatDueDateForInput();
-            input.onchange = (e) => {
-              onEnvelopeChange(envelope.id, 'dueDate', (e.target as HTMLInputElement).value || null);
-            };
-            input.click();
-          }}
-          className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
-        >
-          {formatDueDateDisplay() || (envelope.frequency === 'custom_weeks' ? 'Next due' : 'dd/mm/yy')}
-        </button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="text-[11px] text-text-medium hover:text-text-dark px-1.5 py-0.5 rounded hover:bg-silver-very-light"
+            >
+              {formatDueDateDisplay() || (envelope.frequency === 'custom_weeks' ? 'Next due' : 'Set date')}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={envelope.dueDate ? new Date(envelope.dueDate) : undefined}
+              onSelect={(date) => {
+                onEnvelopeChange(envelope.id, 'dueDate', date ? date.toISOString().split('T')[0] : null);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
       </td>
 
       {/* 9. Funded By */}

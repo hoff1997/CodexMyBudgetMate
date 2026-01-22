@@ -38,6 +38,20 @@ interface TutorialStep {
 }
 
 const TUTORIAL_STEPS: TutorialStep[] = [
+  // === INTRO ===
+  {
+    id: "intro",
+    title: "Welcome to Your Budget!",
+    description: (
+      <>
+        This is where the magic happens! Your Budget Allocation page is the heart of{" "}
+        <strong>the My Budget Way</strong>. In your app, you'll see a more advanced version with extra features,
+        but for onboarding, this is all you need.
+      </>
+    ),
+    icon: <Sparkles className="h-6 w-6 text-gold" />,
+    tip: "Follow through this tutorial to learn what each part of this page does. It'll only take a couple of minutes!",
+  },
   // === BUDGET BASICS SECTION ===
   {
     id: "welcome",
@@ -425,102 +439,107 @@ export function AllocationTutorial({
 
   return (
     <Card className="border-sage bg-white shadow-md">
-      <CardContent className="p-4 space-y-3">
-        {/* Header with close button */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-sage-very-light rounded-lg flex-shrink-0">
-              {step.icon}
+      <CardContent className="p-4 flex flex-col min-h-[280px]">
+        {/* Fixed content area */}
+        <div className="space-y-3 flex-1">
+          {/* Header with close button */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-sage-very-light rounded-lg flex-shrink-0">
+                {step.icon}
+              </div>
+              <h3 className="font-semibold text-text-dark">{step.title}</h3>
             </div>
-            <h3 className="font-semibold text-text-dark">{step.title}</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDismiss}
+              className="h-6 w-6 p-0 -mt-1 -mr-1"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDismiss}
-            className="h-6 w-6 p-0 -mt-1 -mr-1"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
 
-        {/* Progress dots */}
-        <div className="flex gap-1">
-          {TUTORIAL_STEPS.map((s, i) => (
-            <div
-              key={s.id}
-              className={cn(
-                "h-1.5 flex-1 rounded-full transition-colors",
-                i <= currentStep ? "bg-sage" : "bg-gray-200"
-              )}
-            />
-          ))}
-        </div>
+          {/* Progress dots */}
+          <div className="flex gap-1">
+            {TUTORIAL_STEPS.map((s, i) => (
+              <div
+                key={s.id}
+                className={cn(
+                  "h-1.5 flex-1 rounded-full transition-colors",
+                  i <= currentStep ? "bg-sage" : "bg-gray-200"
+                )}
+              />
+            ))}
+          </div>
 
-        {/* Description */}
-        <p className="text-sm text-text-medium leading-relaxed">
-          {step.description}
-        </p>
-
-        {/* Remy tip - same size as description text */}
-        <div className="flex gap-2 p-2 bg-sage-very-light rounded-lg">
-          <RemyAvatar
-            pose={currentStep === TUTORIAL_STEPS.length - 1 ? "celebrating" : "small"}
-            size="sm"
-            className="!w-8 !h-8 !border-0 !shadow-none flex-shrink-0"
-          />
-          <p className="text-sm text-sage-dark italic leading-relaxed">
-            "{step.tip}"
+          {/* Description */}
+          <p className="text-sm text-text-medium leading-relaxed">
+            {step.description}
           </p>
+
+          {/* Remy tip - same size as description text */}
+          <div className="flex gap-2 p-2 bg-sage-very-light rounded-lg">
+            <RemyAvatar
+              pose={currentStep === TUTORIAL_STEPS.length - 1 ? "celebrating" : "small"}
+              size="sm"
+              className="!w-8 !h-8 !border-0 !shadow-none flex-shrink-0"
+            />
+            <p className="text-sm text-sage-dark italic leading-relaxed">
+              "{step.tip}"
+            </p>
+          </div>
+
+          {/* Visual examples for specific steps */}
+          {step.visual && step.visual}
         </div>
 
-        {/* Visual examples for specific steps */}
-        {step.visual && step.visual}
+        {/* Navigation - always at bottom */}
+        <div className="space-y-2 pt-3 mt-auto">
+          <div className="flex justify-between items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePrev}
+              disabled={currentStep === 0}
+              className="gap-1 h-8"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center pt-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handlePrev}
-            disabled={currentStep === 0}
-            className="gap-1 h-8"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </Button>
+            <span className="text-xs text-muted-foreground">
+              {currentStep + 1} / {TUTORIAL_STEPS.length}
+            </span>
 
-          <span className="text-xs text-muted-foreground">
-            {currentStep + 1} / {TUTORIAL_STEPS.length}
-          </span>
+            <Button
+              size="sm"
+              onClick={handleNext}
+              className="bg-sage hover:bg-sage-dark gap-1 h-8"
+            >
+              {currentStep === TUTORIAL_STEPS.length - 1 ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Done
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
 
-          <Button
-            size="sm"
-            onClick={handleNext}
-            className="bg-sage hover:bg-sage-dark gap-1 h-8"
-          >
-            {currentStep === TUTORIAL_STEPS.length - 1 ? (
-              <>
-                <CheckCircle2 className="h-4 w-4" />
-                Done
-              </>
-            ) : (
-              <>
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </div>
-
-        {/* Dismiss link */}
-        <div className="text-center -mb-1">
-          <button
-            onClick={handleDismiss}
-            className="text-xs text-muted-foreground hover:text-text-medium underline"
-          >
-            Dismiss tutorial
-          </button>
+          {/* Dismiss link */}
+          <div className="text-center">
+            <button
+              onClick={handleDismiss}
+              className="text-xs text-muted-foreground hover:text-text-medium underline"
+            >
+              Dismiss tutorial
+            </button>
+          </div>
         </div>
       </CardContent>
     </Card>

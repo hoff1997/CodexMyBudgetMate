@@ -1456,27 +1456,13 @@ export function EnvelopeAllocationStep({
         <RemyTip pose="encouraging">
           I've spotted a celebration envelope - {unconfiguredCelebrations[0].name}! Look for the 🎁 gift icon
           next to the envelope name and click it to add who you're buying for. We'll spread the cost across
-          the year so you're never caught short when the big day arrives. Check out the{" "}
-          <button
-            onClick={() => setTutorialOpen(true)}
-            className="text-sage underline hover:text-sage-dark font-medium"
-          >
-            Tutorial
-          </button>
-          {" "}to learn more about celebrations and seasonal bills.
+          the year so you're never caught short when the big day arrives. The tutorial above explains more about celebrations and seasonal bills.
         </RemyTip>
       ) : unleveledSeasonalBills.length > 0 ? (
         <RemyTip pose="encouraging">
           I've spotted some bills that might vary through the year - like {unleveledSeasonalBills[0].name}.
           Power bills can be heaps higher in winter! Look for the thermometer icon next to the envelope name
-          and click it to level the bill so you save a steady amount each pay. Check out the{" "}
-          <button
-            onClick={() => setTutorialOpen(true)}
-            className="text-sage underline hover:text-sage-dark font-medium"
-          >
-            Tutorial
-          </button>
-          {" "}to learn how leveling works.
+          and click it to level the bill so you save a steady amount each pay. The tutorial above explains how leveling works.
         </RemyTip>
       ) : (
         <RemyTip pose="encouraging">

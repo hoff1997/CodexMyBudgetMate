@@ -209,9 +209,9 @@ All major columns in the Budget Manager table are sortable:
 
 ### Priority Traffic Light System
 Priority column uses compact traffic light dots:
-- 🔴 **Essential** - Must-have expenses
-- 🟡 **Important** - Should-have expenses
-- 🟢 **Flexible** - Nice-to-have expenses
+- 🔵 **Essential** - Must-have expenses (Blue `#6B9ECE`)
+- 🟢 **Important** - Should-have expenses (Green/Sage `#5A7E7A`)
+- ⚪ **Flexible** - Nice-to-have expenses (Silver `#9CA3AF`)
 
 Displayed as small colored circles that expand to dropdown on click.
 

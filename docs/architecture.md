@@ -453,7 +453,7 @@ BudgetManagerClient (Client Component)
   ↓
 UnifiedEnvelopeTable (Client Component)
   ├─ Sortable column headers (all major columns)
-  ├─ Priority traffic light column (🔴🟡🟢)
+  ├─ Priority traffic light column (🔵🟢⚪)
   ├─ Income source columns (dynamic based on user's income_sources)
   ├─ Envelope rows (all user envelopes)
   ├─ Allocation input cells (envelope × income intersection)
@@ -492,9 +492,9 @@ Priority column uses compact traffic light dots for visual clarity:
 
 | Priority | Color | Dot Style |
 |----------|-------|-----------|
-| Essential | 🔴 Red | `bg-red-500` |
-| Important | 🟡 Yellow | `bg-yellow-400` |
-| Flexible | 🟢 Green | `bg-green-500` |
+| Essential | 🔵 Blue | `bg-blue` or `bg-[#6B9ECE]` |
+| Important | 🟢 Green/Sage | `bg-sage-dark` or `bg-[#5A7E7A]` |
+| Flexible | ⚪ Silver | `bg-silver` or `bg-[#9CA3AF]` |
 
 **Display:** Small colored circle (2.5rem) that expands to dropdown on click.
 **Hidden for:** `savings`, `goal`, and `tracking` subtypes (shows "—").

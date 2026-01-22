@@ -92,7 +92,7 @@ const PRIORITY_CONFIG: Record<Priority, {
   },
   important: {
     label: 'Important',
-    dotColor: 'bg-[#7A9E9A]',      // Sage - middle ground
+    dotColor: 'bg-[#5A7E7A]',      // Sage-dark - middle ground
     bgColor: 'bg-[#E2EEEC]',        // Sage very light
     borderColor: 'border-[#B8D4D0]',
     textColor: 'text-[#5A7E7A]',

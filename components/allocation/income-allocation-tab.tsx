@@ -32,24 +32,24 @@ const PRIORITY_CONFIG: Record<PriorityLevel, {
 }> = {
   essential: {
     label: "ESSENTIAL",
-    icon: "🔴",
-    color: "text-red-700",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    icon: "🔵",
+    color: "text-[#4A7BA8]",
+    bgColor: "bg-[#DDEAF5]",
+    borderColor: "border-[#6B9ECE]",
   },
   important: {
     label: "IMPORTANT",
-    icon: "🟡",
-    color: "text-amber-700",
-    bgColor: "bg-amber-50",
-    borderColor: "border-amber-200",
+    icon: "🟢",
+    color: "text-[#5A7E7A]",
+    bgColor: "bg-[#E2EEEC]",
+    borderColor: "border-[#B8D4D0]",
   },
   discretionary: {
-    label: "DISCRETIONARY",
-    icon: "🟢",
-    color: "text-emerald-700",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-200",
+    label: "FLEXIBLE",
+    icon: "⚪",
+    color: "text-[#6B6B6B]",
+    bgColor: "bg-[#F3F4F6]",
+    borderColor: "border-[#E5E7EB]",
   },
 };
 
@@ -350,10 +350,11 @@ function EnvelopeRow({
   const paysTillDue = calculatePaysTillDue();
 
   // Get priority dot color (matches Budget Manager and Style Guide)
+  // Blue = Essential, Green/Sage = Important, Silver = Flexible
   const getPriorityDot = () => {
     const priority = envelope.priority || 'important';
-    const dotColor = priority === 'essential' ? 'bg-sage-dark' :
-                     priority === 'discretionary' ? 'bg-blue' : 'bg-silver';
+    const dotColor = priority === 'essential' ? 'bg-[#6B9ECE]' :
+                     priority === 'discretionary' ? 'bg-[#9CA3AF]' : 'bg-[#5A7E7A]';
     const label = priority === 'essential' ? 'Essential' :
                   priority === 'discretionary' ? 'Flexible' : 'Important';
     return <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} title={label} />;

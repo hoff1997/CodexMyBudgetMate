@@ -417,52 +417,52 @@ Used for categorising envelopes by importance level.
 
 | Priority | Name | Dot Color | Background | Border | Use Case |
 |----------|------|-----------|------------|--------|----------|
-| 1 | **Essential** | `sage-dark` (#5A7E7A) | `sage-very-light` (#E2EEEC) | `sage-light` (#B8D4D0) | Must-pay items: rent, groceries, utilities |
-| 2 | **Important** | `silver` (#9CA3AF) | `silver-very-light` (#F3F4F6) | `silver-light` (#E5E7EB) | Should-pay items: insurance, savings, debt |
-| 3 | **Extras** | `blue` (#6B9ECE) | `blue-light` (#DDEAF5) | `blue` (#6B9ECE) | Nice-to-have: fun money, hobbies, treats |
+| 1 | **Essential** | `blue` (#6B9ECE) | `blue-light` (#DDEAF5) | `blue` (#6B9ECE) | Must-pay items: rent, groceries, utilities |
+| 2 | **Important** | `sage-dark` (#5A7E7A) | `sage-very-light` (#E2EEEC) | `sage-light` (#B8D4D0) | Should-pay items: insurance, savings, debt |
+| 3 | **Flexible** | `silver` (#9CA3AF) | `silver-very-light` (#F3F4F6) | `silver-light` (#E5E7EB) | Nice-to-have: fun money, hobbies, treats |
 
 ### Priority Color Psychology
 
-- **Sage (Essential)** — Positive, secure. Communicates "these are covered, you're safe."
-- **Silver (Important)** — Neutral, stable. Communicates "steady progress, keep going."
-- **Blue (Extras)** — Informational, flexible. Communicates "adjust freely, no guilt."
+- **Blue (Essential)** — Draws attention calmly. Communicates "these must be covered first."
+- **Sage (Important)** — Positive, secure. Communicates "these are covered, you're safe."
+- **Silver (Flexible)** — Neutral, fades into background. Communicates "adjust freely, no guilt."
 
 ### Usage Examples
 
 **Group Headers:**
 ```tsx
 {/* Essential */}
-<div className="bg-sage-very-light border border-sage-light">...</div>
+<div className="bg-blue-light border border-blue">...</div>
 
 {/* Important */}
-<div className="bg-silver-very-light border border-silver-light">...</div>
+<div className="bg-sage-very-light border border-sage-light">...</div>
 
-{/* Extras */}
-<div className="bg-blue-light border border-blue">...</div>
+{/* Flexible */}
+<div className="bg-silver-very-light border border-silver-light">...</div>
 ```
 
 **Priority Dots:**
 ```tsx
 {/* Essential */}
-<span className="w-3 h-3 rounded-full bg-sage-dark" />
+<span className="w-3 h-3 rounded-full bg-blue" />
 
 {/* Important */}
-<span className="w-3 h-3 rounded-full bg-silver" />
+<span className="w-3 h-3 rounded-full bg-sage-dark" />
 
-{/* Extras */}
-<span className="w-3 h-3 rounded-full bg-blue" />
+{/* Flexible */}
+<span className="w-3 h-3 rounded-full bg-silver" />
 ```
 
 **Row Icons:**
 ```tsx
 {/* Essential */}
-<div className="bg-sage-very-light rounded-lg p-2">...</div>
+<div className="bg-blue-light rounded-lg p-2">...</div>
 
 {/* Important */}
-<div className="bg-silver-very-light rounded-lg p-2">...</div>
+<div className="bg-sage-very-light rounded-lg p-2">...</div>
 
-{/* Extras */}
-<div className="bg-blue-light rounded-lg p-2">...</div>
+{/* Flexible */}
+<div className="bg-silver-very-light rounded-lg p-2">...</div>
 ```
 
 ---
@@ -644,17 +644,17 @@ Compact visual priority indicators:
 
 | Priority | Dot Color | CSS |
 |----------|-----------|-----|
-| Essential | Sage Dark | `bg-sage-dark` or `bg-[#5A7E7A]` |
-| Important | Silver | `bg-silver` or `bg-[#9CA3AF]` |
-| Discretionary | Blue | `bg-blue` or `bg-[#6B9ECE]` |
+| Essential | Blue | `bg-blue` or `bg-[#6B9ECE]` |
+| Important | Sage Dark | `bg-sage-dark` or `bg-[#5A7E7A]` |
+| Flexible | Silver | `bg-silver` or `bg-[#9CA3AF]` |
 
 ```tsx
 // Compact dot (in table)
 <span className={cn(
   "w-2.5 h-2.5 rounded-full",
-  priority === "essential" && "bg-sage-dark",
-  priority === "important" && "bg-silver",
-  priority === "discretionary" && "bg-blue"
+  priority === "essential" && "bg-blue",
+  priority === "important" && "bg-sage-dark",
+  priority === "discretionary" && "bg-silver"
 )} />
 ```
 

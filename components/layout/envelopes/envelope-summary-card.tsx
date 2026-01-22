@@ -22,6 +22,7 @@ export interface SummaryEnvelope extends EnvelopeRow {
 }
 
 // Priority configuration for consistent styling across components
+// Blue = Essential, Green/Sage = Important, Silver = Flexible
 export const PRIORITY_CONFIG: Record<PriorityLevel, {
   label: string;
   dotColor: string;
@@ -30,21 +31,21 @@ export const PRIORITY_CONFIG: Record<PriorityLevel, {
 }> = {
   essential: {
     label: "ESSENTIAL",
+    dotColor: "bg-blue",
+    bgColor: "bg-blue-light",
+    borderColor: "border-blue",
+  },
+  important: {
+    label: "IMPORTANT",
     dotColor: "bg-sage-dark",
     bgColor: "bg-sage-very-light",
     borderColor: "border-sage-light",
   },
-  important: {
-    label: "IMPORTANT",
+  discretionary: {
+    label: "FLEXIBLE",
     dotColor: "bg-silver",
     bgColor: "bg-silver-very-light",
     borderColor: "border-silver-light",
-  },
-  discretionary: {
-    label: "FLEXIBLE",
-    dotColor: "bg-blue",
-    bgColor: "bg-blue-light",
-    borderColor: "border-blue",
   },
 };
 

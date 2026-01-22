@@ -72,15 +72,15 @@ const PRIORITY_CONFIG: Record<PriorityLevel, {
 }> = {
   essential: {
     label: "ESSENTIAL",
-    dotColor: "bg-[#5A7E7A]", // sage-dark
-    bgColor: "bg-[#E2EEEC]", // sage-very-light
-    borderColor: "border-[#B8D4D0]", // sage-light
-  },
-  important: {
-    label: "IMPORTANT",
     dotColor: "bg-[#6B9ECE]", // blue
     bgColor: "bg-[#DDEAF5]", // blue-light
     borderColor: "border-[#6B9ECE]", // blue
+  },
+  important: {
+    label: "IMPORTANT",
+    dotColor: "bg-[#5A7E7A]", // sage-dark
+    bgColor: "bg-[#E2EEEC]", // sage-very-light
+    borderColor: "border-[#B8D4D0]", // sage-light
   },
   discretionary: {
     label: "FLEXIBLE",

@@ -74,7 +74,11 @@ export function FluentEmojiPicker({
           {selectedEmoji || "📦"}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="start">
+      <PopoverContent
+        className="w-96 p-0"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         {/* Header with search */}
         <div className="p-3 border-b">
           <h4 className="font-semibold text-sm mb-2">Choose an Icon</h4>
@@ -86,13 +90,18 @@ export function FluentEmojiPicker({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-8 pl-8 pr-8 text-sm"
+              onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={handleClearSearch}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClearSearch();
+                }}
                 onMouseDown={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
                 className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"

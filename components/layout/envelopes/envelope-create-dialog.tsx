@@ -594,6 +594,7 @@ export function EnvelopeCreateDialog({
                   <FluentEmojiPicker
                     selectedEmoji={form.icon}
                     onEmojiSelect={(emoji) => setForm((prev) => ({ ...prev, icon: emoji }))}
+                    insideDialog
                   />
                 </div>
 

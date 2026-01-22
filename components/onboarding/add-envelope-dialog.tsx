@@ -264,6 +264,7 @@ export function AddEnvelopeDialog({
                   <FluentEmojiPicker
                     selectedEmoji={customIcon}
                     onEmojiSelect={setCustomIcon}
+                    insideDialog
                   />
                 </div>
                 <div className="flex-1">

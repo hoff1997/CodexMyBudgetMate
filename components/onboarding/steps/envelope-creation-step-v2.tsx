@@ -1581,6 +1581,7 @@ export function EnvelopeCreationStepV2({
               <FluentEmojiPicker
                 selectedEmoji={newInstanceIcon || currentMasterForInstance?.icon || "📦"}
                 onEmojiSelect={setNewInstanceIcon}
+                insideDialog
               />
               <div className="flex-1">
                 <label className="text-sm font-medium">Name</label>
@@ -1620,7 +1621,7 @@ export function EnvelopeCreationStepV2({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-4">
-              <FluentEmojiPicker selectedEmoji={newCustomIcon} onEmojiSelect={setNewCustomIcon} />
+              <FluentEmojiPicker selectedEmoji={newCustomIcon} onEmojiSelect={setNewCustomIcon} insideDialog />
               <div className="flex-1">
                 <label className="text-sm font-medium">Name</label>
                 <Input
@@ -1701,7 +1702,7 @@ export function EnvelopeCreationStepV2({
           <div className="space-y-4 py-4">
             {/* Icon and Name row */}
             <div className="flex items-center gap-4">
-              <FluentEmojiPicker selectedEmoji={renameIcon || "📦"} onEmojiSelect={setRenameIcon} />
+              <FluentEmojiPicker selectedEmoji={renameIcon || "📦"} onEmojiSelect={setRenameIcon} insideDialog />
               <div className="flex-1">
                 <label className="text-sm font-medium">Name</label>
                 <Input
@@ -1775,7 +1776,7 @@ export function EnvelopeCreationStepV2({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-4">
-              <FluentEmojiPicker selectedEmoji={newCategoryIcon} onEmojiSelect={setNewCategoryIcon} />
+              <FluentEmojiPicker selectedEmoji={newCategoryIcon} onEmojiSelect={setNewCategoryIcon} insideDialog />
               <div className="flex-1">
                 <label className="text-sm font-medium">Category Name</label>
                 <Input

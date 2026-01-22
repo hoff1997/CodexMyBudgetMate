@@ -17,6 +17,8 @@ interface FluentEmojiPickerProps {
   disabled?: boolean;
   /** Size of the trigger button: "sm" (20px), "md" (32px), "lg" (48px, default) */
   size?: "sm" | "md" | "lg";
+  /** Set to true when picker is inside a Dialog - uses modal mode */
+  insideDialog?: boolean;
 }
 
 const SIZE_CLASSES = {
@@ -30,6 +32,7 @@ export function FluentEmojiPicker({
   onEmojiSelect,
   disabled,
   size = "lg",
+  insideDialog = false,
 }: FluentEmojiPickerProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -62,14 +65,16 @@ export function FluentEmojiPicker({
   }, []);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
+    <Popover open={open} onOpenChange={setOpen} modal={insideDialog}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           variant={size === "lg" ? "outline" : "ghost"}
           className={SIZE_CLASSES[size]}
           disabled={disabled}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {selectedEmoji || "📦"}
         </Button>
@@ -77,6 +82,8 @@ export function FluentEmojiPicker({
       <PopoverContent
         className="w-96 p-0"
         align="start"
+        side="bottom"
+        sideOffset={4}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {/* Header with search */}

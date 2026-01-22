@@ -322,6 +322,7 @@ export function CategoryGroups({
               <FluentEmojiPicker
                 selectedEmoji={editIcon}
                 onEmojiSelect={setEditIcon}
+                insideDialog
               />
             </div>
 

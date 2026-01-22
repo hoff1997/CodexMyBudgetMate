@@ -18,8 +18,8 @@ interface IconPickerProps {
 }
 
 const SIZE_CLASSES = {
-  sm: "h-5 w-5 p-0 text-xs",
-  md: "h-8 w-8 p-0 text-base",
+  sm: "h-5 w-5 p-0 text-sm border-0 hover:bg-muted/50 rounded",
+  md: "h-8 w-8 p-0 text-lg border-0 hover:bg-muted/50 rounded",
   lg: "h-12 w-12 p-0 text-2xl",
 };
 
@@ -54,7 +54,7 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled, size = "lg" }
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant={size === "lg" ? "outline" : "ghost"}
           className={SIZE_CLASSES[size]}
           disabled={disabled}
         >

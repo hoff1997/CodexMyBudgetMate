@@ -1523,6 +1523,7 @@ export function EnvelopeAllocationStep({
   };
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
@@ -1752,6 +1753,8 @@ export function EnvelopeAllocationStep({
                   <button
                     type="button"
                     onClick={(e) => handleEditCategory(category, e)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="p-1 text-muted-foreground hover:text-sage hover:bg-sage-very-light rounded transition-colors"
                     title="Edit category name and icon"
                   >
@@ -2131,48 +2134,49 @@ export function EnvelopeAllocationStep({
           </div>
         ) : null}
       </DragOverlay>
-
-      {/* Category Edit Dialog */}
-      <Dialog open={!!editingCategoryId} onOpenChange={(open) => !open && setEditingCategoryId(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Icon Picker */}
-            <div className="space-y-2">
-              <Label>Icon</Label>
-              <IconPicker
-                selectedIcon={editingCategoryIcon}
-                onIconSelect={setEditingCategoryIcon}
-              />
-            </div>
-
-            {/* Name Input */}
-            <div className="space-y-2">
-              <Label htmlFor="category-name">Name</Label>
-              <Input
-                id="category-name"
-                value={editingCategoryLabel}
-                onChange={(e) => setEditingCategoryLabel(e.target.value)}
-                placeholder="Category name"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingCategoryId(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveCategoryEdit}
-              disabled={!editingCategoryLabel.trim()}
-              className="bg-sage hover:bg-sage-dark"
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DndContext>
+
+    {/* Category Edit Dialog - outside DndContext to avoid event conflicts */}
+    <Dialog open={!!editingCategoryId} onOpenChange={(open) => !open && setEditingCategoryId(null)}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Edit Category</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          {/* Icon Picker */}
+          <div className="space-y-2">
+            <Label>Icon</Label>
+            <IconPicker
+              selectedIcon={editingCategoryIcon}
+              onIconSelect={setEditingCategoryIcon}
+            />
+          </div>
+
+          {/* Name Input */}
+          <div className="space-y-2">
+            <Label htmlFor="category-name-edit">Name</Label>
+            <Input
+              id="category-name-edit"
+              value={editingCategoryLabel}
+              onChange={(e) => setEditingCategoryLabel(e.target.value)}
+              placeholder="Category name"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setEditingCategoryId(null)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSaveCategoryEdit}
+            disabled={!editingCategoryLabel.trim()}
+            className="bg-sage hover:bg-sage-dark"
+          >
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

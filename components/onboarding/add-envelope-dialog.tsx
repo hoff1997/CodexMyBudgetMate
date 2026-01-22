@@ -27,7 +27,7 @@ import {
   type MasterEnvelope,
   type BuiltInCategory,
 } from "@/lib/onboarding/master-envelope-list";
-import { IconPicker } from "@/components/onboarding/icon-picker";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 
 interface AddEnvelopeDialogProps {
   open: boolean;
@@ -261,9 +261,9 @@ export function AddEnvelopeDialog({
               <div className="flex gap-4 items-start">
                 <div>
                   <Label className="text-xs mb-2 block">Icon</Label>
-                  <IconPicker
-                    selectedIcon={customIcon}
-                    onIconSelect={setCustomIcon}
+                  <FluentEmojiPicker
+                    selectedEmoji={customIcon}
+                    onEmojiSelect={setCustomIcon}
                   />
                 </div>
                 <div className="flex-1">

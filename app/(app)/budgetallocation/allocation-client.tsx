@@ -58,7 +58,7 @@ import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-
 import { DebtAllocationDialog } from "@/components/debt/debt-allocation-dialog";
 import { Gift, CreditCard } from "lucide-react";
 import type { GiftRecipient, GiftRecipientInput } from "@/lib/types/celebrations";
-import { IconPicker } from "@/components/onboarding/icon-picker";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 import type { DebtItem, DebtItemInput, LinkedCreditCard } from "@/lib/types/debt";
 import { useCelebrationReadiness, getEnvelopeReadiness, type CelebrationReadinessData } from "@/lib/hooks/use-celebration-readiness";
 import { CelebrationReadinessBadge, CelebrationReadinessPlaceholder } from "@/components/shared/celebration-readiness-badge";
@@ -2657,9 +2657,9 @@ function EnvelopeRow({
       <td className={cn("px-2 py-1.5", editableCellBg)}>
         <div className="flex items-center gap-1.5">
           {/* Envelope icon - clickable to edit */}
-          <IconPicker
-            selectedIcon={envelope.icon}
-            onIconSelect={(icon) => onEnvelopeChange(envelope.id, 'icon', icon)}
+          <FluentEmojiPicker
+            selectedEmoji={envelope.icon}
+            onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
             disabled={envelope.is_suggested}
             size="sm"
           />

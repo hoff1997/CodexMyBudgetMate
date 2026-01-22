@@ -92,7 +92,7 @@ import { QuickEstimateDialog } from "@/components/leveled-bills/quick-estimate-d
 import { TwelveMonthEntryDialog } from "@/components/leveled-bills/twelve-month-entry-dialog";
 import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-dialog";
 import { AllocationTutorial } from "./allocation-tutorial";
-import { IconPicker } from "@/components/onboarding/icon-picker";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 
 interface CustomCategory {
   id: string;
@@ -1124,10 +1124,10 @@ export function EnvelopeAllocationStep({
         {/* Envelope Name */}
         <td className="px-2 py-2" {...(isFirstRow ? { 'data-tutorial': 'envelope-name' } : {})}>
           <div className="flex items-center gap-2">
-            {/* Icon - clickable to edit using IconPicker */}
-            <IconPicker
-              selectedIcon={env.icon}
-              onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
+            {/* Icon - clickable to edit using FluentEmojiPicker */}
+            <FluentEmojiPicker
+              selectedEmoji={env.icon}
+              onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
               size="md"
             />
             {editingCell?.id === env.id && editingCell?.field === 'name' ? (
@@ -2146,9 +2146,9 @@ export function EnvelopeAllocationStep({
           {/* Icon Picker */}
           <div className="space-y-2">
             <Label>Icon</Label>
-            <IconPicker
-              selectedIcon={editingCategoryIcon}
-              onIconSelect={setEditingCategoryIcon}
+            <FluentEmojiPicker
+              selectedEmoji={editingCategoryIcon}
+              onEmojiSelect={setEditingCategoryIcon}
             />
           </div>
 

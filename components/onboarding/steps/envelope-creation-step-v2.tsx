@@ -52,7 +52,7 @@ import {
   type CustomCategory,
   type BuiltInCategory,
 } from "@/lib/onboarding/master-envelope-list";
-import { IconPicker } from "@/components/onboarding/icon-picker";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 import { RemyAvatar } from "@/components/onboarding/remy-tip";
 
 interface EnvelopeCreationStepV2Props {
@@ -1578,9 +1578,9 @@ export function EnvelopeCreationStepV2({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-4">
-              <IconPicker
-                selectedIcon={newInstanceIcon || currentMasterForInstance?.icon || "📦"}
-                onIconSelect={setNewInstanceIcon}
+              <FluentEmojiPicker
+                selectedEmoji={newInstanceIcon || currentMasterForInstance?.icon || "📦"}
+                onEmojiSelect={setNewInstanceIcon}
               />
               <div className="flex-1">
                 <label className="text-sm font-medium">Name</label>
@@ -1620,7 +1620,7 @@ export function EnvelopeCreationStepV2({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-4">
-              <IconPicker selectedIcon={newCustomIcon} onIconSelect={setNewCustomIcon} />
+              <FluentEmojiPicker selectedEmoji={newCustomIcon} onEmojiSelect={setNewCustomIcon} />
               <div className="flex-1">
                 <label className="text-sm font-medium">Name</label>
                 <Input
@@ -1701,7 +1701,7 @@ export function EnvelopeCreationStepV2({
           <div className="space-y-4 py-4">
             {/* Icon and Name row */}
             <div className="flex items-center gap-4">
-              <IconPicker selectedIcon={renameIcon || "📦"} onIconSelect={setRenameIcon} />
+              <FluentEmojiPicker selectedEmoji={renameIcon || "📦"} onEmojiSelect={setRenameIcon} />
               <div className="flex-1">
                 <label className="text-sm font-medium">Name</label>
                 <Input
@@ -1775,7 +1775,7 @@ export function EnvelopeCreationStepV2({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-4">
-              <IconPicker selectedIcon={newCategoryIcon} onIconSelect={setNewCategoryIcon} />
+              <FluentEmojiPicker selectedEmoji={newCategoryIcon} onEmojiSelect={setNewCategoryIcon} />
               <div className="flex-1">
                 <label className="text-sm font-medium">Category Name</label>
                 <Input

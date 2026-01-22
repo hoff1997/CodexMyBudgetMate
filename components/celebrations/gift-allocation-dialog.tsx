@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover as RadixPopover,
-  PopoverContent as RadixPopoverContent,
-  PopoverTrigger as RadixPopoverTrigger,
-} from "@/components/ui/radix-popover";
-import { CalendarIcon, Plus, X, AlertCircle, Users, ChevronDown, ChevronUp, PartyPopper, StickyNote } from "lucide-react";
+import { Plus, X, AlertCircle, Users, ChevronDown, ChevronUp, PartyPopper } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/cn";
@@ -70,83 +64,41 @@ const FESTIVAL_KEYWORDS = ['christmas', 'diwali', 'easter', 'hanukkah', 'eid', '
 const isLikelyFestival = (name: string) => FESTIVAL_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 /**
- * DatePickerForDialog - A date picker component designed to work inside dialogs
- * Uses Radix Popover with modal prop for proper focus scope handling inside Radix dialogs.
- *
- * Uses "dropdown-buttons" captionLayout for year selection support.
- * Calendar positioning is fixed to always appear below the trigger with top alignment.
+ * DateInputForDialog - A simple date input using native HTML date input
+ * Shows dd/mm format and allows easy typing or native date picker on mobile
  */
-function DatePickerForDialog({
+function DateInputForDialog({
   date,
   onDateChange,
 }: {
   date: Date | null;
   onDateChange: (date: Date | null) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  // Default to selected date's month/year, or current date
-  const [displayMonth, setDisplayMonth] = useState<Date>(date || new Date());
+  // Convert Date to yyyy-mm-dd string for input value
+  const inputValue = date ? format(date, "yyyy-MM-dd") : "";
 
-  // Update display month when date changes externally
-  useEffect(() => {
-    if (date) {
-      setDisplayMonth(date);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value) {
+      const parsed = new Date(value);
+      if (!isNaN(parsed.getTime())) {
+        onDateChange(parsed);
+      }
+    } else {
+      onDateChange(null);
     }
-  }, [date]);
-
-  // Calculate year range for dropdown (birthdays only need month/day, but allow full range for flexibility)
-  const currentYear = new Date().getFullYear();
-  const fromYear = 1920; // Allow selecting historical dates for birth years
-  const toYear = currentYear + 1; // Next year for upcoming celebrations
+  };
 
   return (
-    <RadixPopover open={isOpen} onOpenChange={setIsOpen} modal>
-      <RadixPopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          className={cn(
-            "h-8 px-2 justify-center bg-white text-xs",
-            !date && "text-muted-foreground"
-          )}
-          onMouseDown={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {date ? format(date, "d MMM") : <CalendarIcon className="h-3.5 w-3.5" />}
-        </Button>
-      </RadixPopoverTrigger>
-      <RadixPopoverContent
-        className="p-0 w-auto"
-        align="start"
-        side="bottom"
-        sideOffset={4}
-        alignOffset={0}
-        avoidCollisions={false}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <div
-          onMouseDown={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Calendar
-            mode="single"
-            selected={date || undefined}
-            onSelect={(selectedDate) => {
-              onDateChange(selectedDate || null);
-              setIsOpen(false);
-            }}
-            month={displayMonth}
-            onMonthChange={setDisplayMonth}
-            captionLayout="dropdown-buttons"
-            fromYear={fromYear}
-            toYear={toYear}
-          />
-        </div>
-      </RadixPopoverContent>
-    </RadixPopover>
+    <Input
+      type="date"
+      value={inputValue}
+      onChange={handleChange}
+      className="h-8 w-full bg-white text-xs px-2"
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    />
   );
 }
 
@@ -624,9 +576,9 @@ export function GiftAllocationDialog({
                       className="bg-white h-8 text-sm"
                     />
 
-                    {/* Date picker - only for birthdays */}
+                    {/* Date input - only for birthdays */}
                     {!isFestival && (
-                      <DatePickerForDialog
+                      <DateInputForDialog
                         date={recipient.celebration_date}
                         onDateChange={(date) =>
                           updateRecipient(recipient.tempId, "celebration_date", date)

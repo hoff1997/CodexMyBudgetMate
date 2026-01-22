@@ -59,6 +59,7 @@ const SUBTYPE_LABELS: Record<string, string> = {
   savings: "Save",
   goal: "Goal",
   tracking: "Track",
+  debt: "Debt",
 };
 
 const FREQUENCY_LABELS: Record<string, string> = {

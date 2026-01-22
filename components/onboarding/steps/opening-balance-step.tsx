@@ -95,6 +95,7 @@ const TYPE_LABELS: Record<string, string> = {
   savings: 'Savings',
   goal: 'Goal',
   tracking: 'Tracking',
+  debt: 'Debt',
 };
 
 // Frequency labels

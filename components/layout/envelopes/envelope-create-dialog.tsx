@@ -15,29 +15,7 @@ import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { CalendarIcon, X, Info, Plus, DollarSign, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-
-const ICONS = [
-  "💰",
-  "🏠",
-  "🚗",
-  "🛒",
-  "⚡️",
-  "🍔",
-  "🧺",
-  "🎓",
-  "💳",
-  "🛠️",
-  "📦",
-  "✈️",
-  "🧾",
-  "🎁",
-  "🪙",
-  "🧸",
-  "🏖️",
-  "🛡️",
-  "🌟",
-  "📚",
-] as const;
+import { IconPicker } from "@/components/onboarding/icon-picker";
 
 type CategoryOption = { id: string; name: string };
 
@@ -69,7 +47,7 @@ const SUBTYPE_OPTIONS: { value: EnvelopeSubtype; label: string; description: str
 
 const DEFAULT_FORM: FormState = {
   name: "",
-  icon: ICONS[0],
+  icon: "💰",
   subtype: "bill",
   categoryId: "",
   openingBalance: "0.00",
@@ -234,14 +212,6 @@ export function EnvelopeCreateDialog({
       setCreatingCategory(false);
     }
   };
-
-  const iconOptions = useMemo(() => {
-    if (!form.icon) return ICONS;
-    if (ICONS.includes(form.icon as (typeof ICONS)[number])) {
-      return ICONS;
-    }
-    return [form.icon, ...ICONS.filter((icon) => icon !== form.icon)];
-  }, [form.icon]);
 
   const dueAmountNumber = parseFloat(form.dueAmount || "0") || 0;
   const annualAmount = calculateAnnualFromTarget(dueAmountNumber, form.dueFrequency);
@@ -621,24 +591,10 @@ export function EnvelopeCreateDialog({
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-secondary">Icon</Label>
-                  <div className="grid grid-cols-10 gap-2">
-                    {iconOptions.map((icon) => (
-                      <button
-                        key={icon}
-                        type="button"
-                        className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-xl border text-lg transition",
-                          form.icon === icon
-                            ? "border-primary bg-primary/10 text-primary shadow-sm"
-                            : "border-border bg-background hover:border-primary/40 hover:bg-primary/5",
-                        )}
-                        onClick={() => setForm((prev) => ({ ...prev, icon }))}
-                        aria-label={`Select ${icon}`}
-                      >
-                        <span>{icon}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <IconPicker
+                    selectedIcon={form.icon}
+                    onIconSelect={(icon) => setForm((prev) => ({ ...prev, icon }))}
+                  />
                 </div>
 
                 <div className="space-y-2">

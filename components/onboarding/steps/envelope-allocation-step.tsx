@@ -108,6 +108,7 @@ const BILL_FREQUENCY_CYCLES: Record<string, number> = {
   fortnightly: 26,
   monthly: 12,
   quarterly: 4,
+  '6_monthly': 2,
   annual: 1,
   annually: 1,
   custom: 12,
@@ -1862,7 +1863,8 @@ export function EnvelopeAllocationStep({
                     <SelectItem value="fortnightly">Fortnightly</SelectItem>
                     <SelectItem value="monthly">Monthly</SelectItem>
                     <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annual">Annual</SelectItem>
+                    <SelectItem value="6_monthly">6 Monthly</SelectItem>
+                    <SelectItem value="annually">Annual</SelectItem>
                     <SelectItem value="custom_weeks">Every X Weeks</SelectItem>
                   </SelectContent>
                 </Select>

@@ -134,9 +134,9 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     id: "frequency",
     title: "Bill Frequency",
     description:
-      "Weekly, fortnightly, monthly, quarterly, or annual - this affects how much you allocate each pay cycle.",
+      "Weekly, fortnightly, monthly, quarterly, 6 monthly, annual, or even custom weekly cycles (like haircuts every 8 weeks) - this affects how much you allocate each pay cycle.",
     icon: <TrendingUp className="h-6 w-6 text-blue" />,
-    tip: "A $100/month bill = about $46 per fortnight. I do the math for you!",
+    tip: "A $100/month bill = about $46 per fortnight. For custom cycles, I work out exactly how many times per year to get your per-pay right!",
     section: "budget",
   },
   {

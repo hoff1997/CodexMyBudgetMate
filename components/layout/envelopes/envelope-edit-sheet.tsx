@@ -1,7 +1,7 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,35 +14,12 @@ import {
   frequencyOptions,
 } from "@/lib/planner/calculations";
 import { formatCurrency } from "@/lib/finance";
-import { cn } from "@/lib/cn";
 import { add } from "date-fns";
 import { CalendarIcon, RefreshCcw, X } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 
 type CategoryOption = { id: string; name: string };
-
-const DEFAULT_ICON_OPTIONS = [
-  "💰",
-  "🏠",
-  "🚗",
-  "🛒",
-  "⚡️",
-  "🍔",
-  "🧺",
-  "🎓",
-  "💳",
-  "🛠️",
-  "📦",
-  "✈️",
-  "🧾",
-  "🎁",
-  "🪙",
-  "🧸",
-  "🏖️",
-  "🛡️",
-  "🌟",
-  "📚",
-] as const;
 
 interface Props {
   envelope: SummaryEnvelope | null;
@@ -52,7 +29,6 @@ interface Props {
   planPerPay?: number | null;
   planAnnual?: number | null;
   planFrequency?: PlannerFrequency | null;
-  iconOptions?: readonly string[];
 }
 
 type FormState = {
@@ -102,7 +78,6 @@ export function EnvelopeEditSheet({
   planPerPay,
   planAnnual,
   planFrequency,
-  iconOptions = DEFAULT_ICON_OPTIONS,
 }: Props) {
   const [form, setForm] = useState<FormState | null>(null);
   const [showEmergencyFundTip, setShowEmergencyFundTip] = useState(false);
@@ -124,12 +99,6 @@ export function EnvelopeEditSheet({
     localStorage.setItem("remy-tip-emergency-fund-dismissed", "true");
   };
 
-  const iconChoices = useMemo(() => {
-    if (!form || !form.icon) return iconOptions;
-    if (iconOptions.includes(form.icon)) return iconOptions;
-    return [form.icon, ...iconOptions.filter((icon) => icon !== form.icon)];
-  }, [iconOptions, form]);
-
   useEffect(() => {
     if (!envelope) {
       setForm(null);
@@ -137,7 +106,7 @@ export function EnvelopeEditSheet({
     }
     setForm({
       name: envelope.name ?? "",
-      icon: envelope.icon ?? iconOptions[0] ?? "💰",
+      icon: envelope.icon ?? "💰",
       categoryId: envelope.category_id ?? "",
       openingBalance: formatNumericInput(envelope.opening_balance ?? 0),
       notes: envelope.notes ?? "",
@@ -146,7 +115,7 @@ export function EnvelopeEditSheet({
       dueFrequency: (envelope.frequency as PlannerFrequency) ?? FREQUENCY_FALLBACK,
       dueDate: (envelope.next_payment_due ?? envelope.due_date ?? "").slice(0, 10),
     });
-  }, [envelope, iconOptions]);
+  }, [envelope]);
 
   const title = envelope ? "Edit Envelope" : "Add New Envelope";
   const submitLabel = envelope ? "Save Changes" : "Create Envelope";
@@ -258,27 +227,11 @@ export function EnvelopeEditSheet({
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-secondary">Icon</Label>
-                <div className="grid grid-cols-10 gap-2">
-                  {iconChoices.map((icon) => {
-                    const isActive = form.icon === icon;
-                    return (
-                      <button
-                        key={icon}
-                        type="button"
-                        className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-xl border text-lg transition",
-                          isActive
-                            ? "border-primary bg-primary/10 text-primary shadow-sm"
-                            : "border-border bg-background hover:border-primary/40 hover:bg-primary/5",
-                        )}
-                        onClick={() => setForm((prev) => prev && { ...prev, icon })}
-                        aria-label={`Select ${icon}`}
-                      >
-                        <span>{icon}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <FluentEmojiPicker
+                  selectedEmoji={form.icon}
+                  onEmojiSelect={(emoji) => setForm((prev) => prev && { ...prev, icon: emoji })}
+                  insideDialog
+                />
               </div>
 
               <div className="space-y-2">

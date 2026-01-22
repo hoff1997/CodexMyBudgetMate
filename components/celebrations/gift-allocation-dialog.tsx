@@ -73,8 +73,8 @@ const isLikelyFestival = (name: string) => FESTIVAL_KEYWORDS.some(k => name.toLo
  * DatePickerForDialog - A date picker component designed to work inside dialogs
  * Uses Radix Popover with modal prop for proper focus scope handling inside Radix dialogs.
  *
- * Uses "buttons" captionLayout instead of "dropdown-buttons" to avoid
- * native select elements which have issues inside portaled popovers in dialogs.
+ * Uses "dropdown-buttons" captionLayout for year selection support.
+ * Calendar positioning is fixed to always appear below the trigger with top alignment.
  */
 function DatePickerForDialog({
   date,
@@ -93,6 +93,11 @@ function DatePickerForDialog({
       setDisplayMonth(date);
     }
   }, [date]);
+
+  // Calculate year range for dropdown (5 years back to 10 years forward)
+  const currentYear = new Date().getFullYear();
+  const fromYear = currentYear - 5;
+  const toYear = currentYear + 10;
 
   return (
     <RadixPopover open={isOpen} onOpenChange={setIsOpen} modal>
@@ -114,9 +119,11 @@ function DatePickerForDialog({
       </RadixPopoverTrigger>
       <RadixPopoverContent
         className="p-0 w-auto"
-        align="center"
+        align="start"
         side="bottom"
-        sideOffset={8}
+        sideOffset={4}
+        alignOffset={0}
+        avoidCollisions={false}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div
@@ -133,7 +140,9 @@ function DatePickerForDialog({
             }}
             month={displayMonth}
             onMonthChange={setDisplayMonth}
-            captionLayout="buttons"
+            captionLayout="dropdown-buttons"
+            fromYear={fromYear}
+            toYear={toYear}
           />
         </div>
       </RadixPopoverContent>
@@ -419,7 +428,7 @@ export function GiftAllocationDialog({
             <div className="space-y-4">
               {/* Remy guidance - matching help button style */}
               <div className="flex items-start gap-3 p-3 bg-sage-very-light rounded-lg border border-sage-light">
-                <RemyAvatar pose="small" size="sm" />
+                <RemyAvatar pose="small" size="sm" className="!w-10 !h-10 !border-2 flex-shrink-0" />
                 <div className="space-y-2">
                   <p className="text-sm text-text-dark">
                     Add each person you're budgeting for. {!isFestival
@@ -578,14 +587,14 @@ export function GiftAllocationDialog({
                 {/* Header row - different for festivals vs birthdays */}
                 {isFestival ? (
                   // Festival: Name, Gift only (party is at envelope level)
-                  <div className="grid grid-cols-[1fr_70px_28px] gap-2 px-2 text-xs font-medium text-text-medium">
+                  <div className="grid grid-cols-[minmax(100px,1fr)_85px_28px] gap-2 px-2 text-xs font-medium text-text-medium">
                     <span>Name</span>
                     <span className="text-center">Gift</span>
                     <span></span>
                   </div>
                 ) : (
                   // Birthday: Name, Date, Gift, Party, Total
-                  <div className="grid grid-cols-[1fr_90px_70px_70px_70px_28px] gap-2 px-2 text-xs font-medium text-text-medium">
+                  <div className="grid grid-cols-[minmax(80px,140px)_80px_80px_80px_70px_28px] gap-2 px-2 text-xs font-medium text-text-medium">
                     <span>Name</span>
                     <span className="text-center">Date</span>
                     <span className="text-center">Gift</span>
@@ -601,8 +610,8 @@ export function GiftAllocationDialog({
                     className={cn(
                       "gap-2 items-center p-2 bg-sage-very-light rounded-lg border border-sage-light",
                       isFestival
-                        ? "grid grid-cols-[1fr_70px_28px]"
-                        : "grid grid-cols-[1fr_90px_70px_70px_70px_28px]"
+                        ? "grid grid-cols-[minmax(100px,1fr)_85px_28px]"
+                        : "grid grid-cols-[minmax(80px,140px)_80px_80px_80px_70px_28px]"
                     )}
                   >
                     {/* Name */}

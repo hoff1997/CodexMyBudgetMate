@@ -7,7 +7,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { findOrCreateDebtCategory } from "@/lib/utils/credit-card-onboarding-utils";
+import { findOrCreateDebtCategory, addCreditCardToDebtDestroyer } from "@/lib/utils/credit-card-onboarding-utils";
 import { addDebtToSnowball } from "@/lib/utils/debt-progression";
 
 export async function GET() {
@@ -159,50 +159,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create credit card" }, { status: 500 });
     }
 
-    // For cards with debt (not pay_in_full), create a payoff envelope
+    // For cards with debt (not pay_in_full), add to Debt Destroyer envelope
+    let debtDestroyerResult = null;
     let payoffEnvelope = null;
     const debtAmount = startingDebtAmount || currentBalance || 0;
 
     if ((usageType === "paying_down" || usageType === "minimum_only") && debtAmount > 0) {
-      // Get or create "Debt" category
-      const debtCategoryId = await findOrCreateDebtCategory(supabase, user.id);
-
       // Calculate minimum payment (use provided or default to 2% of balance)
       const calculatedMinimum = minimumPayment || Math.ceil(debtAmount * 0.02);
 
-      // Create payoff envelope
-      const { data: createdPayoffEnvelope, error: payoffError } = await supabase
-        .from("envelopes")
-        .insert({
-          user_id: user.id,
-          name: `${name} Payoff`,
-          icon: "💳",
-          subtype: "bill",
-          target_amount: calculatedMinimum,
-          current_amount: 0,
-          frequency: "monthly",
-          due_date: paymentDueDay,
-          category_id: debtCategoryId,
-          priority: "essential",
-          cc_account_id: account.id,
-          envelope_type: "expense",
-          is_spending: false,
-          is_goal: false,
-          notes: `Debt payoff for ${name}`,
-        })
-        .select()
-        .single();
+      // Add credit card as a debt item to the Debt Destroyer envelope
+      debtDestroyerResult = await addCreditCardToDebtDestroyer(supabase, user.id, {
+        name,
+        accountId: account.id,
+        startingBalance: debtAmount,
+        currentBalance: debtAmount,
+        apr: apr || null,
+        minimumPayment: calculatedMinimum,
+      });
 
-      if (payoffError) {
-        console.error("Error creating payoff envelope:", payoffError);
-      } else {
-        payoffEnvelope = createdPayoffEnvelope;
+      if (debtDestroyerResult) {
+        console.log(`[CC Onboarding] Added ${name} to Debt Destroyer envelope as debt item`);
 
-        // Add to debt snowball plan
+        // Also add to legacy debt snowball plan for backwards compatibility
         await addDebtToSnowball(supabase, user.id, {
           card_name: name,
           balance: debtAmount,
-          envelope_id: createdPayoffEnvelope.id,
+          envelope_id: debtDestroyerResult.envelopeId,
           minimum_payment: calculatedMinimum,
         });
       }
@@ -246,6 +229,7 @@ export async function POST(request: Request) {
       success: true,
       creditCard: account,
       payoffEnvelope,
+      debtDestroyer: debtDestroyerResult,
     });
   } catch (error) {
     console.error("Create credit card error:", error);

@@ -16,6 +16,171 @@ import type { AccountRow as Account } from '@/lib/types/accounts';
 import { SupabaseClient } from "@supabase/supabase-js";
 
 // =====================================================
+// DEBT DESTROYER ENVELOPE HELPERS
+// =====================================================
+
+/**
+ * Find or create the "Debt Destroyer" envelope (unified debt tracking envelope)
+ * Returns the envelope ID
+ */
+export async function findOrCreateDebtDestroyerEnvelope(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<{ id: string; isNew: boolean } | null> {
+  // Check if "Debt Destroyer" envelope already exists
+  const { data: existing } = await supabase
+    .from("envelopes")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_debt", true)
+    .or("name.eq.Debt Destroyer,name.eq.debt-destroyer")
+    .maybeSingle();
+
+  if (existing) {
+    return { id: existing.id, isNew: false };
+  }
+
+  // Get or create the Debt category first
+  const debtCategoryId = await findOrCreateDebtCategory(supabase, userId);
+
+  // Create new "Debt Destroyer" envelope
+  const { data, error } = await supabase
+    .from("envelopes")
+    .insert({
+      user_id: userId,
+      name: "Debt Destroyer",
+      icon: "💪",
+      subtype: "debt",
+      target_amount: 0, // Will be updated when debt items are added
+      current_amount: 0,
+      frequency: "monthly",
+      category_id: debtCategoryId,
+      priority: "essential",
+      envelope_type: "expense",
+      is_spending: false,
+      is_goal: false,
+      is_debt: true,
+      notes: "Pay off all debt as fast as possible (My Budget Way Step 2)",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error creating Debt Destroyer envelope:", error);
+    return null;
+  }
+
+  return data ? { id: data.id, isNew: true } : null;
+}
+
+/**
+ * Add a credit card as a debt item to the Debt Destroyer envelope
+ */
+export async function addCreditCardToDebtDestroyer(
+  supabase: SupabaseClient,
+  userId: string,
+  cardDetails: {
+    name: string;
+    accountId: string;
+    startingBalance: number;
+    currentBalance: number;
+    apr: number | null;
+    minimumPayment: number | null;
+  }
+): Promise<{ debtItemId: string; envelopeId: string } | null> {
+  // Find or create the Debt Destroyer envelope
+  const debtEnvelope = await findOrCreateDebtDestroyerEnvelope(supabase, userId);
+  if (!debtEnvelope) {
+    console.error("Could not find or create Debt Destroyer envelope");
+    return null;
+  }
+
+  // Check if this credit card is already linked as a debt item
+  const { data: existingItem } = await supabase
+    .from("debt_items")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("envelope_id", debtEnvelope.id)
+    .eq("linked_account_id", cardDetails.accountId)
+    .maybeSingle();
+
+  if (existingItem) {
+    // Update existing item instead of creating a new one
+    const { error: updateError } = await supabase
+      .from("debt_items")
+      .update({
+        current_balance: cardDetails.currentBalance,
+        interest_rate: cardDetails.apr,
+        minimum_payment: cardDetails.minimumPayment,
+      })
+      .eq("id", existingItem.id);
+
+    if (updateError) {
+      console.error("Error updating debt item:", updateError);
+    }
+
+    // Update envelope target amount
+    await updateDebtDestroyerTarget(supabase, userId, debtEnvelope.id);
+
+    return { debtItemId: existingItem.id, envelopeId: debtEnvelope.id };
+  }
+
+  // Create new debt item
+  const { data: debtItem, error: itemError } = await supabase
+    .from("debt_items")
+    .insert({
+      user_id: userId,
+      envelope_id: debtEnvelope.id,
+      name: cardDetails.name,
+      debt_type: "credit_card",
+      linked_account_id: cardDetails.accountId,
+      starting_balance: cardDetails.startingBalance,
+      current_balance: cardDetails.currentBalance,
+      interest_rate: cardDetails.apr,
+      minimum_payment: cardDetails.minimumPayment,
+      display_order: 0, // Will be sorted by balance anyway
+    })
+    .select("id")
+    .single();
+
+  if (itemError) {
+    console.error("Error creating debt item:", itemError);
+    return null;
+  }
+
+  // Update envelope target amount to sum of all minimum payments
+  await updateDebtDestroyerTarget(supabase, userId, debtEnvelope.id);
+
+  return debtItem ? { debtItemId: debtItem.id, envelopeId: debtEnvelope.id } : null;
+}
+
+/**
+ * Update the Debt Destroyer envelope target amount based on sum of minimum payments
+ */
+async function updateDebtDestroyerTarget(
+  supabase: SupabaseClient,
+  userId: string,
+  envelopeId: string
+): Promise<void> {
+  const { data: items } = await supabase
+    .from("debt_items")
+    .select("minimum_payment")
+    .eq("envelope_id", envelopeId)
+    .eq("user_id", userId);
+
+  const totalMinimumPayments = (items || []).reduce(
+    (sum: number, item: any) => sum + Number(item.minimum_payment || 0),
+    0
+  );
+
+  await supabase
+    .from("envelopes")
+    .update({ target_amount: totalMinimumPayments })
+    .eq("id", envelopeId)
+    .eq("user_id", userId);
+}
+
+// =====================================================
 // CATEGORY HELPERS
 // =====================================================
 

@@ -1156,7 +1156,7 @@ export function EnvelopeAllocationStep({
 
     // Check for debt envelope - specifically "Debt Destroyer" (id: debt-destroyer) or subtype: debt
     const isDebtEnvelope = env.id === 'debt-destroyer' || env.subtype === 'debt';
-    const showDebtPrompt = isDebtEnvelope && !env.isDebt && !env.debtItems?.length;
+    const showDebtPrompt = isDebtEnvelope && !(env.debtItems?.length);
 
     // Check for seasonal bills (power, gas, water) - only if NOT a celebration
     const seasonalDetection = isCelebrationCategory ? null : detectSeasonalBill(env.name);
@@ -1319,7 +1319,7 @@ export function EnvelopeAllocationStep({
                   </TooltipProvider>
                 )}
                 {/* Debt indicator - shows credit card icon when configured (clickable to edit) */}
-                {env.isDebt && (env.debtItems?.length ?? 0) > 0 && (
+                {isDebtEnvelope && (env.debtItems?.length ?? 0) > 0 && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IconPicker } from "@/components/onboarding/icon-picker";
 
 interface Category {
   id: string;
@@ -34,7 +35,7 @@ interface CategoryGroupsProps {
   calculatePerPay: (envelope: UnifiedEnvelopeData) => number;
   onChangeCategoryClick: (envelope: UnifiedEnvelopeData) => void;
   onArchiveClick: (envelope: UnifiedEnvelopeData) => void;
-  onEditCategory?: (categoryId: string, updates: { name?: string; color?: string }) => void;
+  onEditCategory?: (categoryId: string, updates: { name?: string; icon?: string; color?: string }) => void;
   renderEnvelopeRow: (
     envelope: UnifiedEnvelopeData,
     options: {
@@ -70,6 +71,7 @@ export function CategoryGroups({
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editName, setEditName] = useState("");
+  const [editIcon, setEditIcon] = useState("📁");
   const [editColor, setEditColor] = useState("#3b82f6");
 
   // Group envelopes by category
@@ -128,6 +130,7 @@ export function CategoryGroups({
     e.stopPropagation();
     setEditingCategory(category);
     setEditName(category.name);
+    setEditIcon(category.icon || "📁");
     setEditColor(category.color || "#3b82f6");
   };
 
@@ -135,12 +138,13 @@ export function CategoryGroups({
   const handleSaveEdit = () => {
     if (!editingCategory || !onEditCategory) return;
 
-    // For system categories like "Celebrations", only allow color changes
+    // For system categories like "Celebrations", only allow color and icon changes
     const isSystemCategory = editingCategory.is_system ||
       editingCategory.name.toLowerCase() === "celebrations";
 
     onEditCategory(editingCategory.id, {
       name: isSystemCategory ? undefined : editName,
+      icon: editIcon,
       color: editColor,
     });
     setEditingCategory(null);
@@ -312,6 +316,15 @@ export function CategoryGroups({
             <DialogTitle>Edit Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Icon picker */}
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker
+                selectedIcon={editIcon}
+                onIconSelect={setEditIcon}
+              />
+            </div>
+
             {/* Name field - disabled for system categories */}
             <div className="space-y-2">
               <Label htmlFor="category-name">Name</Label>

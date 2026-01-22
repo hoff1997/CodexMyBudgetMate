@@ -124,10 +124,12 @@ export async function PATCH(
   if (parsed.data.color !== undefined) updateData.color = parsed.data.color || null;
   if (parsed.data.display_order !== undefined) updateData.display_order = parsed.data.display_order;
 
-  // System categories cannot have name or icon updated
+  // Icon can be updated for all categories
+  if (parsed.data.icon !== undefined) updateData.icon = parsed.data.icon || null;
+
+  // System categories cannot have name updated
   if (!existingCategory.is_system) {
     if (parsed.data.name !== undefined) updateData.name = parsed.data.name.trim();
-    if (parsed.data.icon !== undefined) updateData.icon = parsed.data.icon || null;
   }
 
   if (Object.keys(updateData).length === 0) {

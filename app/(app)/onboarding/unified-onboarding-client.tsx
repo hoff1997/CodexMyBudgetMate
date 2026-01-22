@@ -556,6 +556,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
             onEnvelopesChange={setEnvelopes}
             categoryOrder={categoryOrder}
             onCategoryOrderChange={setCategoryOrder}
+            customCategories={customCategories}
+            onCustomCategoriesChange={setCustomCategories}
           />
         );
 

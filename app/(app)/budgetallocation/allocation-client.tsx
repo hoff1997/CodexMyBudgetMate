@@ -378,10 +378,10 @@ export function AllocationClient() {
     setArchiveDialogOpen(true);
   }, []);
 
-  // Handle editing a category (name, color)
+  // Handle editing a category (name, icon, color)
   const handleEditCategory = useCallback(async (
     categoryId: string,
-    updates: { name?: string; color?: string }
+    updates: { name?: string; icon?: string; color?: string }
   ) => {
     try {
       const res = await fetch(`/api/envelope-categories/${categoryId}`, {

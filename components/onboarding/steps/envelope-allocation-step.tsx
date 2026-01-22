@@ -92,6 +92,13 @@ import { QuickEstimateDialog } from "@/components/leveled-bills/quick-estimate-d
 import { TwelveMonthEntryDialog } from "@/components/leveled-bills/twelve-month-entry-dialog";
 import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-dialog";
 import { AllocationTutorial } from "./allocation-tutorial";
+import { IconPicker } from "@/components/onboarding/icon-picker";
+
+interface CustomCategory {
+  id: string;
+  label: string;
+  icon: string;
+}
 
 interface EnvelopeAllocationStepProps {
   envelopes: EnvelopeData[];
@@ -100,6 +107,8 @@ interface EnvelopeAllocationStepProps {
   onEnvelopesChange: (envelopes: EnvelopeData[]) => void;
   categoryOrder?: string[];
   onCategoryOrderChange?: (order: string[]) => void;
+  customCategories?: CustomCategory[];
+  onCustomCategoriesChange?: (categories: CustomCategory[]) => void;
 }
 
 // Pay frequency cycles per year
@@ -372,6 +381,8 @@ export function EnvelopeAllocationStep({
   onEnvelopesChange,
   categoryOrder,
   onCategoryOrderChange,
+  customCategories,
+  onCustomCategoriesChange,
 }: EnvelopeAllocationStepProps) {
   const [allocations, setAllocations] = useState<{ [envelopeId: string]: { [incomeId: string]: number } }>({});
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORY_ORDER));
@@ -424,6 +435,65 @@ export function EnvelopeAllocationStep({
   const effectiveCategoryOrder = categoryOrder?.length
     ? categoryOrder
     : CATEGORY_ORDER;
+
+  // Category edit state
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryLabel, setEditingCategoryLabel] = useState('');
+  const [editingCategoryIcon, setEditingCategoryIcon] = useState('');
+
+  // Helper function to get category display (checks customCategories first, then falls back to CATEGORY_LABELS)
+  const getCategoryDisplay = useCallback((categoryKey: string): { label: string; icon: string } => {
+    // Check customCategories first (for overrides and custom categories)
+    const customCat = customCategories?.find(c => c.id === categoryKey);
+    if (customCat) {
+      return { label: customCat.label, icon: customCat.icon };
+    }
+    // Fall back to built-in CATEGORY_LABELS
+    const builtIn = CATEGORY_LABELS[categoryKey as BuiltInCategory];
+    if (builtIn) {
+      return { label: builtIn.label, icon: builtIn.icon };
+    }
+    // Default fallback
+    return { label: categoryKey, icon: '📁' };
+  }, [customCategories]);
+
+  // Handle saving category edits
+  const handleSaveCategoryEdit = useCallback(() => {
+    if (!editingCategoryId || !editingCategoryLabel.trim()) return;
+
+    const updatedCategories = [...(customCategories || [])];
+    const existingIndex = updatedCategories.findIndex(c => c.id === editingCategoryId);
+
+    if (existingIndex >= 0) {
+      // Update existing custom category
+      updatedCategories[existingIndex] = {
+        ...updatedCategories[existingIndex],
+        label: editingCategoryLabel.trim(),
+        icon: editingCategoryIcon,
+      };
+    } else {
+      // Add new custom category (override for built-in)
+      updatedCategories.push({
+        id: editingCategoryId,
+        label: editingCategoryLabel.trim(),
+        icon: editingCategoryIcon,
+      });
+    }
+
+    onCustomCategoriesChange?.(updatedCategories);
+    setEditingCategoryId(null);
+    setEditingCategoryLabel('');
+    setEditingCategoryIcon('');
+  }, [editingCategoryId, editingCategoryLabel, editingCategoryIcon, customCategories, onCustomCategoriesChange]);
+
+  // Handle opening category edit
+  const handleEditCategory = useCallback((categoryKey: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const display = getCategoryDisplay(categoryKey);
+    setEditingCategoryId(categoryKey);
+    setEditingCategoryLabel(display.label);
+    setEditingCategoryIcon(display.icon);
+  }, [getCategoryDisplay]);
 
   // Add envelope dialog state
   const [addEnvelopeOpen, setAddEnvelopeOpen] = useState(false);
@@ -1649,19 +1719,24 @@ export function EnvelopeAllocationStep({
       <div className="space-y-3">
         <SortableContext
           items={effectiveCategoryOrder.filter(cat => {
-            const categoryInfo = CATEGORY_LABELS[cat as BuiltInCategory];
+            // Check if category has a valid display (built-in or custom)
+            const hasBuiltIn = CATEGORY_LABELS[cat as BuiltInCategory];
+            const hasCustom = customCategories?.some(c => c.id === cat);
             const categoryEnvelopes = envelopesByCategory[cat] || [];
-            return categoryInfo && categoryEnvelopes.length > 0;
+            return (hasBuiltIn || hasCustom) && categoryEnvelopes.length > 0;
           }).map(cat => `category-${cat}`)}
           strategy={verticalListSortingStrategy}
         >
         {effectiveCategoryOrder.map((category) => {
-          const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
-          if (!categoryInfo) return null;
+          // Check if this category should be displayed
+          const hasBuiltIn = CATEGORY_LABELS[category as BuiltInCategory];
+          const hasCustom = customCategories?.some(c => c.id === category);
+          if (!hasBuiltIn && !hasCustom) return null;
 
           const categoryEnvelopes = envelopesByCategory[category] || [];
           if (categoryEnvelopes.length === 0) return null;
 
+          const categoryDisplay = getCategoryDisplay(category);
           const isExpanded = expandedCategories.has(category);
           const categoryTotal = sumPerPayInCategory(category);
 
@@ -1695,11 +1770,20 @@ export function EnvelopeAllocationStep({
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span className="text-lg">{categoryInfo.icon}</span>
-                  <span className="font-semibold text-gray-700">{categoryInfo.label}</span>
+                  <span className="text-lg">{categoryDisplay.icon}</span>
+                  <span className="font-semibold text-gray-700">{categoryDisplay.label}</span>
                   <span className="text-sm text-muted-foreground">
                     ({countInCategory(category)})
                   </span>
+                  </button>
+                  {/* Edit Category Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => handleEditCategory(category, e)}
+                    className="p-1 text-muted-foreground hover:text-sage hover:bg-sage-very-light rounded transition-colors"
+                    title="Edit category name and icon"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
                   </button>
                   {/* Add Envelope Button */}
                   <button
@@ -2019,11 +2103,14 @@ export function EnvelopeAllocationStep({
                 </SelectTrigger>
                 <SelectContent>
                   {effectiveCategoryOrder.map((cat) => {
-                    const info = CATEGORY_LABELS[cat as BuiltInCategory];
-                    if (!info) return null;
+                    // Check if category has a valid display (built-in or custom)
+                    const hasBuiltIn = CATEGORY_LABELS[cat as BuiltInCategory];
+                    const hasCustom = customCategories?.some(c => c.id === cat);
+                    if (!hasBuiltIn && !hasCustom) return null;
+                    const display = getCategoryDisplay(cat);
                     return (
                       <SelectItem key={cat} value={cat}>
-                        {info.icon} {info.label}
+                        {display.icon} {display.label}
                       </SelectItem>
                     );
                   })}
@@ -2054,12 +2141,12 @@ export function EnvelopeAllocationStep({
           // Category drag preview
           (() => {
             const categoryKey = activeDragCategoryId.replace('category-', '');
-            const categoryInfo = CATEGORY_LABELS[categoryKey as BuiltInCategory];
+            const categoryDisplay = getCategoryDisplay(categoryKey);
             return (
               <div className="bg-white border border-sage rounded-lg shadow-lg px-3 py-2 flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg">{categoryInfo?.icon || '📁'}</span>
-                <span className="font-semibold text-sm">{categoryInfo?.label || categoryKey}</span>
+                <span className="text-lg">{categoryDisplay.icon}</span>
+                <span className="font-semibold text-sm">{categoryDisplay.label}</span>
               </div>
             );
           })()
@@ -2072,6 +2159,48 @@ export function EnvelopeAllocationStep({
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Category Edit Dialog */}
+      <Dialog open={!!editingCategoryId} onOpenChange={(open) => !open && setEditingCategoryId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Icon Picker */}
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <IconPicker
+                selectedIcon={editingCategoryIcon}
+                onIconSelect={setEditingCategoryIcon}
+              />
+            </div>
+
+            {/* Name Input */}
+            <div className="space-y-2">
+              <Label htmlFor="category-name">Name</Label>
+              <Input
+                id="category-name"
+                value={editingCategoryLabel}
+                onChange={(e) => setEditingCategoryLabel(e.target.value)}
+                placeholder="Category name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingCategoryId(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveCategoryEdit}
+              disabled={!editingCategoryLabel.trim()}
+              className="bg-sage hover:bg-sage-dark"
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DndContext>
   );
 }

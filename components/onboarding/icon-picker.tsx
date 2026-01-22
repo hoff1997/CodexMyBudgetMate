@@ -51,12 +51,14 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled, size = "lg" }
   }, [onIconSelect]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant={size === "lg" ? "outline" : "ghost"}
           className={SIZE_CLASSES[size]}
           disabled={disabled}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           {selectedIcon || "📦"}
         </Button>
@@ -73,11 +75,13 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled, size = "lg" }
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 setActiveCategory(category);
               }}
               onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               className={`
-                px-2 py-1 text-xs rounded-md transition-colors
+                px-2 py-1 text-xs rounded-md transition-colors cursor-pointer
                 ${activeCategory === category
                   ? "bg-[#7A9E9A] text-white"
                   : "hover:bg-muted"
@@ -97,11 +101,17 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled, size = "lg" }
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   handleIconSelect(icon);
                 }}
-                onMouseDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
                 className={`
-                  h-8 w-8 flex items-center justify-center text-lg rounded transition-colors
+                  h-8 w-8 flex items-center justify-center text-lg rounded transition-colors cursor-pointer
                   ${selectedIcon === icon
                     ? "bg-[#E2EEEC] ring-2 ring-[#7A9E9A]"
                     : "hover:bg-muted"

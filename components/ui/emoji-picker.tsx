@@ -40,12 +40,14 @@ export function EmojiPicker({ value, onChange, className }: EmojiPickerProps) {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           className={`w-full justify-center text-2xl h-12 ${className || ""}`}
           type="button"
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           {value || '📊'}
         </Button>
@@ -62,10 +64,13 @@ export function EmojiPicker({ value, onChange, className }: EmojiPickerProps) {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 setActiveCategory(category);
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               className={`
-                px-2 py-1 text-xs rounded-md transition-colors
+                px-2 py-1 text-xs rounded-md transition-colors cursor-pointer
                 ${activeCategory === category
                   ? "bg-[#7A9E9A] text-white"
                   : "hover:bg-muted"
@@ -85,10 +90,13 @@ export function EmojiPicker({ value, onChange, className }: EmojiPickerProps) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
+                  e.preventDefault();
                   handleEmojiSelect(emoji);
                 }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 className={`
-                  h-8 w-8 flex items-center justify-center text-lg rounded transition-colors
+                  h-8 w-8 flex items-center justify-center text-lg rounded transition-colors cursor-pointer
                   ${value === emoji
                     ? "bg-[#E2EEEC] ring-2 ring-[#7A9E9A]"
                     : "hover:bg-muted"

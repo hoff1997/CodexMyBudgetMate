@@ -94,10 +94,10 @@ function DatePickerForDialog({
     }
   }, [date]);
 
-  // Calculate year range for dropdown (5 years back to 10 years forward)
+  // Calculate year range for dropdown (birthdays only need month/day, but allow full range for flexibility)
   const currentYear = new Date().getFullYear();
-  const fromYear = currentYear - 5;
-  const toYear = currentYear + 10;
+  const fromYear = 1920; // Allow selecting historical dates for birth years
+  const toYear = currentYear + 1; // Next year for upcoming celebrations
 
   return (
     <RadixPopover open={isOpen} onOpenChange={setIsOpen} modal>

@@ -19,6 +19,7 @@ type PopoverContextValue = {
   open: boolean;
   setOpen: (value: boolean) => void;
   triggerRef: React.RefObject<HTMLElement>;
+  modal: boolean;
 };
 
 const PopoverContext = createContext<PopoverContextValue | null>(null);
@@ -35,10 +36,10 @@ type PopoverProps = {
   children: ReactNode;
   open?: boolean;
   onOpenChange?: (value: boolean) => void;
-  modal?: boolean; // Not used but accepted for API compatibility
+  modal?: boolean; // When true, blocks interaction with elements outside the popover
 };
 
-export function Popover({ children, open: openProp, onOpenChange, modal: _modal }: PopoverProps) {
+export function Popover({ children, open: openProp, onOpenChange, modal = false }: PopoverProps) {
   const triggerRef = useRef<HTMLElement>(null);
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
 
@@ -61,8 +62,9 @@ export function Popover({ children, open: openProp, onOpenChange, modal: _modal 
       open,
       setOpen,
       triggerRef,
+      modal,
     }),
-    [open, setOpen],
+    [open, setOpen, modal],
   );
 
   return <PopoverContext.Provider value={value}>{children}</PopoverContext.Provider>;
@@ -119,7 +121,7 @@ export function PopoverContent({
   collisionPadding: _collisionPadding,
   onOpenAutoFocus,
 }: PopoverContentProps) {
-  const { open, setOpen, triggerRef } = usePopoverContext("PopoverContent");
+  const { open, setOpen, triggerRef, modal } = usePopoverContext("PopoverContent");
   const contentRef = useRef<HTMLDivElement | null>(null);
   const [container] = useState(() => {
     if (typeof document === "undefined") return null;
@@ -234,6 +236,27 @@ export function PopoverContent({
         return; // Click is on a select element, don't close
       }
 
+      // When in modal mode (inside a dialog), be more careful about closing
+      if (modal) {
+        // Check if click is inside any dialog content
+        const dialogContent = (target as Element).closest?.('[role="dialog"]');
+        if (dialogContent) {
+          return; // Click is inside a dialog, don't close popover
+        }
+
+        // Check if click is on dialog overlay/backdrop (data-state attribute from Radix)
+        const dialogOverlay = (target as Element).closest?.('[data-state="open"]');
+        if (dialogOverlay && dialogOverlay.getAttribute('role') !== 'dialog') {
+          return; // Click is on overlay, don't close popover
+        }
+
+        // Check for Radix dialog primitives
+        const radixDialogContent = (target as Element).closest?.('[data-radix-dialog-content]');
+        if (radixDialogContent) {
+          return; // Click is inside Radix dialog content
+        }
+      }
+
       // Click is outside, close the popover
       setOpen(false);
     };
@@ -247,7 +270,7 @@ export function PopoverContent({
       clearTimeout(timeoutId);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [open, setOpen, triggerRef]);
+  }, [open, setOpen, triggerRef, modal]);
 
   // Handle auto-focus behavior when popover opens
   useLayoutEffect(() => {

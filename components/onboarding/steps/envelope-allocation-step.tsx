@@ -1124,40 +1124,12 @@ export function EnvelopeAllocationStep({
         {/* Envelope Name */}
         <td className="px-2 py-2" {...(isFirstRow ? { 'data-tutorial': 'envelope-name' } : {})}>
           <div className="flex items-center gap-2">
-            {/* Icon - clickable to edit */}
-            {editingCell?.id === env.id && editingCell?.field === 'icon' ? (
-              <Popover open={true} onOpenChange={(open) => !open && setEditingCell(null)}>
-                <PopoverTrigger asChild>
-                  <button className="text-base cursor-pointer hover:scale-110 transition-transform">
-                    {env.icon}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-2" align="start">
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Choose an icon</p>
-                    <div className="grid grid-cols-8 gap-1">
-                      {['💰', '🏠', '🚗', '⚡', '📱', '🎬', '🍔', '☕', '🛒', '💊', '🏥', '🎓', '✈️', '🎁', '🎄', '🎂', '👔', '💇', '🐕', '🐱', '🏋️', '📚', '🎮', '💻', '🔧', '🏦', '💳', '📦', '🎉', '❤️', '🏛️', '📝'].map((icon) => (
-                        <button
-                          key={icon}
-                          onClick={() => handleEnvelopeChange(env.id, 'icon', icon)}
-                          className="p-1.5 text-base hover:bg-muted rounded transition-colors"
-                        >
-                          {icon}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            ) : (
-              <button
-                onClick={() => setEditingCell({ id: env.id, field: 'icon' })}
-                className="text-base cursor-pointer hover:scale-110 transition-transform"
-                title="Click to change icon"
-              >
-                {env.icon}
-              </button>
-            )}
+            {/* Icon - clickable to edit using IconPicker */}
+            <IconPicker
+              selectedIcon={env.icon}
+              onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
+              size="md"
+            />
             {editingCell?.id === env.id && editingCell?.field === 'name' ? (
               <Input
                 type="text"
@@ -1268,13 +1240,13 @@ export function EnvelopeAllocationStep({
         </td>
 
         {/* Type */}
-        <td className="px-1 py-2 text-center hidden md:table-cell">
+        <td className="px-1 py-2 text-center hidden md:table-cell w-16">
           {editingCell?.id === env.id && editingCell?.field === 'type' ? (
             <Select
               value={env.type}
               onValueChange={(val) => handleEnvelopeChange(env.id, 'type', val)}
             >
-              <SelectTrigger className="h-7 w-24 text-xs">
+              <SelectTrigger className="h-7 w-16 text-xs px-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1286,7 +1258,7 @@ export function EnvelopeAllocationStep({
           ) : (
             <button
               onClick={() => setEditingCell({ id: env.id, field: 'type' })}
-              className="text-xs text-muted-foreground hover:text-sage-dark"
+              className="text-xs text-muted-foreground hover:text-sage-dark w-full"
             >
               {TYPE_LABELS[env.type] || env.type}
             </button>

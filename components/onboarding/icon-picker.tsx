@@ -13,7 +13,15 @@ interface IconPickerProps {
   selectedIcon: string;
   onIconSelect: (icon: string) => void;
   disabled?: boolean;
+  /** Size of the trigger button: "sm" (20px), "md" (32px), "lg" (48px, default) */
+  size?: "sm" | "md" | "lg";
 }
+
+const SIZE_CLASSES = {
+  sm: "h-5 w-5 p-0 text-xs",
+  md: "h-8 w-8 p-0 text-base",
+  lg: "h-12 w-12 p-0 text-2xl",
+};
 
 // Group icons by category for easier browsing - expanded selection
 const ICON_CATEGORIES: Record<string, string[]> = {
@@ -33,7 +41,7 @@ const ICON_CATEGORIES: Record<string, string[]> = {
   "Other": ['❤️', '⭐', '🔔', '📦', '🗂️', '📁', '🏷️', '🔒', '🌱', '♻️', '📬', '🔑', '⏰', '📅', '✅', '🎯'],
 };
 
-export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerProps) {
+export function IconPicker({ selectedIcon, onIconSelect, disabled, size = "lg" }: IconPickerProps) {
   const [open, setOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("Home");
 
@@ -47,7 +55,7 @@ export function IconPicker({ selectedIcon, onIconSelect, disabled }: IconPickerP
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="h-12 w-12 p-0 text-2xl"
+          className={SIZE_CLASSES[size]}
           disabled={disabled}
         >
           {selectedIcon || "📦"}

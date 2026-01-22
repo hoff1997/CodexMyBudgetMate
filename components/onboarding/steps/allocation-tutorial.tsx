@@ -84,7 +84,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     id: "priority",
     title: "Priority Traffic Lights",
     description:
-      "Green dot = Essential, Grey dot = Important, Blue dot = Flexible. Click any priority dot to change it.",
+      "Green dot = Essential, Blue dot = Important, Grey dot = Flexible. Click any priority dot to change it.",
     icon: <Target className="h-6 w-6 text-sage" />,
     tip: "When money's tight, essentials get filled before flexibles - that's the My Budget Way.",
     section: "budget",
@@ -95,11 +95,11 @@ const TUTORIAL_STEPS: TutorialStep[] = [
           <span className="text-xs text-muted-foreground">Essential</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#6B9ECE]" />
           <span className="text-xs text-muted-foreground">Important</span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#6B9ECE]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#9CA3AF]" />
           <span className="text-xs text-muted-foreground">Flexible</span>
         </div>
       </div>

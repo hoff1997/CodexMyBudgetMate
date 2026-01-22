@@ -114,7 +114,7 @@ export function FluentEmojiPicker({
 
         {/* Category tabs (hidden when searching) */}
         {!searchQuery && (
-          <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/30 max-h-24 overflow-y-auto">
+          <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/30">
             {Object.entries(FLUENT_CATEGORIES).map(([key, { label, icon }]) => (
               <button
                 key={key}

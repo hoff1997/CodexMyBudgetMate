@@ -286,41 +286,27 @@ export function PopoverContent({
   }
 
   return createPortal(
-    <>
-      {/* Modal backdrop - blocks clicks to elements behind when in modal mode */}
-      {modal && (
-        <div
-          className="fixed inset-0"
-          style={{ zIndex: 99998 }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            setOpen(false);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        />
+    <div
+      ref={contentRef}
+      style={{ zIndex: 99999 }}
+      className={cn(
+        "rounded-xl border border-border/60 bg-background p-4 text-sm shadow-xl",
+        className,
       )}
-      <div
-        ref={contentRef}
-        className={cn(
-          "rounded-xl border border-border/60 bg-background p-4 text-sm shadow-xl",
-          className,
-        )}
-        // Mark as dialog content to prevent Radix Dialog from stealing focus/events
-        data-radix-dialog-content=""
-        role="dialog"
-        aria-modal={modal ? "true" : undefined}
-        // Stop all mouse events from propagating to parent elements (like Dialog backdrop)
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        // Handle change events on select elements (for calendar dropdowns)
-        onChange={(e) => e.stopPropagation()}
-        onFocus={(e) => e.stopPropagation()}
-      >
-        {children}
-      </div>
-    </>,
+      // Mark as dialog content to prevent Radix Dialog from stealing focus/events
+      data-radix-dialog-content=""
+      role="dialog"
+      aria-modal={modal ? "true" : undefined}
+      // Stop all mouse events from propagating to parent elements (like Dialog backdrop)
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      // Handle change events on select elements (for calendar dropdowns)
+      onChange={(e) => e.stopPropagation()}
+      onFocus={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>,
     container,
   );
 }

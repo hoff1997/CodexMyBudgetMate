@@ -7,7 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover as RadixPopover,
+  PopoverContent as RadixPopoverContent,
+  PopoverTrigger as RadixPopoverTrigger,
+} from "@/components/ui/radix-popover";
 import { CalendarIcon, Plus, X, AlertCircle, Users, ChevronDown, ChevronUp, PartyPopper, StickyNote } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -67,7 +71,7 @@ const isLikelyFestival = (name: string) => FESTIVAL_KEYWORDS.some(k => name.toLo
 
 /**
  * DatePickerForDialog - A date picker component designed to work inside dialogs
- * Uses the custom Popover which handles focus scope properly inside Radix dialogs
+ * Uses Radix Popover with modal prop for proper focus scope handling inside Radix dialogs.
  *
  * Uses "buttons" captionLayout instead of "dropdown-buttons" to avoid
  * native select elements which have issues inside portaled popovers in dialogs.
@@ -91,8 +95,8 @@ function DatePickerForDialog({
   }, [date]);
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
-      <PopoverTrigger asChild>
+    <RadixPopover open={isOpen} onOpenChange={setIsOpen} modal>
+      <RadixPopoverTrigger asChild>
         <Button
           variant="outline"
           size="sm"
@@ -101,29 +105,39 @@ function DatePickerForDialog({
             "h-8 px-2 justify-center bg-white text-xs",
             !date && "text-muted-foreground"
           )}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {date ? format(date, "d MMM") : <CalendarIcon className="h-3.5 w-3.5" />}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="p-0"
+      </RadixPopoverTrigger>
+      <RadixPopoverContent
+        className="p-0 w-auto"
         align="center"
+        side="bottom"
         sideOffset={8}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Calendar
-          mode="single"
-          selected={date || undefined}
-          onSelect={(selectedDate) => {
-            onDateChange(selectedDate || null);
-            setIsOpen(false);
-          }}
-          month={displayMonth}
-          onMonthChange={setDisplayMonth}
-          captionLayout="buttons"
-        />
-      </PopoverContent>
-    </Popover>
+        <div
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Calendar
+            mode="single"
+            selected={date || undefined}
+            onSelect={(selectedDate) => {
+              onDateChange(selectedDate || null);
+              setIsOpen(false);
+            }}
+            month={displayMonth}
+            onMonthChange={setDisplayMonth}
+            captionLayout="buttons"
+          />
+        </div>
+      </RadixPopoverContent>
+    </RadixPopover>
   );
 }
 

@@ -45,6 +45,7 @@ import {
   Search,
   X,
   GripVertical,
+  CreditCard,
 } from "lucide-react";
 import {
   DndContext,
@@ -91,7 +92,9 @@ import { SeasonalBillDetectionDialog } from "@/components/leveled-bills/seasonal
 import { QuickEstimateDialog } from "@/components/leveled-bills/quick-estimate-dialog";
 import { TwelveMonthEntryDialog } from "@/components/leveled-bills/twelve-month-entry-dialog";
 import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-dialog";
+import { DebtAllocationDialog } from "@/components/debt/debt-allocation-dialog";
 import { AllocationTutorial } from "./allocation-tutorial";
+import type { DebtItem, DebtItemInput } from "@/lib/types/debt";
 import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 
 interface CustomCategory {
@@ -419,6 +422,9 @@ export function EnvelopeAllocationStep({
 
   // Celebration/gift dialog state (for birthdays, Christmas, etc.)
   const [celebrationEnvelopeId, setCelebrationEnvelopeId] = useState<string | null>(null);
+
+  // Debt dialog state (for Debt Destroyer envelope)
+  const [debtEnvelopeId, setDebtEnvelopeId] = useState<string | null>(null);
 
   // Drag and drop state
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -830,6 +836,80 @@ export function EnvelopeAllocationStep({
     setCelebrationEnvelopeId(null);
   };
 
+  // Handle debt envelope setup (DebtAllocationDialog) - specifically for "Debt Destroyer" envelope
+  const debtEnvelope = useMemo(() => {
+    return envelopes.find(e => e.id === debtEnvelopeId);
+  }, [envelopes, debtEnvelopeId]);
+
+  // Memoized props for DebtAllocationDialog
+  const debtDialogEnvelope = useMemo(() => {
+    if (!debtEnvelope) return null;
+    return {
+      id: debtEnvelope.id,
+      name: debtEnvelope.name,
+      icon: debtEnvelope.icon,
+      is_debt: true,
+      target_amount: debtEnvelope.billAmount || 0,
+      current_amount: 0, // New envelope, no balance yet
+    };
+  }, [debtEnvelope]);
+
+  // Memoized existing debt items for DebtAllocationDialog
+  // Convert OnboardingDebtItem to DebtItem format expected by dialog
+  const debtExistingItems = useMemo((): DebtItem[] => {
+    if (!debtEnvelope?.debtItems) return [];
+    return debtEnvelope.debtItems.map((item, index) => ({
+      id: item.id || `temp-${index}`,
+      user_id: '',
+      envelope_id: debtEnvelope.id,
+      name: item.name,
+      debt_type: item.debt_type as DebtItem['debt_type'],
+      linked_account_id: item.linked_account_id || null,
+      starting_balance: item.starting_balance,
+      current_balance: item.current_balance,
+      interest_rate: item.interest_rate ?? null,
+      minimum_payment: item.minimum_payment ?? null,
+      display_order: index,
+      paid_off_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+  }, [debtEnvelope?.debtItems, debtEnvelope?.id]);
+
+  const handleStartDebt = (envelopeId: string) => {
+    setDebtEnvelopeId(envelopeId);
+  };
+
+  const handleDebtSave = async (
+    items: DebtItemInput[],
+    budgetChange: number
+  ) => {
+    if (!debtEnvelopeId) return;
+
+    // Calculate total minimum payment from items
+    const totalMinimumPayment = items.reduce((sum, item) => sum + (item.minimum_payment || 0), 0);
+
+    // Update the envelope with debt items and set target to total minimum payments
+    const updated = envelopes.map(env => {
+      if (env.id !== debtEnvelopeId) return env;
+      return {
+        ...env,
+        isDebt: true,
+        debtItems: items,
+        billAmount: totalMinimumPayment, // Target is sum of minimum payments
+        frequency: 'monthly' as const,
+        subtype: 'debt' as const,
+      };
+    });
+
+    onEnvelopesChange(updated);
+    setDebtEnvelopeId(null);
+  };
+
+  const handleCloseDebtDialog = () => {
+    setDebtEnvelopeId(null);
+  };
+
   // Handle adding a new envelope
   const handleAddEnvelope = () => {
     if (!newEnvelope.name.trim()) return;
@@ -1074,6 +1154,10 @@ export function EnvelopeAllocationStep({
     const isCelebrationCategory = env.category === 'celebrations';
     const showCelebrationPrompt = isCelebrationCategory && !env.isCelebration;
 
+    // Check for debt envelope - specifically "Debt Destroyer" (id: debt-destroyer) or subtype: debt
+    const isDebtEnvelope = env.id === 'debt-destroyer' || env.subtype === 'debt';
+    const showDebtPrompt = isDebtEnvelope && !env.isDebt && !env.debtItems?.length;
+
     // Check for seasonal bills (power, gas, water) - only if NOT a celebration
     const seasonalDetection = isCelebrationCategory ? null : detectSeasonalBill(env.name);
     const showLevelingPrompt = seasonalDetection?.isLikelySeasonal && !env.isLeveled && seasonalDetection.confidence !== 'low';
@@ -1229,6 +1313,46 @@ export function EnvelopeAllocationStep({
                       <TooltipContent>
                         <p className="text-xs">
                           This bill varies seasonally - click to level it
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {/* Debt indicator - shows credit card icon when configured (clickable to edit) */}
+                {env.isDebt && (env.debtItems?.length ?? 0) > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartDebt(env.id)}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sage text-white hover:bg-sage-dark transition-colors"
+                        >
+                          <CreditCard className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          Click to edit debt items ({env.debtItems?.length ?? 0} debts)
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {/* Debt prompt - for Debt Destroyer envelope */}
+                {showDebtPrompt && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartDebt(env.id)}
+                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sage-light text-sage hover:bg-sage hover:text-white transition-colors"
+                        >
+                          <CreditCard className="h-3 w-3" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          Click to add your debts and create a payoff plan
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -1952,6 +2076,18 @@ export function EnvelopeAllocationStep({
           envelope={celebrationDialogEnvelope}
           existingRecipients={celebrationExistingRecipients}
           onSave={handleCelebrationSave}
+        />
+      )}
+
+      {/* Debt Allocation Dialog - for Debt Destroyer envelope */}
+      {debtDialogEnvelope && (
+        <DebtAllocationDialog
+          open={!!debtEnvelopeId}
+          onOpenChange={(open) => !open && handleCloseDebtDialog()}
+          envelope={debtDialogEnvelope}
+          existingDebtItems={debtExistingItems}
+          availableCreditCards={[]} // No linked credit cards during onboarding
+          onSave={handleDebtSave}
         />
       )}
 

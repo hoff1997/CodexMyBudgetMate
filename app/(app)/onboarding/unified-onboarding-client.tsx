@@ -66,11 +66,24 @@ interface OnboardingGiftRecipient {
   notes?: string;
 }
 
+// Debt item type for debt envelopes (Debt Destroyer) - matches DebtItemInput
+interface OnboardingDebtItem {
+  id?: string;
+  name: string;
+  debt_type: string;
+  linked_account_id?: string | null;
+  starting_balance: number;
+  current_balance: number;
+  interest_rate?: number | null;
+  minimum_payment?: number | null;
+}
+
 export interface EnvelopeData {
   id: string;
   name: string;
   icon: string;
   type: "bill" | "spending" | "savings" | "goal" | "tracking" | "debt";
+  subtype?: "bill" | "spending" | "savings" | "goal" | "tracking" | "debt";
   // Bill fields
   billAmount?: number;
   frequency?: "monthly" | "quarterly" | "annual" | "custom" | "weekly" | "fortnightly" | "annually" | "custom_weeks";
@@ -99,6 +112,9 @@ export interface EnvelopeData {
   // Celebration fields (for birthdays, Christmas, etc.)
   isCelebration?: boolean;
   giftRecipients?: OnboardingGiftRecipient[];
+  // Debt fields (for Debt Destroyer envelope)
+  isDebt?: boolean;
+  debtItems?: OnboardingDebtItem[];
 }
 
 interface OnboardingStep {

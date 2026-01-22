@@ -57,6 +57,12 @@ import {
   type DragStartEvent,
   type DraggableAttributes,
 } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from "@dnd-kit/sortable";
 import type { SyntheticListenerMap } from "@dnd-kit/core/dist/hooks/utilities";
 import { cn } from "@/lib/cn";
 import { Calendar } from "@/components/ui/calendar";
@@ -92,6 +98,8 @@ interface EnvelopeAllocationStepProps {
   incomeSources: IncomeSource[];
   onAllocationsChange: (allocations: { [envelopeId: string]: { [incomeId: string]: number } }) => void;
   onEnvelopesChange: (envelopes: EnvelopeData[]) => void;
+  categoryOrder?: string[];
+  onCategoryOrderChange?: (order: string[]) => void;
 }
 
 // Pay frequency cycles per year
@@ -328,11 +336,41 @@ function DragHandle({
   );
 }
 
+// Sortable category wrapper for drag-and-drop reordering
+interface SortableCategoryProps {
+  category: string;
+  children: (props: {
+    isDragging: boolean;
+    attributes: DraggableAttributes;
+    listeners: SyntheticListenerMap | undefined;
+  }) => React.ReactNode;
+}
+
+function SortableCategory({ category, children }: SortableCategoryProps) {
+  const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({
+    id: `category-${category}`,
+  });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ isDragging, attributes, listeners })}
+    </div>
+  );
+}
+
 export function EnvelopeAllocationStep({
   envelopes,
   incomeSources,
   onAllocationsChange,
   onEnvelopesChange,
+  categoryOrder,
+  onCategoryOrderChange,
 }: EnvelopeAllocationStepProps) {
   const [allocations, setAllocations] = useState<{ [envelopeId: string]: { [incomeId: string]: number } }>({});
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORY_ORDER));
@@ -372,6 +410,7 @@ export function EnvelopeAllocationStep({
 
   // Drag and drop state
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [activeDragCategoryId, setActiveDragCategoryId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -379,6 +418,11 @@ export function EnvelopeAllocationStep({
       },
     })
   );
+
+  // Use passed categoryOrder or fall back to default CATEGORY_ORDER
+  const effectiveCategoryOrder = categoryOrder?.length
+    ? categoryOrder
+    : CATEGORY_ORDER;
 
   // Add envelope dialog state
   const [addEnvelopeOpen, setAddEnvelopeOpen] = useState(false);
@@ -772,17 +816,43 @@ export function EnvelopeAllocationStep({
 
   // Handle drag start
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveDragId(event.active.id as string);
+    const activeIdStr = String(event.active.id);
+    if (activeIdStr.startsWith('category-')) {
+      setActiveDragCategoryId(activeIdStr);
+      setActiveDragId(null);
+    } else {
+      setActiveDragId(activeIdStr);
+      setActiveDragCategoryId(null);
+    }
   }, []);
 
-  // Handle drag end - reorder within category
+  // Handle drag end - reorder within category or reorder categories
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     setActiveDragId(null);
+    setActiveDragCategoryId(null);
 
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // Find the dragged envelope and target envelope
+    const activeIdStr = String(active.id);
+    const overIdStr = String(over.id);
+
+    // Check if dragging a category
+    if (activeIdStr.startsWith('category-') && overIdStr.startsWith('category-')) {
+      const activeCategory = activeIdStr.replace('category-', '');
+      const overCategory = overIdStr.replace('category-', '');
+
+      const oldIndex = effectiveCategoryOrder.indexOf(activeCategory);
+      const newIndex = effectiveCategoryOrder.indexOf(overCategory);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newOrder = arrayMove(effectiveCategoryOrder, oldIndex, newIndex);
+        onCategoryOrderChange?.(newOrder);
+      }
+      return;
+    }
+
+    // Envelope drag logic (unchanged)
     const draggedIndex = envelopes.findIndex(e => e.id === active.id);
     const targetIndex = envelopes.findIndex(e => e.id === over.id);
 
@@ -800,7 +870,7 @@ export function EnvelopeAllocationStep({
     newEnvelopes.splice(targetIndex, 0, draggedEnvelope);
 
     onEnvelopesChange(newEnvelopes);
-  }, [envelopes, onEnvelopesChange]);
+  }, [envelopes, onEnvelopesChange, effectiveCategoryOrder, onCategoryOrderChange]);
 
   // Get the envelope being dragged for the overlay
   const activeDragEnvelope = useMemo(() => {
@@ -1576,7 +1646,15 @@ export function EnvelopeAllocationStep({
 
       {/* Allocation Table by Category */}
       <div className="space-y-3">
-        {CATEGORY_ORDER.map((category) => {
+        <SortableContext
+          items={effectiveCategoryOrder.filter(cat => {
+            const categoryInfo = CATEGORY_LABELS[cat as BuiltInCategory];
+            const categoryEnvelopes = envelopesByCategory[cat] || [];
+            return categoryInfo && categoryEnvelopes.length > 0;
+          }).map(cat => `category-${cat}`)}
+          strategy={verticalListSortingStrategy}
+        >
+        {effectiveCategoryOrder.map((category) => {
           const categoryInfo = CATEGORY_LABELS[category as BuiltInCategory];
           if (!categoryInfo) return null;
 
@@ -1587,14 +1665,30 @@ export function EnvelopeAllocationStep({
           const categoryTotal = sumPerPayInCategory(category);
 
           return (
-            <div key={category} className="border rounded-lg overflow-hidden">
+            <SortableCategory key={category} category={category}>
+              {({ isDragging, attributes, listeners }) => (
+            <div className={cn("border rounded-lg overflow-hidden", isDragging && "ring-2 ring-sage")}>
               {/* Category Header */}
               <div
-                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer"
-                onClick={() => toggleCategory(category)}
-                {...(category === CATEGORY_ORDER[0] ? { 'data-tutorial': 'category-header' } : {})}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-[#F3F4F6] border-b border-gray-200 hover:bg-gray-100 transition-colors"
+                {...(category === effectiveCategoryOrder[0] ? { 'data-tutorial': 'category-header' } : {})}
               >
                 <div className="flex items-center gap-3">
+                  {/* Drag Handle */}
+                  <button
+                    type="button"
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab active:cursor-grabbing p-1 -ml-2 hover:bg-black/5 rounded"
+                    title="Drag to reorder category"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(category)}
+                    className="flex items-center gap-2"
+                  >
                   {isExpanded ? (
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   ) : (
@@ -1605,6 +1699,7 @@ export function EnvelopeAllocationStep({
                   <span className="text-sm text-muted-foreground">
                     ({countInCategory(category)})
                   </span>
+                  </button>
                   {/* Add Envelope Button */}
                   <button
                     type="button"
@@ -1647,8 +1742,11 @@ export function EnvelopeAllocationStep({
                 </div>
               )}
             </div>
+              )}
+            </SortableCategory>
           );
         })}
+        </SortableContext>
 
         {/* Other/Uncategorized */}
         {envelopesByCategory['other']?.length > 0 && (
@@ -1919,7 +2017,7 @@ export function EnvelopeAllocationStep({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORY_ORDER.map((cat) => {
+                  {effectiveCategoryOrder.map((cat) => {
                     const info = CATEGORY_LABELS[cat as BuiltInCategory];
                     if (!info) return null;
                     return (
@@ -1951,7 +2049,20 @@ export function EnvelopeAllocationStep({
 
       {/* Drag Overlay - shows what's being dragged */}
       <DragOverlay>
-        {activeDragEnvelope ? (
+        {activeDragCategoryId ? (
+          // Category drag preview
+          (() => {
+            const categoryKey = activeDragCategoryId.replace('category-', '');
+            const categoryInfo = CATEGORY_LABELS[categoryKey as BuiltInCategory];
+            return (
+              <div className="bg-white border border-sage rounded-lg shadow-lg px-3 py-2 flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <span className="text-lg">{categoryInfo?.icon || '📁'}</span>
+                <span className="font-semibold text-sm">{categoryInfo?.label || categoryKey}</span>
+              </div>
+            );
+          })()
+        ) : activeDragEnvelope ? (
           <div className="bg-white border rounded-lg shadow-lg p-2 opacity-90">
             <div className="flex items-center gap-2">
               <span className="text-base">{activeDragEnvelope.icon}</span>

@@ -554,6 +554,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
             incomeSources={incomeSources}
             onAllocationsChange={setEnvelopeAllocations}
             onEnvelopesChange={setEnvelopes}
+            categoryOrder={categoryOrder}
+            onCategoryOrderChange={setCategoryOrder}
           />
         );
 

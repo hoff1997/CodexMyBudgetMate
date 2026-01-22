@@ -213,6 +213,7 @@ const FREQUENCY_LABELS: Record<string, string> = {
   fortnightly: 'Fortnightly',
   monthly: 'Monthly',
   quarterly: 'Quarterly',
+  '6_monthly': '6 Monthly',
   annual: 'Annual',
   annually: 'Annual', // Legacy value - both map to same label
   custom: 'Custom',

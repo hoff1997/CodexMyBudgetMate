@@ -65,6 +65,68 @@ interface LocalRecipient {
 const FESTIVAL_KEYWORDS = ['christmas', 'diwali', 'easter', 'hanukkah', 'eid', 'lunar', 'new year', 'thanksgiving', 'mother', 'father', 'valentine'];
 const isLikelyFestival = (name: string) => FESTIVAL_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
+/**
+ * DatePickerForDialog - A date picker component designed to work inside dialogs
+ * Uses the custom Popover which handles focus scope properly inside Radix dialogs
+ *
+ * Uses "buttons" captionLayout instead of "dropdown-buttons" to avoid
+ * native select elements which have issues inside portaled popovers in dialogs.
+ */
+function DatePickerForDialog({
+  date,
+  onDateChange,
+}: {
+  date: Date | null;
+  onDateChange: (date: Date | null) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  // Default to selected date's month/year, or current date
+  const [displayMonth, setDisplayMonth] = useState<Date>(date || new Date());
+
+  // Update display month when date changes externally
+  useEffect(() => {
+    if (date) {
+      setDisplayMonth(date);
+    }
+  }, [date]);
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen} modal={true}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          className={cn(
+            "h-8 px-2 justify-center bg-white text-xs",
+            !date && "text-muted-foreground"
+          )}
+        >
+          {date ? format(date, "d MMM") : <CalendarIcon className="h-3.5 w-3.5" />}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="center"
+        sideOffset={8}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <Calendar
+          mode="single"
+          selected={date || undefined}
+          onSelect={(selectedDate) => {
+            onDateChange(selectedDate || null);
+            setIsOpen(false);
+          }}
+          month={displayMonth}
+          onMonthChange={setDisplayMonth}
+          captionLayout="buttons"
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function GiftAllocationDialog({
   open,
   onOpenChange,
@@ -541,41 +603,12 @@ export function GiftAllocationDialog({
 
                     {/* Date picker - only for birthdays */}
                     {!isFestival && (
-                      <Popover modal={true}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={cn(
-                              "h-8 px-2 justify-center bg-white text-xs",
-                              !recipient.celebration_date && "text-muted-foreground"
-                            )}
-                          >
-                            {recipient.celebration_date
-                              ? format(recipient.celebration_date, "d MMM")
-                              : <CalendarIcon className="h-3.5 w-3.5" />}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent
-                          className="p-0 z-[100]"
-                          align="center"
-                          sideOffset={8}
-                          avoidCollisions={true}
-                          collisionPadding={16}
-                        >
-                          <Calendar
-                            mode="single"
-                            selected={recipient.celebration_date || undefined}
-                            onSelect={(date) =>
-                              updateRecipient(recipient.tempId, "celebration_date", date || null)
-                            }
-                            captionLayout="dropdown-buttons"
-                            fromYear={1920}
-                            toYear={new Date().getFullYear() + 1}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <DatePickerForDialog
+                        date={recipient.celebration_date}
+                        onDateChange={(date) =>
+                          updateRecipient(recipient.tempId, "celebration_date", date)
+                        }
+                      />
                     )}
 
                     {/* Gift amount */}

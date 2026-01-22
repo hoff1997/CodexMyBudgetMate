@@ -22,7 +22,7 @@ export function Calendar({ className, showOutsideDays = true, ...props }: Calend
           months: "flex flex-col space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0",
           month: "space-y-4",
           caption: "flex justify-center pt-1 relative items-center",
-          caption_label: "text-sm font-medium text-secondary",
+          caption_label: props.captionLayout === "dropdown-buttons" || props.captionLayout === "dropdown" ? "sr-only" : "text-sm font-medium text-secondary",
           caption_dropdowns: "flex justify-center gap-1",
           dropdown: "appearance-none bg-transparent border border-input rounded-md px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer",
           dropdown_month: "mr-1",

@@ -227,6 +227,13 @@ export function PopoverContent({
         return; // Click is somewhere in a popover portal, don't close
       }
 
+      // Check if click is on a select dropdown option (browser renders these outside the DOM)
+      // The target might be an OPTION element inside a SELECT, or a native select dropdown
+      const targetElement = target as Element;
+      if (targetElement.tagName === 'OPTION' || targetElement.tagName === 'SELECT') {
+        return; // Click is on a select element, don't close
+      }
+
       // Click is outside, close the popover
       setOpen(false);
     };
@@ -266,6 +273,9 @@ export function PopoverContent({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
+      // Handle change events on select elements (for calendar dropdowns)
+      onChange={(e) => e.stopPropagation()}
+      onFocus={(e) => e.stopPropagation()}
     >
       {children}
     </div>,

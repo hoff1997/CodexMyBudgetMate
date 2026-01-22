@@ -250,6 +250,186 @@ if ("subtype" in payload) {
 
 This ensures database consistency with the `is_tracking_only` boolean column.
 
+## 💪 Debt Destroyer System (Updated Jan 2026)
+
+### Overview
+
+The Debt Destroyer system provides unified debt tracking using the **debt snowball method** (smallest balance first). All debts are tracked as `debt_items` within a single "Debt Destroyer" envelope, enabling automatic payment allocation and achievement tracking.
+
+### Key Principle: Snowball Method
+
+Debts are **always sorted smallest to largest balance**. When payments are made:
+1. Payment goes to the smallest debt first
+2. If that debt is paid off, remainder rolls to the next smallest
+3. Achievements trigger automatically when debts are paid off
+
+### Database Structure
+
+**Table:** `debt_items` (Migration: `0075_debt_envelope_system.sql`)
+
+```sql
+CREATE TABLE debt_items (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  envelope_id UUID NOT NULL,           -- FK to "Debt Destroyer" envelope
+  name TEXT NOT NULL,                   -- e.g., "ANZ Visa"
+  debt_type TEXT NOT NULL,              -- credit_card, personal_loan, car_loan, etc.
+  linked_account_id UUID,               -- For CC auto-sync via Akahu
+  starting_balance NUMERIC(12, 2),      -- Original debt amount
+  current_balance NUMERIC(12, 2),       -- Current remaining
+  interest_rate NUMERIC(5, 2),          -- APR percentage
+  minimum_payment NUMERIC(10, 2),       -- Monthly minimum
+  display_order INTEGER,
+  paid_off_at TIMESTAMPTZ,              -- Auto-set when balance <= 0
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+);
+```
+
+**Debt Types:**
+- `credit_card` - Credit cards
+- `personal_loan` - Personal loans
+- `car_loan` - Vehicle financing
+- `student_loan` - Education debt
+- `afterpay` - Buy Now Pay Later
+- `hp` - Hire Purchase
+- `other` - Other debts
+
+### Automatic Triggers
+
+**1. Paid Off Detection** (`check_debt_paid_off` trigger):
+- When `current_balance` drops to 0 or below, `paid_off_at` is automatically set
+- If balance goes back above 0, `paid_off_at` is cleared
+
+**2. CC Balance Sync** (`sync_cc_balance_to_debt_item` trigger):
+- When a linked credit card account balance changes (via Akahu)
+- Automatically updates the corresponding `debt_item.current_balance`
+
+### API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `GET /api/envelopes/[id]/debt-items` | GET | Fetch debt items (sorted by snowball) |
+| `PUT /api/envelopes/[id]/debt-items` | PUT | Replace all debt items |
+| `POST /api/envelopes/[id]/debt-items` | POST | Add single debt item |
+| `POST /api/envelopes/[id]/debt-items/apply-payment` | POST | Apply payment using snowball method |
+
+### Payment Application Flow
+
+When a transaction assigned to a debt envelope is **approved**:
+
+```typescript
+// In app/api/transactions/[id]/approve/route.ts
+if (envelope?.is_debt && transaction.amount) {
+  // Apply payment to smallest debt first
+  debtPaymentResult = await applyPaymentToDebtItems(
+    supabase, userId, envelope.id, paymentAmount, transactionId
+  );
+}
+```
+
+**Response includes:**
+```typescript
+{
+  status: "approved",
+  debtPayment: {
+    paymentApplied: number,
+    paidOffDebts: DebtItem[],
+    remainingPayment: number
+  }
+}
+```
+
+### Achievement Integration
+
+Two debt-related achievements trigger automatically:
+
+| Achievement | Key | Trigger |
+|-------------|-----|---------|
+| **Debt Destroyer** | `debt-destroyer` | First debt item paid off |
+| **Debt Free** | `debt-free` | All debt items paid off |
+
+Achievements are checked in `handleDebtPayoffAchievements()` after each payment.
+
+### Credit Card Integration at Onboarding
+
+When a user sets up a credit card with `paying_down` or `minimum_only` usage type:
+
+1. **Debt Destroyer envelope** is found or created automatically
+2. Credit card is added as a `debt_item` within that envelope
+3. `linked_account_id` links to the CC account for auto-sync
+
+**Helper Functions** (in `lib/utils/credit-card-onboarding-utils.ts`):
+
+```typescript
+// Find or create the unified debt envelope
+const envelope = await findOrCreateDebtDestroyerEnvelope(supabase, userId);
+
+// Add CC as debt item
+const result = await addCreditCardToDebtDestroyer(supabase, userId, {
+  name: "ANZ Visa",
+  accountId: account.id,
+  startingBalance: 5000,
+  currentBalance: 5000,
+  apr: 19.99,
+  minimumPayment: 100,
+});
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/types/debt.ts` | Type definitions and utility functions |
+| `app/api/envelopes/[id]/debt-items/route.ts` | CRUD for debt items |
+| `app/api/envelopes/[id]/debt-items/apply-payment/route.ts` | Snowball payment application |
+| `app/api/transactions/[id]/approve/route.ts` | Auto-applies payments on approval |
+| `lib/utils/credit-card-onboarding-utils.ts` | CC → Debt Destroyer integration |
+| `components/debt/debt-allocation-dialog.tsx` | UI for managing debt items |
+| `supabase/migrations/0075_debt_envelope_system.sql` | Database schema |
+
+### Onboarding Integration
+
+The "Debt Destroyer" envelope appears in onboarding (step 9) with special handling:
+
+- **Detection:** `env.id === 'debt-destroyer' || env.subtype === 'debt'`
+- **Icon:** CreditCard icon (lucide-react)
+- **Prompt:** Shows if envelope has no debt items yet
+- **Indicator:** Shows solid sage icon if debt items exist
+
+```tsx
+// In envelope-allocation-step.tsx
+const isDebtEnvelope = env.id === 'debt-destroyer' || env.subtype === 'debt';
+const showDebtPrompt = isDebtEnvelope && !(env.debtItems?.length);
+```
+
+### Utility Functions
+
+**Snowball Sorting:**
+```typescript
+import { sortBySnowball } from "@/lib/types/debt";
+const sorted = sortBySnowball(debtItems); // Smallest balance first
+```
+
+**Progress Calculation:**
+```typescript
+import { calculateDebtProgress, calculateDebtSummary } from "@/lib/types/debt";
+
+const itemWithProgress = calculateDebtProgress(debtItem);
+// { ...item, progress_percent, amount_paid_off, is_paid_off }
+
+const summary = calculateDebtSummary(debtItems);
+// { total_debt, total_paid_off, progress_percent, next_to_payoff, ... }
+```
+
+**Payoff Projection:**
+```typescript
+import { calculatePayoffProjection } from "@/lib/types/debt";
+
+const projection = calculatePayoffProjection(balance, apr, monthlyPayment);
+// { months_to_payoff, total_interest, total_payment }
+```
+
 ## 📄 Page Architecture
 
 ### Active Pages

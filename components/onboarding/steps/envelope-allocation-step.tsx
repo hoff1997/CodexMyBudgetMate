@@ -2149,6 +2149,7 @@ export function EnvelopeAllocationStep({
             <FluentEmojiPicker
               selectedEmoji={editingCategoryIcon}
               onEmojiSelect={setEditingCategoryIcon}
+              insideDialog
             />
           </div>
 

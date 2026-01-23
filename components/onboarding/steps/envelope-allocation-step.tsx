@@ -46,6 +46,7 @@ import {
   X,
   GripVertical,
   CreditCard,
+  ArrowDownAZ,
 } from "lucide-react";
 import {
   DndContext,
@@ -733,6 +734,62 @@ export function EnvelopeAllocationStep({
     };
     return labels[freq] || 'per pay';
   };
+
+  // Sort envelopes alphabetically within a specific category
+  const handleSortCategory = useCallback((category: string) => {
+    const categoryEnvs = envelopes.filter(e => e.category === category);
+    const otherEnvs = envelopes.filter(e => e.category !== category);
+
+    // Sort the category envelopes alphabetically by name
+    const sortedCategoryEnvs = [...categoryEnvs].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
+
+    // Reconstruct the array maintaining original category positions
+    const newEnvelopes: typeof envelopes = [];
+    let categoryIndex = 0;
+
+    for (const env of envelopes) {
+      if (env.category === category) {
+        newEnvelopes.push(sortedCategoryEnvs[categoryIndex]);
+        categoryIndex++;
+      } else {
+        newEnvelopes.push(env);
+      }
+    }
+
+    onEnvelopesChange(newEnvelopes);
+  }, [envelopes, onEnvelopesChange]);
+
+  // Sort ALL envelopes alphabetically within their respective categories
+  const handleSortAllCategories = useCallback(() => {
+    // Group envelopes by category
+    const grouped: Record<string, typeof envelopes> = {};
+    for (const env of envelopes) {
+      const cat = env.category || 'other';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(env);
+    }
+
+    // Sort each category alphabetically
+    for (const cat of Object.keys(grouped)) {
+      grouped[cat].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      );
+    }
+
+    // Reconstruct preserving category order
+    const newEnvelopes: typeof envelopes = [];
+    for (const env of envelopes) {
+      const cat = env.category || 'other';
+      const sorted = grouped[cat];
+      if (sorted && sorted.length > 0) {
+        newEnvelopes.push(sorted.shift()!);
+      }
+    }
+
+    onEnvelopesChange(newEnvelopes);
+  }, [envelopes, onEnvelopesChange]);
 
   // Handle envelope field updates
   const handleEnvelopeChange = useCallback((envelopeId: string, field: string, value: any) => {
@@ -1767,7 +1824,7 @@ export function EnvelopeAllocationStep({
         ))}
       </div>
 
-      {/* Search and Add Envelope */}
+      {/* Search, Sort, and Add Envelope */}
       <div className="flex items-center gap-3 justify-center">
         {/* Search Box */}
         <div className="relative w-64">
@@ -1789,6 +1846,17 @@ export function EnvelopeAllocationStep({
             </button>
           )}
         </div>
+        {/* Sort All A-Z Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSortAllCategories}
+          className="gap-1 border-muted-foreground/30 text-muted-foreground hover:bg-muted/50"
+          title="Sort all envelopes A-Z within each category"
+        >
+          <ArrowDownAZ className="h-4 w-4" />
+          Sort All A-Z
+        </Button>
         {/* Add Envelope Button */}
         <Button
           variant="outline"
@@ -1883,6 +1951,20 @@ export function EnvelopeAllocationStep({
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
+                  {/* Sort Category A-Z Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSortCategory(category);
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="p-1 text-muted-foreground hover:text-sage hover:bg-sage-very-light rounded transition-colors"
+                    title="Sort this category A-Z"
+                  >
+                    <ArrowDownAZ className="h-3.5 w-3.5" />
+                  </button>
                   {/* Add Envelope Button */}
                   <button
                     type="button"
@@ -1954,6 +2036,20 @@ export function EnvelopeAllocationStep({
                 <span className="text-sm text-muted-foreground">
                   ({envelopesByCategory['other'].length})
                 </span>
+                {/* Sort Category A-Z Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSortCategory('other');
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="p-1 text-muted-foreground hover:text-sage hover:bg-sage-very-light rounded transition-colors"
+                  title="Sort this category A-Z"
+                >
+                  <ArrowDownAZ className="h-3.5 w-3.5" />
+                </button>
                 {/* Add Envelope Button */}
                 <button
                   type="button"

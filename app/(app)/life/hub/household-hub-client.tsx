@@ -127,6 +127,18 @@ export function HouseholdHubClient({
     }
   }, []);
 
+  const refreshConnections = useCallback(async () => {
+    try {
+      const res = await fetch("/api/calendar/connections");
+      if (res.ok) {
+        const data = await res.json();
+        setConnections(data.connections || []);
+      }
+    } catch (error) {
+      console.error("Failed to refresh connections:", error);
+    }
+  }, []);
+
   const handleSync = useCallback(async () => {
     setSyncing(true);
     try {
@@ -166,6 +178,8 @@ export function HouseholdHubClient({
         type: "success",
         message: "Google Calendar connected successfully! Syncing events...",
       });
+      // Refresh connections list first (so sync button appears)
+      refreshConnections();
       // Auto-sync after connecting
       handleSync();
       // Clear URL params
@@ -173,7 +187,7 @@ export function HouseholdHubClient({
     } else if (error) {
       let message = "Failed to connect calendar";
       if (error === "access_denied") {
-        message = "Calendar access was denied";
+        message = "Calendar access was denied. Please click 'Continue' on Google's consent screen to connect your calendar.";
       } else if (error === "no_code") {
         message = "No authorization code received";
       } else if (error === "connection_failed") {
@@ -188,7 +202,7 @@ export function HouseholdHubClient({
       const timer = setTimeout(() => setNotification(null), 5000);
       return () => clearTimeout(timer);
     }
-  }, [searchParams, handleSync]);
+  }, [searchParams, handleSync, refreshConnections]);
 
   const handleChoreStatusChange = async (choreId: string, childId: string, newStatus: string) => {
     const res = await fetch(`/api/kids/${childId}/chores/${choreId}/complete`, {
@@ -204,18 +218,6 @@ export function HouseholdHubClient({
 
     // Refresh dashboard to get updated data
     await refreshDashboard();
-  };
-
-  const refreshConnections = async () => {
-    try {
-      const res = await fetch("/api/calendar/connections");
-      if (res.ok) {
-        const data = await res.json();
-        setConnections(data.connections || []);
-      }
-    } catch (error) {
-      console.error("Failed to refresh connections:", error);
-    }
   };
 
   const handleToggleVisibility = async (id: string, visible: boolean) => {

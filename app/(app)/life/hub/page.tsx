@@ -28,11 +28,37 @@ export default async function HouseholdHubPage() {
     .eq("parent_user_id", user.id);
 
   // Fetch dashboard data directly here instead of via API
-  const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
-  const tomorrowStr = new Date(today.getTime() + 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  // Use NZ timezone for date calculations (this app is NZ-focused)
+  const nzFormatter = new Intl.DateTimeFormat("en-NZ", {
+    timeZone: "Pacific/Auckland",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const now = new Date();
+  const nzParts = nzFormatter.formatToParts(now);
+  const year = nzParts.find((p) => p.type === "year")?.value;
+  const month = nzParts.find((p) => p.type === "month")?.value;
+  const day = nzParts.find((p) => p.type === "day")?.value;
+
+  // Date string for display and date-only queries (meals, chores)
+  const todayDateStr = `${year}-${month}-${day}`;
+
+  // For calendar events, we need to query by timestamp range in NZ timezone
+  const nzOffsetMinutes = new Date()
+    .toLocaleString("en-US", { timeZone: "Pacific/Auckland", timeZoneName: "shortOffset" })
+    .includes("+13")
+    ? 13 * 60
+    : 12 * 60;
+
+  // Calculate start/end of today in UTC (for timestamp comparisons)
+  const todayStartUTC = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+  todayStartUTC.setMinutes(todayStartUTC.getMinutes() - nzOffsetMinutes);
+  const tomorrowStartUTC = new Date(todayStartUTC.getTime() + 24 * 60 * 60 * 1000);
+
+  const todayStr = todayStartUTC.toISOString();
+  const tomorrowStr = tomorrowStartUTC.toISOString();
 
   // Get today's calendar events
   const { data: calendarEventsRaw } = await supabase
@@ -77,7 +103,7 @@ export default async function HouseholdHubPage() {
     `
     )
     .eq("parent_user_id", user.id)
-    .eq("date", todayStr)
+    .eq("date", todayDateStr)
     .order("meal_type");
 
   const meals = (mealsRaw || []).map((meal) => ({
@@ -86,9 +112,9 @@ export default async function HouseholdHubPage() {
   }));
 
   // Get upcoming chores
-  const weekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  const weekFromNowDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const weekParts = nzFormatter.formatToParts(weekFromNowDate);
+  const weekFromNow = `${weekParts.find((p) => p.type === "year")?.value}-${weekParts.find((p) => p.type === "month")?.value}-${weekParts.find((p) => p.type === "day")?.value}`;
 
   const { data: choresRaw } = await supabase
     .from("chore_assignments")
@@ -100,7 +126,7 @@ export default async function HouseholdHubPage() {
     `
     )
     .eq("parent_user_id", user.id)
-    .gte("week_starting", todayStr)
+    .gte("week_starting", todayDateStr)
     .lte("week_starting", weekFromNow)
     .in("status", ["pending", "done"])
     .order("week_starting");
@@ -176,8 +202,8 @@ export default async function HouseholdHubPage() {
 
   const dashboardData = {
     today: {
-      date: todayStr,
-      day_name: today.toLocaleDateString("en-NZ", { weekday: "long" }),
+      date: todayDateStr,
+      day_name: now.toLocaleDateString("en-NZ", { timeZone: "Pacific/Auckland", weekday: "long" }),
       events: calendarEvents,
       meals: meals,
       chores: chores,

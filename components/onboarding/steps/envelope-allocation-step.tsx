@@ -1301,9 +1301,10 @@ export function EnvelopeAllocationStep({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleStartCelebration(env.id)}
-                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold text-white hover:bg-gold/80 transition-colors"
+                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
+                          title="Gift recipients configured"
                         >
-                          🎁
+                          <span className="text-base">🎁</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -1321,9 +1322,10 @@ export function EnvelopeAllocationStep({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleStartLeveling(env.id)}
-                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue text-white text-[10px] hover:bg-blue/80 transition-colors"
+                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
+                          title="Leveling configured"
                         >
-                          {env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}
+                          <span className="text-base">{env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -1341,9 +1343,10 @@ export function EnvelopeAllocationStep({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleStartCelebration(env.id)}
-                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold-light text-gold hover:bg-gold hover:text-white transition-colors"
+                          className="inline-flex items-center justify-center opacity-40 hover:opacity-100 hover:scale-110 transition-all"
+                          title="Click to add gift recipients"
                         >
-                          <Gift className="h-3 w-3" />
+                          <span className="text-base">🎁</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -1361,9 +1364,10 @@ export function EnvelopeAllocationStep({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleStartLeveling(env.id)}
-                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-light text-blue hover:bg-blue hover:text-white transition-colors"
+                          className="inline-flex items-center justify-center opacity-40 hover:opacity-100 hover:scale-110 transition-all"
+                          title="Click to level this seasonal bill"
                         >
-                          <Thermometer className="h-3 w-3" />
+                          <span className="text-base">🌡️</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -1381,9 +1385,10 @@ export function EnvelopeAllocationStep({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleStartDebt(env.id)}
-                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sage text-white hover:bg-sage-dark transition-colors"
+                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
+                          title="Debts configured"
                         >
-                          <CreditCard className="h-3 w-3" />
+                          <span className="text-base">💳</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -1401,9 +1406,10 @@ export function EnvelopeAllocationStep({
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => handleStartDebt(env.id)}
-                          className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sage-light text-sage hover:bg-sage hover:text-white transition-colors"
+                          className="inline-flex items-center justify-center opacity-40 hover:opacity-100 hover:scale-110 transition-all"
+                          title="Click to add your debts"
                         >
-                          <CreditCard className="h-3 w-3" />
+                          <span className="text-base">💳</span>
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -1972,7 +1978,7 @@ export function EnvelopeAllocationStep({
                     className="flex items-center gap-1 text-xs text-sage hover:text-sage-dark hover:bg-sage-very-light px-2 py-1 rounded transition-colors"
                   >
                     <Plus className="h-3 w-3" />
-                    <span>Add</span>
+                    <span>Add envelope</span>
                   </button>
                 </div>
                 <span className="font-semibold text-[#5A7E7A]">

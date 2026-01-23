@@ -457,6 +457,41 @@ export async function POST(request: Request) {
         }
 
         envelopeIdMap.set(envelope.id, createdEnvelope.id);
+
+        // Save gift recipients for celebration envelopes (birthdays, Christmas, etc.)
+        if (envelope.giftRecipients && envelope.giftRecipients.length > 0) {
+          for (const recipient of envelope.giftRecipients) {
+            // Handle celebration_date which could be Date object or ISO string (after JSON serialization)
+            let celebrationDate: string | null = null;
+            const rawDate = recipient.celebration_date as Date | string | null | undefined;
+            if (rawDate) {
+              if (rawDate instanceof Date) {
+                celebrationDate = rawDate.toISOString().split('T')[0];
+              } else if (typeof rawDate === 'string') {
+                celebrationDate = rawDate.split('T')[0];
+              }
+            }
+
+            const { error: recipientError } = await supabase
+              .from("gift_recipients")
+              .insert({
+                user_id: userId,
+                envelope_id: createdEnvelope.id,
+                recipient_name: recipient.recipient_name,
+                gift_amount: recipient.gift_amount || 0,
+                party_amount: recipient.party_amount || 0,
+                celebration_date: celebrationDate,
+                notes: recipient.notes || null,
+                needs_gift: true,
+              });
+
+            if (recipientError) {
+              console.error("Gift recipient creation error:", recipientError);
+              // Continue anyway - gift recipients can be added later
+            }
+          }
+          console.log(`Created ${envelope.giftRecipients.length} gift recipients for envelope: ${envelope.name}`);
+        }
       }
     }
 

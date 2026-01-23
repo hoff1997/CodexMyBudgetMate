@@ -53,7 +53,6 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  useDraggable,
   type DragEndEvent,
   type DragStartEvent,
   type DraggableAttributes,
@@ -282,8 +281,8 @@ type DragHandleRenderProps = {
   disabled: boolean;
 };
 
-// Draggable table row wrapper
-function DraggableRow({
+// Sortable table row wrapper for envelope drag-and-drop reordering
+function SortableRow({
   id,
   disabled,
   children,
@@ -292,17 +291,17 @@ function DraggableRow({
   disabled?: boolean;
   children: React.ReactNode | ((props: DragHandleRenderProps) => React.ReactNode);
 }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
     disabled,
   });
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: isDragging ? 50 : undefined,
-      }
-    : undefined;
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   return (
     <tr
@@ -310,7 +309,7 @@ function DraggableRow({
       style={style}
       className={cn(
         "border-b last:border-0 hover:bg-muted/20 group transition-opacity",
-        isDragging && "opacity-50 bg-muted/30"
+        isDragging && "bg-muted/30"
       )}
     >
       {typeof children === 'function'
@@ -1168,7 +1167,7 @@ export function EnvelopeAllocationStep({
     const isDragDisabled = env.id === 'surplus' || env.id === 'credit-card-holding';
 
     return (
-      <DraggableRow key={env.id} id={env.id} disabled={isDragDisabled}>
+      <SortableRow key={env.id} id={env.id} disabled={isDragDisabled}>
         {({ attributes, listeners, disabled }) => (
           <Fragment>
             {/* Drag Handle */}
@@ -1642,7 +1641,7 @@ export function EnvelopeAllocationStep({
         </td>
           </Fragment>
         )}
-      </DraggableRow>
+      </SortableRow>
     );
   };
 
@@ -1919,9 +1918,14 @@ export function EnvelopeAllocationStep({
                         <th className="text-center px-1 py-2 font-medium text-muted-foreground w-8"></th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {categoryEnvelopes.map((env, idx) => renderEnvelopeRow(env, idx))}
-                    </tbody>
+                    <SortableContext
+                      items={categoryEnvelopes.map(env => env.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <tbody>
+                        {categoryEnvelopes.map((env, idx) => renderEnvelopeRow(env, idx))}
+                      </tbody>
+                    </SortableContext>
                   </table>
                 </div>
               )}
@@ -1984,9 +1988,14 @@ export function EnvelopeAllocationStep({
                       <th className="text-center px-1 py-2 font-medium text-muted-foreground w-8"></th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {envelopesByCategory['other'].map((env, idx) => renderEnvelopeRow(env, idx))}
-                  </tbody>
+                  <SortableContext
+                    items={envelopesByCategory['other'].map(env => env.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <tbody>
+                      {envelopesByCategory['other'].map((env, idx) => renderEnvelopeRow(env, idx))}
+                    </tbody>
+                  </SortableContext>
                 </table>
               </div>
             )}

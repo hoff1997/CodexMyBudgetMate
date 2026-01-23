@@ -63,6 +63,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     aisle: fullItem.aisle_name || null,
     category_id: fullItem.category_id || null,
     estimated_price: fullItem.estimated_price || null,
+    price_unit: fullItem.price_unit || 'each',
     notes: fullItem.notes || null,
     checked: fullItem.is_checked,
     checked_at: null,
@@ -91,7 +92,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const body = await request.json();
-  const { name, quantity, aisle, category_id, checked, photo_url, estimated_price, notes } = body;
+  const { name, quantity, aisle, category_id, checked, photo_url, estimated_price, price_unit, notes } = body;
 
   // Build update object with only provided fields (mapped to DB columns)
   const updates: Record<string, unknown> = {};
@@ -102,6 +103,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (checked !== undefined) updates.is_checked = checked;
   if (photo_url !== undefined) updates.photo_url = photo_url;
   if (estimated_price !== undefined) updates.estimated_price = estimated_price;
+  if (price_unit !== undefined) updates.price_unit = price_unit;
   if (notes !== undefined) updates.notes = notes;
 
   const { data: item, error } = await supabase
@@ -126,6 +128,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     aisle: item.aisle_name || null,
     category_id: item.category_id || null,
     estimated_price: item.estimated_price || null,
+    price_unit: item.price_unit || 'each',
     notes: item.notes || null,
     checked: item.is_checked,
     checked_at: null,

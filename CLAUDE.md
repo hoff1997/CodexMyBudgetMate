@@ -1281,3 +1281,257 @@ upgradePrompt: {
 **File:** `supabase/migrations/0077_teen_graduation_system.sql`
 
 Creates all teen mode tables, columns, constraints, triggers, and helper functions.
+
+## ✅ To-Do Lists System (Updated Jan 2026)
+
+### Overview
+
+The To-Do Lists module provides household task management with categories, user assignment, and reusable list functionality.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Categories** | Group items within a list (e.g., "Bathroom", "Clothing" for packing lists) |
+| **User Assignment** | Assign items to Me, Everyone (family), or specific children |
+| **Reset List** | Uncheck all items to reuse lists (e.g., weekly cleaning, packing checklists) |
+| **Templates** | Pre-built and custom templates for common lists |
+
+### Database Schema
+
+**Table:** `todo_items` (Migration: `0080_todo_item_categories.sql`)
+
+```sql
+-- Added columns
+category TEXT DEFAULT NULL,              -- Optional grouping within list
+assigned_to_id UUID,                     -- Who the item is assigned to
+assigned_to_type TEXT,                   -- 'parent', 'child', or 'family'
+```
+
+### API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `GET /api/todos/lists` | GET | Fetch all lists with items |
+| `POST /api/todos/lists` | POST | Create new list |
+| `PATCH /api/todos/lists/[id]` | PATCH | Update list |
+| `DELETE /api/todos/lists/[id]` | DELETE | Delete list |
+| `POST /api/todos/lists/[id]/reset` | POST | Uncheck all items (reset for reuse) |
+| `GET /api/todos/items` | GET | Fetch items |
+| `POST /api/todos/items` | POST | Create item with optional category |
+| `PATCH /api/todos/items/[id]` | PATCH | Update item (text, category, assignment) |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `components/todos/todo-list-view.tsx` | Main list display with categories and assignment UI |
+| `components/todos/create-list-dialog.tsx` | Create list with emoji picker |
+| `app/(app)/life/todos/todos-client.tsx` | Client-side state management |
+| `app/api/todos/lists/[id]/reset/route.ts` | Reset list endpoint |
+
+### User Assignment Options
+
+| Option | `assigned_to_type` | `assigned_to_id` |
+|--------|-------------------|------------------|
+| Unassigned | `null` | `null` |
+| Everyone | `'family'` | `null` |
+| Me (Parent) | `'parent'` | `null` |
+| Specific Child | `'child'` | `child_profile_id` |
+
+### Category Grouping
+
+Items are grouped by category in the UI:
+- Categorized items appear under their category header with a colored left border
+- Uncategorized items appear in a separate "Uncategorized" section
+- Users can change an item's category via dropdown
+
+## 👨‍👩‍👧‍👦 Multi-Adult Household System (Added Jan 2026)
+
+### Overview
+
+The Multi-Adult Household system allows two adults to share a household, linking their budgets and children together. Partners can be invited via email and join using a secure token link.
+
+### Key Principle
+
+- **Two adults max per household** (owner + partner)
+- **Email-based invitations** with expiring tokens
+- **Children auto-link** to household when parent joins
+- **Audit logging** for all household changes
+
+### Database Schema
+
+**Migration:** `supabase/migrations/0081_multi_adult_household.sql`
+
+```sql
+-- Households table
+households (id, name, created_at, updated_at)
+
+-- Household members
+household_members (
+  id, household_id, user_id, role,
+  display_name, joined_at, invited_by
+)
+-- role: 'owner', 'partner', 'member'
+
+-- Invitations
+household_invitations (
+  id, household_id, email, invited_by, role,
+  token, status, created_at, expires_at,
+  accepted_at, accepted_by
+)
+-- status: 'pending', 'accepted', 'declined', 'expired'
+
+-- Audit log
+household_audit_log (
+  id, household_id, action, performed_by,
+  affected_user, details, created_at
+)
+
+-- Child profiles link
+child_profiles.household_id → households.id
+```
+
+### API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `GET /api/household` | GET | Get current user's household info |
+| `POST /api/household` | POST | Create a new household |
+| `DELETE /api/household` | DELETE | Leave household |
+| `POST /api/household/invite` | POST | Invite partner via email |
+| `GET /api/household/invite` | GET | Get pending invitations |
+| `DELETE /api/household/invite?id=` | DELETE | Cancel invitation |
+| `GET /api/household/join?token=` | GET | Get invitation details by token |
+| `POST /api/household/join` | POST | Accept invitation and join |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/types/household.ts` | TypeScript types |
+| `lib/hooks/use-household.ts` | React Query hook |
+| `components/household/household-settings.tsx` | Settings UI component |
+| `app/(app)/join-household/page.tsx` | Join household page |
+
+### Invitation Flow
+
+1. **Owner creates household** → auto-added as owner
+2. **Owner invites partner** via email → token generated
+3. **Partner receives link** → `/join-household?token=xxx`
+4. **Partner accepts** → added as partner, children linked
+5. **Audit logged** → all actions tracked
+
+### Helper Functions
+
+```sql
+-- Get user's household ID
+get_user_household_id(p_user_id UUID) → UUID
+
+-- Get household partner IDs
+get_household_partner_ids(p_user_id UUID) → UUID[]
+
+-- Check if user can view another's data
+can_view_partner_data(p_viewer_id, p_owner_id) → BOOLEAN
+```
+
+### Profile Sharing Preferences
+
+```sql
+-- On profiles table
+household_share_budgets BOOLEAN DEFAULT true
+household_share_transactions BOOLEAN DEFAULT true
+household_share_accounts BOOLEAN DEFAULT true
+```
+
+### Usage
+
+```typescript
+import { useHousehold } from "@/lib/hooks/use-household";
+
+function MyComponent() {
+  const {
+    household,
+    role,
+    members,
+    pendingInvitations,
+    hasPartner,
+    createHousehold,
+    invitePartner,
+    leaveHousehold,
+  } = useHousehold();
+
+  // Create household
+  await createHousehold.mutateAsync("The Smiths");
+
+  // Invite partner
+  await invitePartner.mutateAsync({ email: "partner@email.com" });
+}
+```
+
+## 🧊 Freezer Meals (Added Jan 2026)
+
+### Overview
+
+Dedicated page for managing freezer meals, accessible from the sidebar under Meal Planner.
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `app/(app)/life/meal-planner/freezer-meals/page.tsx` | Server component |
+| `app/(app)/life/meal-planner/freezer-meals/freezer-meals-client.tsx` | Client component |
+| `components/layout/sidebar.tsx` | Added 🧊 Freezer Meals link |
+
+### Sidebar Location
+
+```
+Meal Planner
+└── 🧊 Freezer Meals
+```
+
+## 💾 Meal Planner Preference Persistence
+
+The meal planner now saves which meal types are visible (breakfast, lunch, dinner, snacks) to localStorage.
+
+### Implementation
+
+```typescript
+// In meal-planner-client.tsx
+useEffect(() => {
+  const saved = localStorage.getItem("meal-planner-visible-types");
+  if (saved) {
+    setVisibleMealTypes(new Set(JSON.parse(saved)));
+  }
+}, []);
+
+const toggleMealType = (mealType: MealTypeKey) => {
+  setVisibleMealTypes((prev) => {
+    const newSet = new Set(prev);
+    // Toggle logic...
+    localStorage.setItem("meal-planner-visible-types", JSON.stringify(Array.from(newSet)));
+    return newSet;
+  });
+};
+```
+
+## 😊 Full Emoji Library for To-Do Lists
+
+The create list dialog now uses the full emoji library (`FluentEmojiPicker`) instead of a hardcoded icon list.
+
+### Before
+```tsx
+const ICONS = ["📝", "🛒", "🏠", ...]; // Limited icons
+```
+
+### After
+```tsx
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+
+<FluentEmojiPicker
+  selectedEmoji={icon}
+  onEmojiSelect={setIcon}
+  size="lg"
+  insideDialog={true}
+/>
+```

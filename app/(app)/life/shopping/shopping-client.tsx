@@ -17,6 +17,7 @@ import {
   ManageTemplatesDialog,
   ManageSupermarketsDialog,
 } from "@/components/shopping";
+import { ShoppingTotalBanner } from "@/components/shopping/shopping-total-banner";
 import type { ListType } from "@/components/shopping/create-shopping-list-dialog";
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { Plus, ShoppingCart, Store, Search, MoreVertical, Settings2, Printer, Share2, FileText } from "lucide-react";
@@ -30,6 +31,7 @@ interface ShoppingItem {
   aisle: string | null;
   category_id: string | null;
   estimated_price: number | null;
+  price_unit: string | null;
   notes: string | null;
   checked: boolean;
   checked_at: string | null;
@@ -51,6 +53,7 @@ interface ShoppingList {
   estimatedTotal: number;
   linked_envelope_id: string | null;
   linked_envelope_name: string | null;
+  linked_envelope_balance: number | null;
   is_completed: boolean;
   show_on_hub: boolean;
 }
@@ -141,6 +144,21 @@ export function ShoppingClient({
   // Check if any grocery lists exist (for showing supermarket controls)
   const hasGroceryLists = useMemo(() => {
     return lists.some((list) => list.list_type === "grocery");
+  }, [lists]);
+
+  // Calculate totals across all active (non-completed) lists
+  const totals = useMemo(() => {
+    const activeLists = lists.filter((list) => !list.is_completed);
+    const estimatedTotal = activeLists.reduce((sum, list) => sum + list.estimatedTotal, 0);
+
+    // Find a linked envelope (use the first one found for simplicity)
+    const listWithEnvelope = activeLists.find((list) => list.linked_envelope_id && list.linked_envelope_balance !== null);
+
+    return {
+      estimatedTotal,
+      linkedEnvelopeBalance: listWithEnvelope?.linked_envelope_balance ?? null,
+      linkedEnvelopeName: listWithEnvelope?.linked_envelope_name ?? null,
+    };
   }, [lists]);
 
   // Handle category updates from dialog
@@ -490,6 +508,16 @@ export function ShoppingClient({
             </DropdownMenu>
           </div>
         </div>
+
+        {/* Total Banner - shows when there are active lists with prices */}
+        {lists.length > 0 && totals.estimatedTotal > 0 && (
+          <ShoppingTotalBanner
+            estimatedTotal={totals.estimatedTotal}
+            linkedEnvelopeBalance={totals.linkedEnvelopeBalance}
+            linkedEnvelopeName={totals.linkedEnvelopeName}
+            className="mb-4"
+          />
+        )}
 
         {/* Lists */}
         {lists.length === 0 ? (

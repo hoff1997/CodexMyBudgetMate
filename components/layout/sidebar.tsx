@@ -424,6 +424,18 @@ export default function Sidebar({
               <span>📅</span>
               <span>Meal Planner</span>
             </Link>
+            <Link
+              href="/life/meal-planner/freezer-meals"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition",
+                pathname === "/life/meal-planner/freezer-meals"
+                  ? "bg-white text-text-dark border-l-3 border-l-sage"
+                  : "text-text-medium hover:bg-silver-light hover:text-text-dark"
+              )}
+            >
+              <span>🧊</span>
+              <span>Freezer Meals</span>
+            </Link>
           </nav>
         </div>
       )}

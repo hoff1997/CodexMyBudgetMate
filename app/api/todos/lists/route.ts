@@ -43,6 +43,7 @@ export async function GET(request: Request) {
       assigned_to_id: string | null;
       assigned_to_type: string | null;
       sort_order: number;
+      category: string | null;
     }) => ({
       id: item.id,
       text: item.text,
@@ -50,7 +51,8 @@ export async function GET(request: Request) {
       completed_at: item.completed_at,
       due_date: null,
       assigned_to: item.assigned_to_id,
-      category: null,
+      assigned_to_type: item.assigned_to_type,
+      category: item.category,
       notes: null,
       sort_order: item.sort_order,
     }));

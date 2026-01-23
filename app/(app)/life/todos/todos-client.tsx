@@ -48,6 +48,7 @@ interface TodoItem {
   completed_at: string | null;
   due_date: string | null;
   assigned_to: string | null;
+  assigned_to_type: "parent" | "child" | "family" | null;
   category: string | null;
   notes: string | null;
   sort_order: number;
@@ -120,12 +121,12 @@ export function TodosClient({ initialLists, childProfiles }: TodosClientProps) {
     }
   };
 
-  const handleAddItem = async (listId: string, text: string) => {
+  const handleAddItem = async (listId: string, text: string, category?: string) => {
     try {
       const res = await fetch("/api/todos/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ list_id: listId, text }),
+        body: JSON.stringify({ list_id: listId, text, category: category || null }),
       });
 
       if (res.ok) {
@@ -237,6 +238,37 @@ export function TodosClient({ initialLists, childProfiles }: TodosClientProps) {
       }
     } catch (error) {
       console.error("Error deleting list:", error);
+    }
+  };
+
+  const handleResetList = async (listId: string) => {
+    if (!confirm("This will uncheck all items in the list. Continue?")) return;
+
+    try {
+      const res = await fetch(`/api/todos/lists/${listId}/reset`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        // Reset all items in the local state
+        setLists((prev) =>
+          prev.map((list) =>
+            list.id === listId
+              ? {
+                  ...list,
+                  items: list.items.map((item) => ({
+                    ...item,
+                    completed: false,
+                    completed_at: null,
+                  })),
+                  completedItems: 0,
+                }
+              : list
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error resetting list:", error);
     }
   };
 
@@ -407,6 +439,7 @@ export function TodosClient({ initialLists, childProfiles }: TodosClientProps) {
                 onDeleteItem={handleDeleteItem}
                 onUpdateItem={handleUpdateItem}
                 onDeleteList={handleDeleteList}
+                onResetList={handleResetList}
                 showCompleted={showCompleted}
               />
             ))}

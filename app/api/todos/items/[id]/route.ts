@@ -46,7 +46,8 @@ export async function GET(
     completed_at: item.completed_at,
     due_date: null,
     assigned_to: item.assigned_to_id,
-    category: null,
+    assigned_to_type: item.assigned_to_type,
+    category: item.category || null,
     notes: null,
     sort_order: item.sort_order,
   });
@@ -69,7 +70,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { text, completed, sort_order, assigned_to } = body;
+  const { text, completed, sort_order, assigned_to, assigned_to_type, category } = body;
 
   // First verify ownership via the list
   const { data: existingItem, error: fetchError } = await supabase
@@ -95,7 +96,9 @@ export async function PATCH(
     updates.completed_at = completed ? new Date().toISOString() : null;
   }
   if (sort_order !== undefined) updates.sort_order = sort_order;
-  if (assigned_to !== undefined) updates.assigned_to_id = assigned_to;
+  if (assigned_to !== undefined) updates.assigned_to_id = assigned_to === "parent" ? null : assigned_to;
+  if (assigned_to_type !== undefined) updates.assigned_to_type = assigned_to_type;
+  if (category !== undefined) updates.category = category;
 
   const { data: item, error } = await supabase
     .from("todo_items")
@@ -118,7 +121,8 @@ export async function PATCH(
     completed_at: item.completed_at,
     due_date: null,
     assigned_to: item.assigned_to_id,
-    category: null,
+    assigned_to_type: item.assigned_to_type,
+    category: item.category || null,
     notes: null,
     sort_order: item.sort_order,
   });

@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, Palette, Check } from "lucide-react";
+import { BookOpen, Palette, Check, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MiniBookCover } from "./book-cover";
 import { useRecipeCategories } from "@/lib/hooks/use-recipe-categories";
-import { PRESET_CATEGORIES, COLOR_SWATCHES } from "@/lib/types/recipes";
+import { PRESET_CATEGORIES, COLOR_SWATCHES, PresetCategory } from "@/lib/types/recipes";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/lib/hooks/use-toast";
 
@@ -32,40 +34,88 @@ export function AddCategoryDialog({
   const [mode, setMode] = useState<Mode>("preset");
   const [customName, setCustomName] = useState("");
   const [selectedColor, setSelectedColor] = useState(COLOR_SWATCHES[0]);
+  const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
   const { categories, createCategory, isCreating } = useRecipeCategories();
   const { toast } = useToast();
 
   const existingSlugs = new Set(categories.map((c) => c.slug));
 
-  const handlePresetSelect = async (
-    preset: (typeof PRESET_CATEGORIES)[number]
-  ) => {
-    if (existingSlugs.has(preset.slug)) {
-      toast({
-        title: "Category exists",
-        description: "You already have this category.",
-        variant: "destructive",
-      });
-      return;
+  // Get count of available (not yet added) presets
+  const availablePresetsCount = PRESET_CATEGORIES.filter(
+    (p) => !existingSlugs.has(p.slug)
+  ).length;
+
+  // Toggle a preset selection
+  const togglePresetSelection = (preset: PresetCategory) => {
+    if (existingSlugs.has(preset.slug)) return; // Can't select already added
+
+    setSelectedPresets((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(preset.slug)) {
+        newSet.delete(preset.slug);
+      } else {
+        newSet.add(preset.slug);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all available presets
+  const selectAllAvailable = () => {
+    const availableSlugs = PRESET_CATEGORIES
+      .filter((p) => !existingSlugs.has(p.slug))
+      .map((p) => p.slug);
+    setSelectedPresets(new Set(availableSlugs));
+  };
+
+  // Clear all selections
+  const clearSelections = () => {
+    setSelectedPresets(new Set());
+  };
+
+  // Save all selected presets
+  const handleSavePresets = async () => {
+    if (selectedPresets.size === 0) return;
+
+    setIsSaving(true);
+    const presetsToAdd = PRESET_CATEGORIES.filter((p) => selectedPresets.has(p.slug));
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const preset of presetsToAdd) {
+      try {
+        await createCategory({
+          name: preset.name,
+          slug: preset.slug,
+          color: preset.color,
+        });
+        successCount++;
+      } catch (error) {
+        failCount++;
+        console.error(`Failed to add ${preset.name}:`, error);
+      }
     }
 
-    try {
-      await createCategory({
-        name: preset.name,
-        slug: preset.slug,
-        color: preset.color,
-      });
+    setIsSaving(false);
+    setSelectedPresets(new Set());
+
+    if (successCount > 0) {
       toast({
-        title: "Category added",
-        description: `${preset.name} has been added to your library.`,
+        title: successCount === 1 ? "Category added" : "Categories added",
+        description: `${successCount} ${successCount === 1 ? "category has" : "categories have"} been added to your library.`,
       });
-      onOpenChange(false);
-    } catch (error) {
+    }
+    if (failCount > 0) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add category",
+        title: "Some categories failed",
+        description: `${failCount} ${failCount === 1 ? "category" : "categories"} could not be added.`,
         variant: "destructive",
       });
+    }
+
+    if (failCount === 0) {
+      onOpenChange(false);
     }
   };
 
@@ -92,13 +142,22 @@ export function AddCategoryDialog({
     }
   };
 
+  // Reset selections when dialog closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setSelectedPresets(new Set());
+      setCustomName("");
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Recipe Category</DialogTitle>
+          <DialogTitle>Add Recipe Categories</DialogTitle>
           <DialogDescription>
-            Choose a preset category or create your own custom one
+            Select multiple preset categories or create your own custom one
           </DialogDescription>
         </DialogHeader>
 
@@ -132,35 +191,87 @@ export function AddCategoryDialog({
 
         {/* Preset mode */}
         {mode === "preset" && (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {PRESET_CATEGORIES.map((preset) => {
-              const exists = existingSlugs.has(preset.slug);
-              return (
-                <button
-                  key={preset.slug}
-                  onClick={() => !exists && handlePresetSelect(preset)}
-                  disabled={exists || isCreating}
-                  className={cn(
-                    "flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all",
-                    exists
-                      ? "border-silver-light bg-silver-very-light opacity-50 cursor-not-allowed"
-                      : "border-transparent hover:border-sage hover:scale-105 cursor-pointer",
-                    isCreating && "opacity-50 cursor-wait"
+          <div className="space-y-4">
+            {/* Selection actions */}
+            {availablePresetsCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-text-medium">
+                  {selectedPresets.size > 0
+                    ? `${selectedPresets.size} selected`
+                    : "Click to select categories"}
+                </span>
+                <div className="flex gap-2">
+                  {selectedPresets.size < availablePresetsCount && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllAvailable}
+                      className="text-sage hover:text-sage-dark"
+                    >
+                      Select All
+                    </Button>
                   )}
-                >
-                  <MiniBookCover name={preset.name} color={preset.color} />
-                  <span className="text-sm font-medium text-text-dark">
-                    {preset.name}
-                  </span>
-                  {exists && (
-                    <span className="text-xs text-sage flex items-center gap-1">
-                      <Check className="w-3 h-3" />
-                      Added
+                  {selectedPresets.size > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSelections}
+                      className="text-text-medium"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Categories grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {PRESET_CATEGORIES.map((preset) => {
+                const exists = existingSlugs.has(preset.slug);
+                const isSelected = selectedPresets.has(preset.slug);
+                return (
+                  <button
+                    key={preset.slug}
+                    onClick={() => togglePresetSelection(preset)}
+                    disabled={exists || isSaving}
+                    className={cn(
+                      "relative flex flex-col items-center gap-3 p-4 rounded-lg border-2 transition-all",
+                      exists
+                        ? "border-silver-light bg-silver-very-light opacity-50 cursor-not-allowed"
+                        : isSelected
+                        ? "border-sage bg-sage-very-light"
+                        : "border-transparent hover:border-sage-light cursor-pointer",
+                      isSaving && "opacity-50 cursor-wait"
+                    )}
+                  >
+                    {/* Checkbox indicator */}
+                    {!exists && (
+                      <div className="absolute top-2 right-2">
+                        <Checkbox
+                          checked={isSelected}
+                          className={cn(
+                            "h-5 w-5",
+                            isSelected && "bg-sage border-sage text-white"
+                          )}
+                          onCheckedChange={() => togglePresetSelection(preset)}
+                        />
+                      </div>
+                    )}
+                    <MiniBookCover name={preset.name} color={preset.color} />
+                    <span className="text-sm font-medium text-text-dark">
+                      {preset.name}
                     </span>
-                  )}
-                </button>
-              );
-            })}
+                    {exists && (
+                      <span className="text-xs text-sage flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Added
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -219,6 +330,33 @@ export function AddCategoryDialog({
               {isCreating ? "Adding..." : "Add Category"}
             </Button>
           </div>
+        )}
+
+        {/* Footer with Save button for preset mode */}
+        {mode === "preset" && selectedPresets.size > 0 && (
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSavePresets}
+              disabled={isSaving || selectedPresets.size === 0}
+              className="bg-sage hover:bg-sage-dark"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                `Add ${selectedPresets.size} ${selectedPresets.size === 1 ? "Category" : "Categories"}`
+              )}
+            </Button>
+          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>

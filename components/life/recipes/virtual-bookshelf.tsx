@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { BookOpen, Pencil, Plus, UtensilsCrossed, Heart, Clock, Users, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BookCover } from "./book-cover";
@@ -9,7 +9,7 @@ import { EditCategoryDialog } from "./edit-category-dialog";
 import { CategoryDetailDialog } from "./category-detail-dialog";
 import { ShareMenu } from "./share-menu";
 import { useRecipeCategories } from "@/lib/hooks/use-recipe-categories";
-import { RecipeCategory } from "@/lib/types/recipes";
+import { RecipeCategory, PRESET_CATEGORIES } from "@/lib/types/recipes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -37,7 +37,8 @@ interface VirtualBookshelfProps {
 }
 
 export function VirtualBookshelf({ searchQuery = "", recipes = [], onAddToMealPlan }: VirtualBookshelfProps) {
-  const { categories, isLoading } = useRecipeCategories();
+  const { categories, isLoading, createCategory } = useRecipeCategories();
+  const hasCreatedDefault = useRef(false);
 
   // Generate shareable category text
   const getCategoryShareText = (category: RecipeCategory) => {
@@ -90,6 +91,28 @@ Shared from My Budget Mate Recipe Library`;
   );
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+
+  // Auto-create "Mains" category for new users on first visit
+  useEffect(() => {
+    const createDefaultCategory = async () => {
+      if (!isLoading && categories.length === 0 && !hasCreatedDefault.current) {
+        hasCreatedDefault.current = true;
+        const mainsPreset = PRESET_CATEGORIES.find((p) => p.slug === "mains");
+        if (mainsPreset) {
+          try {
+            await createCategory({
+              name: mainsPreset.name,
+              slug: mainsPreset.slug,
+              color: mainsPreset.color,
+            });
+          } catch (error) {
+            console.error("Failed to create default Mains category:", error);
+          }
+        }
+      }
+    };
+    createDefaultCategory();
+  }, [isLoading, categories.length, createCategory]);
 
   if (isLoading) {
     return (

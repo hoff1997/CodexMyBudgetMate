@@ -102,6 +102,7 @@ interface ShoppingItem {
   aisle: string | null;
   category_id: string | null;
   estimated_price: number | null;
+  price_unit: string | null;
   notes: string | null;
   checked: boolean;
   checked_at: string | null;
@@ -680,7 +681,16 @@ export function ShoppingListView({
             onClick={() => !item.checked && startEditingPrice(item)}
             title="Click to edit price"
           >
-            {item.estimated_price ? `$${item.estimated_price.toFixed(2)}` : "—"}
+            {item.estimated_price ? (
+              <>
+                ${item.estimated_price.toFixed(2)}
+                {item.price_unit && item.price_unit !== 'each' && (
+                  <span className="text-text-medium font-normal">
+                    /{item.price_unit === 'per_kg' ? 'kg' : '100g'}
+                  </span>
+                )}
+              </>
+            ) : "—"}
           </div>
         )}
       </div>
@@ -936,7 +946,7 @@ export function ShoppingListView({
                   value={selectedSupermarket || "default"}
                   onValueChange={(value) => handleSupermarketChange(value === "default" ? null : value)}
                 >
-                  <SelectTrigger className="h-7 text-xs w-28 border-silver-light">
+                  <SelectTrigger className="h-7 text-xs w-36 border-silver-light">
                     <SelectValue placeholder="Aisle order" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1018,6 +1028,7 @@ export function ShoppingListView({
                             aisle: suggestion.aisleName,
                             category_id: suggestion.categoryId,
                             estimated_price: suggestion.averagePrice || null,
+                            price_unit: "each",
                             notes: null,
                             checked: false,
                             checked_at: null,

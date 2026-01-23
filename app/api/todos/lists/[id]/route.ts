@@ -32,7 +32,7 @@ export async function GET(request: Request, { params }: RouteParams) {
       items:todo_items(*)
     `)
     .eq("id", params.id)
-    .eq("user_id", user.id)
+    .eq("parent_user_id", user.id)
     .single();
 
   if (error) {
@@ -86,7 +86,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     .from("todo_lists")
     .update(updates)
     .eq("id", params.id)
-    .eq("user_id", user.id)
+    .eq("parent_user_id", user.id)
     .select()
     .single();
 
@@ -115,7 +115,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     .from("todo_lists")
     .delete()
     .eq("id", params.id)
-    .eq("user_id", user.id);
+    .eq("parent_user_id", user.id);
 
   if (error) {
     console.error("Error deleting todo list:", error);

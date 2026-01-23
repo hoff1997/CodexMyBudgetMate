@@ -59,7 +59,8 @@ export async function GET(request: Request) {
     completed_at: item.completed_at,
     due_date: null,
     assigned_to: item.assigned_to_id,
-    category: null,
+    assigned_to_type: item.assigned_to_type,
+    category: item.category || null,
     notes: null,
     sort_order: item.sort_order,
   })) || [];
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { list_id, text } = body;
+  const { list_id, text, category } = body;
 
   if (!list_id) {
     return NextResponse.json({ error: "List ID is required" }, { status: 400 });
@@ -119,6 +120,7 @@ export async function POST(request: Request) {
       text,
       is_completed: false,
       sort_order: nextOrder,
+      category: category || null,
     })
     .select()
     .single();
@@ -137,7 +139,8 @@ export async function POST(request: Request) {
     completed_at: item.completed_at,
     due_date: null,
     assigned_to: item.assigned_to_id,
-    category: null,
+    assigned_to_type: item.assigned_to_type,
+    category: item.category || null,
     notes: null,
     sort_order: item.sort_order,
   }, { status: 201 });

@@ -284,21 +284,20 @@ export function HouseholdHubClient({
             </div>
           </div>
           <div className="flex gap-2">
-            {connections.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleSync}
-                disabled={syncing}
-                className="gap-2"
-              >
-                {syncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                {syncing ? "Syncing..." : "Sync Calendars"}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={handleSync}
+              disabled={syncing || connections.length === 0}
+              className="gap-2"
+              title={connections.length === 0 ? "Connect a calendar first" : "Sync all connected calendars"}
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              {syncing ? "Syncing..." : "Sync Calendars"}
+            </Button>
             <Button
               onClick={handleConnectCalendar}
               disabled={connecting}

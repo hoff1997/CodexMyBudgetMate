@@ -17,12 +17,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const includeCompleted = searchParams.get("includeCompleted") === "true";
 
-  // Fetch shopping lists with items
+  // Fetch shopping lists with items and linked envelope balance
   const { data: lists, error } = await supabase
     .from("shopping_lists")
     .select(`
       *,
-      items:shopping_items(*)
+      items:shopping_items(*),
+      envelope:envelopes!shopping_lists_linked_envelope_id_fkey(id, name, current_balance)
     `)
     .eq("parent_user_id", user.id)
     .eq("is_active", true)
@@ -48,6 +49,7 @@ export async function GET(request: Request) {
       aisle_name: string | null;
       category_id: string | null;
       estimated_price?: number | null;
+      price_unit?: string | null;
       notes?: string | null;
       is_checked: boolean;
       checked_at?: string | null;
@@ -62,12 +64,23 @@ export async function GET(request: Request) {
       aisle: item.aisle_name,
       category_id: item.category_id || null,
       estimated_price: item.estimated_price || null,
+      price_unit: item.price_unit || 'each',
       notes: item.notes || null,
       checked: item.is_checked,
       checked_at: item.checked_at || null,
       sort_order: item.sort_order || 0,
       photo_url: item.photo_url || null,
     }));
+
+    // Get envelope data if linked
+    const envelope = list.envelope as { id: string; name: string; current_balance: number } | null;
+
+    // Calculate estimated total from items
+    const estimatedTotal = allItems.reduce((sum: number, item: { estimated_price?: number | null; quantity?: string | null }) => {
+      const price = item.estimated_price || 0;
+      const qty = item.quantity ? parseInt(item.quantity) || 1 : 1;
+      return sum + (price * qty);
+    }, 0);
 
     return {
       id: list.id,
@@ -80,9 +93,10 @@ export async function GET(request: Request) {
       itemsByAisle: null,
       totalItems: allItems.length,
       checkedItems: allItems.filter((item: { is_checked: boolean }) => item.is_checked).length,
-      estimatedTotal: 0,
+      estimatedTotal,
       linked_envelope_id: list.linked_envelope_id || null,
-      linked_envelope_name: list.linked_envelope_name || null,
+      linked_envelope_name: envelope?.name || list.linked_envelope_name || null,
+      linked_envelope_balance: envelope?.current_balance ?? null,
       is_completed: list.is_completed || false,
       show_on_hub: list.show_on_hub ?? true,
     };

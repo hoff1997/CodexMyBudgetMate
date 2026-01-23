@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Loader2, FileText, Plus, ShoppingCart, List, FolderOpen } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 
 interface TemplateItem {
   name: string;
@@ -44,19 +45,6 @@ interface CreateShoppingListDialogProps {
     from_template_id?: string;
   }) => Promise<void>;
 }
-
-const ICONS = [
-  // Shopping & Food
-  "🛒", "🛍️", "🥗", "🍎", "🥬", "🧀", "🍞", "🥩",
-  "🏪", "💊", "🧹", "🎁", "📦", "🌿", "🍕", "🍜",
-  // Travel & Lifestyle
-  "✈️", "🧳", "🏖️", "🌅", "🚗", "🚐", "⛵", "🛥️",
-  "🏕️", "🧺", "🏊", "🎿", "🚴", "🎣", "⛳", "🎾",
-  // Home & Garden
-  "🪴", "🏡", "🛋️", "🛏️", "🧰", "🔧", "🎨", "📚",
-  // Events & Celebrations
-  "🎂", "🎉", "🍾", "🥂", "🎄", "🎃", "💒", "👶",
-];
 
 const LIST_TYPES = [
   {
@@ -258,23 +246,12 @@ export function CreateShoppingListDialog({
             {/* Icon Selection */}
             <div className="space-y-2">
               <Label>Icon</Label>
-              <div className="flex flex-wrap gap-2">
-                {ICONS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => setIcon(emoji)}
-                    className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all",
-                      icon === emoji
-                        ? "bg-sage-light ring-2 ring-sage"
-                        : "bg-silver-light hover:bg-silver"
-                    )}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+              <FluentEmojiPicker
+                selectedEmoji={icon}
+                onEmojiSelect={setIcon}
+                size="lg"
+                insideDialog={true}
+              />
             </div>
 
             {/* Grocery List Info */}

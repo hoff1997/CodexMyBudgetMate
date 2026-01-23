@@ -13,18 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 
 interface CreateListDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateList: (data: { name: string; icon: string; color: string }) => Promise<void>;
 }
-
-const ICONS = [
-  "📝", "✅", "📋", "🎯", "🏠", "🧹", "🛒", "📦",
-  "🎉", "✈️", "👶", "🎓", "💼", "🏋️", "📚", "🎨",
-  "🌱", "🔧", "💡", "⭐",
-];
 
 const COLORS = [
   { value: "sage", bg: "bg-sage", label: "Sage" },
@@ -83,23 +78,12 @@ export function CreateListDialog({
 
           <div className="space-y-2">
             <Label>Icon</Label>
-            <div className="flex flex-wrap gap-2">
-              {ICONS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => setIcon(emoji)}
-                  className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all",
-                    icon === emoji
-                      ? "bg-sage-light ring-2 ring-sage"
-                      : "bg-silver-light hover:bg-silver"
-                  )}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+            <FluentEmojiPicker
+              selectedEmoji={icon}
+              onEmojiSelect={setIcon}
+              size="lg"
+              insideDialog={true}
+            />
           </div>
 
           <div className="space-y-2">

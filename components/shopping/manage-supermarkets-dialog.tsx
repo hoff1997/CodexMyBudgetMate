@@ -67,6 +67,25 @@ interface Category {
   icon: string | null;
 }
 
+// Default categories to show if user has none yet (matches database seeding)
+const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'default-produce', name: 'Produce', icon: '🥬' },
+  { id: 'default-bakery', name: 'Bakery', icon: '🍞' },
+  { id: 'default-deli', name: 'Deli', icon: '🥓' },
+  { id: 'default-meat', name: 'Meat', icon: '🥩' },
+  { id: 'default-seafood', name: 'Seafood', icon: '🐟' },
+  { id: 'default-dairy', name: 'Dairy', icon: '🧀' },
+  { id: 'default-frozen', name: 'Frozen', icon: '🧊' },
+  { id: 'default-pantry', name: 'Pantry', icon: '🥫' },
+  { id: 'default-snacks', name: 'Snacks', icon: '🍿' },
+  { id: 'default-beverages', name: 'Beverages', icon: '🥤' },
+  { id: 'default-health', name: 'Health & Beauty', icon: '💊' },
+  { id: 'default-cleaning', name: 'Cleaning', icon: '🧹' },
+  { id: 'default-baby', name: 'Baby', icon: '👶' },
+  { id: 'default-pet', name: 'Pet', icon: '🐕' },
+  { id: 'default-other', name: 'Other', icon: '📦' },
+];
+
 interface Supermarket {
   id: string;
   name: string;
@@ -285,11 +304,14 @@ export function ManageSupermarketsDialog({
   // Aisle editing functions
   const startEditingAisles = (supermarket: Supermarket) => {
     setEditingAislesFor(supermarket.id);
-    // If supermarket has custom order, use it; otherwise use all categories
+    // If supermarket has custom order, use it; otherwise use all categories or defaults
     if (supermarket.categories.length > 0) {
       setAisleCategories(supermarket.categories);
-    } else {
+    } else if (allCategories.length > 0) {
       setAisleCategories(allCategories);
+    } else {
+      // Fallback to defaults if no categories loaded
+      setAisleCategories(DEFAULT_CATEGORIES);
     }
   };
 

@@ -133,10 +133,25 @@ export function MealPlannerClient({
   const [selectedMealType, setSelectedMealType] = useState("");
   const [copyingWeek, setCopyingWeek] = useState(false);
 
-  // Meal type filter - which meal types to show
+  // Meal type filter - which meal types to show (persisted to localStorage)
   const [visibleMealTypes, setVisibleMealTypes] = useState<Set<MealTypeKey>>(
     new Set(["breakfast", "lunch", "dinner", "snack"])
   );
+
+  // Load persisted meal type visibility from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("meal-planner-visible-types");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as MealTypeKey[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setVisibleMealTypes(new Set(parsed));
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    }
+  }, []);
 
   // Shopping list generation
   const [shoppingDialogOpen, setShoppingDialogOpen] = useState(false);
@@ -255,7 +270,7 @@ export function MealPlannerClient({
     setShoppingDialogOpen(true);
   };
 
-  // Toggle meal type visibility
+  // Toggle meal type visibility and persist to localStorage
   const toggleMealType = (mealType: MealTypeKey) => {
     setVisibleMealTypes((prev) => {
       const newSet = new Set(prev);
@@ -267,6 +282,8 @@ export function MealPlannerClient({
       } else {
         newSet.add(mealType);
       }
+      // Save to localStorage
+      localStorage.setItem("meal-planner-visible-types", JSON.stringify(Array.from(newSet)));
       return newSet;
     });
   };

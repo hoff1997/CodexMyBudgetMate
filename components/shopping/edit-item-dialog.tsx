@@ -30,6 +30,7 @@ interface ShoppingItem {
   aisle: string | null;
   category_id: string | null;
   estimated_price: number | null;
+  price_unit: string | null;
   notes: string | null;
   checked: boolean;
   photo_url: string | null;
@@ -48,7 +49,7 @@ interface EditItemDialogProps {
   categories?: Category[];
   listId?: string;
   onSave: (itemId: string, updates: Partial<ShoppingItem>) => Promise<void>;
-  onCreate?: (data: { name: string; quantity: number; estimated_price: number | null; notes: string | null; aisle: string | null }) => Promise<void>;
+  onCreate?: (data: { name: string; quantity: number; estimated_price: number | null; price_unit: string | null; notes: string | null; aisle: string | null }) => Promise<void>;
 }
 
 // Default categories if none provided
@@ -101,6 +102,7 @@ export function EditItemDialog({
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [estimatedPrice, setEstimatedPrice] = useState<string>("");
+  const [priceUnit, setPriceUnit] = useState<string>("each");
   const [notes, setNotes] = useState("");
   const [aisle, setAisle] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
@@ -113,6 +115,7 @@ export function EditItemDialog({
       setName(item.name);
       setQuantity(item.quantity || 1);
       setEstimatedPrice(item.estimated_price?.toString() || "");
+      setPriceUnit(item.price_unit || "each");
       setNotes(item.notes || "");
       setAisle(item.aisle || "");
     }
@@ -128,6 +131,7 @@ export function EditItemDialog({
           name: name.trim(),
           quantity,
           estimated_price: estimatedPrice ? parseFloat(estimatedPrice) : null,
+          price_unit: priceUnit || null,
           notes: notes.trim() || null,
           aisle: aisle || null,
         });
@@ -137,6 +141,7 @@ export function EditItemDialog({
           name: name.trim(),
           quantity,
           estimated_price: estimatedPrice ? parseFloat(estimatedPrice) : null,
+          price_unit: priceUnit || null,
           notes: notes.trim() || null,
           aisle: aisle || null,
         });
@@ -229,21 +234,33 @@ export function EditItemDialog({
             </div>
           </div>
 
-          {/* Estimated Price */}
+          {/* Estimated Price with Unit */}
           <div className="space-y-2">
             <Label htmlFor="item-price">Estimated Price (NZD)</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-medium">$</span>
-              <Input
-                id="item-price"
-                type="number"
-                min={0}
-                step={0.01}
-                value={estimatedPrice}
-                onChange={(e) => setEstimatedPrice(e.target.value)}
-                placeholder="0.00"
-                className="pl-7"
-              />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-medium">$</span>
+                <Input
+                  id="item-price"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={estimatedPrice}
+                  onChange={(e) => setEstimatedPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-7"
+                />
+              </div>
+              <Select value={priceUnit} onValueChange={setPriceUnit}>
+                <SelectTrigger className="w-28">
+                  <SelectValue placeholder="Unit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="each">each</SelectItem>
+                  <SelectItem value="per_kg">per kg</SelectItem>
+                  <SelectItem value="per_100g">per 100g</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <p className="text-xs text-text-medium">
               Optional - helps track your shopping budget

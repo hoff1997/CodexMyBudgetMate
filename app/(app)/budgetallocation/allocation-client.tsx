@@ -2661,7 +2661,9 @@ function EnvelopeRow({
           // Determine if icon should move to Target column
           const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
           const hasTargetAmount = (envelope.targetAmount || 0) > 0;
-          const isLeveled = envelope.is_leveled;
+          // Check both is_leveled flag AND presence of leveling_data (handles data sync issues)
+          const hasLevelingData = envelope.leveling_data && typeof envelope.leveling_data === 'object' && Object.keys(envelope.leveling_data).length > 0;
+          const isLeveled = envelope.is_leveled || hasLevelingData;
           const hasCelebrationGifts = (envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0;
           const isDebt = envelope.subtype === 'debt' || envelope.is_debt;
 
@@ -2729,7 +2731,9 @@ function EnvelopeRow({
         {(() => {
           const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
           const hasTargetAmount = (envelope.targetAmount || 0) > 0;
-          const isLeveled = envelope.is_leveled;
+          // Check both is_leveled flag AND presence of leveling_data (handles data sync issues)
+          const hasLevelingData = envelope.leveling_data && typeof envelope.leveling_data === 'object' && Object.keys(envelope.leveling_data).length > 0;
+          const isLeveled = envelope.is_leveled || hasLevelingData;
           const hasCelebrationGifts = (envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0;
           const isDebt = envelope.subtype === 'debt' || envelope.is_debt;
 

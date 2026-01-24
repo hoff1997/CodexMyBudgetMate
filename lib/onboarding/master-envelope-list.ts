@@ -137,6 +137,7 @@ export function getCategoryInfo(
 export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   // ========== THE MY BUDGET WAY ==========
   // These are the core "My Budget Way" progression envelopes
+  // All are alwaysInclude: true - cannot be deselected during onboarding
   {
     id: 'starter-stash',
     name: 'Starter Stash',
@@ -146,6 +147,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     subtype: 'goal',
     description: 'First $1000 emergency fund (My Budget Way Step 1)',
     defaultSelected: true,
+    alwaysInclude: true,
   },
   {
     id: 'debt-destroyer',
@@ -156,6 +158,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     subtype: 'debt',
     description: 'Pay off all debt as fast as possible using snowball method (My Budget Way Step 2). Add your debts inside this envelope.',
     defaultSelected: true,
+    alwaysInclude: true,
   },
   {
     id: 'safety-net',
@@ -166,6 +169,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     subtype: 'goal',
     description: '3 months essential expenses (My Budget Way Step 3)',
     defaultSelected: true,
+    alwaysInclude: true,
     isLocked: true,
     lockedReason: 'Unlocks after Starter Stash is funded ($1,000) and all debt is paid off',
     unlockConditions: ['starter-stash-funded', 'debt-paid-off'],

@@ -272,10 +272,21 @@ export async function POST(request: Request) {
       existingEnvelopes?.map((e) => e.onboarding_temp_id).filter(Boolean) || []
     );
     const incomingTempIds = new Set(envelopes.map((e) => e.id));
+    const incomingNames = new Set(envelopes.map((e) => e.name.toLowerCase()));
+
+    // Build name-to-envelope map for existing envelopes (for deduplication)
+    const existingByName = new Map<string, typeof existingEnvelopes[0]>();
+    for (const env of existingEnvelopes || []) {
+      existingByName.set(env.name.toLowerCase(), env);
+    }
 
     // Delete envelopes that were removed (cascades to gift_recipients and debt_items)
+    // Only delete if both temp_id doesn't match AND name doesn't match
     const toDelete = existingEnvelopes?.filter(
-      (e) => e.onboarding_temp_id && !incomingTempIds.has(e.onboarding_temp_id)
+      (e) =>
+        e.onboarding_temp_id &&
+        !incomingTempIds.has(e.onboarding_temp_id) &&
+        !incomingNames.has(e.name.toLowerCase())
     );
 
     if (toDelete && toDelete.length > 0) {
@@ -344,14 +355,22 @@ export async function POST(request: Request) {
         envelopeData.priority = "essential";
       }
 
-      // Find existing envelope by temp_id
-      const existing = existingEnvelopes?.find(
+      // Find existing envelope by temp_id first, then by name (deduplication)
+      let existing = existingEnvelopes?.find(
         (e) => e.onboarding_temp_id === envelope.id
       );
+
+      // Fallback: match by name to prevent duplicates
+      if (!existing) {
+        existing = existingByName.get(envelope.name.toLowerCase());
+      }
 
       let envelopeId: string;
 
       if (existing) {
+        // Remove from name map to prevent matching again with a different envelope
+        existingByName.delete(envelope.name.toLowerCase());
+
         // Update existing
         const { error: updateError } = await supabase
           .from("envelopes")

@@ -846,8 +846,8 @@ export function AllocationClient() {
           auto_calculate_target: env.auto_calculate_target,
           description: env.description,
           snoozed_until: env.snoozed_until,
-          // Leveled bill fields
-          is_leveled: env.is_leveled,
+          // Leveled bill fields - infer is_leveled from leveling_data if flag is missing
+          is_leveled: env.is_leveled || (env.leveling_data && Object.keys(env.leveling_data).length > 0),
           leveling_data: env.leveling_data,
           seasonal_pattern: env.seasonal_pattern,
           // Celebration envelope fields
@@ -2749,60 +2749,66 @@ function EnvelopeRow({
             );
           }
 
-          // Leveled bills - show envelope icon + seasonal indicator (clickable to edit)
+          // Leveled bills - show envelope icon + seasonal indicator (clickable to edit leveling)
           if (isLeveled && onLevelBillClick) {
             return (
-              <button
-                type="button"
-                onClick={() => onLevelBillClick(envelope)}
-                className="flex items-center justify-center gap-1 w-full hover:opacity-70 transition-opacity"
-                title="Click to edit leveling settings"
-              >
+              <div className="flex items-center justify-center gap-1 w-full">
                 <FluentEmojiPicker
                   selectedEmoji={envelope.icon}
                   onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
                   size="sm"
                 />
-                <span className="text-base">{envelope.seasonal_pattern === 'winter-peak' ? '❄️' : '☀️'}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onLevelBillClick(envelope)}
+                  className="text-base hover:scale-110 transition-transform"
+                  title="Click to edit leveling settings"
+                >
+                  {envelope.seasonal_pattern === 'winter-peak' ? '❄️' : '☀️'}
+                </button>
+              </div>
             );
           }
 
-          // Celebration with gifts - show envelope icon + gift icon (clickable to edit)
+          // Celebration with gifts - show envelope icon + gift icon (clickable to edit gifts)
           if (hasCelebrationGifts && onGiftAllocationClick) {
             return (
-              <button
-                type="button"
-                onClick={() => onGiftAllocationClick(envelope)}
-                className="flex items-center justify-center gap-1 w-full hover:opacity-70 transition-opacity"
-                title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''} - click to edit`}
-              >
+              <div className="flex items-center justify-center gap-1 w-full">
                 <FluentEmojiPicker
                   selectedEmoji={envelope.icon}
                   onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
                   size="sm"
                 />
-                <span className="text-base">🎁</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onGiftAllocationClick(envelope)}
+                  className="text-base hover:scale-110 transition-transform"
+                  title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''} - click to edit`}
+                >
+                  🎁
+                </button>
+              </div>
             );
           }
 
-          // Debt envelope - show envelope icon + credit card icon (clickable to edit)
+          // Debt envelope - show envelope icon + credit card icon (clickable to edit debt items)
           if (isDebt && onDebtAllocationClick) {
             return (
-              <button
-                type="button"
-                onClick={() => onDebtAllocationClick(envelope)}
-                className="flex items-center justify-center gap-1 w-full hover:opacity-70 transition-opacity"
-                title="Click to edit debt items"
-              >
+              <div className="flex items-center justify-center gap-1 w-full">
                 <FluentEmojiPicker
                   selectedEmoji={envelope.icon}
                   onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
                   size="sm"
                 />
-                <span className="text-base">💳</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onDebtAllocationClick(envelope)}
+                  className="text-base hover:scale-110 transition-transform"
+                  title="Click to edit debt items"
+                >
+                  💳
+                </button>
+              </div>
             );
           }
 

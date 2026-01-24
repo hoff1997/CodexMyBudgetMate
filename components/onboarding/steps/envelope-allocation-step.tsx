@@ -47,6 +47,7 @@ import {
   GripVertical,
   CreditCard,
   ArrowDownAZ,
+  FolderPlus,
 } from "lucide-react";
 import {
   DndContext,
@@ -70,6 +71,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -512,6 +514,13 @@ export function EnvelopeAllocationStep({
     customWeeks: 8 as number, // Default to 8 weeks for custom frequency
     priority: 'important' as 'essential' | 'important' | 'discretionary',
     category: 'other',
+  });
+
+  // Add category dialog state
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    icon: '📂',
   });
 
   // Get envelope being leveled (for seasonal bills)
@@ -1003,6 +1012,50 @@ export function EnvelopeAllocationStep({
     e.stopPropagation(); // Prevent category toggle
     setNewEnvelope(prev => ({ ...prev, category }));
     setAddEnvelopeOpen(true);
+  };
+
+  // Handle adding a new category
+  const handleAddCategory = () => {
+    if (!newCategory.name.trim()) return;
+
+    // Generate a unique ID for the category (lowercase, hyphenated)
+    const categoryId = newCategory.name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    // Check if category already exists
+    const existingCategory = customCategories?.find(c => c.id === categoryId);
+    const isBuiltIn = CATEGORY_LABELS[categoryId as BuiltInCategory];
+    if (existingCategory || isBuiltIn) {
+      // Category already exists, just close the dialog
+      setAddCategoryOpen(false);
+      setNewCategory({ name: '', icon: '📂' });
+      return;
+    }
+
+    // Add to custom categories
+    const updatedCategories = [...(customCategories || []), {
+      id: categoryId,
+      label: newCategory.name.trim(),
+      icon: newCategory.icon,
+    }];
+    onCustomCategoriesChange?.(updatedCategories);
+
+    // Add to category order (at the end, before 'other')
+    const currentOrder = categoryOrder || CATEGORY_ORDER;
+    const otherIndex = currentOrder.indexOf('other');
+    const newOrder = [...currentOrder];
+    if (otherIndex >= 0) {
+      newOrder.splice(otherIndex, 0, categoryId);
+    } else {
+      newOrder.push(categoryId);
+    }
+    onCategoryOrderChange?.(newOrder);
+
+    // Expand the new category
+    setExpandedCategories(prev => new Set([...prev, categoryId]));
+
+    // Reset and close dialog
+    setAddCategoryOpen(false);
+    setNewCategory({ name: '', icon: '📂' });
   };
 
   // Handle deleting an envelope
@@ -1863,6 +1916,16 @@ export function EnvelopeAllocationStep({
           <ArrowDownAZ className="h-4 w-4" />
           Sort All A-Z
         </Button>
+        {/* Add Category Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setAddCategoryOpen(true)}
+          className="gap-1 border-gold text-gold hover:bg-gold-light"
+        >
+          <FolderPlus className="h-4 w-4" />
+          Add Category
+        </Button>
         {/* Add Envelope Button */}
         <Button
           variant="outline"
@@ -2353,6 +2416,58 @@ export function EnvelopeAllocationStep({
               className="bg-sage hover:bg-sage-dark"
             >
               Add Envelope
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Category Dialog */}
+      <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Category</DialogTitle>
+            <DialogDescription>
+              Create a new category to group your envelopes
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Category Name */}
+            <div className="space-y-2">
+              <Label htmlFor="category-name">Category Name</Label>
+              <Input
+                id="category-name"
+                placeholder="e.g., Pets, Side Business, Hobbies"
+                value={newCategory.name}
+                onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            {/* Category Icon */}
+            <div className="space-y-2">
+              <Label>Icon</Label>
+              <div className="flex items-center gap-3">
+                <FluentEmojiPicker
+                  selectedEmoji={newCategory.icon}
+                  onEmojiSelect={(emoji) => setNewCategory(prev => ({ ...prev, icon: emoji }))}
+                  size="lg"
+                />
+                <span className="text-sm text-muted-foreground">
+                  Click to choose an icon for your category
+                </span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddCategory}
+              disabled={!newCategory.name.trim()}
+              className="bg-gold hover:bg-gold-dark text-white"
+            >
+              <FolderPlus className="h-4 w-4 mr-1" />
+              Add Category
             </Button>
           </DialogFooter>
         </DialogContent>

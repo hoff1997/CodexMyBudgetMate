@@ -772,62 +772,74 @@ function SortableTableRow({
       )}
 
       {/* Envelope (Icon + Name) for onboarding, or separate columns for maintenance */}
-      {mode === 'onboarding' ? (
-        <td className="px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className={`text-base hover:bg-muted rounded leading-none flex-shrink-0 ${isLocked ? 'pointer-events-none' : ''}`}
-              onClick={() => {
-                if (isLocked) return;
-                const newIcon = prompt('Enter emoji icon:', envelope.icon);
-                if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
-              }}
-              disabled={isLocked}
-            >
-              {envelope.icon}
-            </button>
-            <Input
-              value={getDisplayValue(envelope.id, 'name', envelope.name)}
-              onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
-              onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
-              onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
-              className="h-7 text-sm font-medium border-0 focus-visible:ring-0 focus:outline-none px-1 flex-1"
-              disabled={isLocked}
-            />
-          </div>
-        </td>
-      ) : (
-        <>
-          {/* Icon */}
-          <td className="w-6 min-w-[24px] max-w-[24px] px-0 py-0">
-            <button
-              type="button"
-              className={`text-sm hover:bg-muted rounded leading-none ${isLocked ? 'pointer-events-none' : ''}`}
-              onClick={() => {
-                if (isLocked) return;
-                const newIcon = prompt('Enter emoji icon:', envelope.icon);
-                if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
-              }}
-              disabled={isLocked}
-            >
-              {envelope.icon}
-            </button>
-          </td>
+      {/* For savings/goal envelopes with target amount, icon moves to Amount column */}
+      {(() => {
+        const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
+        const hasTargetAmount = (envelope.targetAmount || 0) > 0;
+        const showIconInAmountColumn = isSavingsOrGoal && hasTargetAmount;
 
-          {/* Name */}
-          <td className="w-24 min-w-[96px] max-w-[96px] pl-1 pr-0 py-0.5">
-            <Input
-              value={getDisplayValue(envelope.id, 'name', envelope.name)}
-              onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
-              onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
-              onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
-              className="h-6 text-[11px] font-medium border-0 focus-visible:ring-0 focus:outline-none px-0.5"
-              disabled={isLocked}
-            />
+        return mode === 'onboarding' ? (
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className={`text-base hover:bg-muted rounded leading-none flex-shrink-0 ${isLocked ? 'pointer-events-none' : ''}`}
+                onClick={() => {
+                  if (isLocked) return;
+                  const newIcon = prompt('Enter emoji icon:', envelope.icon);
+                  if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
+                }}
+                disabled={isLocked}
+              >
+                {envelope.icon}
+              </button>
+              <Input
+                value={getDisplayValue(envelope.id, 'name', envelope.name)}
+                onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
+                onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
+                onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
+                className="h-7 text-sm font-medium border-0 focus-visible:ring-0 focus:outline-none px-1 flex-1"
+                disabled={isLocked}
+              />
+            </div>
           </td>
-        </>
-      )}
+        ) : (
+          <>
+            {/* Icon - hidden for savings/goal with target (icon moves to Amount column) */}
+            <td className="w-6 min-w-[24px] max-w-[24px] px-0 py-0">
+              {!showIconInAmountColumn ? (
+                <button
+                  type="button"
+                  className={`text-sm hover:bg-muted rounded leading-none ${isLocked ? 'pointer-events-none' : ''}`}
+                  onClick={() => {
+                    if (isLocked) return;
+                    const newIcon = prompt('Enter emoji icon:', envelope.icon);
+                    if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
+                  }}
+                  disabled={isLocked}
+                >
+                  {envelope.icon}
+                </button>
+              ) : (
+                <span className="text-muted-foreground text-[10px]">—</span>
+              )}
+            </td>
+
+            {/* Name */}
+            {/* Name */}
+            <td className="w-24 min-w-[96px] max-w-[96px] pl-1 pr-0 py-0.5">
+              <Input
+                value={getDisplayValue(envelope.id, 'name', envelope.name)}
+                onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
+                onFocus={() => handleCellFocus(envelope.id, 'name', envelope.name)}
+                onBlur={(e) => handleCellBlur(envelope.id, 'name', e.target.value)}
+                className="h-6 text-[11px] font-medium border-0 focus-visible:ring-0 focus:outline-none px-0.5"
+                disabled={isLocked}
+              />
+            </td>
+          </>
+        );
+      })()}
 
       {/* Category */}
       {effectiveShowCategories && (
@@ -889,22 +901,55 @@ function SortableTableRow({
         </td>
       )}
 
-      {/* Payment Amount */}
+      {/* Payment Amount - For savings/goal with target, show icon here */}
       <td className={mode === 'onboarding' ? "px-3 py-2.5 text-right" : "w-14 min-w-[56px] max-w-[56px] px-0.5 py-0.5 text-center"}>
-        <Input
-          type="text"
-          inputMode="decimal"
-          value={getDisplayValue(envelope.id, 'targetAmount', (envelope.targetAmount || 0).toFixed(2))}
-          onFocus={() => handleCellFocus(envelope.id, 'targetAmount', envelope.targetAmount || 0)}
-          onChange={(e) => handleCellChange(envelope.id, 'targetAmount', e.target.value)}
-          onBlur={(e) => handleCellBlur(envelope.id, 'targetAmount', e.target.value)}
-          className={mode === 'onboarding'
-            ? "h-7 text-sm text-right border border-border rounded px-2 focus:ring-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            : "h-6 text-[11px] text-center border-0 focus-visible:ring-0 focus:outline-none px-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        {(() => {
+          const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
+          const hasTargetAmount = (envelope.targetAmount || 0) > 0;
+          const showIconHere = mode !== 'onboarding' && isSavingsOrGoal && hasTargetAmount;
+
+          if (showIconHere) {
+            // For savings/goal with target: show icon + amount in a compact layout
+            return (
+              <div className="flex items-center justify-center gap-0.5">
+                <button
+                  type="button"
+                  className={`text-xs hover:bg-muted rounded leading-none flex-shrink-0 ${isLocked ? 'pointer-events-none' : ''}`}
+                  onClick={() => {
+                    if (isLocked) return;
+                    const newIcon = prompt('Enter emoji icon:', envelope.icon);
+                    if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
+                  }}
+                  disabled={isLocked}
+                  title={`${envelope.name} - Click to change icon`}
+                >
+                  {envelope.icon}
+                </button>
+                <span className="text-[10px] text-sage-dark font-medium" title={`Target: $${(envelope.targetAmount || 0).toFixed(2)}`}>
+                  ✓
+                </span>
+              </div>
+            );
           }
-          placeholder="0.00"
-          disabled={isLocked}
-        />
+
+          // Default: show editable input
+          return (
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={getDisplayValue(envelope.id, 'targetAmount', (envelope.targetAmount || 0).toFixed(2))}
+              onFocus={() => handleCellFocus(envelope.id, 'targetAmount', envelope.targetAmount || 0)}
+              onChange={(e) => handleCellChange(envelope.id, 'targetAmount', e.target.value)}
+              onBlur={(e) => handleCellBlur(envelope.id, 'targetAmount', e.target.value)}
+              className={mode === 'onboarding'
+                ? "h-7 text-sm text-right border border-border rounded px-2 focus:ring-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                : "h-6 text-[11px] text-center border-0 focus-visible:ring-0 focus:outline-none px-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              }
+              placeholder="0.00"
+              disabled={isLocked}
+            />
+          );
+        })()}
       </td>
 
       {/* Frequency - Available for bills, spending, and savings */}

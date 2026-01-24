@@ -58,10 +58,10 @@ export const AVAILABLE_ICONS = [
 ];
 
 // Built-in category types - matches CSV categories
+// NOTE: 'debt' category removed - Debt Destroyer is in 'bank' category
 export type BuiltInCategory =
   | 'bank'
   | 'celebrations'
-  | 'debt'
   | 'extras'
   | 'giving'
   | 'goals'
@@ -88,7 +88,6 @@ export interface CategoryInfo {
 export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
   bank: { label: 'Bank', icon: '🏦' },
   celebrations: { label: 'Celebrations', icon: '🎉' },
-  debt: { label: 'Debt Payoff', icon: '📉' },
   extras: { label: 'Extras', icon: '🛍️' },
   giving: { label: 'Giving', icon: '❤️' },
   goals: { label: 'Goals', icon: '🎯' },
@@ -147,15 +146,8 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     defaultSelected: true,
     alwaysInclude: true,
   },
-  {
-    id: 'credit-card-historic-debt',
-    name: 'CC Legacy Debt',
-    icon: '📊',
-    category: 'debt',
-    priority: 'essential',
-    subtype: 'debt',
-    description: 'Credit card debt from before budgeting. Pay down to zero as part of My Budget Way Step 2.',
-  },
+  // NOTE: "CC Legacy Debt" removed - Debt Destroyer now handles all debts
+  // including credit card debt as individual debt_items within that envelope
   {
     id: 'surplus',
     name: 'Surplus',
@@ -194,10 +186,10 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     id: 'debt-destroyer',
     name: 'Debt Destroyer',
     icon: '💪',
-    category: 'debt',
+    category: 'bank',
     priority: 'essential',
     subtype: 'debt',
-    description: 'Pay off all debt as fast as possible (My Budget Way Step 2)',
+    description: 'Pay off all debt as fast as possible using snowball method (My Budget Way Step 2). Add your debts inside this envelope.',
     defaultSelected: true,
   },
   {
@@ -852,15 +844,14 @@ export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelop
   const grouped: Record<EnvelopeCategory, MasterEnvelope[]> = {
     bank: [],
     celebrations: [],
-    clothing: [],
     extras: [],
     giving: [],
     goals: [],
-    hair: [],
     health: [],
     hobbies: [],
     household: [],
     insurance: [],
+    personal: [],
     'phone-internet': [],
     school: [],
     subscriptions: [],
@@ -881,7 +872,6 @@ export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelop
  */
 export const CATEGORY_ORDER: EnvelopeCategory[] = [
   'bank',
-  'debt',
   'household',
   'insurance',
   'phone-internet',

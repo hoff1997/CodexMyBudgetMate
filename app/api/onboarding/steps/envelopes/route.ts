@@ -260,11 +260,27 @@ export async function POST(request: Request) {
     };
 
     // Get or create built-in categories used by envelopes
+    // Helper to check if a string looks like a UUID (corrupted data)
+    const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
     for (const envelope of envelopes) {
       if (envelope.category && !envelope.category.startsWith("custom-")) {
+        // Skip if category looks like a UUID (corrupted data) - don't create categories with UUID names
+        if (isUUID(envelope.category)) {
+          console.warn(`Skipping UUID-like category: ${envelope.category}`);
+          continue;
+        }
+
         if (!categoryIdMap.has(envelope.category)) {
           const label =
             builtInCategoryLabels[envelope.category] || envelope.category;
+
+          // Additional check: don't create categories with UUID-like labels
+          if (isUUID(label)) {
+            console.warn(`Skipping UUID-like category label: ${label}`);
+            continue;
+          }
+
           const existingId = existingCatByName.get(label.toLowerCase());
 
           if (existingId) {

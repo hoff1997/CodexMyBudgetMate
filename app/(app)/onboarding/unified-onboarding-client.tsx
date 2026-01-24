@@ -24,6 +24,9 @@ import { CompletionStep } from "@/components/onboarding/steps/completion-step";
 // Credit card types
 import type { CreditCardConfig } from "@/lib/types/credit-card-onboarding";
 
+// Onboarding save configuration
+import { USE_DIRECT_TO_MAIN, STEP_ENDPOINTS } from "@/lib/onboarding/save-config";
+
 // Types
 export interface BankAccount {
   id: string;
@@ -142,8 +145,11 @@ interface UnifiedOnboardingClientProps {
   isMobile: boolean;
 }
 
-// Autosave debounce delay in ms
-const AUTOSAVE_DELAY = 2000;
+// Autosave debounce delay in ms - reduced for better data protection
+const AUTOSAVE_DELAY = 500;
+
+// LocalStorage key for emergency backup
+const LOCAL_STORAGE_BACKUP_KEY = 'mybudgetmate_onboarding_backup';
 
 export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientProps) {
   const router = useRouter();
@@ -172,8 +178,185 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   // Ref for debouncing autosave
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasLoadedDraft = useRef(false);
+  const lastLocalBackupRef = useRef<string>('');
+
+  // ============================================================================
+  // CRITICAL: Safe state setters that prevent accidental data wiping
+  // These wrappers validate updates before applying to prevent bugs from
+  // accidentally clearing user's hard work
+  // ============================================================================
+  const safeSetEnvelopes = useCallback((updater: EnvelopeData[] | ((prev: EnvelopeData[]) => EnvelopeData[])) => {
+    setEnvelopes((prev) => {
+      const newValue = typeof updater === 'function' ? updater(prev) : updater;
+
+      // Prevent accidentally clearing all envelopes if we had many before
+      // Exception: during initial load when prev is empty
+      if (prev.length > 5 && newValue.length === 0) {
+        console.error('[Onboarding] BLOCKED: Attempted to clear all envelopes! Previous count:', prev.length);
+        toast.error("Something tried to clear your envelopes. Your data is protected.");
+        return prev; // Return previous state, don't allow the wipe
+      }
+
+      // Prevent losing more than 50% of envelopes in a single operation (except during initial load)
+      if (prev.length > 10 && newValue.length < prev.length * 0.5) {
+        console.warn('[Onboarding] WARNING: Large envelope reduction detected. Previous:', prev.length, 'New:', newValue.length);
+        // Still allow, but log for debugging
+      }
+
+      return newValue;
+    });
+  }, []);
+
+  const safeSetEnvelopeAllocations = useCallback((updater: typeof envelopeAllocations | ((prev: typeof envelopeAllocations) => typeof envelopeAllocations)) => {
+    setEnvelopeAllocations((prev) => {
+      const newValue = typeof updater === 'function' ? updater(prev) : updater;
+
+      // Prevent accidentally clearing all allocations if we had many before
+      const prevCount = Object.keys(prev).length;
+      const newCount = Object.keys(newValue).length;
+
+      if (prevCount > 5 && newCount === 0) {
+        console.error('[Onboarding] BLOCKED: Attempted to clear all allocations! Previous count:', prevCount);
+        toast.error("Something tried to clear your allocations. Your data is protected.");
+        return prev;
+      }
+
+      return newValue;
+    });
+  }, []);
 
   const progress = (currentStep / STEPS.length) * 100;
+
+  // ============================================================================
+  // CRITICAL: LocalStorage backup for data protection
+  // This provides a secondary safety net in case the server autosave fails
+  // ============================================================================
+  const saveToLocalStorage = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (currentStep <= 1) return; // Don't save on welcome step
+
+    try {
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        currentStep,
+        highestStepReached,
+        fullName,
+        bankAccounts,
+        creditCardConfigs,
+        incomeSources: incomeSources.map(source => ({
+          ...source,
+          nextPayDate: source.nextPayDate instanceof Date
+            ? source.nextPayDate.toISOString()
+            : source.nextPayDate,
+        })),
+        useTemplate,
+        envelopes,
+        customCategories,
+        categoryOrder,
+        envelopeAllocations,
+        openingBalances,
+        creditCardOpeningAllocation,
+      };
+
+      const backupString = JSON.stringify(backupData);
+
+      // Only save if data has changed
+      if (backupString !== lastLocalBackupRef.current) {
+        localStorage.setItem(LOCAL_STORAGE_BACKUP_KEY, backupString);
+        lastLocalBackupRef.current = backupString;
+        console.log('[Onboarding Backup] Saved to localStorage:', new Date().toISOString());
+      }
+    } catch (error) {
+      console.error('[Onboarding Backup] Failed to save to localStorage:', error);
+    }
+  }, [currentStep, highestStepReached, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, customCategories, categoryOrder, envelopeAllocations, openingBalances, creditCardOpeningAllocation]);
+
+  const loadFromLocalStorage = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const stored = localStorage.getItem(LOCAL_STORAGE_BACKUP_KEY);
+      if (stored) {
+        const backup = JSON.parse(stored);
+        console.log('[Onboarding Backup] Found localStorage backup from:', backup.timestamp);
+        return backup;
+      }
+    } catch (error) {
+      console.error('[Onboarding Backup] Failed to load from localStorage:', error);
+    }
+    return null;
+  }, []);
+
+  const clearLocalStorageBackup = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_BACKUP_KEY);
+      lastLocalBackupRef.current = '';
+      console.log('[Onboarding Backup] Cleared localStorage backup');
+    } catch (error) {
+      console.error('[Onboarding Backup] Failed to clear localStorage:', error);
+    }
+  }, []);
+
+  // Save to localStorage on every data change (immediate, no debounce)
+  useEffect(() => {
+    if (isLoadingDraft) return;
+    saveToLocalStorage();
+  }, [saveToLocalStorage, isLoadingDraft, envelopes, envelopeAllocations, openingBalances, incomeSources, bankAccounts, creditCardConfigs, fullName, customCategories, categoryOrder]);
+
+  // Helper function to check if draft data appears corrupted (all amounts are 0)
+  const isDraftCorrupted = useCallback((draft: any): boolean => {
+    if (!draft || !draft.envelopes || draft.envelopes.length === 0) return false;
+
+    // Check if ALL envelopes have $0 amounts - this indicates data corruption
+    const hasAnyAmount = draft.envelopes.some((env: any) => {
+      const billAmount = env.billAmount || 0;
+      const monthlyBudget = env.monthlyBudget || 0;
+      const savingsAmount = env.savingsAmount || 0;
+      return billAmount > 0 || monthlyBudget > 0 || savingsAmount > 0;
+    });
+
+    // Also check if any allocations exist
+    const hasAnyAllocations = draft.envelopeAllocations &&
+      Object.keys(draft.envelopeAllocations).length > 0 &&
+      Object.values(draft.envelopeAllocations).some((allocs: any) =>
+        Object.values(allocs || {}).some((amount: any) => (amount as number) > 0)
+      );
+
+    // If we're past the allocation step but have no amounts, data is corrupted
+    const isPastAllocationStep = (draft.currentStep || 1) >= 9;
+
+    if (isPastAllocationStep && !hasAnyAmount && !hasAnyAllocations) {
+      console.warn('[Onboarding] Draft appears corrupted - no amounts found despite being past allocation step');
+      return true;
+    }
+
+    return false;
+  }, []);
+
+  // Helper to apply backup data to state
+  const applyBackupData = useCallback((backup: any) => {
+    console.log('[Onboarding] Applying backup data from:', backup.timestamp);
+
+    setCurrentStep(backup.currentStep || 1);
+    setHighestStepReached(backup.highestStepReached || backup.currentStep || 1);
+    setFullName(backup.fullName || "");
+    setBankAccounts(backup.bankAccounts || []);
+    setCreditCardConfigs(backup.creditCardConfigs || []);
+    setIncomeSources((backup.incomeSources || []).map((source: any) => ({
+      ...source,
+      nextPayDate: source.nextPayDate ? new Date(source.nextPayDate) : new Date(),
+    })));
+    setUseTemplate(backup.useTemplate ?? true);
+    setEnvelopes(backup.envelopes || []);
+    setCustomCategories(backup.customCategories || []);
+    setCategoryOrder(backup.categoryOrder || []);
+    setEnvelopeAllocations(backup.envelopeAllocations || {});
+    setOpeningBalances(backup.openingBalances || {});
+    if (backup.creditCardOpeningAllocation !== undefined) {
+      setCreditCardOpeningAllocation(backup.creditCardOpeningAllocation);
+    }
+  }, []);
 
   // Load existing draft on mount OR handle preview mode
   useEffect(() => {
@@ -206,15 +389,65 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
 
     async function loadDraft() {
       try {
+        // First, check for localStorage backup
+        const localBackup = loadFromLocalStorage();
+
         const response = await fetch("/api/onboarding/autosave");
         if (!response.ok) {
+          // Server failed - try localStorage backup
+          if (localBackup) {
+            console.log('[Onboarding] Server unavailable, using localStorage backup');
+            applyBackupData(localBackup);
+            toast.success("Restored from local backup!");
+          }
           setIsLoadingDraft(false);
           return;
         }
 
         const data = await response.json();
+
         if (data.hasDraft && data.draft) {
           const draft = data.draft;
+
+          // Check if server draft appears corrupted
+          if (isDraftCorrupted(draft)) {
+            // Try localStorage backup first
+            if (localBackup && !isDraftCorrupted(localBackup)) {
+              console.log('[Onboarding] Server draft corrupted, using localStorage backup');
+              applyBackupData(localBackup);
+              toast.warning("Restored from local backup - server data was incomplete", {
+                duration: 5000,
+              });
+              setIsLoadingDraft(false);
+              return;
+            }
+
+            // Both corrupted - warn user but continue with server data
+            console.warn('[Onboarding] Both server and local data appear corrupted');
+            toast.error("Your budget data may be incomplete. Please verify your amounts.", {
+              duration: 8000,
+            });
+          }
+
+          // Check if localStorage has MORE data (more recent or more complete)
+          const serverEnvelopeCount = draft.envelopes?.length || 0;
+          const localEnvelopeCount = localBackup?.envelopes?.length || 0;
+
+          // Use localStorage if it has more envelopes and is more recent
+          if (localBackup && localEnvelopeCount > serverEnvelopeCount) {
+            const localTime = new Date(localBackup.timestamp).getTime();
+            const serverTime = draft.lastSavedAt ? new Date(draft.lastSavedAt).getTime() : 0;
+
+            if (localTime > serverTime) {
+              console.log('[Onboarding] localStorage backup is more recent and has more data');
+              applyBackupData(localBackup);
+              toast.success("Restored more recent local backup!");
+              setIsLoadingDraft(false);
+              return;
+            }
+          }
+
+          // Use server draft
           const savedStep = draft.currentStep || 1;
           const savedHighest = draft.highestStepReached || savedStep;
           setCurrentStep(savedStep);
@@ -229,6 +462,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           })));
           setUseTemplate(draft.useTemplate ?? true);
           setEnvelopes(draft.envelopes || []);
+          setCustomCategories(draft.customCategories || []);
+          setCategoryOrder(draft.categoryOrder || []);
           setEnvelopeAllocations(draft.envelopeAllocations || {});
           setOpeningBalances(draft.openingBalances || {});
           setLastSaved(draft.lastSavedAt ? new Date(draft.lastSavedAt) : null);
@@ -236,57 +471,228 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           if (savedStep > 1) {
             toast.success("Welcome back! Your progress has been restored.");
           }
+        } else if (localBackup) {
+          // No server draft but have local backup
+          console.log('[Onboarding] No server draft, using localStorage backup');
+          applyBackupData(localBackup);
+          toast.success("Restored from local backup!");
         }
       } catch (error) {
         console.error("Failed to load draft:", error);
+
+        // Try localStorage backup on error
+        const localBackup = loadFromLocalStorage();
+        if (localBackup) {
+          console.log('[Onboarding] Server error, using localStorage backup');
+          applyBackupData(localBackup);
+          toast.warning("Server unavailable - restored from local backup");
+        }
       } finally {
         setIsLoadingDraft(false);
       }
     }
 
     loadDraft();
-  }, [searchParams]);
+  }, [searchParams, loadFromLocalStorage, isDraftCorrupted, applyBackupData]);
 
-  // Autosave function
+  // Autosave function - supports both legacy and direct-to-main systems
   const saveProgress = useCallback(async () => {
     // Don't save if on welcome step or completion step
     if (currentStep <= 1 || currentStep === STEPS.length) return;
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/onboarding/autosave", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentStep,
-          highestStepReached,
-          fullName,
-          bankAccounts,
-          creditCardConfigs,
-          incomeSources: incomeSources.map(source => ({
-            ...source,
-            nextPayDate: source.nextPayDate instanceof Date
-              ? source.nextPayDate.toISOString()
-              : source.nextPayDate,
-          })),
-          useTemplate,
-          envelopes,
-          envelopeAllocations,
-          openingBalances,
-        }),
-      });
+      if (USE_DIRECT_TO_MAIN) {
+        // =========================================================================
+        // NEW SYSTEM: Direct-to-main-tables with step-specific endpoints
+        // =========================================================================
+        const savePromises: Promise<Response>[] = [];
 
-      if (response.ok) {
-        setLastSaved(new Date());
+        // Always update progress
+        savePromises.push(
+          fetch(STEP_ENDPOINTS.progress, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ currentStep, highestStepReached }),
+          })
+        );
+
+        // Save step-specific data based on current step
+        // Profile (step 2)
+        if (currentStep >= 2 && fullName) {
+          savePromises.push(
+            fetch(STEP_ENDPOINTS.profile, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fullName, currentStep, highestStepReached }),
+            })
+          );
+        }
+
+        // Income (step 3)
+        if (currentStep >= 3 && incomeSources.length > 0) {
+          savePromises.push(
+            fetch(STEP_ENDPOINTS.income, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                incomeSources: incomeSources.map(source => ({
+                  ...source,
+                  nextPayDate: source.nextPayDate instanceof Date
+                    ? source.nextPayDate.toISOString()
+                    : source.nextPayDate,
+                })),
+                currentStep,
+                highestStepReached,
+              }),
+            })
+          );
+        }
+
+        // Accounts (step 4)
+        if (currentStep >= 4 && bankAccounts.length > 0) {
+          savePromises.push(
+            fetch(STEP_ENDPOINTS.accounts, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ bankAccounts, currentStep, highestStepReached }),
+            })
+          );
+        }
+
+        // Envelopes (step 8+)
+        if (currentStep >= 8 && envelopes.length > 0) {
+          // Transform envelope data for API
+          const transformedEnvelopes = envelopes.map(env => ({
+            id: env.id,
+            name: env.name,
+            icon: env.icon,
+            type: env.type,
+            category: env.category,
+            sortOrder: env.sortOrder,
+            billAmount: env.billAmount,
+            frequency: env.frequency,
+            dueDate: env.dueDate,
+            priority: env.priority,
+            monthlyBudget: env.monthlyBudget,
+            savingsAmount: env.savingsAmount,
+            payCycleAmount: env.payCycleAmount,
+            is_leveled: env.isLeveled,
+            leveling_data: env.levelingData,
+            seasonal_pattern: env.seasonalPattern,
+            is_celebration: env.isCelebration,
+            giftRecipients: env.giftRecipients?.map(r => ({
+              ...r,
+              celebration_date: r.celebration_date instanceof Date
+                ? r.celebration_date.toISOString()
+                : r.celebration_date,
+            })),
+            is_debt: env.isDebt,
+            debtItems: env.debtItems,
+          }));
+
+          savePromises.push(
+            fetch(STEP_ENDPOINTS.envelopes, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                envelopes: transformedEnvelopes,
+                customCategories,
+                categoryOrder,
+                currentStep,
+                highestStepReached,
+              }),
+            })
+          );
+        }
+
+        // Allocations (step 9+)
+        if (currentStep >= 9 && Object.keys(envelopeAllocations).length > 0) {
+          savePromises.push(
+            fetch(STEP_ENDPOINTS.allocations, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                envelopeAllocations,
+                currentStep,
+                highestStepReached,
+              }),
+            })
+          );
+        }
+
+        // Opening balances (step 11)
+        if (currentStep >= 11 && Object.keys(openingBalances).length > 0) {
+          savePromises.push(
+            fetch(STEP_ENDPOINTS.openingBalances, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                openingBalances,
+                currentStep,
+                highestStepReached,
+              }),
+            })
+          );
+        }
+
+        // Execute all saves in parallel
+        const results = await Promise.allSettled(savePromises);
+        const anyFailed = results.some(r => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok));
+
+        if (!anyFailed) {
+          setLastSaved(new Date());
+          console.log('[Onboarding] Saved to main tables:', new Date().toISOString());
+        } else {
+          console.error('[Onboarding] Some saves failed:', results);
+          // localStorage backup already happened via useEffect, so data is safe
+        }
+      } else {
+        // =========================================================================
+        // LEGACY SYSTEM: Single autosave endpoint with JSONB storage
+        // =========================================================================
+        const response = await fetch("/api/onboarding/autosave", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentStep,
+            highestStepReached,
+            fullName,
+            bankAccounts,
+            creditCardConfigs,
+            incomeSources: incomeSources.map(source => ({
+              ...source,
+              nextPayDate: source.nextPayDate instanceof Date
+                ? source.nextPayDate.toISOString()
+                : source.nextPayDate,
+            })),
+            useTemplate,
+            envelopes,
+            customCategories,
+            categoryOrder,
+            envelopeAllocations,
+            openingBalances,
+            creditCardOpeningAllocation,
+          }),
+        });
+
+        if (response.ok) {
+          setLastSaved(new Date());
+          console.log('[Onboarding] Saved to server:', new Date().toISOString());
+        } else {
+          console.error('[Onboarding] Server save failed:', response.status);
+          // localStorage backup already happened via useEffect, so data is safe
+        }
       }
     } catch (error) {
       console.error("Autosave failed:", error);
+      // localStorage backup already happened via useEffect, so data is safe
     } finally {
       setIsSaving(false);
     }
-  }, [currentStep, highestStepReached, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances]);
+  }, [currentStep, highestStepReached, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, customCategories, categoryOrder, envelopeAllocations, openingBalances, creditCardOpeningAllocation]);
 
-  // Debounced autosave on data changes
+  // Debounced autosave on data changes - CRITICAL for data protection
   useEffect(() => {
     if (isLoadingDraft || currentStep <= 1) return;
 
@@ -305,7 +711,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [currentStep, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, envelopeAllocations, openingBalances, isLoadingDraft, saveProgress]);
+  }, [currentStep, fullName, bankAccounts, creditCardConfigs, incomeSources, useTemplate, envelopes, customCategories, categoryOrder, envelopeAllocations, openingBalances, creditCardOpeningAllocation, isLoadingDraft, saveProgress]);
 
   // Save immediately when changing steps
   useEffect(() => {
@@ -399,6 +805,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         bankAccounts: bankAccounts.length,
         incomeSources: incomeSources.length,
         envelopes: envelopes.length,
+        useDirectToMain: USE_DIRECT_TO_MAIN,
       });
 
       // Validate required data
@@ -412,35 +819,66 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         throw new Error("Please add at least one income source");
       }
 
-      // Save all onboarding data
-      const response = await fetch("/api/onboarding/unified", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fullName,
-          bankAccounts,
-          creditCardConfigs, // Credit card configurations
-          incomeSources: incomeSources.map(source => ({
-            ...source,
-            nextPayDate: source.nextPayDate instanceof Date
-              ? source.nextPayDate.toISOString()
-              : new Date(source.nextPayDate).toISOString()
-          })),
-          envelopes,
-          envelopeAllocations,
-          openingBalances,
-          creditCardOpeningAllocation, // Amount set aside for CC holding
-          customCategories, // Pass custom categories
-          categoryOrder, // Pass category order for sorting
-          completedAt: new Date().toISOString(),
-        }),
-      });
+      if (USE_DIRECT_TO_MAIN) {
+        // =========================================================================
+        // NEW SYSTEM: Data is already in main tables with draft flag
+        // Just call complete endpoint to flip the flags
+        // =========================================================================
+        const response = await fetch("/api/onboarding/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            completedAt: new Date().toISOString(),
+            useDirectToMain: true,
+          }),
+        });
 
-      const data = await response.json();
-      console.log("API response:", data);
+        const data = await response.json();
+        console.log("Complete API response:", data);
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save onboarding data");
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to complete onboarding");
+        }
+      } else {
+        // =========================================================================
+        // LEGACY SYSTEM: Migrate data from draft to main tables
+        // =========================================================================
+        const response = await fetch("/api/onboarding/unified", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fullName,
+            bankAccounts,
+            creditCardConfigs,
+            incomeSources: incomeSources.map(source => ({
+              ...source,
+              nextPayDate: source.nextPayDate instanceof Date
+                ? source.nextPayDate.toISOString()
+                : new Date(source.nextPayDate).toISOString()
+            })),
+            envelopes,
+            envelopeAllocations,
+            openingBalances,
+            creditCardOpeningAllocation,
+            customCategories,
+            categoryOrder,
+            completedAt: new Date().toISOString(),
+          }),
+        });
+
+        const data = await response.json();
+        console.log("API response:", data);
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to save onboarding data");
+        }
+
+        // Delete the legacy draft since onboarding is complete
+        try {
+          await fetch("/api/onboarding/autosave", { method: "DELETE" });
+        } catch (error) {
+          console.warn("Failed to delete draft (non-critical):", error);
+        }
       }
 
       // Award achievement (non-blocking)
@@ -456,12 +894,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         console.warn("Achievement award failed (non-critical):", error);
       }
 
-      // Delete the draft since onboarding is complete
-      try {
-        await fetch("/api/onboarding/autosave", { method: "DELETE" });
-      } catch (error) {
-        console.warn("Failed to delete draft (non-critical):", error);
-      }
+      // Clear localStorage backup since onboarding is complete
+      clearLocalStorageBackup();
 
       toast.success("Your budget is ready!");
 
@@ -551,7 +985,7 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
         return (
           <EnvelopeCreationStep
             envelopes={envelopes}
-            onEnvelopesChange={setEnvelopes}
+            onEnvelopesChange={safeSetEnvelopes}
             customCategories={customCategories}
             onCustomCategoriesChange={setCustomCategories}
             categoryOrder={categoryOrder}
@@ -568,8 +1002,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           <EnvelopeAllocationStep
             envelopes={envelopes}
             incomeSources={incomeSources}
-            onAllocationsChange={setEnvelopeAllocations}
-            onEnvelopesChange={setEnvelopes}
+            onAllocationsChange={safeSetEnvelopeAllocations}
+            onEnvelopesChange={safeSetEnvelopes}
             categoryOrder={categoryOrder}
             onCategoryOrderChange={setCategoryOrder}
             customCategories={customCategories}
@@ -630,20 +1064,25 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold">My Budget Mate</h1>
             <div className="flex items-center gap-4">
-              {/* Autosave indicator */}
+              {/* Autosave indicator - more prominent for user confidence */}
               {currentStep > 1 && currentStep < STEPS.length && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-xs bg-sage-very-light px-2 py-1 rounded-md">
                   {isSaving ? (
                     <>
-                      <Save className="h-3.5 w-3.5 animate-pulse" />
-                      <span>Saving...</span>
+                      <Save className="h-3.5 w-3.5 animate-pulse text-sage" />
+                      <span className="text-sage-dark">Saving...</span>
                     </>
                   ) : lastSaved ? (
                     <>
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[#7A9E9A]" />
-                      <span>Saved</span>
+                      <CheckCircle2 className="h-3.5 w-3.5 text-sage" />
+                      <span className="text-sage-dark">Auto-saved</span>
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      <Save className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Waiting...</span>
+                    </>
+                  )}
                 </div>
               )}
               {currentStep > 1 && (

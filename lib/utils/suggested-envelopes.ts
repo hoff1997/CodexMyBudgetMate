@@ -2,16 +2,20 @@
  * Suggested Envelopes: "The My Budget Way"
  *
  * Creates suggested envelopes for new users after onboarding:
- * - Starter Stash: $1,000 emergency fund to get started
+ * - Starter Stash: $1,000 emergency fund to get started (Step 1)
+ * - Debt Destroyer: Pay off all debt using snowball method (Step 2)
  * - CC Holding: Credit card payment holding envelope
- * - Safety Net: 3 months of essential expenses (auto-calculated)
+ * - Safety Net: 3 months of essential expenses (Step 3)
+ *
+ * NOTE: These may already exist from onboarding if user selected them.
+ * The createSuggestedEnvelopes function checks by name to avoid duplicates.
  */
 
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const SUGGESTED_ENVELOPE_CATEGORY = "The My Budget Way";
 
-export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net';
+export type SuggestionType = 'starter-stash' | 'debt-destroyer' | 'cc-holding' | 'safety-net';
 
 export interface SuggestedEnvelope {
   name: string;
@@ -24,7 +28,7 @@ export interface SuggestedEnvelope {
   priority?: string;
 }
 
-// Order matters: Starter Stash first, then CC Holding, then Safety Net
+// Order matters: Starter Stash (Step 1), Debt Destroyer (Step 2), CC Holding, Safety Net (Step 3)
 export const SUGGESTED_ENVELOPES: SuggestedEnvelope[] = [
   {
     name: "Starter Stash",
@@ -34,6 +38,16 @@ export const SUGGESTED_ENVELOPES: SuggestedEnvelope[] = [
     description: "Your first $1,000 emergency buffer. A safety cushion for life's little surprises.",
     icon: "🌱",
     subtype: "savings",
+    priority: "essential",
+  },
+  {
+    name: "Debt Destroyer",
+    suggestion_type: "debt-destroyer",
+    target_amount: 0, // No target - contains debt_items
+    auto_calculate_target: false,
+    description: "Pay off all debt as fast as possible using snowball method (My Budget Way Step 2). Add your debts inside this envelope.",
+    icon: "💪",
+    subtype: "debt",
     priority: "essential",
   },
   {
@@ -140,26 +154,36 @@ export async function calculateSafetyNetTarget(
 
 /**
  * Create suggested envelopes for a user after onboarding
+ *
+ * Checks by name to avoid duplicates - envelopes may already exist
+ * from onboarding if user selected them from the master envelope list.
  */
 export async function createSuggestedEnvelopes(
   supabase: SupabaseClient,
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if suggested envelopes already exist
-    const { data: existing } = await supabase
+    // Get all existing envelopes by name (case-insensitive) to avoid duplicates
+    const { data: existingEnvelopes } = await supabase
       .from("envelopes")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("is_suggested", true)
-      .limit(1);
+      .select("id, name")
+      .eq("user_id", userId);
 
-    if (existing && existing.length > 0) {
-      // Already has suggested envelopes, skip
+    const existingNames = new Set(
+      (existingEnvelopes || []).map(e => e.name.toLowerCase())
+    );
+
+    // Filter to only envelopes that don't already exist
+    const envelopesToCreate = SUGGESTED_ENVELOPES.filter(
+      env => !existingNames.has(env.name.toLowerCase())
+    );
+
+    if (envelopesToCreate.length === 0) {
+      // All suggested envelopes already exist
       return { success: true };
     }
 
-    // Create the category
+    // Create the category (if any envelopes need to be created)
     const categoryId = await createSuggestedCategory(supabase, userId);
 
     // Calculate Safety Net target
@@ -168,8 +192,8 @@ export async function createSuggestedEnvelopes(
       userId
     );
 
-    // Create the envelopes
-    const envelopesToCreate = SUGGESTED_ENVELOPES.map((env) => ({
+    // Build envelope records
+    const envelopeRecords = envelopesToCreate.map((env) => ({
       user_id: userId,
       name: env.name,
       category_id: categoryId,
@@ -187,9 +211,11 @@ export async function createSuggestedEnvelopes(
           : env.description,
       // CC Holding envelope should be flagged for reconciliation
       is_cc_holding: env.suggestion_type === "cc-holding" ? true : false,
+      // Debt Destroyer should be flagged as debt envelope
+      is_debt: env.suggestion_type === "debt-destroyer" ? true : false,
     }));
 
-    const { error } = await supabase.from("envelopes").insert(envelopesToCreate);
+    const { error } = await supabase.from("envelopes").insert(envelopeRecords);
 
     if (error) {
       console.error("Error creating suggested envelopes:", error);

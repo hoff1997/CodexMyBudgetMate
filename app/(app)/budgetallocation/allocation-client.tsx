@@ -2288,6 +2288,7 @@ export function AllocationClient() {
           envelopeName={envelopeToLevel.name}
           onBack={() => setLevelingStep('detection')}
           onSave={handleSaveLevelingData}
+          existingLevelingData={envelopeToLevel.leveling_data}
         />
       )}
 
@@ -2306,6 +2307,7 @@ export function AllocationClient() {
           suggestedPattern={detectedSeasonalInfo.suggestedPattern === 'custom' ? 'winter-peak' : detectedSeasonalInfo.suggestedPattern}
           onBack={() => setLevelingStep('detection')}
           onSave={handleSaveLevelingData}
+          existingLevelingData={envelopeToLevel.leveling_data}
         />
       )}
 
@@ -2660,7 +2662,6 @@ function EnvelopeRow({
           <FluentEmojiPicker
             selectedEmoji={envelope.icon}
             onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
-            disabled={envelope.is_suggested}
             size="sm"
           />
           <input
@@ -2668,7 +2669,6 @@ function EnvelopeRow({
             value={envelope.name}
             onChange={(e) => onEnvelopeChange(envelope.id, 'name', e.target.value)}
             className={cn(inputClass, "font-medium text-text-dark text-[12px] py-0.5")}
-            readOnly={envelope.is_suggested}
           />
           {/* Show leveled indicator for seasonal bills - clickable to edit */}
           {envelope.is_leveled && onLevelBillClick && (

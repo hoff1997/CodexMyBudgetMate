@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +33,7 @@ interface TwelveMonthEntryDialogProps {
   envelopeName: string;
   onBack: () => void;
   onSave: (levelingData: LevelingData) => void;
+  existingLevelingData?: LevelingData | null;
 }
 
 /**
@@ -44,12 +45,26 @@ export function TwelveMonthEntryDialog({
   envelopeName,
   onBack,
   onSave,
+  existingLevelingData,
 }: TwelveMonthEntryDialogProps) {
-  // Initialize with empty values for each month
-  const [monthlyAmounts, setMonthlyAmounts] = useState<(number | "")[]>(
-    Array(12).fill("")
+  // Initialize with existing data if available, otherwise empty values
+  const [monthlyAmounts, setMonthlyAmounts] = useState<(number | "")[]>(() => {
+    if (existingLevelingData?.monthlyAmounts?.length === 12) {
+      return existingLevelingData.monthlyAmounts;
+    }
+    return Array(12).fill("");
+  });
+  const [bufferPercent, setBufferPercent] = useState(() =>
+    existingLevelingData?.bufferPercent ?? DEFAULT_BUFFER_PERCENT
   );
-  const [bufferPercent, setBufferPercent] = useState(DEFAULT_BUFFER_PERCENT);
+
+  // Reset state when dialog opens with new data
+  useEffect(() => {
+    if (open && existingLevelingData?.monthlyAmounts?.length === 12) {
+      setMonthlyAmounts(existingLevelingData.monthlyAmounts);
+      setBufferPercent(existingLevelingData.bufferPercent ?? DEFAULT_BUFFER_PERCENT);
+    }
+  }, [open, existingLevelingData]);
 
   // Track which months have been filled
   const filledMonths = monthlyAmounts.filter((v) => v !== "" && v > 0).length;

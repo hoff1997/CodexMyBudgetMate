@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,7 @@ interface QuickEstimateDialogProps {
   suggestedPattern: "winter-peak" | "summer-peak";
   onBack: () => void;
   onSave: (levelingData: LevelingData) => void;
+  existingLevelingData?: LevelingData | null;
 }
 
 /**
@@ -49,10 +50,31 @@ export function QuickEstimateDialog({
   suggestedPattern,
   onBack,
   onSave,
+  existingLevelingData,
 }: QuickEstimateDialogProps) {
-  const [highSeasonAmount, setHighSeasonAmount] = useState<number | "">("");
-  const [lowSeasonAmount, setLowSeasonAmount] = useState<number | "">("");
-  const [bufferPercent, setBufferPercent] = useState(DEFAULT_BUFFER_PERCENT);
+  // Initialize with existing data if available
+  const [highSeasonAmount, setHighSeasonAmount] = useState<number | "">(() =>
+    existingLevelingData?.highSeasonEstimate ?? ""
+  );
+  const [lowSeasonAmount, setLowSeasonAmount] = useState<number | "">(() =>
+    existingLevelingData?.lowSeasonEstimate ?? ""
+  );
+  const [bufferPercent, setBufferPercent] = useState(() =>
+    existingLevelingData?.bufferPercent ?? DEFAULT_BUFFER_PERCENT
+  );
+
+  // Reset state when dialog opens with new data
+  useEffect(() => {
+    if (open && existingLevelingData) {
+      if (existingLevelingData.highSeasonEstimate) {
+        setHighSeasonAmount(existingLevelingData.highSeasonEstimate);
+      }
+      if (existingLevelingData.lowSeasonEstimate) {
+        setLowSeasonAmount(existingLevelingData.lowSeasonEstimate);
+      }
+      setBufferPercent(existingLevelingData.bufferPercent ?? DEFAULT_BUFFER_PERCENT);
+    }
+  }, [open, existingLevelingData]);
 
   const isWinterPeak = suggestedPattern === "winter-peak";
 

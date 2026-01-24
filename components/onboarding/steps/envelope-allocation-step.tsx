@@ -2167,6 +2167,7 @@ export function EnvelopeAllocationStep({
             suggestedPattern={(levelingDetection.suggestedPattern as 'winter-peak' | 'summer-peak') || 'winter-peak'}
             onBack={() => setLevelingDialogStep('detection')}
             onSave={handleLevelingSave}
+            existingLevelingData={levelingEnvelope.levelingData}
           />
 
           <TwelveMonthEntryDialog
@@ -2175,6 +2176,7 @@ export function EnvelopeAllocationStep({
             envelopeName={levelingEnvelope.name}
             onBack={() => setLevelingDialogStep('detection')}
             onSave={handleLevelingSave}
+            existingLevelingData={levelingEnvelope.levelingData}
           />
         </>
       )}

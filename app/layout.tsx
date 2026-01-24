@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description:
     "Personalised envelope budgeting with Supabase persistence and Akahu-powered bank connections.",
   icons: {
-    icon: "/Images/My Budget Mate Evevelope Logo Icon.jpeg",
+    icon: "/favicon.svg",
   },
 };
 

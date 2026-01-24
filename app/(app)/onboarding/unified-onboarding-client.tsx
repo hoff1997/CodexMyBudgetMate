@@ -305,7 +305,15 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
   }, [saveToLocalStorage, isLoadingDraft, envelopes, envelopeAllocations, openingBalances, incomeSources, bankAccounts, creditCardConfigs, fullName, customCategories, categoryOrder]);
 
   // Helper function to check if draft data appears corrupted (all amounts are 0)
-  const isDraftCorrupted = useCallback((draft: any): boolean => {
+  // NOTE: This is primarily for the LEGACY system. With direct-to-main, data is always
+  // in real tables and "corruption" is less likely. We're more lenient with direct-to-main.
+  const isDraftCorrupted = useCallback((draft: any, isDirectToMain?: boolean): boolean => {
+    // Direct-to-main system: data is in real tables, user can edit anytime
+    // Don't flag as corrupted - user may legitimately have empty data or be early in process
+    if (isDirectToMain) {
+      return false;
+    }
+
     if (!draft || !draft.envelopes || draft.envelopes.length === 0) return false;
 
     // Check if ALL envelopes have $0 amounts - this indicates data corruption
@@ -324,7 +332,8 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
       );
 
     // If we're past the allocation step but have no amounts, data is corrupted
-    const isPastAllocationStep = (draft.currentStep || 1) >= 9;
+    // Only apply this check for LEGACY system (step 10+ means review/completion)
+    const isPastAllocationStep = (draft.currentStep || 1) >= 10;
 
     if (isPastAllocationStep && !hasAnyAmount && !hasAnyAllocations) {
       console.warn('[Onboarding] Draft appears corrupted - no amounts found despite being past allocation step');
@@ -408,11 +417,12 @@ export function UnifiedOnboardingClient({ isMobile }: UnifiedOnboardingClientPro
 
         if (data.hasDraft && data.draft) {
           const draft = data.draft;
+          const isDirectToMain = data.isDirectToMain === true;
 
-          // Check if server draft appears corrupted
-          if (isDraftCorrupted(draft)) {
+          // Check if server draft appears corrupted (only for legacy system)
+          if (isDraftCorrupted(draft, isDirectToMain)) {
             // Try localStorage backup first
-            if (localBackup && !isDraftCorrupted(localBackup)) {
+            if (localBackup && !isDraftCorrupted(localBackup, false)) {
               console.log('[Onboarding] Server draft corrupted, using localStorage backup');
               applyBackupData(localBackup);
               toast.warning("Restored from local backup - server data was incomplete", {

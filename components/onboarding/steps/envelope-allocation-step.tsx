@@ -1317,12 +1317,23 @@ export function EnvelopeAllocationStep({
         {/* Envelope Name */}
         <td className="px-2 py-2" {...(isFirstRow ? { 'data-tutorial': 'envelope-name' } : {})}>
           <div className="flex items-center gap-2">
-            {/* Icon - clickable to edit using FluentEmojiPicker */}
-            <FluentEmojiPicker
-              selectedEmoji={env.icon}
-              onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
-              size="md"
-            />
+            {/* Icon - moves to Target column for: celebration with gifts, leveled bills, debt with items, savings/goal with target */}
+            {(() => {
+              const isSavingsOrGoal = env.type === 'savings' || env.type === 'goal';
+              const hasTargetAmount = (env.targetAmount || 0) > 0;
+              const hasDebtItems = isDebtEnvelope && (env.debtItems?.length ?? 0) > 0;
+              const showIconHere = !((isSavingsOrGoal && hasTargetAmount) || env.isLeveled || env.isCelebration || hasDebtItems);
+
+              return showIconHere ? (
+                <FluentEmojiPicker
+                  selectedEmoji={env.icon}
+                  onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                  size="md"
+                />
+              ) : (
+                <span className="text-muted-foreground text-[10px] w-5 text-center">—</span>
+              );
+            })()}
             {editingCell?.id === env.id && editingCell?.field === 'name' ? (
               <Input
                 type="text"
@@ -1347,49 +1358,8 @@ export function EnvelopeAllocationStep({
                   {env.name}
                   <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 </button>
-                {/* Celebration indicator - shows gift icon when configured (clickable to edit) */}
-                {env.isCelebration && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => handleStartCelebration(env.id)}
-                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
-                          title="Gift recipients configured"
-                        >
-                          <span className="text-base">🎁</span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">
-                          Click to edit gift recipients
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {/* Leveled indicator - shows seasonal pattern for seasonal bills - clickable to edit */}
-                {env.isLeveled && !env.isCelebration && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => handleStartLeveling(env.id)}
-                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
-                          title="Leveling configured"
-                        >
-                          <span className="text-base">{env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}</span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">
-                          Click to edit leveling ({env.seasonalPattern === 'winter-peak' ? 'Winter Peak' : 'Summer Peak'})
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {/* Celebration prompt - gift icon for birthdays, Christmas, etc. */}
+                {/* Celebration/Leveled/Debt indicators moved to Target column */}
+                {/* Celebration prompt - gift icon for birthdays, Christmas, etc. (unconfigured) */}
                 {showCelebrationPrompt && (
                   <TooltipProvider>
                     <Tooltip>
@@ -1431,28 +1401,8 @@ export function EnvelopeAllocationStep({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {/* Debt indicator - shows credit card icon when configured (clickable to edit) */}
-                {isDebtEnvelope && (env.debtItems?.length ?? 0) > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => handleStartDebt(env.id)}
-                          className="inline-flex items-center justify-center hover:scale-110 transition-transform"
-                          title="Debts configured"
-                        >
-                          <span className="text-base">💳</span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">
-                          Click to edit debt items ({env.debtItems?.length ?? 0} debts)
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-                {/* Debt prompt - for Debt Destroyer envelope */}
+                {/* Debt indicator moved to Target column */}
+                {/* Debt prompt - for Debt Destroyer envelope (unconfigured) */}
                 {showDebtPrompt && (
                   <TooltipProvider>
                     <Tooltip>
@@ -1504,18 +1454,128 @@ export function EnvelopeAllocationStep({
           )}
         </td>
 
-        {/* Target */}
-        <td className="px-1 py-2 text-right" {...(isFirstRow ? { 'data-tutorial': 'target-cell' } : {})}>
-          {editingCell?.id === env.id && editingCell?.field === 'targetAmount' ? (
-            renderEditableCell(env, 'targetAmount', env.targetAmount, 'number')
-          ) : (
-            <button
-              onClick={() => setEditingCell({ id: env.id, field: 'targetAmount' })}
-              className="text-text-medium hover:text-sage-dark"
-            >
-              {formatCurrency(env.targetAmount)}
-            </button>
-          )}
+        {/* Target - show icons for: celebration with gifts, leveled bills, debt with items, savings/goal with target */}
+        <td className="px-1 py-2" {...(isFirstRow ? { 'data-tutorial': 'target-cell' } : {})}>
+          {(() => {
+            const isSavingsOrGoal = env.type === 'savings' || env.type === 'goal';
+            const hasTargetAmount = (env.targetAmount || 0) > 0;
+            const hasDebtItems = isDebtEnvelope && (env.debtItems?.length ?? 0) > 0;
+
+            // Savings/Goal with target - show icon + checkmark
+            if (isSavingsOrGoal && hasTargetAmount) {
+              return (
+                <div className="flex items-center justify-center gap-1">
+                  <FluentEmojiPicker
+                    selectedEmoji={env.icon}
+                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                    size="sm"
+                  />
+                  <span className="text-[10px] text-sage-dark font-medium" title={`Target: ${formatCurrency(env.targetAmount)}`}>
+                    ✓
+                  </span>
+                </div>
+              );
+            }
+
+            // Leveled bills - show icon + seasonal indicator (clickable)
+            if (env.isLeveled) {
+              return (
+                <div className="flex items-center justify-center gap-1">
+                  <FluentEmojiPicker
+                    selectedEmoji={env.icon}
+                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                    size="sm"
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartLeveling(env.id)}
+                          className="text-base hover:scale-110 transition-transform"
+                          title="Click to edit leveling settings"
+                        >
+                          {env.seasonalPattern === 'winter-peak' ? '❄️' : '☀️'}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Click to edit leveling</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              );
+            }
+
+            // Celebration with gifts - show icon + gift indicator (clickable)
+            if (env.isCelebration) {
+              return (
+                <div className="flex items-center justify-center gap-1">
+                  <FluentEmojiPicker
+                    selectedEmoji={env.icon}
+                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                    size="sm"
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartCelebration(env.id)}
+                          className="text-base hover:scale-110 transition-transform"
+                          title="Click to edit gift recipients"
+                        >
+                          🎁
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Click to edit gift recipients</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              );
+            }
+
+            // Debt with items - show icon + credit card indicator (clickable)
+            if (hasDebtItems) {
+              return (
+                <div className="flex items-center justify-center gap-1">
+                  <FluentEmojiPicker
+                    selectedEmoji={env.icon}
+                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                    size="sm"
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => handleStartDebt(env.id)}
+                          className="text-base hover:scale-110 transition-transform"
+                          title="Click to edit debt items"
+                        >
+                          💳
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Click to edit debts ({env.debtItems?.length ?? 0})</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              );
+            }
+
+            // Default - show target amount (editable)
+            return editingCell?.id === env.id && editingCell?.field === 'targetAmount' ? (
+              renderEditableCell(env, 'targetAmount', env.targetAmount, 'number')
+            ) : (
+              <button
+                onClick={() => setEditingCell({ id: env.id, field: 'targetAmount' })}
+                className="text-text-medium hover:text-sage-dark text-right w-full"
+              >
+                {formatCurrency(env.targetAmount)}
+              </button>
+            );
+          })()}
         </td>
 
         {/* Frequency */}
@@ -2252,6 +2312,7 @@ export function EnvelopeAllocationStep({
           envelope={celebrationDialogEnvelope}
           existingRecipients={celebrationExistingRecipients}
           onSave={handleCelebrationSave}
+          skipBudgetWarning={true}
         />
       )}
 

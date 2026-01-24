@@ -2689,7 +2689,7 @@ function EnvelopeRow({
                 className={cn(inputClass, "font-medium text-text-dark text-[12px] py-0.5")}
               />
               {/* Show snowflake icon for bills that CAN be leveled (but aren't yet) */}
-              {!envelope.is_leveled && envelope.subtype === 'bill' && onLevelBillClick && (
+              {!isLeveled && envelope.subtype === 'bill' && onLevelBillClick && (
                 <button
                   type="button"
                   onClick={() => onLevelBillClick(envelope)}

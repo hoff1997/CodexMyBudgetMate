@@ -39,6 +39,8 @@ interface GiftAllocationDialogProps {
   existingRecipients?: GiftRecipient[];
   onSave: (recipients: GiftRecipientInput[], budgetChange: number, envelopeUpdates?: EnvelopeUpdates) => Promise<void>;
   categories?: CategoryOption[];
+  /** If true, skip the budget change warning dialog (useful during onboarding) */
+  skipBudgetWarning?: boolean;
 }
 
 interface EnvelopeUpdates {
@@ -109,6 +111,7 @@ export function GiftAllocationDialog({
   existingRecipients = [],
   onSave,
   categories = [],
+  skipBudgetWarning = false,
 }: GiftAllocationDialogProps) {
   const [recipients, setRecipients] = useState<LocalRecipient[]>([]);
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
@@ -290,7 +293,8 @@ export function GiftAllocationDialog({
       return;
     }
 
-    if (Math.abs(budgetChange) > 0.01) {
+    // Skip budget warning during onboarding or if no significant change
+    if (Math.abs(budgetChange) > 0.01 && !skipBudgetWarning) {
       setShowBudgetWarning(true);
     } else {
       handleConfirmSave();

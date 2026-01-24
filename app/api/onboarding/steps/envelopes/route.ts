@@ -184,22 +184,36 @@ export async function POST(request: Request) {
         const category = customCategories[index];
         const sortOrder = categoryOrder?.indexOf(category.id) ?? index;
 
-        // Check if exists by name
+        // Check if exists by name (case-insensitive)
         const existingId = existingCatByName.get(category.label.toLowerCase());
 
         if (existingId) {
+          // Update existing category
           categoryIdMap.set(category.id, existingId);
-        } else {
-          // Create new category
-          const { data: created, error } = await supabase
+          await supabase
             .from("envelope_categories")
-            .insert({
-              user_id: user.id,
-              name: category.label,
+            .update({
               icon: category.icon,
               display_order: sortOrder,
-              is_onboarding_draft: true,
             })
+            .eq("id", existingId);
+        } else {
+          // Create new category - use upsert to handle race conditions
+          const { data: created, error } = await supabase
+            .from("envelope_categories")
+            .upsert(
+              {
+                user_id: user.id,
+                name: category.label,
+                icon: category.icon,
+                display_order: sortOrder,
+                is_onboarding_draft: true,
+              },
+              {
+                onConflict: "user_id,name",
+                ignoreDuplicates: false,
+              }
+            )
             .select("id")
             .single();
 
@@ -207,7 +221,20 @@ export async function POST(request: Request) {
             categoryIdMap.set(category.id, created.id);
             existingCatByName.set(category.label.toLowerCase(), created.id);
           } else if (error) {
-            console.error("Category creation error:", error);
+            // If upsert failed, try to find existing by name again
+            const { data: existingCat } = await supabase
+              .from("envelope_categories")
+              .select("id")
+              .eq("user_id", user.id)
+              .ilike("name", category.label)
+              .maybeSingle();
+
+            if (existingCat) {
+              categoryIdMap.set(category.id, existingCat.id);
+              existingCatByName.set(category.label.toLowerCase(), existingCat.id);
+            } else {
+              console.error("Category creation error:", error);
+            }
           }
         }
       }
@@ -243,22 +270,41 @@ export async function POST(request: Request) {
           if (existingId) {
             categoryIdMap.set(envelope.category, existingId);
           } else {
-            // Create the category
+            // Create the category - use upsert to handle race conditions
             const sortOrder = categoryOrder?.indexOf(envelope.category) ?? 999;
-            const { data: created } = await supabase
+            const { data: created, error } = await supabase
               .from("envelope_categories")
-              .insert({
-                user_id: user.id,
-                name: label,
-                display_order: sortOrder,
-                is_onboarding_draft: true,
-              })
+              .upsert(
+                {
+                  user_id: user.id,
+                  name: label,
+                  display_order: sortOrder,
+                  is_onboarding_draft: true,
+                },
+                {
+                  onConflict: "user_id,name",
+                  ignoreDuplicates: false,
+                }
+              )
               .select("id")
               .single();
 
             if (created) {
               categoryIdMap.set(envelope.category, created.id);
               existingCatByName.set(label.toLowerCase(), created.id);
+            } else if (error) {
+              // If upsert failed, try to find existing by name again
+              const { data: existingCat } = await supabase
+                .from("envelope_categories")
+                .select("id")
+                .eq("user_id", user.id)
+                .ilike("name", label)
+                .maybeSingle();
+
+              if (existingCat) {
+                categoryIdMap.set(envelope.category, existingCat.id);
+                existingCatByName.set(label.toLowerCase(), existingCat.id);
+              }
             }
           }
         }

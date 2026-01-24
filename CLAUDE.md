@@ -12,6 +12,15 @@ After reading, confirm: "I have reviewed the architecture docs and will follow t
 
 ## 🚨 Critical Rules (Never Break These)
 
+### Development Server
+- **ALWAYS** run the dev server on port 3000
+- Before starting, kill any existing process on port 3000:
+  ```bash
+  # Find process: netstat -ano | findstr :3000 | findstr LISTENING
+  # Kill it: taskkill //F //PID <PID_NUMBER>
+  ```
+- Then start: `npm run dev`
+
 ### Authentication (We spent hours fixing this!)
 - `/lib/supabase/server.ts` - NEVER modify without explicit permission
 - Must use `await cookies()` (Next.js 14.2+ requirement)

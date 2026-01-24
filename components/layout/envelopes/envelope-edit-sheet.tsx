@@ -332,6 +332,19 @@ export function EnvelopeEditSheet({
                     />
                     <CalendarIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   </div>
+                  {/* Clear date button */}
+                  {form.dueDate && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 text-muted-foreground hover:text-foreground"
+                      onClick={() => setForm((prev) => prev && { ...prev, dueDate: "" })}
+                      title="Clear due date"
+                    >
+                      <span className="text-lg">×</span>
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="outline"
@@ -350,7 +363,7 @@ export function EnvelopeEditSheet({
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Use the refresh button to auto-calculate the next payment date.
+                  Use the refresh button to auto-calculate the next payment date, or × to clear.
                 </p>
               </div>
             </div>

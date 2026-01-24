@@ -1981,7 +1981,7 @@ export function EnvelopeAllocationStep({
           variant="outline"
           size="sm"
           onClick={() => setAddCategoryOpen(true)}
-          className="gap-1 border-gold text-gold hover:bg-gold-light"
+          className="gap-1 border-sage text-sage hover:bg-sage-very-light"
         >
           <FolderPlus className="h-4 w-4" />
           Add Category
@@ -2481,58 +2481,6 @@ export function EnvelopeAllocationStep({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Add Category Dialog */}
-      <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Category</DialogTitle>
-            <DialogDescription>
-              Create a new category to group your envelopes
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {/* Category Name */}
-            <div className="space-y-2">
-              <Label htmlFor="category-name">Category Name</Label>
-              <Input
-                id="category-name"
-                placeholder="e.g., Pets, Side Business, Hobbies"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
-              />
-            </div>
-
-            {/* Category Icon */}
-            <div className="space-y-2">
-              <Label>Icon</Label>
-              <div className="flex items-center gap-3">
-                <FluentEmojiPicker
-                  selectedEmoji={newCategory.icon}
-                  onEmojiSelect={(emoji) => setNewCategory(prev => ({ ...prev, icon: emoji }))}
-                  size="lg"
-                />
-                <span className="text-sm text-muted-foreground">
-                  Click to choose an icon for your category
-                </span>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddCategory}
-              disabled={!newCategory.name.trim()}
-              className="bg-gold hover:bg-gold-dark text-white"
-            >
-              <FolderPlus className="h-4 w-4 mr-1" />
-              Add Category
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
 
       {/* Drag Overlay - shows what's being dragged */}
@@ -2560,6 +2508,59 @@ export function EnvelopeAllocationStep({
         ) : null}
       </DragOverlay>
     </DndContext>
+
+    {/* Add Category Dialog - outside DndContext to avoid event conflicts */}
+    <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Category</DialogTitle>
+          <DialogDescription>
+            Create a new category to group your envelopes
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          {/* Category Name */}
+          <div className="space-y-2">
+            <Label htmlFor="category-name">Category Name</Label>
+            <Input
+              id="category-name"
+              placeholder="e.g., Pets, Side Business, Hobbies"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory(prev => ({ ...prev, name: e.target.value }))}
+            />
+          </div>
+
+          {/* Category Icon */}
+          <div className="space-y-2">
+            <Label>Icon</Label>
+            <div className="flex items-center gap-3">
+              <FluentEmojiPicker
+                selectedEmoji={newCategory.icon}
+                onEmojiSelect={(emoji) => setNewCategory(prev => ({ ...prev, icon: emoji }))}
+                size="lg"
+                insideDialog
+              />
+              <span className="text-sm text-muted-foreground">
+                Click to choose an icon for your category
+              </span>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setAddCategoryOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAddCategory}
+            disabled={!newCategory.name.trim()}
+            className="bg-sage hover:bg-sage-dark text-white"
+          >
+            <FolderPlus className="h-4 w-4 mr-1" />
+            Add Category
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     {/* Category Edit Dialog - outside DndContext to avoid event conflicts */}
     <Dialog open={!!editingCategoryId} onOpenChange={(open) => !open && setEditingCategoryId(null)}>

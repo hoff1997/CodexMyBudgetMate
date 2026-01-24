@@ -2657,14 +2657,25 @@ function EnvelopeRow({
 
       {/* 4. Envelope Name */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
-        <div className="flex items-center gap-1.5">
-          {/* Envelope icon - clickable to edit */}
-          <FluentEmojiPicker
-            selectedEmoji={envelope.icon}
-            onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
-            size="sm"
-          />
-          <input
+        {(() => {
+          // For savings/goal envelopes with target amount, icon moves to Target column
+          const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
+          const hasTargetAmount = (envelope.targetAmount || 0) > 0;
+          const showIconHere = !(isSavingsOrGoal && hasTargetAmount);
+
+          return (
+            <div className="flex items-center gap-1.5">
+              {/* Envelope icon - clickable to edit (hidden for savings/goal with target) */}
+              {showIconHere ? (
+                <FluentEmojiPicker
+                  selectedEmoji={envelope.icon}
+                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                  size="sm"
+                />
+              ) : (
+                <span className="text-muted-foreground text-[10px] w-5 text-center">—</span>
+              )}
+              <input
             type="text"
             value={envelope.name}
             onChange={(e) => onEnvelopeChange(envelope.id, 'name', e.target.value)}
@@ -2702,7 +2713,9 @@ function EnvelopeRow({
               <Gift className="h-3.5 w-3.5 text-gold" />
             </button>
           )}
-        </div>
+            </div>
+          );
+        })()}
       </td>
 
       {/* 5. Category (only in priority view) */}
@@ -2727,20 +2740,43 @@ function EnvelopeRow({
         </select>
       </td>
 
-      {/* 6. Target (Amount) */}
+      {/* 6. Target (Amount) - For savings/goal with target, show icon here */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
-        <div className="relative">
-          <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[11px] text-text-light">$</span>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={envelope.targetAmount ? Number(envelope.targetAmount).toFixed(2) : ''}
-            onChange={(e) => onEnvelopeChange(envelope.id, 'targetAmount', parseFloat(e.target.value) || 0)}
-            className={cn(inputClass, "text-right pl-3 text-text-dark text-[11px] py-0.5")}
-            placeholder="0.00"
-          />
-        </div>
+        {(() => {
+          const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
+          const hasTargetAmount = (envelope.targetAmount || 0) > 0;
+          const showIconInTarget = isSavingsOrGoal && hasTargetAmount;
+
+          if (showIconInTarget) {
+            return (
+              <div className="flex items-center justify-center gap-1">
+                <FluentEmojiPicker
+                  selectedEmoji={envelope.icon}
+                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                  size="sm"
+                />
+                <span className="text-[10px] text-sage-dark font-medium" title={`Target: $${(envelope.targetAmount || 0).toFixed(2)}`}>
+                  ✓
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div className="relative">
+              <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[11px] text-text-light">$</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={envelope.targetAmount ? Number(envelope.targetAmount).toFixed(2) : ''}
+                onChange={(e) => onEnvelopeChange(envelope.id, 'targetAmount', parseFloat(e.target.value) || 0)}
+                className={cn(inputClass, "text-right pl-3 text-text-dark text-[11px] py-0.5")}
+                placeholder="0.00"
+              />
+            </div>
+          );
+        })()}
       </td>
 
       {/* 7. Frequency (abbreviated display) */}

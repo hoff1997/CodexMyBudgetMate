@@ -2658,14 +2658,19 @@ function EnvelopeRow({
       {/* 4. Envelope Name */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
         {(() => {
-          // For savings/goal envelopes with target amount, icon moves to Target column
+          // Determine if icon should move to Target column
           const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
           const hasTargetAmount = (envelope.targetAmount || 0) > 0;
-          const showIconHere = !(isSavingsOrGoal && hasTargetAmount);
+          const isLeveled = envelope.is_leveled;
+          const hasCelebrationGifts = (envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0;
+          const isDebt = envelope.subtype === 'debt' || envelope.is_debt;
+
+          // Icon moves to Target column for: savings/goal with target, leveled bills, celebration with gifts, debt envelopes
+          const showIconHere = !((isSavingsOrGoal && hasTargetAmount) || isLeveled || hasCelebrationGifts || isDebt);
 
           return (
             <div className="flex items-center gap-1.5">
-              {/* Envelope icon - clickable to edit (hidden for savings/goal with target) */}
+              {/* Envelope icon - clickable to edit (hidden when icon moves to Target) */}
               {showIconHere ? (
                 <FluentEmojiPicker
                   selectedEmoji={envelope.icon}
@@ -2676,43 +2681,22 @@ function EnvelopeRow({
                 <span className="text-muted-foreground text-[10px] w-5 text-center">—</span>
               )}
               <input
-            type="text"
-            value={envelope.name}
-            onChange={(e) => onEnvelopeChange(envelope.id, 'name', e.target.value)}
-            className={cn(inputClass, "font-medium text-text-dark text-[12px] py-0.5")}
-          />
-          {/* Show leveled indicator for seasonal bills - clickable to edit */}
-          {envelope.is_leveled && onLevelBillClick && (
-            <button
-              type="button"
-              onClick={() => onLevelBillClick(envelope)}
-              className="flex-shrink-0 hover:opacity-70 transition-opacity"
-              title="Click to edit leveling settings"
-            >
-              <LeveledIndicator seasonalPattern={envelope.seasonal_pattern || 'custom'} />
-            </button>
-          )}
-          {/* Show snowflake icon for bills that can be leveled */}
-          {!envelope.is_leveled && envelope.subtype === 'bill' && onLevelBillClick && (
-            <button
-              type="button"
-              onClick={() => onLevelBillClick(envelope)}
-              className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-light text-blue flex items-center justify-center text-[10px] hover:bg-blue hover:text-white transition-colors"
-              title="Level this bill for seasonal variation"
-            >
-              ❄
-            </button>
-          )}
-          {/* Show gift recipients indicator for celebration envelopes - clickable to edit */}
-          {(envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0 && onGiftAllocationClick && (
-            <button
-              onClick={() => onGiftAllocationClick(envelope)}
-              title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''} - click to edit`}
-              className="flex-shrink-0 p-0.5 rounded hover:bg-gold-light transition-colors"
-            >
-              <Gift className="h-3.5 w-3.5 text-gold" />
-            </button>
-          )}
+                type="text"
+                value={envelope.name}
+                onChange={(e) => onEnvelopeChange(envelope.id, 'name', e.target.value)}
+                className={cn(inputClass, "font-medium text-text-dark text-[12px] py-0.5")}
+              />
+              {/* Show snowflake icon for bills that CAN be leveled (but aren't yet) */}
+              {!envelope.is_leveled && envelope.subtype === 'bill' && onLevelBillClick && (
+                <button
+                  type="button"
+                  onClick={() => onLevelBillClick(envelope)}
+                  className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-light text-blue flex items-center justify-center text-[10px] hover:bg-blue hover:text-white transition-colors"
+                  title="Level this bill for seasonal variation"
+                >
+                  ❄
+                </button>
+              )}
             </div>
           );
         })()}
@@ -2740,14 +2724,17 @@ function EnvelopeRow({
         </select>
       </td>
 
-      {/* 6. Target (Amount) - For savings/goal with target, show icon here */}
+      {/* 6. Target (Amount) - Show special icons here for leveled/celebration/debt/savings/goal */}
       <td className={cn("px-2 py-1.5", editableCellBg)}>
         {(() => {
           const isSavingsOrGoal = envelope.subtype === 'savings' || envelope.subtype === 'goal';
           const hasTargetAmount = (envelope.targetAmount || 0) > 0;
-          const showIconInTarget = isSavingsOrGoal && hasTargetAmount;
+          const isLeveled = envelope.is_leveled;
+          const hasCelebrationGifts = (envelope.is_celebration || envelope.category_name?.toLowerCase() === 'celebrations') && (envelope.gift_recipient_count ?? 0) > 0;
+          const isDebt = envelope.subtype === 'debt' || envelope.is_debt;
 
-          if (showIconInTarget) {
+          // Savings/Goal with target amount - show envelope icon + checkmark
+          if (isSavingsOrGoal && hasTargetAmount) {
             return (
               <div className="flex items-center justify-center gap-1">
                 <FluentEmojiPicker
@@ -2762,6 +2749,64 @@ function EnvelopeRow({
             );
           }
 
+          // Leveled bills - show envelope icon + seasonal indicator (clickable to edit)
+          if (isLeveled && onLevelBillClick) {
+            return (
+              <button
+                type="button"
+                onClick={() => onLevelBillClick(envelope)}
+                className="flex items-center justify-center gap-1 w-full hover:opacity-70 transition-opacity"
+                title="Click to edit leveling settings"
+              >
+                <FluentEmojiPicker
+                  selectedEmoji={envelope.icon}
+                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                  size="sm"
+                />
+                <span className="text-base">{envelope.seasonal_pattern === 'winter-peak' ? '❄️' : '☀️'}</span>
+              </button>
+            );
+          }
+
+          // Celebration with gifts - show envelope icon + gift icon (clickable to edit)
+          if (hasCelebrationGifts && onGiftAllocationClick) {
+            return (
+              <button
+                type="button"
+                onClick={() => onGiftAllocationClick(envelope)}
+                className="flex items-center justify-center gap-1 w-full hover:opacity-70 transition-opacity"
+                title={`${envelope.gift_recipient_count} gift recipient${(envelope.gift_recipient_count ?? 0) > 1 ? 's' : ''} - click to edit`}
+              >
+                <FluentEmojiPicker
+                  selectedEmoji={envelope.icon}
+                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                  size="sm"
+                />
+                <span className="text-base">🎁</span>
+              </button>
+            );
+          }
+
+          // Debt envelope - show envelope icon + credit card icon (clickable to edit)
+          if (isDebt && onDebtAllocationClick) {
+            return (
+              <button
+                type="button"
+                onClick={() => onDebtAllocationClick(envelope)}
+                className="flex items-center justify-center gap-1 w-full hover:opacity-70 transition-opacity"
+                title="Click to edit debt items"
+              >
+                <FluentEmojiPicker
+                  selectedEmoji={envelope.icon}
+                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                  size="sm"
+                />
+                <span className="text-base">💳</span>
+              </button>
+            );
+          }
+
+          // Default - show target amount input
           return (
             <div className="relative">
               <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[11px] text-text-light">$</span>

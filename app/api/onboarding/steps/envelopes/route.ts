@@ -242,9 +242,11 @@ export async function POST(request: Request) {
 
     // Map built-in category names to IDs
     const builtInCategoryLabels: Record<string, string> = {
+      'my-budget-way': "The My Budget Way",
       housing: "Housing",
       utilities: "Utilities",
       transport: "Transport",
+      bank: "Bank",
       insurance: "Insurance",
       food: "Food & Dining",
       health: "Health",
@@ -253,7 +255,14 @@ export async function POST(request: Request) {
       personal: "Personal Care",
       entertainment: "Entertainment",
       subscriptions: "Subscriptions",
-      debt: "Debt",
+      household: "Household",
+      celebrations: "Celebrations",
+      extras: "Extras",
+      hobbies: "Hobbies",
+      'phone-internet': "Phone/Internet",
+      school: "School",
+      vehicles: "Vehicles",
+      goals: "Goals",
       savings: "Savings & Goals",
       giving: "Giving",
       other: "Other",

@@ -58,8 +58,8 @@ export const AVAILABLE_ICONS = [
 ];
 
 // Built-in category types - matches CSV categories
-// NOTE: 'debt' category removed - Debt Destroyer is in 'bank' category
 export type BuiltInCategory =
+  | 'my-budget-way'  // The My Budget Way essentials (Starter Stash, Debt Destroyer, Safety Net)
   | 'bank'
   | 'celebrations'
   | 'extras'
@@ -86,6 +86,7 @@ export interface CategoryInfo {
 }
 
 export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
+  'my-budget-way': { label: 'The My Budget Way', icon: '✨' },
   bank: { label: 'Bank', icon: '🏦' },
   celebrations: { label: 'Celebrations', icon: '🎉' },
   extras: { label: 'Extras', icon: '🛍️' },
@@ -134,6 +135,42 @@ export function getCategoryInfo(
  * Based on CSV template list for beta testing
  */
 export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
+  // ========== THE MY BUDGET WAY ==========
+  // These are the core "My Budget Way" progression envelopes
+  {
+    id: 'starter-stash',
+    name: 'Starter Stash',
+    icon: '🌱',
+    category: 'my-budget-way',
+    priority: 'essential',
+    subtype: 'goal',
+    description: 'First $1000 emergency fund (My Budget Way Step 1)',
+    defaultSelected: true,
+  },
+  {
+    id: 'debt-destroyer',
+    name: 'Debt Destroyer',
+    icon: '💪',
+    category: 'my-budget-way',
+    priority: 'essential',
+    subtype: 'debt',
+    description: 'Pay off all debt as fast as possible using snowball method (My Budget Way Step 2). Add your debts inside this envelope.',
+    defaultSelected: true,
+  },
+  {
+    id: 'safety-net',
+    name: 'Safety Net',
+    icon: '🛡️',
+    category: 'my-budget-way',
+    priority: 'essential',
+    subtype: 'goal',
+    description: '3 months essential expenses (My Budget Way Step 3)',
+    defaultSelected: true,
+    isLocked: true,
+    lockedReason: 'Unlocks after Starter Stash is funded ($1,000) and all debt is paid off',
+    unlockConditions: ['starter-stash-funded', 'debt-paid-off'],
+  },
+
   // ========== BANK ==========
   {
     id: 'credit-card-holding',
@@ -146,8 +183,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     defaultSelected: true,
     alwaysInclude: true,
   },
-  // NOTE: "CC Legacy Debt" removed - Debt Destroyer now handles all debts
-  // including credit card debt as individual debt_items within that envelope
   {
     id: 'surplus',
     name: 'Surplus',
@@ -158,39 +193,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     description: 'Special envelope for unallocated funds - auto-created by system',
     defaultSelected: true,
     alwaysInclude: true,
-  },
-  {
-    id: 'starter-stash',
-    name: 'Starter Stash',
-    icon: '🛡️',
-    category: 'bank',
-    priority: 'essential',
-    subtype: 'goal',
-    description: 'First $1000 emergency fund (My Budget Way Step 1)',
-    defaultSelected: true,
-  },
-  {
-    id: 'safety-net',
-    name: 'Safety Net',
-    icon: '🏦',
-    category: 'bank',
-    priority: 'essential',
-    subtype: 'goal',
-    description: '3 months essential expenses (My Budget Way Step 3)',
-    defaultSelected: true,
-    isLocked: true,
-    lockedReason: 'Unlocks after Starter Stash is funded ($1,000) and all debt is paid off',
-    unlockConditions: ['starter-stash-funded', 'debt-paid-off'],
-  },
-  {
-    id: 'debt-destroyer',
-    name: 'Debt Destroyer',
-    icon: '💪',
-    category: 'bank',
-    priority: 'essential',
-    subtype: 'debt',
-    description: 'Pay off all debt as fast as possible using snowball method (My Budget Way Step 2). Add your debts inside this envelope.',
-    defaultSelected: true,
   },
   {
     id: 'kids-pocket-money',
@@ -842,6 +844,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
  */
 export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelope[]> {
   const grouped: Record<EnvelopeCategory, MasterEnvelope[]> = {
+    'my-budget-way': [],
     bank: [],
     celebrations: [],
     extras: [],
@@ -871,6 +874,7 @@ export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelop
  * Get category order for display
  */
 export const CATEGORY_ORDER: EnvelopeCategory[] = [
+  'my-budget-way',  // The My Budget Way essentials always first
   'bank',
   'household',
   'insurance',

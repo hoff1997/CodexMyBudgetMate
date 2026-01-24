@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 // Quick Actions removed for V1 - will be re-added in future version once users are familiar with core app flow
 // import { QuickActionsSheet } from "@/components/quick-actions/quick-actions-sheet";
@@ -453,7 +454,14 @@ export default function Sidebar({
         >
           <Menu className="w-6 h-6" />
         </button>
-        <span className="ml-3 font-semibold text-[#3D3D3D]">My Budget Mate</span>
+        <Image
+          src="/Images/My Budget Mate Evevelope Logo Icon.jpeg"
+          alt="My Budget Mate Logo"
+          width={28}
+          height={28}
+          className="ml-3 rounded-md"
+        />
+        <span className="ml-2 font-inter font-semibold text-[#3D3D3D]">My Budget Mate</span>
       </div>
 
       {/* Mobile Backdrop */}
@@ -481,7 +489,16 @@ export default function Sidebar({
       >
         {/* Mobile close button and header */}
         <div className="lg:hidden flex items-center justify-between px-3 py-2 border-b border-silver-light">
-          <span className="text-base font-bold text-text-dark">My Budget Mate</span>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/Images/My Budget Mate Evevelope Logo Icon.jpeg"
+              alt="My Budget Mate Logo"
+              width={28}
+              height={28}
+              className="rounded-md"
+            />
+            <span className="text-base font-inter font-semibold text-text-dark">My Budget Mate</span>
+          </div>
           <button
             onClick={() => setIsMobileMenuOpen(false)}
             className="p-2 -mr-2 text-[#6B6B6B] hover:bg-[#E5E7EB] rounded-lg"
@@ -497,11 +514,32 @@ export default function Sidebar({
           isDesktopCollapsed ? "justify-center px-2 py-2" : "justify-between px-3 py-2"
         )}>
           {!isDesktopCollapsed && (
-            <span className="text-base font-bold text-text-dark">My Budget Mate</span>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/Images/My Budget Mate Evevelope Logo Icon.jpeg"
+                alt="My Budget Mate Logo"
+                width={28}
+                height={28}
+                className="rounded-md"
+              />
+              <span className="text-base font-inter font-semibold text-text-dark">My Budget Mate</span>
+            </div>
+          )}
+          {isDesktopCollapsed && (
+            <Image
+              src="/Images/My Budget Mate Evevelope Logo Icon.jpeg"
+              alt="My Budget Mate Logo"
+              width={28}
+              height={28}
+              className="rounded-md"
+            />
           )}
           <button
             onClick={() => sidebar.toggleDesktop()}
-            className="p-1.5 text-[#6B6B6B] hover:bg-[#E5E7EB] rounded-lg transition-colors"
+            className={cn(
+              "p-1.5 text-[#6B6B6B] hover:bg-[#E5E7EB] rounded-lg transition-colors",
+              isDesktopCollapsed && "hidden"
+            )}
             aria-label={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={isDesktopCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >

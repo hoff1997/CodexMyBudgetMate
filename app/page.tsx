@@ -52,6 +52,8 @@ export default function MarketingPage() {
                 height={375}
                 className="object-contain w-[140px] sm:w-[120px] lg:w-[240px] h-auto"
                 priority
+                quality={100}
+                unoptimized
               />
             </div>
           </div>

@@ -49,6 +49,9 @@ export function RemyHelpPanel({ pageId }: RemyHelpPanelProps) {
                     alt="Remy"
                     fill
                     className="object-cover object-top"
+                    quality={100}
+                    unoptimized
+                    style={{ imageRendering: "auto" }}
                   />
                 </div>
                 <div>
@@ -208,6 +211,9 @@ export function RemyHelpPanel({ pageId }: RemyHelpPanelProps) {
                   alt=""
                   fill
                   className="object-cover object-top"
+                  quality={100}
+                  unoptimized
+                  style={{ imageRendering: "auto" }}
                 />
               </div>
               <p className="text-xs text-[#9CA3AF] italic">

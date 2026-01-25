@@ -508,32 +508,11 @@ export default function Sidebar({
           </button>
         </div>
 
-        {/* Desktop header with collapse toggle */}
+        {/* Desktop header with collapse toggle - logo moved to page headers */}
         <div className={cn(
           "hidden lg:flex items-center border-b border-silver-light",
-          isDesktopCollapsed ? "justify-center px-2 py-2" : "justify-between px-3 py-2"
+          isDesktopCollapsed ? "justify-center px-2 py-2" : "justify-end px-3 py-2"
         )}>
-          {!isDesktopCollapsed && (
-            <div className="flex items-center gap-2">
-              <Image
-                src="/Images/My Budget Mate Evevelope Logo Icon.jpeg"
-                alt="My Budget Mate Logo"
-                width={28}
-                height={28}
-                className="rounded-md"
-              />
-              <span className="text-base font-inter font-semibold text-text-dark">My Budget Mate</span>
-            </div>
-          )}
-          {isDesktopCollapsed && (
-            <Image
-              src="/Images/My Budget Mate Evevelope Logo Icon.jpeg"
-              alt="My Budget Mate Logo"
-              width={28}
-              height={28}
-              className="rounded-md"
-            />
-          )}
           <button
             onClick={() => sidebar.toggleDesktop()}
             className={cn(

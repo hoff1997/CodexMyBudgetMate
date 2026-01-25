@@ -23,6 +23,9 @@ export function RemyTip({ children, pose = "encouraging", className = "" }: Remy
           alt="Remy"
           fill
           className="object-cover object-top"
+          quality={100}
+          unoptimized
+          style={{ imageRendering: "auto" }}
         />
       </div>
       <div className="flex-1">
@@ -44,6 +47,7 @@ interface RemyAvatarProps {
 /**
  * RemyAvatar - Standalone Remy avatar for headers
  * Sizes increased by ~0.5cm and larger on mobile for better visibility
+ * Uses unoptimized + quality=100 for sharp rendering
  */
 export function RemyAvatar({ pose = "welcome", size = "md", className = "" }: RemyAvatarProps) {
   // Mobile sizes are larger for better visibility
@@ -61,6 +65,9 @@ export function RemyAvatar({ pose = "welcome", size = "md", className = "" }: Re
         alt="Remy"
         fill
         className="object-cover object-top"
+        quality={100}
+        unoptimized
+        style={{ imageRendering: "auto" }}
       />
     </div>
   );

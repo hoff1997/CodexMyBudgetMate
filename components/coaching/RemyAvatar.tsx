@@ -42,6 +42,9 @@ export function RemyAvatar({
         width={sizePx[size]}
         height={sizePx[size]}
         className="object-cover object-top"
+        quality={100}
+        unoptimized
+        style={{ imageRendering: "auto" }}
       />
     </div>
   );

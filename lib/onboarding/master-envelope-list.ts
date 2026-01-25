@@ -85,6 +85,7 @@ export interface CategoryInfo {
   isCustom?: boolean;
 }
 
+// Category labels - alphabetically sorted (My Budget Way always first in display)
 export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
   'my-budget-way': { label: 'The My Budget Way', icon: '✨' },
   bank: { label: 'Bank', icon: '🏦' },
@@ -136,8 +137,21 @@ export function getCategoryInfo(
  */
 export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   // ========== THE MY BUDGET WAY ==========
-  // These are the core "My Budget Way" progression envelopes
-  // All are alwaysInclude: true - cannot be deselected during onboarding
+  // These are the core "My Budget Way" envelopes in order:
+  // 1. Credit Card Holding, 2. Starter Stash, 3. Debt Destroyer, 4. Safety Net, 5. Future Fund, 6. My Budget Mate, 7. Surplus
+  // Most are alwaysInclude: true - cannot be deselected during onboarding
+  // Future Fund is optional (alwaysInclude: false) as users may already be investing
+  {
+    id: 'credit-card-holding',
+    name: 'Credit Card Holding',
+    icon: '💳',
+    category: 'my-budget-way',
+    priority: null,
+    subtype: 'tracking',
+    description: 'Tracks money set aside for credit card payments. Auto-created when credit cards enabled. Affects reconciliation: Available Cash = Bank Balance - CC Holding. Do not manually top up - system manages this automatically.',
+    defaultSelected: true,
+    alwaysInclude: true,
+  },
   {
     id: 'starter-stash',
     name: 'Starter Stash',
@@ -174,16 +188,25 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     lockedReason: 'Unlocks after Starter Stash is funded ($1,000) and all debt is paid off',
     unlockConditions: ['starter-stash-funded', 'debt-paid-off'],
   },
-
-  // ========== BANK ==========
   {
-    id: 'credit-card-holding',
-    name: 'Credit Card Holding',
-    icon: '💳',
-    category: 'bank',
-    priority: null,
-    subtype: 'tracking',
-    description: 'Tracks money set aside for credit card payments. Auto-created when credit cards enabled. Affects reconciliation: Available Cash = Bank Balance - CC Holding. Do not manually top up - system manages this automatically.',
+    id: 'future-fund',
+    name: 'Future Fund',
+    icon: '📈',
+    category: 'my-budget-way',
+    priority: 'important',
+    subtype: 'savings',
+    description: "If you aren't already investing, this step comes after your Safety Net goal is complete (My Budget Way Step 4). You're in control of when you're ready to start.",
+    defaultSelected: false,
+    alwaysInclude: false,
+  },
+  {
+    id: 'my-budget-mate',
+    name: 'My Budget Mate',
+    icon: '✨',
+    category: 'my-budget-way',
+    priority: 'essential',
+    subtype: 'bill',
+    description: 'Your budgeting subscription - 14 day free trial, then $9.99/month',
     defaultSelected: true,
     alwaysInclude: true,
   },
@@ -191,13 +214,15 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     id: 'surplus',
     name: 'Surplus',
     icon: '💰',
-    category: 'bank',
+    category: 'my-budget-way',
     priority: null,
     subtype: 'tracking',
     description: 'Special envelope for unallocated funds - auto-created by system',
     defaultSelected: true,
     alwaysInclude: true,
   },
+
+  // ========== BANK ==========
   {
     id: 'kids-pocket-money',
     name: 'Kids Pocket Money',
@@ -213,14 +238,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     category: 'bank',
     priority: null,
     subtype: 'tracking',
-  },
-  {
-    id: 'investing',
-    name: 'Investing',
-    icon: '📈',
-    category: 'bank',
-    priority: 'important',
-    subtype: 'savings',
   },
   {
     id: 'ird-refunds',
@@ -423,14 +440,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     id: 'medication',
     name: 'Medication',
     icon: '💊',
-    category: 'health',
-    priority: 'essential',
-    subtype: 'spending',
-  },
-  {
-    id: 'gp-medical',
-    name: 'GP/Medical',
-    icon: '🏥',
     category: 'health',
     priority: 'essential',
     subtype: 'spending',
@@ -785,16 +794,6 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
     priority: 'discretionary',
     subtype: 'bill',
   },
-  {
-    id: 'my-budget-mate',
-    name: 'My Budget Mate',
-    icon: '✨',
-    category: 'bank',
-    priority: 'essential',
-    subtype: 'bill',
-    description: 'Your budgeting subscription - 14 day free trial, then $9.99/month',
-    defaultSelected: true,
-  },
 
   // ========== VEHICLES ==========
   {
@@ -876,23 +875,24 @@ export function getEnvelopesByCategory(): Record<EnvelopeCategory, MasterEnvelop
 
 /**
  * Get category order for display
+ * Alphabetically sorted with My Budget Way always first
  */
 export const CATEGORY_ORDER: EnvelopeCategory[] = [
-  'my-budget-way',  // The My Budget Way essentials always first
+  'my-budget-way',  // The My Budget Way essentials - ALWAYS FIRST
   'bank',
+  'celebrations',
+  'extras',
+  'giving',
+  'goals',
+  'health',
+  'hobbies',
   'household',
   'insurance',
-  'phone-internet',
-  'vehicles',
-  'health',
-  'school',
   'personal',
-  'extras',
-  'hobbies',
-  'celebrations',
-  'goals',
-  'giving',
+  'phone-internet',
+  'school',
   'subscriptions',
+  'vehicles',
 ];
 
 /**

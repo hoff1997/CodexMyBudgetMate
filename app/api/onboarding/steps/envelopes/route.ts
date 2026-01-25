@@ -346,9 +346,10 @@ export async function POST(request: Request) {
     const incomingNames = new Set(envelopes.map((e) => e.name.toLowerCase()));
 
     // Build name-to-envelope map for existing envelopes (for deduplication)
-    const existingByName = new Map<string, typeof existingEnvelopes[0]>();
+    type ExistingEnvelope = { id: string; onboarding_temp_id: string | null; name: string; target_amount: number | null; pay_cycle_amount: number | null };
+    const existingByName = new Map<string, ExistingEnvelope>();
     for (const env of existingEnvelopes || []) {
-      existingByName.set(env.name.toLowerCase(), env);
+      existingByName.set(env.name.toLowerCase(), env as ExistingEnvelope);
     }
 
     // Delete envelopes that were removed (cascades to gift_recipients and debt_items)

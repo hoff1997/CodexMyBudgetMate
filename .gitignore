@@ -33,6 +33,12 @@ supabase/.branches
 # TypeScript build
 *.tsbuildinfo
 
+# Scripts (prevent accidental secret commits)
+scripts/*.mjs
+scripts/*.js
+scripts/*.ts
+!scripts/README.md
+
 # Archived/Legacy code
 _archived/
 Source Replit/

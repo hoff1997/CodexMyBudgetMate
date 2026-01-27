@@ -15,7 +15,7 @@ import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import { CalendarIcon, X, Info, Plus, DollarSign, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+import { IconPicker } from "@/components/onboarding/icon-picker";
 
 type CategoryOption = { id: string; name: string };
 
@@ -591,10 +591,9 @@ export function EnvelopeCreateDialog({
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-secondary">Icon</Label>
-                  <FluentEmojiPicker
-                    selectedEmoji={form.icon}
-                    onEmojiSelect={(emoji) => setForm((prev) => ({ ...prev, icon: emoji }))}
-                    insideDialog
+                  <IconPicker
+                    selectedIcon={form.icon || "wallet"}
+                    onIconSelect={(icon) => setForm((prev) => ({ ...prev, icon: icon }))}
                   />
                 </div>
 

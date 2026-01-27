@@ -27,7 +27,8 @@ import {
   type MasterEnvelope,
   type BuiltInCategory,
 } from "@/lib/onboarding/master-envelope-list";
-import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+import { IconPicker } from "@/components/onboarding/icon-picker";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface AddEnvelopeDialogProps {
   open: boolean;
@@ -195,8 +196,8 @@ export function AddEnvelopeDialog({
                 <div className="divide-y">
                   {Array.from(groupedEnvelopes.entries()).map(([category, envelopes]) => (
                     <div key={category}>
-                      <div className="px-3 py-2 bg-muted/50 text-xs font-semibold text-muted-foreground sticky top-0">
-                        {CATEGORY_LABELS[category as BuiltInCategory]?.icon}{" "}
+                      <div className="px-3 py-2 bg-muted/50 text-xs font-semibold text-muted-foreground sticky top-0 flex items-center gap-1.5">
+                        <EnvelopeIcon icon={CATEGORY_LABELS[category as BuiltInCategory]?.icon || "wallet"} size={14} />
                         {CATEGORY_LABELS[category as BuiltInCategory]?.label || category}
                       </div>
                       {envelopes.map((env) => (
@@ -208,7 +209,7 @@ export function AddEnvelopeDialog({
                             checked={selectedMasterIds.has(env.id)}
                             onCheckedChange={() => handleToggleMaster(env.id)}
                           />
-                          <span className="text-lg">{env.icon}</span>
+                          <EnvelopeIcon icon={env.icon} size={20} />
                           <span className="text-sm flex-1">{env.name}</span>
                           <span className="text-xs text-muted-foreground capitalize">
                             {env.subtype}
@@ -261,10 +262,9 @@ export function AddEnvelopeDialog({
               <div className="flex gap-4 items-start">
                 <div>
                   <Label className="text-xs mb-2 block">Icon</Label>
-                  <FluentEmojiPicker
-                    selectedEmoji={customIcon}
-                    onEmojiSelect={setCustomIcon}
-                    insideDialog
+                  <IconPicker
+                    selectedIcon={customIcon}
+                    onIconSelect={setCustomIcon}
                   />
                 </div>
                 <div className="flex-1">

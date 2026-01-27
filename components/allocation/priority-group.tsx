@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { UnifiedEnvelopeData, IncomeSource } from "@/lib/types/unified-envelope";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 type PriorityLevel = 'essential' | 'important' | 'discretionary' | 'unfunded';
 
@@ -141,7 +142,7 @@ export function PriorityGroup({
                   <tr key={envelope.id} className="hover:bg-[#E2EEEC] transition-colors">
                     {/* Icon */}
                     <td className="px-3 py-2 text-center">
-                      <span className="text-base">{envelope.icon}</span>
+                      <EnvelopeIcon icon={envelope.icon || "wallet"} size={20} />
                     </td>
 
                     {/* Name */}

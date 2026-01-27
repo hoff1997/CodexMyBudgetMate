@@ -4,13 +4,13 @@
  * A comprehensive list of all possible household expenses.
  * Users select which ones apply to their situation.
  *
- * Updated: January 2026 - Beta testing version
+ * Updated: January 2026 - Now uses Phosphor icon keys instead of emojis
  */
 
 export interface MasterEnvelope {
   id: string;
   name: string;
-  icon: string;
+  icon: string; // Now stores icon key (e.g., "groceries", "car") instead of emoji
   category: EnvelopeCategory;
   priority: 'essential' | 'important' | 'discretionary' | null; // null for tracking envelopes
   subtype: 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
@@ -26,35 +26,34 @@ export interface MasterEnvelope {
 }
 
 /**
- * Available icons for custom envelopes and icon picker
+ * Available icon keys for custom envelopes and icon picker
+ * These map to Phosphor icons in lib/icons/phosphor-icon-map.tsx
  */
 export const AVAILABLE_ICONS = [
-  // Transport
-  '🚗', '🚙', '🚕', '🏍️', '🚲', '🛵', '🚌', '🚂', '✈️', '🚁', '⛵', '🛳️',
-  // Tech
-  '📱', '💻', '🖥️', '📺', '🎮', '📷', '🎧', '⌚', '💾', '🖨️',
+  // Finance
+  'bank', 'bill', 'cash', 'coin', 'dollar', 'money-plant', 'piggy-bank', 'safe', 'saving', 'trend-up', 'trend-down', 'wallet',
+  // Shopping
+  'bag', 'basket', 'box', 'card', 'card-2', 'card-3', 'shop', 'shopping-cart', 'tag', 'truck', 'location', 'offer', 'sale',
   // Home
-  '🏠', '🏡', '🏢', '🏗️', '🔧', '🔨', '🛠️', '🔌', '💡', '🚿', '🛁',
-  // Money
-  '💰', '💵', '💳', '🏦', '💎', '📈', '📉', '💸',
-  // Animals
-  '🐕', '🐈', '🐇', '🐠', '🐦', '🐾', '🦜', '🐢', '🐹',
-  // People
-  '👶', '👧', '👦', '👨', '👩', '👴', '👵', '👨‍👩‍👧', '👨‍👧', '👩‍👧',
+  'home', 'bulb', 'key', 'lock', 'sofa', 'tv', 'tree', 'paint-bucket', 'paint-brush', 'paint-roller',
   // Health
-  '🏥', '💊', '🩺', '🦷', '👓', '🏋️', '🧘', '🏃', '💆', '💪',
-  // Food
-  '🛒', '🍕', '🍽️', '☕', '🍷', '🥪', '🍔', '🥗',
-  // Activities
-  '🎬', '🎭', '🎨', '🎯', '⚽', '🎾', '🏈', '🎸', '🎹', '📚', '✏️', '🏉',
+  'first-aid', 'heart-beat', 'stethoscope', 'pills', 'tooth', 'bottle', 'injection', 'lungs', 'wheelchair',
+  // Food & Drink
+  'burger', 'pizza', 'cake', 'cutlery', 'dish', 'drink', 'water', 'ice-cream', 'candy', 'coffee-cup',
+  // Transport
+  'car', 'bus', 'plane', 'ship', 'rocket', 'hot-air-balloon',
+  // Tech
+  'phone', 'tablet', 'headphone', 'camera', 'video-camera', 'speaker', 'mic', 'chip', 'server', 'globe', 'cloud', 'signal',
+  // Entertainment
+  'music', 'play', 'guitar', 'movie-clapper', 'trophy', 'target', 'puzzle', 'balloon', 'crown',
+  // People & Life
+  'user', 'heart', 'star', 'gift', 'thumbs-up', 'suitcase', 'bell',
+  // Education
+  'bookmark', 'doc', 'folder', 'pencil', 'pen', 'ruler', 'calculator', 'file',
   // Nature
-  '🌴', '🏖️', '⛰️', '🏕️', '🌺', '🌳', '🌱',
-  // Celebrations
-  '🎄', '🎂', '🐰', '🌸', '🕯️', '🎉',
-  // Other
-  '🎁', '❤️', '⭐', '🔔', '📦', '🗂️', '📁', '🏷️', '🔒', '🎓', '✨', '🛍️',
-  '👔', '👗', '👕', '💇', '💇‍♀️', '🔥', '🅿️', '🧹', '☁️', '📋', '✅', '📝',
-  '📸', '💝', '🎵', '📊', '🛡️', '🔄',
+  'sun', 'fire', 'sunny', 'rain', 'snow', 'snowflake', 'wind',
+  // Interface
+  'shield', 'flag', 'info', 'tick', 'cross', 'sync', 'search', 'setting', 'dashboard', 'calendar', 'clock', 'pin', 'map', 'mail', 'zap',
 ];
 
 // Built-in category types - matches CSV categories
@@ -81,34 +80,34 @@ export type EnvelopeCategory = BuiltInCategory | string;
 // Category info structure
 export interface CategoryInfo {
   label: string;
-  icon: string;
+  icon: string; // Now uses icon keys instead of emojis
   isCustom?: boolean;
 }
 
 // Category labels - alphabetically sorted (My Budget Way always first in display)
 export const CATEGORY_LABELS: Record<BuiltInCategory, CategoryInfo> = {
-  'my-budget-way': { label: 'The My Budget Way', icon: '✨' },
-  bank: { label: 'Bank', icon: '🏦' },
-  celebrations: { label: 'Celebrations', icon: '🎉' },
-  extras: { label: 'Extras', icon: '🛍️' },
-  giving: { label: 'Giving', icon: '❤️' },
-  goals: { label: 'Goals', icon: '🎯' },
-  health: { label: 'Health', icon: '🏥' },
-  hobbies: { label: 'Hobbies', icon: '🏉' },
-  household: { label: 'Household', icon: '🏠' },
-  insurance: { label: 'Insurance', icon: '🛡️' },
-  personal: { label: 'Personal', icon: '💅' },
-  'phone-internet': { label: 'Phone/Internet', icon: '📱' },
-  school: { label: 'School', icon: '🏫' },
-  subscriptions: { label: 'Subscriptions', icon: '📺' },
-  vehicles: { label: 'Vehicles', icon: '🚗' },
+  'my-budget-way': { label: 'The My Budget Way', icon: 'envelope' },
+  bank: { label: 'Bank', icon: 'piggy-bank' },
+  celebrations: { label: 'Celebrations', icon: 'confetti' },
+  extras: { label: 'Extras', icon: 'bag' },
+  giving: { label: 'Giving', icon: 'tip-jar' },
+  goals: { label: 'Goals', icon: 'currency-circle-dollar' },
+  health: { label: 'Health', icon: 'bandaids' },
+  hobbies: { label: 'Hobbies', icon: 'person-simple' },
+  household: { label: 'Household', icon: 'house' },
+  insurance: { label: 'Insurance', icon: 'shield-check' },
+  personal: { label: 'Personal', icon: 'user-rectangle' },
+  'phone-internet': { label: 'Phone/Internet', icon: 'cell-tower' },
+  school: { label: 'School', icon: 'buildings' },
+  subscriptions: { label: 'Subscriptions', icon: 'airplay' },
+  vehicles: { label: 'Vehicles', icon: 'tire' },
 };
 
 // Custom category structure
 export interface CustomCategory {
   id: string; // e.g., 'custom-1234567890'
   label: string;
-  icon: string;
+  icon: string; // Icon key
 }
 
 // Helper to get category info (built-in or custom)
@@ -128,12 +127,13 @@ export function getCategoryInfo(
   }
 
   // Fallback
-  return { label: 'Unknown', icon: '📦', isCustom: true };
+  return { label: 'Unknown', icon: 'box', isCustom: true };
 }
 
 /**
  * The Master List - Comprehensive household expenses
  * Based on CSV template list for beta testing
+ * Now uses Phosphor icon keys instead of emojis
  */
 export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   // ========== THE MY BUDGET WAY ==========
@@ -144,7 +144,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'credit-card-holding',
     name: 'Credit Card Holding',
-    icon: '💳',
+    icon: 'card',
     category: 'my-budget-way',
     priority: null,
     subtype: 'tracking',
@@ -155,7 +155,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'starter-stash',
     name: 'Starter Stash',
-    icon: '🌱',
+    icon: 'plant',
     category: 'my-budget-way',
     priority: 'essential',
     subtype: 'goal',
@@ -166,7 +166,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'debt-destroyer',
     name: 'Debt Destroyer',
-    icon: '💪',
+    icon: 'chart-line-down',
     category: 'my-budget-way',
     priority: 'essential',
     subtype: 'debt',
@@ -177,7 +177,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'safety-net',
     name: 'Safety Net',
-    icon: '🛡️',
+    icon: 'potted-plant',
     category: 'my-budget-way',
     priority: 'essential',
     subtype: 'goal',
@@ -191,7 +191,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'future-fund',
     name: 'Future Fund',
-    icon: '📈',
+    icon: 'tree',
     category: 'my-budget-way',
     priority: 'important',
     subtype: 'savings',
@@ -202,7 +202,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'my-budget-mate',
     name: 'My Budget Mate',
-    icon: '✨',
+    icon: 'envelope-simple',
     category: 'my-budget-way',
     priority: 'essential',
     subtype: 'bill',
@@ -213,7 +213,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'surplus',
     name: 'Surplus',
-    icon: '💰',
+    icon: 'tip-jar',
     category: 'my-budget-way',
     priority: null,
     subtype: 'tracking',
@@ -226,7 +226,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'kids-pocket-money',
     name: 'Kids Pocket Money',
-    icon: '👧',
+    icon: 'hand-coins',
     category: 'bank',
     priority: 'important',
     subtype: 'spending',
@@ -234,7 +234,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'work-bonus',
     name: 'Work Bonus',
-    icon: '🎁',
+    icon: 'briefcase',
     category: 'bank',
     priority: null,
     subtype: 'tracking',
@@ -242,7 +242,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'ird-refunds',
     name: 'IRD Refunds',
-    icon: '💵',
+    icon: 'swap',
     category: 'bank',
     priority: null,
     subtype: 'tracking',
@@ -250,7 +250,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'reimbursements',
     name: 'Reimbursements',
-    icon: '🔄',
+    icon: 'receipt',
     category: 'bank',
     priority: null,
     subtype: 'tracking',
@@ -258,7 +258,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'credit-card-fees',
     name: 'Credit Card Fees',
-    icon: '💳',
+    icon: 'card',
     category: 'bank',
     priority: 'essential',
     subtype: 'bill',
@@ -266,7 +266,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'mortgage-1',
     name: 'Mortgage 1',
-    icon: '🏡',
+    icon: 'house-line',
     category: 'bank',
     priority: 'essential',
     subtype: 'bill',
@@ -276,7 +276,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'mortgage-2',
     name: 'Mortgage 2',
-    icon: '🏡',
+    icon: 'house-line',
     category: 'bank',
     priority: 'essential',
     subtype: 'bill',
@@ -286,7 +286,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'christmas',
     name: 'Christmas',
-    icon: '🎄',
+    icon: 'tree-evergreen',
     category: 'celebrations',
     priority: 'discretionary',
     subtype: 'savings',
@@ -294,7 +294,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'birthdays',
     name: 'Birthdays',
-    icon: '🎂',
+    icon: 'cake',
     category: 'celebrations',
     priority: 'discretionary',
     subtype: 'savings',
@@ -302,7 +302,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'easter',
     name: 'Easter',
-    icon: '🐰',
+    icon: 'cross',
     category: 'celebrations',
     priority: 'discretionary',
     subtype: 'savings',
@@ -310,7 +310,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'mother-fathers-days',
     name: "Mother & Father's Days",
-    icon: '🌸',
+    icon: 'flower-tulip',
     category: 'celebrations',
     priority: 'discretionary',
     subtype: 'savings',
@@ -318,7 +318,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'religious-festivals',
     name: 'Religious Festivals',
-    icon: '🕯️',
+    icon: 'flame',
     category: 'celebrations',
     priority: 'discretionary',
     subtype: 'savings',
@@ -326,7 +326,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'gifts-general',
     name: 'Gifts',
-    icon: '🎁',
+    icon: 'gift',
     category: 'celebrations',
     priority: 'important',
     subtype: 'savings',
@@ -337,7 +337,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'hair',
     name: 'Hair',
-    icon: '💇',
+    icon: 'scissors',
     category: 'personal',
     priority: 'important',
     subtype: 'spending',
@@ -346,7 +346,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'kids-hair',
     name: "Kid's Hair",
-    icon: '💇‍♀️',
+    icon: 'scissors',
     category: 'personal',
     priority: 'important',
     subtype: 'spending',
@@ -356,7 +356,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'beauty-treatments',
     name: 'Beauty Treatments',
-    icon: '💅',
+    icon: 'eye-closed',
     category: 'personal',
     priority: 'discretionary',
     subtype: 'spending',
@@ -365,7 +365,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'makeup',
     name: 'Makeup',
-    icon: '💄',
+    icon: 'star',
     category: 'personal',
     priority: 'discretionary',
     subtype: 'spending',
@@ -373,7 +373,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'clothing',
     name: 'Clothing',
-    icon: '👔',
+    icon: 'coat-hanger',
     category: 'personal',
     priority: 'important',
     subtype: 'spending',
@@ -382,7 +382,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'kids-clothing',
     name: "Kid's Clothing",
-    icon: '👕',
+    icon: 't-shirt',
     category: 'personal',
     priority: 'important',
     subtype: 'spending',
@@ -394,7 +394,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'fun-money',
     name: 'Fun Money',
-    icon: '🎉',
+    icon: 'wallet',
     category: 'extras',
     priority: 'discretionary',
     subtype: 'spending',
@@ -402,7 +402,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'takeaways-restaurants',
     name: 'Takeaways/Restaurants',
-    icon: '🍽️',
+    icon: 'cutlery',
     category: 'extras',
     priority: 'discretionary',
     subtype: 'spending',
@@ -410,7 +410,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'holidays',
     name: 'Holiday Goal',
-    icon: '✈️',
+    icon: 'plane',
     category: 'extras',
     priority: 'important',
     subtype: 'goal',
@@ -419,7 +419,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'books-learning',
     name: 'Books/Learning',
-    icon: '📚',
+    icon: 'book',
     category: 'extras',
     priority: 'discretionary',
     subtype: 'spending',
@@ -429,7 +429,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'donations',
     name: 'Donations',
-    icon: '❤️',
+    icon: 'heart',
     category: 'giving',
     priority: 'discretionary',
     subtype: 'spending',
@@ -439,7 +439,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'medication',
     name: 'Medication',
-    icon: '💊',
+    icon: 'pills',
     category: 'health',
     priority: 'essential',
     subtype: 'spending',
@@ -447,7 +447,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'doctor',
     name: 'Doctor',
-    icon: '🩺',
+    icon: 'stethoscope',
     category: 'health',
     priority: 'essential',
     subtype: 'spending',
@@ -455,7 +455,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'dentist',
     name: 'Dentist',
-    icon: '🦷',
+    icon: 'tooth',
     category: 'health',
     priority: 'essential',
     subtype: 'spending',
@@ -463,7 +463,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'glasses-optometrist',
     name: 'Glasses/Optometrist',
-    icon: '👓',
+    icon: 'user',
     category: 'health',
     priority: 'important',
     subtype: 'savings',
@@ -471,7 +471,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'physio-massage',
     name: 'Physio/Massage',
-    icon: '💆',
+    icon: 'person-simple-circle',
     category: 'health',
     priority: 'important',
     subtype: 'spending',
@@ -479,7 +479,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'gym-membership',
     name: 'Gym Membership',
-    icon: '💪',
+    icon: 'heart-beat',
     category: 'health',
     priority: 'important',
     subtype: 'bill',
@@ -489,7 +489,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'sport-dance',
     name: 'Sport/Dance',
-    icon: '🏉',
+    icon: 'person-simple-circle',
     category: 'hobbies',
     priority: 'important',
     subtype: 'spending',
@@ -501,7 +501,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'rent-board',
     name: 'Rent/Board',
-    icon: '🏠',
+    icon: 'home',
     category: 'household',
     priority: 'essential',
     subtype: 'bill',
@@ -509,7 +509,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'rates',
     name: 'Rates',
-    icon: '🏡',
+    icon: 'park',
     category: 'household',
     priority: 'essential',
     subtype: 'bill',
@@ -517,7 +517,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'groceries',
     name: 'Groceries',
-    icon: '🛒',
+    icon: 'basket',
     category: 'household',
     priority: 'essential',
     subtype: 'spending',
@@ -525,7 +525,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'electricity',
     name: 'Electricity',
-    icon: '⚡',
+    icon: 'lightbulb',
     category: 'household',
     priority: 'essential',
     subtype: 'bill',
@@ -533,7 +533,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'firewood',
     name: 'Firewood',
-    icon: '🔥',
+    icon: 'fire',
     category: 'household',
     priority: 'essential',
     subtype: 'spending',
@@ -541,7 +541,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'water',
     name: 'Water',
-    icon: '💧',
+    icon: 'water',
     category: 'household',
     priority: 'essential',
     subtype: 'bill',
@@ -549,7 +549,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'pet-care',
     name: 'Pet Care',
-    icon: '🐾',
+    icon: 'heart',
     category: 'household',
     priority: 'important',
     subtype: 'spending',
@@ -559,7 +559,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'drycleaning',
     name: 'Drycleaning',
-    icon: '👔',
+    icon: 'washing-machine',
     category: 'household',
     priority: 'discretionary',
     subtype: 'spending',
@@ -567,15 +567,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'parking',
     name: 'Parking',
-    icon: '🅿️',
-    category: 'household',
-    priority: 'important',
-    subtype: 'spending',
-  },
-  {
-    id: 'household-supplies',
-    name: 'Household Supplies',
-    icon: '🧹',
+    icon: 'letter-circle-p',
     category: 'household',
     priority: 'important',
     subtype: 'spending',
@@ -583,7 +575,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'home-maintenance',
     name: 'Home Maintenance',
-    icon: '🔧',
+    icon: 'paint-brush-household',
     category: 'household',
     priority: 'essential',
     subtype: 'savings',
@@ -591,7 +583,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'garden-lawn',
     name: 'Garden/Lawn',
-    icon: '🌱',
+    icon: 'leaf',
     category: 'household',
     priority: 'important',
     subtype: 'savings',
@@ -599,7 +591,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'technology-electronics',
     name: 'Technology/Electronics',
-    icon: '💻',
+    icon: 'laptop',
     category: 'household',
     priority: 'important',
     subtype: 'savings',
@@ -609,7 +601,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'car-insurance',
     name: 'Car Insurance',
-    icon: '🚗',
+    icon: 'car-profile',
     category: 'insurance',
     priority: 'essential',
     subtype: 'bill',
@@ -619,7 +611,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'contents-insurance',
     name: 'Contents Insurance',
-    icon: '🏠',
+    icon: 'sketch-logo',
     category: 'insurance',
     priority: 'essential',
     subtype: 'bill',
@@ -627,7 +619,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'health-insurance',
     name: 'Health Insurance',
-    icon: '🏥',
+    icon: 'pulse',
     category: 'insurance',
     priority: 'essential',
     subtype: 'bill',
@@ -635,7 +627,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'house-insurance',
     name: 'House Insurance',
-    icon: '🏡',
+    icon: 'house-simple',
     category: 'insurance',
     priority: 'essential',
     subtype: 'bill',
@@ -643,7 +635,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'life-mortgage-protection',
     name: 'Life & Mortgage Protection',
-    icon: '👨‍👩‍👧',
+    icon: 'user-circle-check',
     category: 'insurance',
     priority: 'essential',
     subtype: 'bill',
@@ -651,7 +643,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'pet-insurance',
     name: 'Pet Insurance',
-    icon: '🐕',
+    icon: 'shield-star',
     category: 'insurance',
     priority: 'important',
     subtype: 'bill',
@@ -663,7 +655,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'cellphone',
     name: 'Cellphone',
-    icon: '📱',
+    icon: 'device-mobile-speaker',
     category: 'phone-internet',
     priority: 'essential',
     subtype: 'bill',
@@ -673,7 +665,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'internet',
     name: 'Internet',
-    icon: '🌐',
+    icon: 'wifi-high',
     category: 'phone-internet',
     priority: 'essential',
     subtype: 'bill',
@@ -683,7 +675,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'school-fees',
     name: 'School Fees',
-    icon: '🏫',
+    icon: 'backpack',
     category: 'school',
     priority: 'essential',
     subtype: 'bill',
@@ -693,7 +685,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'school-uniform',
     name: 'School Uniform',
-    icon: '👕',
+    icon: 'shirt-folded',
     category: 'school',
     priority: 'important',
     subtype: 'bill',
@@ -703,7 +695,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'school-stationery',
     name: 'School Stationery',
-    icon: '📝',
+    icon: 'pencil',
     category: 'school',
     priority: 'important',
     subtype: 'bill',
@@ -713,7 +705,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'school-activities',
     name: 'School Activities',
-    icon: '⚽',
+    icon: 'tent',
     category: 'school',
     priority: 'important',
     subtype: 'bill',
@@ -723,7 +715,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'school-photos',
     name: 'School Photos',
-    icon: '📸',
+    icon: 'user-rectangle',
     category: 'school',
     priority: 'discretionary',
     subtype: 'bill',
@@ -731,7 +723,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'school-donations',
     name: 'School Donations',
-    icon: '💝',
+    icon: 'hand-deposit',
     category: 'school',
     priority: 'discretionary',
     subtype: 'bill',
@@ -741,7 +733,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'apple-storage',
     name: 'Apple Storage',
-    icon: '☁️',
+    icon: 'apple-logo',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -749,7 +741,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'netflix',
     name: 'Netflix',
-    icon: '📺',
+    icon: 'monitor-play',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -757,7 +749,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'sky-tv',
     name: 'Sky TV',
-    icon: '📺',
+    icon: 'television',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -765,7 +757,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'spotify',
     name: 'Spotify',
-    icon: '🎵',
+    icon: 'spotify-logo',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -773,7 +765,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'disney',
     name: 'Disney',
-    icon: '🎬',
+    icon: 'castle-turret',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -781,7 +773,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'neon',
     name: 'Neon',
-    icon: '📺',
+    icon: 'monitor-play',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -789,7 +781,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'gaming',
     name: 'Gaming',
-    icon: '🎮',
+    icon: 'game-controller',
     category: 'subscriptions',
     priority: 'discretionary',
     subtype: 'bill',
@@ -799,7 +791,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'petrol',
     name: 'Petrol',
-    icon: '⛽',
+    icon: 'car',
     category: 'vehicles',
     priority: 'essential',
     subtype: 'bill',
@@ -807,7 +799,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'vehicle-maintenance',
     name: 'Car Maintenance',
-    icon: '🔧',
+    icon: 'car-battery',
     category: 'vehicles',
     priority: 'essential',
     subtype: 'savings',
@@ -815,7 +807,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'registration',
     name: 'Car Registration',
-    icon: '📋',
+    icon: 'road-horizon',
     category: 'vehicles',
     priority: 'essential',
     subtype: 'bill',
@@ -825,7 +817,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'wof',
     name: 'WOF',
-    icon: '✅',
+    icon: 'sticker',
     category: 'vehicles',
     priority: 'essential',
     subtype: 'bill',
@@ -835,7 +827,7 @@ export const MASTER_ENVELOPE_LIST: MasterEnvelope[] = [
   {
     id: 'car-replacement-fund',
     name: 'Car Replacement Fund',
-    icon: '🚙',
+    icon: 'jeep',
     category: 'vehicles',
     priority: 'important',
     subtype: 'goal',

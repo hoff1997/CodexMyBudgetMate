@@ -17,7 +17,7 @@ import { formatCurrency } from "@/lib/finance";
 import { add } from "date-fns";
 import { CalendarIcon, RefreshCcw, X } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
-import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+import { IconPicker } from "@/components/onboarding/icon-picker";
 
 type CategoryOption = { id: string; name: string };
 
@@ -227,10 +227,9 @@ export function EnvelopeEditSheet({
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-secondary">Icon</Label>
-                <FluentEmojiPicker
-                  selectedEmoji={form.icon}
-                  onEmojiSelect={(emoji) => setForm((prev) => prev && { ...prev, icon: emoji })}
-                  insideDialog
+                <IconPicker
+                  selectedIcon={form.icon || "wallet"}
+                  onIconSelect={(icon) => setForm((prev) => prev && { ...prev, icon })}
                 />
               </div>
 

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, ChevronRight, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/finance";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/cn";
 import { getProgressColor } from "@/lib/utils/progress-colors";
@@ -264,7 +265,7 @@ function BillRow({ bill }: { bill: ProcessedBill }) {
 
       {/* Bill Name + Icon + Target */}
       <div className="flex items-center gap-1.5 min-w-0 pr-1">
-        <span className="text-sm flex-shrink-0">{bill.icon || "💰"}</span>
+        <EnvelopeIcon icon={bill.icon || "wallet"} size={18} />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium text-text-dark truncate">{bill.name}</p>
           <p className="text-[10px] text-text-light">{formatCurrency(bill.targetAmount)}</p>

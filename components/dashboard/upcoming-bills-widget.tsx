@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { formatCurrency } from "@/lib/finance";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import {
   calculateEnvelopePrediction,
   type Envelope,
@@ -203,7 +204,7 @@ function BillItem({ bill }: { bill: UpcomingBill }) {
     <div className="rounded-lg border border-border bg-background p-4">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">{envelope.icon || "💰"}</span>
+          <EnvelopeIcon icon={envelope.icon || "wallet"} size={28} />
           <div>
             <h4 className="font-medium text-secondary">{envelope.name}</h4>
             <p className="text-xs text-muted-foreground">

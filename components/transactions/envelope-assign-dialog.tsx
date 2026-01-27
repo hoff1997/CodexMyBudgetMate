@@ -19,9 +19,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Loader2, Wallet, Plus, ArrowLeft } from "lucide-react";
+import { Check, Loader2, Plus, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { toast } from "sonner";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Envelope {
   id: string;
@@ -39,7 +40,7 @@ interface EnvelopeAssignDialogProps {
   merchantName?: string;
 }
 
-const QUICK_ICONS = ["💰", "🛒", "🍔", "🚗", "🏠", "⚡️", "💳", "✈️", "🎁", "📦"] as const;
+const QUICK_ICONS = ["wallet", "basket", "burger", "car", "home", "zap", "card", "plane", "gift", "box"] as const;
 
 export function EnvelopeAssignDialog({
   open,
@@ -218,13 +219,13 @@ export function EnvelopeAssignDialog({
                     type="button"
                     onClick={() => setNewEnvelopeIcon(icon)}
                     className={cn(
-                      "w-10 h-10 rounded-lg border text-xl flex items-center justify-center transition-colors",
+                      "w-10 h-10 rounded-lg border flex items-center justify-center transition-colors",
                       newEnvelopeIcon === icon
                         ? "border-[#7A9E9A] bg-[#E2EEEC]"
                         : "border-[#E5E7EB] hover:border-[#9CA3AF]"
                     )}
                   >
-                    {icon}
+                    <EnvelopeIcon icon={icon} size={24} />
                   </button>
                 ))}
               </div>
@@ -306,11 +307,7 @@ export function EnvelopeAssignDialog({
                                 : "opacity-0"
                             )}
                           />
-                          {envelope.icon ? (
-                            <span className="text-base">{envelope.icon}</span>
-                          ) : (
-                            <Wallet className="h-4 w-4 text-[#7A9E9A]" />
-                          )}
+                          <EnvelopeIcon icon={envelope.icon || "wallet"} size={18} />
                           <span className="flex-1 text-[#3D3D3D]">{envelope.name}</span>
                           {envelope.current_amount !== undefined && (
                             <span className="text-xs text-[#9CA3AF]">

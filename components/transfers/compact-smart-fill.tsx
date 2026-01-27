@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import type { SummaryEnvelope, PriorityLevel } from "@/components/layout/envelopes/envelope-summary-card";
 import { CheckCircle, Loader2, ArrowRight, X } from "lucide-react";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface CompactSmartFillProps {
   envelopes: SummaryEnvelope[];
@@ -291,7 +292,7 @@ export function CompactSmartFill({
                     : "bg-silver-very-light text-text-medium border border-silver-light hover:border-sage-light"
                 )}
               >
-                <span>{source.icon}</span>
+                <EnvelopeIcon icon={source.icon || "wallet"} size={16} />
                 <span className="font-medium">{source.name}</span>
                 <span className="text-xs">+{formatCurrency(source.surplus)}</span>
                 {source.selected && <CheckCircle className="h-3.5 w-3.5 ml-0.5" />}
@@ -400,7 +401,7 @@ export function CompactSmartFill({
 
                         {/* Envelope */}
                         <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <span className="text-sm flex-shrink-0">{dest.icon}</span>
+                          <EnvelopeIcon icon={dest.icon || "wallet"} size={16} />
                           <span className="text-sm font-medium text-text-dark truncate">
                             {dest.name}
                           </span>

@@ -23,6 +23,7 @@ import { getEnvelopeStatus } from "@/lib/finance";
 import { getProgressColor } from "@/lib/utils/progress-colors";
 import { calculatePaysUntilDue, getNextDueDate, type PaySchedule } from "@/lib/utils/pays-until-due";
 import { PaysUntilDueBadge, PaysUntilDuePlaceholder } from "@/components/shared/pays-until-due-badge";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 // Category icon lookup map (used when database doesn't have icons)
 export const CATEGORY_ICONS: Record<string, string> = {
@@ -288,7 +289,7 @@ function SortableEnvelopeRow({
 
       {/* Envelope Name + Icon + Target/Frequency */}
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-base flex-shrink-0">{envelope.icon ?? "💼"}</span>
+        <EnvelopeIcon icon={envelope.icon || "wallet"} size={18} />
         <span className="font-medium text-text-dark truncate">{envelope.name}</span>
         {!isSpending && target > 0 && (
           <span className="text-text-light text-xs flex-shrink-0">

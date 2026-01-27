@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Archive, RotateCcw, Calendar, FileText, AlertCircle, ArrowLeft, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -150,9 +151,7 @@ export function ArchivedEnvelopesClient() {
                 <tr key={envelope.id} className="hover:bg-silver-very-light/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      {envelope.icon && (
-                        <span className="text-lg">{envelope.icon}</span>
-                      )}
+                      <EnvelopeIcon icon={envelope.icon || "wallet"} size={20} />
                       <span className="font-medium text-text-dark">
                         {envelope.name}
                       </span>

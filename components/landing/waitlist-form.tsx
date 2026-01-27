@@ -178,7 +178,7 @@ export function WaitlistForm({
         )}
       </form>
       <p className="text-text-light text-sm mt-3">
-        No spam, promise. Just a heads up when we&apos;re ready for you.
+        No spam. Just a heads up when we&apos;re ready.
       </p>
     </div>
   );

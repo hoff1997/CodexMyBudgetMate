@@ -13,6 +13,7 @@ import { getProgressColor } from "@/lib/utils/progress-colors";
 import { cn } from "@/lib/cn";
 import type { SmartFillDestination } from "@/lib/utils/smart-fill-calculator";
 import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface SmartFillDestinationListProps {
   destinations: SmartFillDestination[];
@@ -192,7 +193,7 @@ function DestinationRow({
     <div className="rounded-lg bg-white/80 p-3 border border-white">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="text-lg flex-shrink-0">{destination.icon || "💰"}</span>
+          <EnvelopeIcon icon={destination.icon || "wallet"} size={20} />
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-dark truncate">
               {destination.name}

@@ -1,12 +1,5 @@
 "use client";
 
-/**
- * Icon Picker Component
- *
- * Uses Phosphor icons for envelope icons.
- * Icons are stored as keys (e.g., "groceries", "car") and rendered as SVG components.
- */
-
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +10,11 @@ import {
 import {
   PhosphorIcon,
   getIconCategories,
+  getPhosphorIcon,
   ICON_COLORS,
 } from "@/lib/icons/phosphor-icon-map";
 
-interface IconPickerProps {
+interface DoodleIconPickerProps {
   selectedIcon: string;
   onIconSelect: (icon: string) => void;
   disabled?: boolean;
@@ -54,13 +48,13 @@ const CATEGORY_ORDER = [
   "Interface",
 ];
 
-export function IconPicker({
+export function DoodleIconPicker({
   selectedIcon,
   onIconSelect,
   disabled,
   size = "lg",
   color = ICON_COLORS.sage,
-}: IconPickerProps) {
+}: DoodleIconPickerProps) {
   const [open, setOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("Finance");
 

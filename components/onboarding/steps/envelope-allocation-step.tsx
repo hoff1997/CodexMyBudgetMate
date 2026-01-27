@@ -97,7 +97,8 @@ import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-
 import { DebtAllocationDialog } from "@/components/debt/debt-allocation-dialog";
 import { AllocationTutorial } from "./allocation-tutorial";
 import type { DebtItem, DebtItemInput } from "@/lib/types/debt";
-import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+import { IconPicker } from "@/components/onboarding/icon-picker";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface CustomCategory {
   id: string;
@@ -1325,9 +1326,9 @@ export function EnvelopeAllocationStep({
               const showIconHere = !((isSavingsOrGoal && hasTargetAmount) || env.isLeveled || env.isCelebration || hasDebtItems);
 
               return showIconHere ? (
-                <FluentEmojiPicker
-                  selectedEmoji={env.icon}
-                  onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                <IconPicker
+                  selectedIcon={env.icon || "wallet"}
+                  onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
                   size="md"
                 />
               ) : (
@@ -1465,9 +1466,9 @@ export function EnvelopeAllocationStep({
             if (isSavingsOrGoal && hasTargetAmount) {
               return (
                 <div className="flex items-center justify-center gap-1">
-                  <FluentEmojiPicker
-                    selectedEmoji={env.icon}
-                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                  <IconPicker
+                    selectedIcon={env.icon || "wallet"}
+                    onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
                     size="sm"
                   />
                   <span className="text-[10px] text-sage-dark font-medium" title={`Target: ${formatCurrency(env.targetAmount)}`}>
@@ -1481,9 +1482,9 @@ export function EnvelopeAllocationStep({
             if (env.isLeveled) {
               return (
                 <div className="flex items-center justify-center gap-1">
-                  <FluentEmojiPicker
-                    selectedEmoji={env.icon}
-                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                  <IconPicker
+                    selectedIcon={env.icon || "wallet"}
+                    onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
                     size="sm"
                   />
                   <TooltipProvider>
@@ -1510,9 +1511,9 @@ export function EnvelopeAllocationStep({
             if (env.isCelebration) {
               return (
                 <div className="flex items-center justify-center gap-1">
-                  <FluentEmojiPicker
-                    selectedEmoji={env.icon}
-                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                  <IconPicker
+                    selectedIcon={env.icon || "wallet"}
+                    onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
                     size="sm"
                   />
                   <TooltipProvider>
@@ -1539,9 +1540,9 @@ export function EnvelopeAllocationStep({
             if (hasDebtItems) {
               return (
                 <div className="flex items-center justify-center gap-1">
-                  <FluentEmojiPicker
-                    selectedEmoji={env.icon}
-                    onEmojiSelect={(emoji) => handleEnvelopeChange(env.id, 'icon', emoji)}
+                  <IconPicker
+                    selectedIcon={env.icon || "wallet"}
+                    onIconSelect={(icon) => handleEnvelopeChange(env.id, 'icon', icon)}
                     size="sm"
                   />
                   <TooltipProvider>
@@ -2063,7 +2064,7 @@ export function EnvelopeAllocationStep({
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <span className="text-lg">{categoryDisplay.icon}</span>
+                  <EnvelopeIcon icon={categoryDisplay.icon || "folder"} size={20} />
                   <span className="font-semibold text-gray-700">{categoryDisplay.label}</span>
                   <span className="text-sm text-muted-foreground">
                     ({countInCategory(category)})
@@ -2458,11 +2459,19 @@ export function EnvelopeAllocationStep({
                     const display = getCategoryDisplay(cat);
                     return (
                       <SelectItem key={cat} value={cat}>
-                        {display.icon} {display.label}
+                        <span className="flex items-center gap-2">
+                          <EnvelopeIcon icon={display.icon || "folder"} size={16} />
+                          {display.label}
+                        </span>
                       </SelectItem>
                     );
                   })}
-                  <SelectItem value="other">📦 Other</SelectItem>
+                  <SelectItem value="other">
+                    <span className="flex items-center gap-2">
+                      <EnvelopeIcon icon="box" size={16} />
+                      Other
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2493,7 +2502,7 @@ export function EnvelopeAllocationStep({
             return (
               <div className="bg-white border border-sage rounded-lg shadow-lg px-3 py-2 flex items-center gap-2">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg">{categoryDisplay.icon}</span>
+                <EnvelopeIcon icon={categoryDisplay.icon || "folder"} size={20} />
                 <span className="font-semibold text-sm">{categoryDisplay.label}</span>
               </div>
             );
@@ -2501,7 +2510,7 @@ export function EnvelopeAllocationStep({
         ) : activeDragEnvelope ? (
           <div className="bg-white border rounded-lg shadow-lg p-2 opacity-90">
             <div className="flex items-center gap-2">
-              <span className="text-base">{activeDragEnvelope.icon}</span>
+              <EnvelopeIcon icon={activeDragEnvelope.icon || "wallet"} size={20} />
               <span className="text-sm font-medium">{activeDragEnvelope.name}</span>
             </div>
           </div>
@@ -2534,11 +2543,10 @@ export function EnvelopeAllocationStep({
           <div className="space-y-2">
             <Label>Icon</Label>
             <div className="flex items-center gap-3">
-              <FluentEmojiPicker
-                selectedEmoji={newCategory.icon}
-                onEmojiSelect={(emoji) => setNewCategory(prev => ({ ...prev, icon: emoji }))}
+              <IconPicker
+                selectedIcon={newCategory.icon || "folder"}
+                onIconSelect={(icon) => setNewCategory(prev => ({ ...prev, icon: icon }))}
                 size="lg"
-                insideDialog
               />
               <span className="text-sm text-muted-foreground">
                 Click to choose an icon for your category
@@ -2572,10 +2580,9 @@ export function EnvelopeAllocationStep({
           {/* Icon Picker */}
           <div className="space-y-2">
             <Label>Icon</Label>
-            <FluentEmojiPicker
-              selectedEmoji={editingCategoryIcon}
-              onEmojiSelect={setEditingCategoryIcon}
-              insideDialog
+            <IconPicker
+              selectedIcon={editingCategoryIcon || "folder"}
+              onIconSelect={setEditingCategoryIcon}
             />
           </div>
 

@@ -17,6 +17,7 @@ import { cn } from "@/lib/cn";
 import type { SummaryEnvelope, PriorityLevel } from "@/components/layout/envelopes/envelope-summary-card";
 import { Loader2, ChevronDown, Check } from "lucide-react";
 import { toast } from "sonner";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface CompactManualTransferProps {
   envelopes: SummaryEnvelope[];
@@ -264,7 +265,7 @@ export function CompactManualTransfer({
                     >
                       {/* Envelope */}
                       <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <span className="text-sm flex-shrink-0">{dest.icon}</span>
+                        <EnvelopeIcon icon={dest.icon || "wallet"} size={16} />
                         <span className="text-sm font-medium text-text-dark truncate">
                           {dest.name}
                         </span>

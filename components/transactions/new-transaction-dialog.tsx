@@ -41,6 +41,7 @@ import {
 import { Upload, X, Store, Plus, ChevronDown, Check } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 const transactionSchema = z.object({
   amount: z.string().min(1, "Amount is required"),
@@ -361,9 +362,7 @@ export default function NewTransactionDialog({
                                 );
                                 return selectedEnvelope ? (
                                   <span className="flex items-center gap-2">
-                                    {selectedEnvelope.icon && (
-                                      <span>{selectedEnvelope.icon}</span>
-                                    )}
+                                    <EnvelopeIcon icon={selectedEnvelope.icon || "wallet"} size={16} />
                                     <span>{selectedEnvelope.name}</span>
                                     {merchantSuggestion &&
                                       selectedEnvelope.id ===
@@ -428,7 +427,7 @@ export default function NewTransactionDialog({
                                         : "opacity-0"
                                     }`}
                                   />
-                                  {envelope.icon && <span>{envelope.icon}</span>}
+                                  <EnvelopeIcon icon={envelope.icon || "wallet"} size={16} />
                                   <span className="flex-1 truncate">
                                     {envelope.name}
                                   </span>

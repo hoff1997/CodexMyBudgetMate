@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Envelope {
   id: string;
@@ -76,7 +77,7 @@ export function EnvelopeMonitorSelector({
               />
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">{envelope.icon || "📊"}</span>
+                  <EnvelopeIcon icon={envelope.icon || "analytics"} size={20} />
                 </div>
                 <Label
                   htmlFor={`envelope-${envelope.id}`}

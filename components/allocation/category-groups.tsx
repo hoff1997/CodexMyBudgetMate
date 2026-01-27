@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+import { IconPicker } from "@/components/onboarding/icon-picker";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Category {
   id: string;
@@ -319,10 +320,9 @@ export function CategoryGroups({
             {/* Icon picker */}
             <div className="space-y-2">
               <Label>Icon</Label>
-              <FluentEmojiPicker
-                selectedEmoji={editIcon}
-                onEmojiSelect={setEditIcon}
-                insideDialog
+              <IconPicker
+                selectedIcon={editIcon || "folder"}
+                onIconSelect={setEditIcon}
               />
             </div>
 

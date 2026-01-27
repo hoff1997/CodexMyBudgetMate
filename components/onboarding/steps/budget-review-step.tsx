@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Edit, AlertTriangle, CheckCircle2, Zap, ShoppingBag, Target, Plus, TrendingUp } from "lucide-react";
 import { RemyTip } from "@/components/onboarding/remy-tip";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import { useBudgetValidation } from "@/lib/hooks/use-budget-validation";
 import { AllocateSurplusDialog } from "@/components/dialogs/allocate-surplus-dialog";
 import { trackSurplusAllocation } from "@/lib/analytics/events";
@@ -130,7 +131,7 @@ export function BudgetReviewStep({
             <div className="space-y-1 text-sm">
               {billEnvelopes.map((env) => (
                 <div key={env.id} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{env.icon} {env.name}</span>
+                  <span className="text-muted-foreground flex items-center gap-1.5"><EnvelopeIcon icon={env.icon || "wallet"} size={16} /> {env.name}</span>
                   <span>${env.payCycleAmount?.toFixed(2)}</span>
                 </div>
               ))}
@@ -156,7 +157,7 @@ export function BudgetReviewStep({
             <div className="space-y-1 text-sm">
               {spendingEnvelopes.map((env) => (
                 <div key={env.id} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{env.icon} {env.name}</span>
+                  <span className="text-muted-foreground flex items-center gap-1.5"><EnvelopeIcon icon={env.icon || "wallet"} size={16} /> {env.name}</span>
                   <span>${env.payCycleAmount?.toFixed(2)}</span>
                 </div>
               ))}
@@ -182,7 +183,7 @@ export function BudgetReviewStep({
             <div className="space-y-1 text-sm">
               {savingsEnvelopes.map((env) => (
                 <div key={env.id} className="flex items-center justify-between">
-                  <span className="text-muted-foreground">{env.icon} {env.name}</span>
+                  <span className="text-muted-foreground flex items-center gap-1.5"><EnvelopeIcon icon={env.icon || "wallet"} size={16} /> {env.name}</span>
                   <span>${env.payCycleAmount?.toFixed(2)}</span>
                 </div>
               ))}

@@ -14,6 +14,8 @@ import { Trash2, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown, GripVertical, C
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { calculateOpeningBalance } from "@/lib/hooks/use-opening-balance-calculator";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
+import { IconPicker } from "@/components/onboarding/icon-picker";
 import type {
   UnifiedEnvelopeTableProps,
   UnifiedEnvelopeData,
@@ -781,18 +783,12 @@ function SortableTableRow({
         return mode === 'onboarding' ? (
           <td className="px-3 py-2.5">
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={`text-base hover:bg-muted rounded leading-none flex-shrink-0 ${isLocked ? 'pointer-events-none' : ''}`}
-                onClick={() => {
-                  if (isLocked) return;
-                  const newIcon = prompt('Enter emoji icon:', envelope.icon);
-                  if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
-                }}
+              <IconPicker
+                selectedIcon={envelope.icon || "wallet"}
+                onIconSelect={(newIcon) => onEnvelopeUpdate(envelope.id, { icon: newIcon })}
+                size="md"
                 disabled={isLocked}
-              >
-                {envelope.icon}
-              </button>
+              />
               <Input
                 value={getDisplayValue(envelope.id, 'name', envelope.name)}
                 onChange={(e) => handleCellChange(envelope.id, 'name', e.target.value)}
@@ -808,18 +804,12 @@ function SortableTableRow({
             {/* Icon - hidden for savings/goal with target (icon moves to Amount column) */}
             <td className="w-6 min-w-[24px] max-w-[24px] px-0 py-0">
               {!showIconInAmountColumn ? (
-                <button
-                  type="button"
-                  className={`text-sm hover:bg-muted rounded leading-none ${isLocked ? 'pointer-events-none' : ''}`}
-                  onClick={() => {
-                    if (isLocked) return;
-                    const newIcon = prompt('Enter emoji icon:', envelope.icon);
-                    if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
-                  }}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(newIcon) => onEnvelopeUpdate(envelope.id, { icon: newIcon })}
+                  size="sm"
                   disabled={isLocked}
-                >
-                  {envelope.icon}
-                </button>
+                />
               ) : (
                 <span className="text-muted-foreground text-[10px]">—</span>
               )}
@@ -912,19 +902,12 @@ function SortableTableRow({
             // For savings/goal with target: show icon + amount in a compact layout
             return (
               <div className="flex items-center justify-center gap-0.5">
-                <button
-                  type="button"
-                  className={`text-xs hover:bg-muted rounded leading-none flex-shrink-0 ${isLocked ? 'pointer-events-none' : ''}`}
-                  onClick={() => {
-                    if (isLocked) return;
-                    const newIcon = prompt('Enter emoji icon:', envelope.icon);
-                    if (newIcon) onEnvelopeUpdate(envelope.id, { icon: newIcon });
-                  }}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(newIcon) => onEnvelopeUpdate(envelope.id, { icon: newIcon })}
+                  size="sm"
                   disabled={isLocked}
-                  title={`${envelope.name} - Click to change icon`}
-                >
-                  {envelope.icon}
-                </button>
+                />
                 <span className="text-[10px] text-sage-dark font-medium" title={`Target: $${(envelope.targetAmount || 0).toFixed(2)}`}>
                   ✓
                 </span>

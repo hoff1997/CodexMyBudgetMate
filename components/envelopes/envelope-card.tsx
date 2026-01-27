@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Envelope {
   id: string;
@@ -57,7 +58,9 @@ export default function EnvelopeCard({ envelope, onClick }: EnvelopeCardProps) {
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center">
-          <span className="text-lg mr-2">{envelope.icon || "💰"}</span>
+          <span className="mr-2">
+            <EnvelopeIcon icon={envelope.icon || "wallet"} size={24} />
+          </span>
           <h3 className="font-medium text-foreground">{envelope.name}</h3>
         </div>
         {getStatusBadge()}

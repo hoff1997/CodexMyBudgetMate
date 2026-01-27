@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertCircle, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface UnbudgetedEnvelope {
   id: string;
@@ -147,9 +148,7 @@ export function EnvelopeResolutionDialog({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {envelope.icon && (
-                    <span className="text-2xl flex-shrink-0">{envelope.icon}</span>
-                  )}
+                  <EnvelopeIcon icon={envelope.icon || "wallet"} size={28} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-medium">{envelope.name}</h4>

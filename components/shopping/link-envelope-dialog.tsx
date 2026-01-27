@@ -12,6 +12,7 @@ import {
 import { Loader2, Wallet, Check, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/utils/format";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Envelope {
   id: string;
@@ -246,7 +247,7 @@ function EnvelopeOption({
           : "border-silver-light hover:border-sage-light"
       }`}
     >
-      <span className="text-xl">{envelope.icon || "💰"}</span>
+      <EnvelopeIcon icon={envelope.icon || "wallet"} size={24} />
       <div className="flex-1 min-w-0">
         <p className="font-medium text-text-dark truncate">{envelope.name}</p>
         <p className="text-sm text-text-medium">

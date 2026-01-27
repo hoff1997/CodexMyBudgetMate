@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { ChevronDown, Check, Plus, ArrowLeft, Loader2, Wallet } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { toast } from 'sonner';
+import { EnvelopeIcon } from '@/components/shared/envelope-icon';
 
 interface Envelope {
   id: string;
@@ -38,7 +39,7 @@ interface EnvelopeComboboxProps {
   disabled?: boolean;
 }
 
-const QUICK_ICONS = ['💰', '🛒', '🍔', '🚗', '🏠', '⚡️', '💳', '✈️', '🎁', '📦'] as const;
+const QUICK_ICONS = ['wallet', 'basket', 'burger', 'car', 'home', 'zap', 'card', 'plane', 'gift', 'box'] as const;
 type QuickIcon = typeof QUICK_ICONS[number];
 
 export function EnvelopeCombobox({
@@ -414,13 +415,13 @@ export function EnvelopeCombobox({
                     type="button"
                     onClick={() => setNewEnvelopeIcon(icon)}
                     className={cn(
-                      'w-8 h-8 rounded border text-base flex items-center justify-center transition-colors',
+                      'w-8 h-8 rounded border flex items-center justify-center transition-colors',
                       newEnvelopeIcon === icon
                         ? 'border-[#7A9E9A] bg-[#E2EEEC]'
                         : 'border-[#E5E7EB] hover:border-[#9CA3AF]'
                     )}
                   >
-                    {icon}
+                    <EnvelopeIcon icon={icon} size={20} />
                   </button>
                 ))}
               </div>
@@ -515,11 +516,7 @@ export function EnvelopeCombobox({
                                     value === env.id ? 'opacity-100' : 'opacity-0'
                                   )}
                                 />
-                                {env.icon ? (
-                                  <span className="text-base">{env.icon}</span>
-                                ) : (
-                                  <Wallet className="h-4 w-4 text-[#7A9E9A] shrink-0" />
-                                )}
+                                <EnvelopeIcon icon={env.icon || "wallet"} size={18} />
                                 <span className="flex-1 text-left text-[#3D3D3D] truncate">{env.name}</span>
                               </button>
                             );

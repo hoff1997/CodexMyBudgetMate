@@ -27,6 +27,7 @@ import { PaysUntilDueBadge, PaysUntilDuePlaceholder } from "@/components/shared/
 import { calculatePaysUntilDue, getNextDueDate, getPrimaryPaySchedule } from "@/lib/utils/pays-until-due";
 import { cn } from "@/lib/cn";
 import type { UnifiedEnvelopeData, IncomeSource } from "@/lib/types/unified-envelope";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -214,7 +215,7 @@ export function SnapshotView({
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2 flex-1">
-            {envelope.icon && <span className="text-xl">{envelope.icon}</span>}
+            <EnvelopeIcon icon={envelope.icon || "wallet"} size={24} />
             <div>
               <h4 className="font-medium text-text-dark">{envelope.name}</h4>
               <p className="text-xs text-text-medium">

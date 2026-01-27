@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Envelope {
   id: string;
@@ -157,7 +158,7 @@ export default function CondensedEnvelopeOverview({
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <span className="text-sm">{envelope.icon || "💰"}</span>
+                    <EnvelopeIcon icon={envelope.icon || "wallet"} size={18} />
                     <span className="font-medium text-sm text-foreground truncate">
                       {envelope.name}
                     </span>

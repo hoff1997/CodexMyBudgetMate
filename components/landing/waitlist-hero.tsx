@@ -18,38 +18,44 @@ export function WaitlistHero({ waitlistCount = 0 }: WaitlistHeroProps) {
           {/* Left: Content */}
           <div className="text-center md:text-left">
             {/* Coming soon badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold-light border border-gold rounded-full mb-6">
-              <span className="w-2 h-2 bg-gold rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-gold-dark">Coming Soon</span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#F3F4F6] border border-[#D1D5DB] rounded-full mb-6">
+              <span className="w-2 h-2 bg-[#9CA3AF] rounded-full animate-pulse" />
+              <span className="text-sm font-medium text-[#6B7280]">Coming Soon</span>
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-text-dark mb-6 leading-tight">
-              Finally, budgeting
-              <span className="text-sage"> built for Kiwis</span>
+              Kia Ora,
+              <br />
+              welcome to <span className="text-sage">My Budget Mate</span>
             </h1>
 
-            <p className="text-lg md:text-xl text-text-medium mb-8 leading-relaxed">
-              Fortnightly pay? Sorted. NZ bank connections? Sweet as. A budgeting app that actually
-              gets how we do money in Aotearoa.
+            <p className="text-base md:text-lg text-text-medium mb-4 leading-relaxed">
+              My Budget Mate uses envelope budgeting to help you tell your money where to go,
+              before you wonder where it went. Sync with your bank using trusted Akahu bank
+              connections.
+            </p>
+            <p className="text-base md:text-lg text-text-medium font-medium mb-8">
+              Your money. Your plan. Your pace - one pay cycle at a time.
             </p>
 
             {/* Remy's intro */}
             <div className="flex items-start gap-4 p-4 bg-sage-very-light border border-sage-light rounded-2xl mb-8">
-              <div className="relative w-12 h-12 flex-shrink-0">
+              <div className="relative w-16 h-16 md:w-[72px] md:h-[72px] rounded-full overflow-hidden flex-shrink-0 border-2 border-white shadow-sm bg-sage-light">
                 <Image
-                  src="/Images/remy-encouraging.png"
+                  src="/Images/remy-welcome.png"
                   alt="Remy"
                   fill
-                  className="object-contain"
+                  className="object-cover object-top"
                   quality={100}
                   unoptimized
+                  style={{ imageRendering: "auto" }}
                 />
               </div>
               <div>
                 <p className="text-sage-dark text-sm leading-relaxed">
-                  &quot;Hey! I&apos;m Remy, your financial coach. I&apos;m putting the finishing
-                  touches on something special for you. Pop your email in and I&apos;ll give you a
-                  shout when we&apos;re ready!&quot;
+                  &quot;Kia ora! I&apos;m Remy, your financial coach. We&apos;re almost ready to open
+                  the doors. Pop your email below and I&apos;ll give you a shout when it&apos;s
+                  time to get sorted.&quot;
                 </p>
                 <p className="text-sage text-xs mt-1 italic">- Remy</p>
               </div>
@@ -57,16 +63,6 @@ export function WaitlistHero({ waitlistCount = 0 }: WaitlistHeroProps) {
 
             {/* Waitlist form */}
             <WaitlistForm source="hero" variant="hero" />
-
-            {/* Social proof */}
-            {waitlistCount > 10 && (
-              <p className="text-text-medium text-sm mt-4">
-                <span className="font-semibold text-sage-dark">
-                  {waitlistCount.toLocaleString()}
-                </span>{" "}
-                Kiwis already on the waitlist
-              </p>
-            )}
           </div>
 
           {/* Right: Remy illustration */}

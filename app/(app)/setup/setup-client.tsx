@@ -41,6 +41,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Account name is required"),
@@ -531,7 +532,7 @@ export function SetupClient({ userId }: SetupClientProps) {
                           onClick={() => addCommonEnvelope(envelope)}
                         >
                           <div className="flex items-center space-x-2">
-                            <span className="text-lg">{envelope.icon}</span>
+                            <EnvelopeIcon icon={envelope.icon || "wallet"} size={20} />
                             <span>{envelope.name}</span>
                           </div>
                           <div className="text-right">
@@ -632,7 +633,7 @@ export function SetupClient({ userId }: SetupClientProps) {
                           className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
                         >
                           <div className="flex items-center space-x-3">
-                            <span className="text-lg">{envelope.icon}</span>
+                            <EnvelopeIcon icon={envelope.icon || "wallet"} size={20} />
                             <span className="font-medium">{envelope.name}</span>
                           </div>
                           <div className="flex items-center space-x-2">

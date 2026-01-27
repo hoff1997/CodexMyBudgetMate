@@ -86,7 +86,7 @@ export default function SignupPage() {
       <HydrationSafe className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
         <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
           <HydrationSafe className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-            <Link href="/" className="flex items-center">
+            <Link href="/" className="flex items-center gap-2">
               <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
             </Link>
           </HydrationSafe>
@@ -123,7 +123,7 @@ export default function SignupPage() {
     <HydrationSafe className="min-h-screen bg-gradient-to-br from-[#E2EEEC] via-white to-[#F3F4F6]">
       <header className="border-b border-[#E5E7EB] bg-white/80 backdrop-blur">
         <HydrationSafe className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center gap-2">
             <span className="text-xl font-semibold text-[#3D3D3D]">My Budget Mate</span>
           </Link>
           <Button asChild variant="ghost" size="sm" className="text-[#6B6B6B]">

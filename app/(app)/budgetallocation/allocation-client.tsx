@@ -58,7 +58,8 @@ import { GiftAllocationDialog } from "@/components/celebrations/gift-allocation-
 import { DebtAllocationDialog } from "@/components/debt/debt-allocation-dialog";
 import { Gift, CreditCard } from "lucide-react";
 import type { GiftRecipient, GiftRecipientInput } from "@/lib/types/celebrations";
-import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
+import { IconPicker } from "@/components/onboarding/icon-picker";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import type { DebtItem, DebtItemInput, LinkedCreditCard } from "@/lib/types/debt";
 import { useCelebrationReadiness, getEnvelopeReadiness, type CelebrationReadinessData } from "@/lib/hooks/use-celebration-readiness";
 import { CelebrationReadinessBadge, CelebrationReadinessPlaceholder } from "@/components/shared/celebration-readiness-badge";
@@ -2674,9 +2675,9 @@ function EnvelopeRow({
             <div className="flex items-center gap-1.5">
               {/* Envelope icon - clickable to edit (hidden when icon moves to Target) */}
               {showIconHere ? (
-                <FluentEmojiPicker
-                  selectedEmoji={envelope.icon}
-                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(icon) => onEnvelopeChange(envelope.id, 'icon', icon)}
                   size="sm"
                 />
               ) : (
@@ -2741,9 +2742,9 @@ function EnvelopeRow({
           if (isSavingsOrGoal && hasTargetAmount) {
             return (
               <div className="flex items-center justify-center gap-1">
-                <FluentEmojiPicker
-                  selectedEmoji={envelope.icon}
-                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(icon) => onEnvelopeChange(envelope.id, 'icon', icon)}
                   size="sm"
                 />
                 <span className="text-[10px] text-sage-dark font-medium" title={`Target: $${(envelope.targetAmount || 0).toFixed(2)}`}>
@@ -2757,9 +2758,9 @@ function EnvelopeRow({
           if (isLeveled && onLevelBillClick) {
             return (
               <div className="flex items-center justify-center gap-1 w-full">
-                <FluentEmojiPicker
-                  selectedEmoji={envelope.icon}
-                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(icon) => onEnvelopeChange(envelope.id, 'icon', icon)}
                   size="sm"
                 />
                 <button
@@ -2778,9 +2779,9 @@ function EnvelopeRow({
           if (hasCelebrationGifts && onGiftAllocationClick) {
             return (
               <div className="flex items-center justify-center gap-1 w-full">
-                <FluentEmojiPicker
-                  selectedEmoji={envelope.icon}
-                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(icon) => onEnvelopeChange(envelope.id, 'icon', icon)}
                   size="sm"
                 />
                 <button
@@ -2799,9 +2800,9 @@ function EnvelopeRow({
           if (isDebt && onDebtAllocationClick) {
             return (
               <div className="flex items-center justify-center gap-1 w-full">
-                <FluentEmojiPicker
-                  selectedEmoji={envelope.icon}
-                  onEmojiSelect={(emoji) => onEnvelopeChange(envelope.id, 'icon', emoji)}
+                <IconPicker
+                  selectedIcon={envelope.icon || "wallet"}
+                  onIconSelect={(icon) => onEnvelopeChange(envelope.id, 'icon', icon)}
                   size="sm"
                 />
                 <button

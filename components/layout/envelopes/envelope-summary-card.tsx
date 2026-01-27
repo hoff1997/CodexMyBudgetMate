@@ -3,6 +3,7 @@ import { cn } from "@/lib/cn";
 import { getEnvelopeStatus } from "@/lib/finance";
 import { getProgressColor } from "@/lib/utils/progress-colors";
 import type { EnvelopeRow } from "@/lib/auth/types";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 export type PriorityLevel = 'essential' | 'important' | 'discretionary';
 
@@ -81,7 +82,7 @@ export function EnvelopeSummaryCard({ envelope, onSelect }: Props) {
         {/* LEFT SECTION: Icon + Name + Bill Info */}
         <div className="flex items-center gap-2 min-w-0 md:flex-[0_0_240px]">
           <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
-            {envelope.icon ?? "💼"}
+            <EnvelopeIcon icon={envelope.icon ?? "wallet"} size={20} />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-secondary truncate">

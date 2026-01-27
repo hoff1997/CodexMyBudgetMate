@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/finance";
 import { cn } from "@/lib/cn";
 import type { SmartFillSource } from "@/lib/utils/smart-fill-calculator";
 import { Info } from "lucide-react";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface SmartFillSourceListProps {
   sources: SmartFillSource[];
@@ -110,7 +111,7 @@ function SourceRow({
         className="data-[state=checked]:bg-sage data-[state=checked]:border-sage"
       />
 
-      <span className="text-lg flex-shrink-0">{source.icon || "💰"}</span>
+      <EnvelopeIcon icon={source.icon || "wallet"} size={20} />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-dark truncate">

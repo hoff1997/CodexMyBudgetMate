@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Minus, CircleCheck, Circle, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { UnifiedEnvelopeData, IncomeSource } from "@/lib/types/unified-envelope";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import type { PayCycle } from "@/lib/utils/ideal-allocation-calculator";
 
 type PriorityLevel = 'essential' | 'important' | 'discretionary';
@@ -377,7 +378,7 @@ function EnvelopeRow({
 
       {/* Icon */}
       <td className="w-6 min-w-[24px] max-w-[24px] px-0 py-0">
-        <span className="text-sm">{envelope.icon}</span>
+        <EnvelopeIcon icon={envelope.icon || "wallet"} size={16} />
       </td>
 
       {/* Name */}

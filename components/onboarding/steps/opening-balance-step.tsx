@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency } from "@/lib/finance";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 import {
   AlertTriangle,
   Wallet,
@@ -311,7 +312,7 @@ export function OpeningBalanceStep({
         {/* Envelope Name */}
         <td className="px-2 py-2">
           <div className="flex items-center gap-2">
-            <span className="text-base">{env.icon}</span>
+            <EnvelopeIcon icon={env.icon || "wallet"} size={18} />
             <div className="flex items-center gap-1">
               <span className="font-medium text-text-dark">
                 {env.name}

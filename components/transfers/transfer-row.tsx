@@ -11,6 +11,7 @@ import { cn } from "@/lib/cn";
 import { getProgressColor } from "@/lib/utils/progress-colors";
 import { formatCurrency } from "@/lib/finance";
 import type { SummaryEnvelope } from "@/components/layout/envelopes/envelope-summary-card";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface TransferRowProps {
   envelope: SummaryEnvelope;
@@ -78,7 +79,7 @@ export function TransferRow({
 
       {/* Envelope Name + Icon */}
       <div className="flex items-center gap-2 min-w-0 pr-2">
-        <span className="text-sm flex-shrink-0">{envelope.icon ?? "📁"}</span>
+        <EnvelopeIcon icon={envelope.icon || "wallet"} size={18} />
         <span className="text-sm font-medium text-text-dark truncate">
           {envelope.name}
         </span>

@@ -7,6 +7,7 @@ import { Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
 
 interface Envelope {
   id: string;
@@ -77,7 +78,7 @@ export default function MonitoredEnvelopesWidget({ monitoredEnvelopeIds = [] }: 
             >
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">{envelope.icon || "📊"}</span>
+                  <EnvelopeIcon icon={envelope.icon || "analytics"} size={20} />
                 </div>
                 <div>
                   <p className="font-medium text-sm">{envelope.name}</p>

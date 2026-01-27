@@ -365,7 +365,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 - ALL must use `await createClient()` from `@/lib/supabase/server`
 
 **Required Pattern**:
-See `/docs/CONVENTIONS.md` for the full template
+See `/docs/Architecture files/CONVENTIONS.md` for the full template
 
 ---
 
@@ -445,3 +445,74 @@ Ask the user before modifying if:
 - You're unsure if a change will affect auth
 
 **Remember**: These systems were debugged for hours. A single character change can break everything.
+
+---
+
+## 🔒 SECURITY SYSTEMS - DO NOT DISABLE
+
+### 8. Pre-Commit Secret Scanner (`.githooks/pre-commit`)
+
+**Purpose**: Scans all staged files for hardcoded secrets before allowing commits
+
+**Why It's Critical**:
+- Prevents accidental exposure of API keys, JWT tokens, and passwords
+- Implemented after a GitGuardian incident detected exposed Supabase Service Role JWTs
+- Three-layer prevention system (gitignore + pre-commit hook + npm prepare)
+
+**How It Works**:
+1. Runs automatically on every `git commit`
+2. Scans staged file contents (not just filenames) for secret patterns
+3. Blocks the commit with detailed file/line references if secrets found
+4. Skips binary files, lock files, and itself
+
+**Secret Patterns Detected**:
+- JWT tokens (`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9`)
+- Supabase service role keys
+- Stripe live/test secret keys (`sk_live_`, `sk_test_`)
+- Stripe webhook secrets (`whsec_`)
+- Akahu client and webhook secrets
+- Hardcoded passwords (pattern: `password = "..."`)
+- Private keys
+
+**What NOT To Do**:
+- ❌ Delete `.githooks/pre-commit`
+- ❌ Remove the `prepare` script from `package.json`
+- ❌ Change `core.hooksPath` git config
+- ❌ Routinely use `--no-verify` to bypass the hook
+- ❌ Add secrets to the SKIP_PATTERNS list
+
+**What Happens If You Break It**:
+- Secrets can be accidentally committed and pushed to GitHub
+- GitGuardian and other scanners will flag the repository
+- Exposed secrets must be rotated immediately (Supabase, Stripe, Akahu)
+
+**Auto-Setup**:
+```json
+// package.json
+"prepare": "git config core.hooksPath .githooks"
+```
+This runs automatically on `npm install`, ensuring all developers have the hook active.
+
+---
+
+### 9. `.gitignore` Script Blocking
+
+**Purpose**: Prevents script files from being tracked by git
+
+**Rules**:
+```
+scripts/*.mjs
+scripts/*.js
+scripts/*.ts
+!scripts/README.md
+```
+
+**Why It's Critical**:
+- Development scripts often contain hardcoded database URLs, API keys, or test data
+- These rules are the first line of defense before the pre-commit hook
+- The `scripts/` directory is available for local development but nothing in it will be committed
+
+**What NOT To Do**:
+- ❌ Remove the script blocking rules from `.gitignore`
+- ❌ Force-add script files with `git add -f`
+- ❌ Move scripts outside the `scripts/` directory to bypass the rules

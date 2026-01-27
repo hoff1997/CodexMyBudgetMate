@@ -4,9 +4,9 @@
 
 Before making ANY code changes to this project, you MUST:
 
-1. **Read `/docs/ARCHITECTURE.md`** - Understand how the system works
-2. **Read `/docs/CONVENTIONS.md`** - Follow established patterns
-3. **Read `/docs/CRITICAL-SYSTEMS.md`** - Know what NOT to touch
+1. **Read `/docs/Architecture files/ARCHITECTURE.md`** - Understand how the system works
+2. **Read `/docs/Architecture files/CONVENTIONS.md`** - Follow established patterns
+3. **Read `/docs/Architecture files/CRITICAL-SYSTEMS.md`** - Know what NOT to touch
 
 After reading, confirm: "I have reviewed the architecture docs and will follow the established patterns."
 
@@ -42,6 +42,14 @@ After reading, confirm: "I have reviewed the architecture docs and will follow t
 - Cookie logic is in middleware.ts and auth routes
 - NEVER manually delete cookies - let Supabase handle it
 
+### Security & Secrets
+- **NEVER** hardcode API keys, JWT tokens, passwords, or secrets in source code
+- All secrets must come from environment variables (`process.env`)
+- A pre-commit hook in `.githooks/pre-commit` scans for secrets and blocks commits
+- The hook is auto-configured via `npm prepare` on `npm install`
+- Scripts are blocked from git by `.gitignore` rules (`scripts/*.mjs`, `scripts/*.js`, `scripts/*.ts`)
+- If the pre-commit hook blocks your commit, remove the secret - do NOT use `--no-verify`
+
 ## 📁 Project Structure
 
 ```
@@ -59,7 +67,7 @@ After reading, confirm: "I have reviewed the architecture docs and will follow t
 ## 🔧 When Adding New Features
 
 1. Check if similar patterns exist in the codebase
-2. Follow conventions in `/docs/CONVENTIONS.md`
+2. Follow conventions in `/docs/Architecture files/CONVENTIONS.md`
 3. If touching auth/cookies/middleware/supabase - **ASK FIRST**
 4. Test authentication flow after changes
 
@@ -96,7 +104,7 @@ Verify:
 
 - [Next.js 14 Docs](https://nextjs.org/docs)
 - [Supabase SSR Docs](https://supabase.com/docs/guides/auth/server-side/nextjs)
-- [Project Architecture Docs](/docs/ARCHITECTURE.md)
+- [Project Architecture Docs](/docs/Architecture files/ARCHITECTURE.md)
 
 ## 🏦 Akahu Integration (NZ Open Banking)
 
@@ -725,6 +733,37 @@ const message = getCoachingMessage('surplus');
 <Card className="bg-gold-light border-gold">...</Card>
 ```
 
+## 🎨 Icon System (Updated Jan 2026)
+
+### Dual Icon Libraries
+
+The project uses two icon libraries:
+
+| Library | Package | Usage |
+|---------|---------|-------|
+| **Phosphor Icons** | `@phosphor-icons/react` | Envelope icons, icon picker, doodle-style icons |
+| **Lucide React** | `lucide-react` | General UI (buttons, nav, indicators) |
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `EnvelopeIcon` | `components/shared/envelope-icon.tsx` | Renders Phosphor icon by name string |
+| `DoodleIconPicker` | `components/onboarding/doodle-icon-picker.tsx` | Searchable icon picker with categories |
+| Icon Registry | `lib/icons/phosphor-registry.ts` | Maps icon names to Phosphor components |
+
+### Usage
+
+```typescript
+// EnvelopeIcon - renders by name
+import { EnvelopeIcon } from "@/components/shared/envelope-icon";
+<EnvelopeIcon name="House" size={24} />
+
+// Direct Phosphor import
+import { House, ShoppingCart } from "@phosphor-icons/react";
+<House size={24} weight="duotone" />
+```
+
 ## 🏆 Achievement System (Updated Dec 2025)
 
 ### Overview
@@ -812,6 +851,76 @@ Add `suppressHydrationWarning` to form elements:
 ```
 
 **Applied to**: `components/auth/auth-form.tsx`
+
+## ⚙️ User Preferences System (Added Jan 2026)
+
+### Overview
+
+Per-user display, notification, and behaviour settings stored in Supabase with NZ-focused defaults.
+
+### Database Table
+
+**Migration**: `supabase/migrations/0088_user_preferences.sql`
+
+Columns: `currency_display`, `date_format`, `number_format`, `show_cents`, `dashboard_layout`, `email_weekly_summary`, `email_bill_reminders`, `email_low_balance`, `email_achievement_unlocked`, `auto_approve_rules`, `confirm_transfers`
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `lib/types/user-preferences.ts` | TypeScript types + `DEFAULT_PREFERENCES` constant |
+| `app/api/user/preferences/route.ts` | GET (auto-upsert) and PATCH endpoints |
+| `lib/hooks/use-preferences.ts` | React Query hook (5-min stale time) |
+| `components/layout/settings/settings-client.tsx` | Preferences section in Settings |
+
+### Usage
+
+```typescript
+import { usePreferences } from "@/lib/hooks/use-preferences";
+
+const { preferences, isLoading, updatePreference } = usePreferences();
+
+// Update a preference
+updatePreference.mutate({ show_cents: false });
+```
+
+### Auto-Create on Signup
+
+A database trigger (`create_user_defaults`) on `profiles` INSERT automatically creates:
+1. `user_preferences` row with NZ defaults
+2. `subscriptions` row with free plan
+
+## 💳 Subscription Trial System (Added Jan 2026)
+
+### Overview
+
+First-time Pro subscribers get a 14-day free trial via Stripe. Trial status is displayed in the UI.
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `app/api/stripe/checkout/route.ts` | Adds `trial_period_days: 14` for new subscribers |
+| `app/api/stripe/subscription/route.ts` | Returns trial info (`isTrialing`, `trialEndsAt`, `daysRemaining`) |
+| `hooks/useSubscription.ts` | Exposes `trialInfo` state |
+| `components/subscription/trial-banner.tsx` | "X days left" banner, hidden during beta |
+| `components/subscription/SubscriptionCard.tsx` | Trial countdown display |
+
+### Trial Info Interface
+
+```typescript
+interface TrialInfo {
+  isTrialing: boolean;
+  trialEndsAt: string | null;
+  daysRemaining: number | null;
+}
+```
+
+### Visibility Rules
+
+- Hidden when `BETA_MODE=true`
+- Hidden when `WAITLIST_MODE=true`
+- Shown only for users with `subscription.status === 'trialing'`
 
 ## ➕ Add Envelope Dialog (Updated Dec 2025)
 
@@ -1544,3 +1653,32 @@ import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
   insideDialog={true}
 />
 ```
+
+## 🔒 Security Measures (Updated Jan 2026)
+
+### Pre-Commit Secret Scanner
+
+A pre-commit hook (`.githooks/pre-commit`) scans all staged files for hardcoded secrets:
+
+**Detected Patterns:**
+- JWT tokens (Supabase anon/service role keys)
+- Stripe keys (`sk_live_`, `sk_test_`, `whsec_`)
+- Akahu secrets
+- Hardcoded passwords and private keys
+
+**Setup**: Automatic via `npm prepare` script (`git config core.hooksPath .githooks`)
+
+### Script Policy
+
+- All development scripts have been removed from the repository
+- `scripts/*.mjs`, `scripts/*.js`, `scripts/*.ts` are blocked by `.gitignore`
+- If you need a script, create it in `scripts/` (gitignored) and use `process.env` for all secrets
+
+### Dependency Versions (Jan 2026)
+
+| Package | Version | Notes |
+|---------|---------|-------|
+| `next` | `14.2.35` | Latest 14.2.x patch |
+| `jspdf` | `4.0.0` | Updated from 3.0.4 (CVE fix) |
+| `@phosphor-icons/react` | `2.1.7` | Envelope icon system |
+| `@tanstack/react-query` | `5.40.0` | Data fetching |

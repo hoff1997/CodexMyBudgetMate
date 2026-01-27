@@ -28,11 +28,23 @@ export async function GET() {
       .eq('slug', 'free')
       .single();
 
+    // Calculate trial info
+    const trialInfo = subscription?.status === 'trialing' && subscription?.trial_end
+      ? {
+          isTrialing: true,
+          trialEndsAt: subscription.trial_end,
+          daysRemaining: Math.max(0, Math.ceil(
+            (new Date(subscription.trial_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+          )),
+        }
+      : { isTrialing: false, trialEndsAt: null, daysRemaining: null };
+
     return NextResponse.json({
       subscription: subscription || null,
       currentPlan: subscription?.plan || freePlan,
       isActive: subscription?.status === 'active' || subscription?.status === 'trialing',
       isBetaMode: isBetaMode(),
+      trial: trialInfo,
     });
 
   } catch (error) {

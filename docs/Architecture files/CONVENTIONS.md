@@ -218,3 +218,113 @@ return NextResponse.json({ error: "Not found" }, { status: 404 });
 // 500: Internal Server Error
 return NextResponse.json({ error: "Server error" }, { status: 500 });
 ```
+
+## Security Conventions
+
+### Never Hardcode Secrets
+
+**NEVER** hardcode API keys, JWT tokens, passwords, or any secrets in source code files:
+
+```typescript
+// ❌ WRONG - hardcoded secret
+const supabase = createClient('https://xxx.supabase.co', 'eyJhbGciOiJIUzI1NiIs...');
+
+// ✅ CORRECT - use environment variables
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+```
+
+### Scripts Policy
+
+- All development/debug scripts must use `process.env` for secrets
+- Scripts are blocked from git by `.gitignore` rules (`scripts/*.mjs`, `scripts/*.js`, `scripts/*.ts`)
+- Never commit scripts containing database queries, API keys, or user data
+- If you need a temporary script, create it in the `scripts/` directory (it will be gitignored)
+
+### Pre-Commit Hook
+
+A pre-commit hook in `.githooks/pre-commit` automatically scans staged files for:
+- JWT tokens (Supabase keys)
+- Stripe secret keys (`sk_live_`, `sk_test_`, `whsec_`)
+- Akahu secrets
+- Hardcoded passwords
+- Private keys
+
+The hook is auto-configured via `npm prepare` (runs `git config core.hooksPath .githooks`).
+
+**If the hook blocks your commit:**
+1. Remove the secret and use an environment variable instead
+2. If it's a false positive, use `git commit --no-verify` (emergency only)
+
+### Environment Variables
+
+| Variable | Where Used | Public? |
+|----------|-----------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Client + Server | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client + Server | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server only | **No** |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client | Yes |
+| `STRIPE_SECRET_KEY` | Server only | **No** |
+| `STRIPE_WEBHOOK_SECRET` | Server only | **No** |
+| `AKAHU_CLIENT_SECRET` | Server only | **No** |
+| `AKAHU_WEBHOOK_SECRET` | Server only | **No** |
+| `BETA_MODE` | Server | Yes |
+| `WAITLIST_MODE` | Server | Yes |
+
+### React Query Hook Pattern
+
+When creating new data-fetching hooks, follow the established React Query pattern:
+
+```typescript
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+export function useMyData() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["my-data"],
+    queryFn: async () => {
+      const res = await fetch("/api/my-data");
+      if (!res.ok) throw new Error("Failed to fetch");
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const updateData = useMutation({
+    mutationFn: async (updates: Partial<MyData>) => {
+      const res = await fetch("/api/my-data", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-data"] });
+    },
+  });
+
+  return { data, isLoading, error, updateData };
+}
+```
+
+### Icon Library
+
+The project uses **Phosphor Icons** (`@phosphor-icons/react`) for envelope and UI icons alongside **Lucide React** for general UI icons.
+
+```typescript
+// Phosphor Icons - for envelope icons and rich icon picker
+import { House, ShoppingCart, Heart } from "@phosphor-icons/react";
+
+// Lucide React - for general UI icons (buttons, navigation, etc.)
+import { ChevronDown, X, Plus } from "lucide-react";
+```
+
+**Icon Components:**
+- `EnvelopeIcon` (`components/shared/envelope-icon.tsx`) - Renders Phosphor icons by name
+- `DoodleIconPicker` (`components/onboarding/doodle-icon-picker.tsx`) - Full icon picker with search and categories
+- Icon registry: `lib/icons/phosphor-registry.ts`

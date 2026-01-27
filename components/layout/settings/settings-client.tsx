@@ -15,6 +15,12 @@ import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { AchievementGallery } from "@/components/achievements/AchievementGallery";
 import { SubscriptionCard } from "@/components/subscription";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
+import { usePreferences } from "@/lib/hooks/use-preferences";
+import {
+  CURRENCY_OPTIONS,
+  DATE_FORMAT_OPTIONS,
+  NUMBER_FORMAT_OPTIONS,
+} from "@/lib/types/user-preferences";
 
 // Types
 type IncomeSourceRow = {
@@ -159,6 +165,9 @@ export function SettingsClient({ data, flash = null }: Props) {
   const [celebrationReminderWeeks, setCelebrationReminderWeeks] = useState<number>(
     data.profile.celebrationReminderWeeks ?? 3
   );
+
+  // User preferences
+  const { preferences, updatePreference } = usePreferences();
 
   // Separate active and archived income
   const activeIncome = useMemo(() => incomeSources.filter(i => i.is_active), [incomeSources]);
@@ -953,6 +962,153 @@ export function SettingsClient({ data, flash = null }: Props) {
             Reminders appear on your dashboard when birthdays, Christmas, or other celebrations are approaching.
             Set up gift recipients in your celebration envelopes to track budgets.
           </p>
+        </div>
+      </section>
+
+      {/* Preferences Section */}
+      <section className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+        <div className="px-3 py-2 border-b border-[#E5E7EB]">
+          <h2 className="font-semibold text-[#3D3D3D]">Preferences</h2>
+        </div>
+
+        {/* Display sub-group */}
+        <div className="px-3 py-2 border-b border-[#E5E7EB]">
+          <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-wide mb-2">Display</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#3D3D3D]">Currency</span>
+              <select
+                value={preferences.currency_display}
+                onChange={(e) => {
+                  updatePreference.mutate({ currency_display: e.target.value as typeof preferences.currency_display });
+                }}
+                className="h-8 px-2 text-sm border border-[#E5E7EB] rounded-lg focus:border-[#7A9E9A] focus:outline-none"
+              >
+                {CURRENCY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#3D3D3D]">Date format</span>
+              <select
+                value={preferences.date_format}
+                onChange={(e) => {
+                  updatePreference.mutate({ date_format: e.target.value as typeof preferences.date_format });
+                }}
+                className="h-8 px-2 text-sm border border-[#E5E7EB] rounded-lg focus:border-[#7A9E9A] focus:outline-none"
+              >
+                {DATE_FORMAT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#3D3D3D]">Number format</span>
+              <select
+                value={preferences.number_format}
+                onChange={(e) => {
+                  updatePreference.mutate({ number_format: e.target.value as typeof preferences.number_format });
+                }}
+                className="h-8 px-2 text-sm border border-[#E5E7EB] rounded-lg focus:border-[#7A9E9A] focus:outline-none"
+              >
+                {NUMBER_FORMAT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#3D3D3D]">Show cents</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={preferences.show_cents}
+                onClick={() => updatePreference.mutate({ show_cents: !preferences.show_cents })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  preferences.show_cents ? "bg-[#7A9E9A]" : "bg-[#E5E7EB]"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.show_cents ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Email Notifications sub-group */}
+        <div className="px-3 py-2 border-b border-[#E5E7EB]">
+          <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-wide mb-2">Email Notifications</p>
+          <div className="space-y-2">
+            {([
+              { key: "email_weekly_summary" as const, label: "Weekly budget summary" },
+              { key: "email_bill_reminders" as const, label: "Bill due reminders" },
+              { key: "email_low_balance" as const, label: "Low balance alerts" },
+              { key: "email_achievement_unlocked" as const, label: "Achievement notifications" },
+            ]).map(({ key, label }) => (
+              <div key={key} className="flex items-center justify-between">
+                <span className="text-sm text-[#3D3D3D]">{label}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={preferences[key]}
+                  onClick={() => updatePreference.mutate({ [key]: !preferences[key] })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    preferences[key] ? "bg-[#7A9E9A]" : "bg-[#E5E7EB]"
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    preferences[key] ? "translate-x-6" : "translate-x-1"
+                  }`} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Behaviour sub-group */}
+        <div className="px-3 py-2">
+          <p className="text-xs font-medium text-[#9CA3AF] uppercase tracking-wide mb-2">Behaviour</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-[#3D3D3D]">Auto-approve merchant rules</span>
+                <p className="text-xs text-[#9CA3AF]">Automatically assign envelopes based on merchant rules</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={preferences.auto_approve_rules}
+                onClick={() => updatePreference.mutate({ auto_approve_rules: !preferences.auto_approve_rules })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                  preferences.auto_approve_rules ? "bg-[#7A9E9A]" : "bg-[#E5E7EB]"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.auto_approve_rules ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-[#3D3D3D]">Confirm transfers</span>
+                <p className="text-xs text-[#9CA3AF]">Show confirmation dialog before envelope transfers</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={preferences.confirm_transfers}
+                onClick={() => updatePreference.mutate({ confirm_transfers: !preferences.confirm_transfers })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                  preferences.confirm_transfers ? "bg-[#7A9E9A]" : "bg-[#E5E7EB]"
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.confirm_transfers ? "translate-x-6" : "translate-x-1"
+                }`} />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

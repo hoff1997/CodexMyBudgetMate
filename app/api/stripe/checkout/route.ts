@@ -21,6 +21,16 @@ export async function POST(request: Request) {
     // Get or create Stripe customer
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!);
 
+    // Check if user already has an active/trialing subscription (no trial for returning users)
+    const { data: existingSub } = await supabase
+      .from('subscriptions')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .in('status', ['active', 'trialing'])
+      .maybeSingle();
+
+    const isFirstSubscription = !existingSub;
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -34,6 +44,12 @@ export async function POST(request: Request) {
       ],
       mode: 'subscription',
       allow_promotion_codes: true,
+      // Grant 14-day free trial for first-time subscribers
+      ...(isFirstSubscription && {
+        subscription_data: {
+          trial_period_days: 14,
+        },
+      }),
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?subscription=success`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/settings?subscription=cancelled`,
       metadata: {

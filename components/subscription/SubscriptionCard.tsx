@@ -13,7 +13,7 @@ function formatDate(dateString: string): string {
 }
 
 export function SubscriptionCard() {
-  const { subscription, currentPlan, isActive, isBetaMode, isLoading } = useSubscription();
+  const { subscription, currentPlan, isActive, isBetaMode, isLoading, trialInfo } = useSubscription();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const handleManageSubscription = async () => {
@@ -97,8 +97,23 @@ export function SubscriptionCard() {
           </div>
         </div>
 
+        {/* Trial info */}
+        {trialInfo.isTrialing && trialInfo.daysRemaining !== null && trialInfo.trialEndsAt && (
+          <div className="bg-gold-light rounded-lg p-3 mb-4">
+            <p className="text-sm text-gold-dark font-medium">
+              {trialInfo.daysRemaining === 0
+                ? 'Your free trial ends today'
+                : `${trialInfo.daysRemaining} day${trialInfo.daysRemaining === 1 ? '' : 's'} left in your free trial`}
+            </p>
+            <p className="text-xs text-gold-dark/80 mt-1">
+              Your trial ends on {formatDate(trialInfo.trialEndsAt)}.
+              Add a payment method to continue after your trial.
+            </p>
+          </div>
+        )}
+
         {/* Billing info for active subscriptions */}
-        {isActive && subscription?.current_period_end && (
+        {isActive && !trialInfo.isTrialing && subscription?.current_period_end && (
           <div className="bg-sage-very-light rounded-lg p-3 mb-4">
             <p className="text-sm text-muted-foreground">
               {subscription.cancel_at_period_end ? (

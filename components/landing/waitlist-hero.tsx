@@ -26,7 +26,9 @@ export function WaitlistHero({ waitlistCount = 0 }: WaitlistHeroProps) {
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-text-dark mb-6 leading-tight">
               Kia Ora,
               <br />
-              welcome to <span className="text-sage">My Budget Mate</span>
+              welcome to
+              <br />
+              <span className="text-sage whitespace-nowrap">My Budget Mate</span>
             </h1>
 
             <p className="text-base md:text-lg text-text-medium mb-4 leading-relaxed">
@@ -62,7 +64,9 @@ export function WaitlistHero({ waitlistCount = 0 }: WaitlistHeroProps) {
             </div>
 
             {/* Waitlist form */}
-            <WaitlistForm source="hero" variant="hero" />
+            <div id="waitlist">
+              <WaitlistForm source="hero" variant="hero" />
+            </div>
           </div>
 
           {/* Right: Remy illustration */}

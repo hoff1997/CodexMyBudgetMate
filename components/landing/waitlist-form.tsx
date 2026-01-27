@@ -95,7 +95,7 @@ export function WaitlistForm({
   // Compact variant (for footer, sidebar)
   if (variant === "compact") {
     return (
-      <form onSubmit={handleSubmit} className={`flex flex-col sm:flex-row gap-2 ${className}`}>
+      <form onSubmit={handleSubmit} suppressHydrationWarning className={`flex flex-col sm:flex-row gap-2 ${className}`}>
         <input
           type="email"
           placeholder="Enter your email"
@@ -103,6 +103,7 @@ export function WaitlistForm({
           onChange={(e) => setEmail(e.target.value)}
           required
           disabled={status === "loading"}
+          suppressHydrationWarning
           className="flex-1 px-4 py-2.5 rounded-lg border border-silver-light focus:border-sage focus:ring-1 focus:ring-sage outline-none text-sm disabled:opacity-50"
         />
         <button
@@ -132,7 +133,7 @@ export function WaitlistForm({
   // Default and hero variants
   return (
     <div className={className}>
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} suppressHydrationWarning className="space-y-3">
         {showName && (
           <input
             type="text"
@@ -140,6 +141,7 @@ export function WaitlistForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={status === "loading"}
+            suppressHydrationWarning
             className="w-full px-4 py-3 rounded-xl border border-silver-light focus:border-sage focus:ring-2 focus:ring-sage/20 outline-none disabled:opacity-50"
           />
         )}
@@ -151,6 +153,7 @@ export function WaitlistForm({
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={status === "loading"}
+            suppressHydrationWarning
             className="flex-1 px-4 py-3 rounded-xl border border-silver-light focus:border-sage focus:ring-2 focus:ring-sage/20 outline-none disabled:opacity-50"
           />
           <button

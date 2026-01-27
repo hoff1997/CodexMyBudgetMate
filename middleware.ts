@@ -1,6 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Waitlist mode - redirect /login and /signup to home page
+// Keep in sync with WAITLIST_MODE in app/page.tsx
+const WAITLIST_MODE = true;
+
 // MFA session timeout in milliseconds (2 hours as required by Akahu)
 const MFA_SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MFA_VERIFIED_COOKIE = "mfa_verified_at";
@@ -138,6 +142,11 @@ export async function middleware(request: NextRequest) {
   // or set up a dedicated staging environment with test accounts
 
   const pathname = request.nextUrl.pathname;
+
+  // Waitlist mode: block access to login/signup pages
+  if (WAITLIST_MODE && (pathname === "/login" || pathname === "/signup")) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   // Kid dashboard routes require valid kid session
   // Match /kids/[childId]/dashboard, /kids/[childId]/chores, etc.

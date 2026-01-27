@@ -29,8 +29,8 @@ export async function WaitlistPage() {
             <a href="#features" className="text-text-medium hover:text-sage transition-colors">
               Features
             </a>
-            <a href="/login" className="text-sage hover:text-sage-dark font-medium transition-colors">
-              Sign In
+            <a href="#waitlist" className="text-sage hover:text-sage-dark font-medium transition-colors">
+              Join the Waitlist
             </a>
           </div>
         </div>

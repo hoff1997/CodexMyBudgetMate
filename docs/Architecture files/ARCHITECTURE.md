@@ -3083,3 +3083,162 @@ export async function GET(
   // ... rest of handler
 }
 ```
+
+---
+
+## User Preferences System
+
+**Status**: ✅ **COMPLETE** (Jan 2026)
+
+### Overview
+
+The User Preferences system provides per-user display, notification, and behaviour settings. Preferences are stored server-side in Supabase with NZ-focused defaults.
+
+### Database Schema
+
+**Migration**: `supabase/migrations/0088_user_preferences.sql`
+
+```sql
+CREATE TABLE user_preferences (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  -- Display
+  currency_display TEXT DEFAULT 'NZD',
+  date_format TEXT DEFAULT 'dd/MM/yyyy',
+  number_format TEXT DEFAULT 'space',
+  show_cents BOOLEAN DEFAULT true,
+  dashboard_layout TEXT DEFAULT 'default',
+
+  -- Email Notifications
+  email_weekly_summary BOOLEAN DEFAULT true,
+  email_bill_reminders BOOLEAN DEFAULT true,
+  email_low_balance BOOLEAN DEFAULT true,
+  email_achievement_unlocked BOOLEAN DEFAULT true,
+
+  -- Behaviour
+  auto_approve_rules BOOLEAN DEFAULT false,
+  confirm_transfers BOOLEAN DEFAULT true,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id)
+);
+```
+
+### Architecture Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Types | `lib/types/user-preferences.ts` | TypeScript interfaces + `DEFAULT_PREFERENCES` constant |
+| API Route | `app/api/user/preferences/route.ts` | GET (with auto-upsert) and PATCH endpoints |
+| React Hook | `lib/hooks/use-preferences.ts` | React Query hook (5-min stale time) |
+| Settings UI | `components/layout/settings/settings-client.tsx` | Preferences section in Settings page |
+
+### API Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/user/preferences` | Fetch preferences, auto-creates defaults if none exist |
+| PATCH | `/api/user/preferences` | Update individual preference fields |
+
+### React Hook Usage
+
+```typescript
+import { usePreferences } from "@/lib/hooks/use-preferences";
+
+function MyComponent() {
+  const { preferences, isLoading, error, updatePreference } = usePreferences();
+
+  // Read preference
+  const format = preferences.date_format;
+
+  // Update preference
+  updatePreference.mutate({ show_cents: false });
+}
+```
+
+### Auto-Create on Signup
+
+The migration includes a `create_user_defaults()` trigger function that fires on `profiles` INSERT. It automatically creates:
+1. A `user_preferences` row with NZ defaults
+2. A `subscriptions` row with free plan + status 'inactive'
+
+---
+
+## Subscription Trial System
+
+**Status**: ✅ **COMPLETE** (Jan 2026)
+
+### Overview
+
+First-time subscribers get a 14-day free trial of the Pro plan via Stripe's built-in trial functionality. Trial status is tracked and displayed throughout the UI.
+
+### Architecture Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Checkout | `app/api/stripe/checkout/route.ts` | Adds `trial_period_days: 14` for first-time subscribers |
+| Subscription API | `app/api/stripe/subscription/route.ts` | Returns `trial` object with `isTrialing`, `trialEndsAt`, `daysRemaining` |
+| Hook | `hooks/useSubscription.ts` | Exposes `trialInfo` from API response |
+| Trial Banner | `components/subscription/trial-banner.tsx` | "X days left" banner with upgrade CTA |
+| Subscription Card | `components/subscription/SubscriptionCard.tsx` | Trial countdown display |
+
+### Trial Info Response
+
+The `/api/stripe/subscription` endpoint returns:
+
+```typescript
+{
+  subscription: Subscription | null,
+  currentPlan: SubscriptionPlan,
+  isActive: boolean,
+  isBetaMode: boolean,
+  trial: {
+    isTrialing: boolean,
+    trialEndsAt: string | null,
+    daysRemaining: number | null,
+  }
+}
+```
+
+### Trial Banner
+
+- Shows "X days left in your free trial" with upgrade CTA
+- Uses `bg-gold-light border-gold` styling (anxiety-free design)
+- Hidden when `BETA_MODE=true` or `WAITLIST_MODE=true`
+- Rendered conditionally in app layout
+
+---
+
+## Security Infrastructure (Jan 2026)
+
+### Overview
+
+After a GitGuardian incident detecting exposed Supabase Service Role JWTs in committed scripts, a comprehensive three-layer secret prevention system was implemented.
+
+### Three-Layer Prevention
+
+| Layer | Mechanism | File |
+|-------|-----------|------|
+| 1. Git Ignore | `.gitignore` rules block `scripts/*.mjs`, `scripts/*.js`, `scripts/*.ts` | `.gitignore` |
+| 2. Pre-Commit Hook | Scans staged files for JWT tokens, Stripe keys, Akahu secrets, passwords | `.githooks/pre-commit` |
+| 3. Auto-Setup | `npm prepare` script auto-configures git hooks on `npm install` | `package.json` |
+
+### Pre-Commit Hook Patterns
+
+The hook scans for these secret patterns:
+- JWT tokens (`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9`)
+- Supabase service role keys
+- Stripe live/test secret keys (`sk_live_`, `sk_test_`)
+- Stripe webhook secrets (`whsec_`)
+- Akahu client/webhook secrets
+- Hardcoded passwords
+- Private keys
+
+### Script Policy
+
+**All scripts have been deleted from the repository.** The `scripts/` directory is blocked by `.gitignore` to prevent future accidental commits. If scripts are needed for development, they must:
+1. Use `process.env` for ALL secrets
+2. Be listed in `.gitignore`
+3. Never be committed to the repository

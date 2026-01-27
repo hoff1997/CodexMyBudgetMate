@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Subscription, SubscriptionPlan, Feature } from '@/lib/types/subscription';
 
+export interface TrialInfo {
+  isTrialing: boolean;
+  trialEndsAt: string | null;
+  daysRemaining: number | null;
+}
+
 interface UseSubscriptionReturn {
   subscription: Subscription | null;
   currentPlan: SubscriptionPlan | null;
@@ -10,6 +16,7 @@ interface UseSubscriptionReturn {
   isBetaMode: boolean;
   isLoading: boolean;
   error: string | null;
+  trialInfo: TrialInfo;
   hasFeature: (feature: Feature) => boolean;
   isWithinLimit: (limitType: 'envelopes' | 'accounts' | 'income_sources', count: number) => boolean;
   refresh: () => Promise<void>;
@@ -22,6 +29,11 @@ export function useSubscription(): UseSubscriptionReturn {
   const [isBetaMode, setIsBetaMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [trialInfo, setTrialInfo] = useState<TrialInfo>({
+    isTrialing: false,
+    trialEndsAt: null,
+    daysRemaining: null,
+  });
 
   const fetchSubscription = useCallback(async () => {
     try {
@@ -40,6 +52,7 @@ export function useSubscription(): UseSubscriptionReturn {
       setCurrentPlan(data.currentPlan);
       setIsActive(data.isActive);
       setIsBetaMode(data.isBetaMode);
+      setTrialInfo(data.trial || { isTrialing: false, trialEndsAt: null, daysRemaining: null });
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -84,6 +97,7 @@ export function useSubscription(): UseSubscriptionReturn {
     isBetaMode,
     isLoading,
     error,
+    trialInfo,
     hasFeature,
     isWithinLimit,
     refresh: fetchSubscription,

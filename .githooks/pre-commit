@@ -43,7 +43,7 @@ PATTERNS=(
 )
 
 # Files to skip (binary, lock files, the hook itself, etc.)
-SKIP_PATTERNS="(\.png|\.jpg|\.jpeg|\.gif|\.svg|\.ico|\.woff|\.woff2|\.ttf|\.eot|\.map|package-lock\.json|\.lock|node_modules|\.githooks/pre-commit)"
+SKIP_PATTERNS="(\.png|\.jpg|\.jpeg|\.gif|\.svg|\.ico|\.woff|\.woff2|\.ttf|\.eot|\.map|package-lock\.json|\.lock|node_modules|\.githooks/pre-commit|CLAUDE\.md)"
 
 for FILE in $STAGED_FILES; do
   # Skip binary/lock files

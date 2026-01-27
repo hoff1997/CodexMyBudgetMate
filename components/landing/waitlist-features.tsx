@@ -1,5 +1,24 @@
-import { Building2, CalendarClock, Compass, PiggyBank, Route, Heart } from "lucide-react";
+import { Building2, CalendarClock, Compass, Mail, Milestone } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+function LineSquiggle({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M7 3.5c5-2 7 2.5 3 4C1.5 10 2 15 5 16c5 2 9-10 14-7s.5 13.5-4 12c-5-2.5.5-11 6-2" />
+    </svg>
+  );
+}
 
 const features = [
   {
@@ -24,21 +43,21 @@ const features = [
       "Remy walks you through it step by step. No budget experience needed. No spreadsheet degree required.",
   },
   {
-    icon: PiggyBank,
+    icon: Mail,
     iconAlt: "Envelope budgeting for bills savings and spending",
     title: "Envelope Budgeting",
     description:
       "Allocate your pay into digital envelopes for bills, savings, and spending. Always know what's available before you tap.",
   },
   {
-    icon: Route,
+    icon: Milestone,
     iconAlt: "The My Budget Way financial roadmap",
     title: "The My Budget Way",
     description:
       "A clear path that works: Fill your envelopes, Save your Starter Stash, Destroy Debt, Build your Safety Net, Grow your Future Fund.",
   },
   {
-    icon: Heart,
+    icon: LineSquiggle,
     iconAlt: "Coaching not lecturing financial guidance",
     title: "Coaching, Not Lecturing",
     description:

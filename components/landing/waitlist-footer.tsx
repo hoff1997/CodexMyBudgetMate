@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { LogIn } from "lucide-react";
 import { WaitlistForm } from "./waitlist-form";
 
 export function WaitlistFooter() {
@@ -35,12 +36,20 @@ export function WaitlistFooter() {
         {/* Bottom */}
         <div className="border-t border-silver/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-silver-light text-sm">Made with aroha in Aotearoa</p>
-          <div className="flex gap-6 text-sm text-silver-light">
+          <div className="flex gap-6 text-sm text-silver-light items-center">
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy
             </Link>
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
+            </Link>
+            <Link
+              href="/login?bypass=budgetmate2026"
+              className="hover:text-white transition-colors"
+              title="Beta access"
+              prefetch={false}
+            >
+              <LogIn className="h-4 w-4" />
             </Link>
           </div>
         </div>

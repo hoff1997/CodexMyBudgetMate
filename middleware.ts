@@ -5,6 +5,10 @@ import { NextResponse, type NextRequest } from "next/server";
 // Keep in sync with WAITLIST_MODE in app/page.tsx
 const WAITLIST_MODE = true;
 
+// Secret bypass key for admin access during waitlist mode
+// Use: /login?bypass=budgetmate2026 or /signup?bypass=budgetmate2026
+const WAITLIST_BYPASS_KEY = "budgetmate2026";
+
 // MFA session timeout in milliseconds (2 hours as required by Akahu)
 const MFA_SESSION_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MFA_VERIFIED_COOKIE = "mfa_verified_at";
@@ -143,9 +147,12 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Waitlist mode: block access to login/signup pages
+  // Waitlist mode: block access to login/signup pages (unless bypass key provided)
   if (WAITLIST_MODE && (pathname === "/login" || pathname === "/signup")) {
-    return NextResponse.redirect(new URL("/", request.url));
+    const bypassKey = request.nextUrl.searchParams.get("bypass");
+    if (bypassKey !== WAITLIST_BYPASS_KEY) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   // Kid dashboard routes require valid kid session

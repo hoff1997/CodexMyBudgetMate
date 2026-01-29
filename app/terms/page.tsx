@@ -22,7 +22,7 @@ const sections = [
     copy: [
       "Safeguard your login credentials and enable 2FA when available.",
       "Do not share access to your Supabase credentials or bank connections with unauthorised parties.",
-      "Notify us immediately if you suspect unauthorised access at security@mybudgetmate.nz.",
+      "Notify us immediately if you suspect unauthorised access via the in-app help link.",
     ],
   },
   {
@@ -52,7 +52,7 @@ const sections = [
     title: "Availability and support",
     copy: [
       "We target 99% uptime excluding planned maintenance or outages caused by Akahu/Supabase.",
-      "Support is available via email at support@mybudgetmate.nz or through the in-app help link.",
+      "Support is available through the in-app help link.",
       "We may roll out beta features to limited accounts; participation is optional and feedback is welcome.",
     ],
   },
@@ -73,7 +73,7 @@ const sections = [
   {
     title: "Contact",
     copy: [
-      "Questions or concerns can be directed to support@mybudgetmate.nz.",
+      "Questions or concerns can be directed to us via the in-app help link.",
       "Postal address for formal notices: My Budget Mate, PO Box 12345, Auckland 1143, New Zealand.",
     ],
   },
@@ -113,11 +113,7 @@ export default function TermsPage() {
           <Link href="/privacy" className="underline underline-offset-4">
             privacy page
           </Link>{" "}
-          to see how we handle your data. For account-specific questions,{" "}
-          <a href="mailto:support@mybudgetmate.nz" className="underline underline-offset-4">
-            email support
-          </a>
-          .
+          to see how we handle your data.
         </p>
       </footer>
     </main>

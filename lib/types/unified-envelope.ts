@@ -6,7 +6,7 @@
 export type EnvelopeSubtype = 'bill' | 'spending' | 'savings' | 'goal' | 'tracking' | 'debt';
 export type FrequencyType = 'none' | 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | '6_monthly' | 'annual' | 'annually' | 'custom_weeks';
 export type PriorityType = 'essential' | 'important' | 'discretionary';
-export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net';
+export type SuggestionType = 'starter-stash' | 'cc-holding' | 'safety-net' | 'wallet';
 // Seasonal patterns are for bills that vary by season (power, gas, water)
 // Celebrations (birthdays, Christmas) are handled separately via GiftAllocationDialog and is_celebration flag
 export type SeasonalPatternType = 'winter-peak' | 'summer-peak' | 'custom';
@@ -113,11 +113,15 @@ export interface UnifiedEnvelopeData {
 
   // Suggested envelope fields ("The My Budget Way")
   is_suggested?: boolean; // True for system-suggested envelopes
-  suggestion_type?: SuggestionType; // 'starter-stash', 'cc-holding', or 'safety-net'
+  suggestion_type?: SuggestionType; // 'starter-stash', 'cc-holding', 'safety-net', or 'wallet'
   is_dismissed?: boolean; // True if user dismissed the suggestion
   auto_calculate_target?: boolean; // True if target calculated dynamically (e.g., Safety Net)
   description?: string; // Description shown under envelope name
   snoozed_until?: string; // ISO timestamp when snooze expires
+
+  // Wallet envelope fields (cash on hand tracking)
+  is_wallet?: boolean; // True for wallet envelopes that track physical cash
+  linked_wallet_account_id?: string; // UUID of linked wallet account in accounts table
 
   // Locked state (for onboarding - e.g., CC Holding handled in later step)
   isLocked?: boolean;

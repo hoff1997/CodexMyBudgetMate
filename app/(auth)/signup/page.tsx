@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { markUserAsReturning } from "@/components/landing/returning-user-cta";
 import { HydrationSafe } from "@/components/utils/hydration-safe";
 
@@ -23,6 +23,8 @@ export default function SignupPage() {
     general?: string;
   }>({});
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -161,26 +163,46 @@ export default function SignupPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Input
-                    placeholder="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
-                  />
+                  <div className="relative">
+                    <Input
+                      placeholder="Password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A] pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B6B6B] hover:text-[#3D3D3D]"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.password && (
                     <p className="text-xs text-[#6B9ECE]">{errors.password}</p>
                   )}
                 </div>
 
                 <div className="space-y-1">
-                  <Input
-                    placeholder="Confirm password"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
-                  />
+                  <div className="relative">
+                    <Input
+                      placeholder="Confirm password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A] pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B6B6B] hover:text-[#3D3D3D]"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.confirmPassword && (
                     <p className="text-xs text-[#6B9ECE]">{errors.confirmPassword}</p>
                   )}

@@ -15,7 +15,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 
 export const SUGGESTED_ENVELOPE_CATEGORY = "The My Budget Way";
 
-export type SuggestionType = 'starter-stash' | 'debt-destroyer' | 'cc-holding' | 'safety-net';
+export type SuggestionType = 'starter-stash' | 'debt-destroyer' | 'cc-holding' | 'safety-net' | 'wallet';
 
 export interface SuggestedEnvelope {
   name: string;
@@ -26,6 +26,8 @@ export interface SuggestedEnvelope {
   icon: string;
   subtype: string;
   priority?: string;
+  creates_account?: boolean; // If true, also creates an account (e.g., Wallet creates cash account)
+  is_wallet?: boolean; // Flag for wallet envelopes
 }
 
 // Order matters: Starter Stash (Step 1), Debt Destroyer (Step 2), CC Holding, Safety Net (Step 3)
@@ -69,6 +71,18 @@ export const SUGGESTED_ENVELOPES: SuggestedEnvelope[] = [
     icon: "🛡️",
     subtype: "savings",
     priority: "essential",
+  },
+  {
+    name: "Wallet",
+    suggestion_type: "wallet",
+    target_amount: 0, // No target - tracks balance in linked account
+    auto_calculate_target: false,
+    description: "Track your cash on hand. Record ATM withdrawals, gifts received, and cash spending.",
+    icon: "💵",
+    subtype: "tracking",
+    priority: "essential",
+    creates_account: true, // Creates a cash account linked to this envelope
+    is_wallet: true,
   },
 ];
 
@@ -192,6 +206,44 @@ export async function createSuggestedEnvelopes(
       userId
     );
 
+    // Handle Wallet envelope specially - needs to create account first
+    const walletEnvelope = envelopesToCreate.find(env => env.suggestion_type === "wallet");
+    let walletAccountId: string | null = null;
+
+    if (walletEnvelope) {
+      // Check if wallet account already exists
+      const { data: existingWalletAccount } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_wallet", true)
+        .maybeSingle();
+
+      if (existingWalletAccount) {
+        walletAccountId = existingWalletAccount.id;
+      } else {
+        // Create the wallet account
+        const { data: newWalletAccount, error: accountError } = await supabase
+          .from("accounts")
+          .insert({
+            user_id: userId,
+            name: "Wallet",
+            account_type: "cash",
+            current_balance: 0,
+            is_wallet: true,
+          })
+          .select("id")
+          .single();
+
+        if (accountError) {
+          console.error("Error creating wallet account:", accountError);
+          return { success: false, error: accountError.message };
+        }
+
+        walletAccountId = newWalletAccount.id;
+      }
+    }
+
     // Build envelope records
     const envelopeRecords = envelopesToCreate.map((env) => ({
       user_id: userId,
@@ -213,6 +265,9 @@ export async function createSuggestedEnvelopes(
       is_cc_holding: env.suggestion_type === "cc-holding" ? true : false,
       // Debt Destroyer should be flagged as debt envelope
       is_debt: env.suggestion_type === "debt-destroyer" ? true : false,
+      // Wallet envelope fields
+      is_wallet: env.is_wallet || false,
+      linked_wallet_account_id: env.suggestion_type === "wallet" ? walletAccountId : null,
     }));
 
     const { error } = await supabase.from("envelopes").insert(envelopeRecords);

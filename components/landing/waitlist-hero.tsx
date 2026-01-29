@@ -56,7 +56,7 @@ export function WaitlistHero({ waitlistCount = 0 }: WaitlistHeroProps) {
               <div>
                 <p className="text-sage-dark text-sm leading-relaxed">
                   &quot;Kia ora! I&apos;m Remy, your financial coach. We&apos;re almost ready to open
-                  the doors. Pop your email below and I&apos;ll give you a shout when it&apos;s
+                  the doors. Pop your name and email below and I&apos;ll give you a shout when it&apos;s
                   time to get sorted.&quot;
                 </p>
                 <p className="text-sage text-xs mt-1 italic">- Remy</p>

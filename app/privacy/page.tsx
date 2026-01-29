@@ -45,7 +45,7 @@ const sections = [
   {
     title: "Your rights",
     copy: [
-      "Request an export of your data via the in-app support link or email privacy@mybudgetmate.nz.",
+      "Request an export of your data via the in-app support link.",
       "Ask for corrections or removal of your account; we will confirm once deletion has been processed.",
       "Disable bank connections at any time. This stops new imports and removes access tokens from Akahu and Supabase.",
     ],
@@ -53,7 +53,7 @@ const sections = [
   {
     title: "Contact",
     copy: [
-      "Questions about privacy or data handling can be sent to privacy@mybudgetmate.nz.",
+      "Questions about privacy or data handling can be sent via the in-app help link.",
       "We target New Zealand households and coaches. If you are outside NZ, contact us before connecting any bank accounts.",
     ],
   },
@@ -93,11 +93,7 @@ export default function PrivacyPage() {
           <Link href="/settings" className="underline underline-offset-4">
             settings hub
           </Link>{" "}
-          to manage bank connections and download records, or contact{" "}
-          <a href="mailto:privacy@mybudgetmate.nz" className="underline underline-offset-4">
-            privacy@mybudgetmate.nz
-          </a>{" "}
-          for anything requiring manual support.
+          to manage bank connections and download records.
         </p>
         <p className="mt-4">
           For information about how we use cookies, see our{" "}

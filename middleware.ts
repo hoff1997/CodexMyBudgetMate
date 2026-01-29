@@ -147,8 +147,10 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  // Waitlist mode: block access to login/signup pages (unless bypass key provided)
-  if (WAITLIST_MODE && (pathname === "/login" || pathname === "/signup")) {
+  // Waitlist mode: block access to auth pages (unless bypass key provided)
+  // Note: /forgot-password needs bypass too since it links from login page
+  const waitlistBlockedPaths = ["/login", "/signup", "/forgot-password"];
+  if (WAITLIST_MODE && waitlistBlockedPaths.includes(pathname)) {
     const bypassKey = request.nextUrl.searchParams.get("bypass");
     if (bypassKey !== WAITLIST_BYPASS_KEY) {
       return NextResponse.redirect(new URL("/", request.url));

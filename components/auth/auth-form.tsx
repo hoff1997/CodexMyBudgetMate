@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { markUserAsReturning } from "@/components/landing/returning-user-cta";
 
 export function AuthForm() {
@@ -31,6 +31,7 @@ export function AuthForm() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -115,14 +116,24 @@ export function AuthForm() {
         )}
       </div>
       <div className="space-y-1" suppressHydrationWarning>
-        <Input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A]"
-          suppressHydrationWarning
-        />
+        <div className="relative">
+          <Input
+            placeholder="Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border-[#E5E7EB] focus:border-[#7A9E9A] focus:ring-[#7A9E9A] pr-10"
+            suppressHydrationWarning
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B6B6B] hover:text-[#3D3D3D]"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
         {passwordError && (
           <p className="text-xs text-[#6B9ECE]">{passwordError}</p>
         )}
@@ -138,7 +149,10 @@ export function AuthForm() {
         )}
       </Button>
       <div className="text-center">
-        <Link href="/forgot-password" className="text-sm text-[#5A7E7A] hover:underline">
+        <Link
+          href={searchParams.get("bypass") ? `/forgot-password?bypass=${searchParams.get("bypass")}` : "/forgot-password"}
+          className="text-sm text-[#5A7E7A] hover:underline"
+        >
           Forgot password?
         </Link>
       </div>

@@ -42,12 +42,6 @@ export function WaitlistFooter() {
             <Link href="/terms" className="hover:text-white transition-colors">
               Terms
             </Link>
-            <a
-              href="mailto:hello@mybudgetmate.co.nz"
-              className="hover:text-white transition-colors"
-            >
-              Contact
-            </a>
           </div>
         </div>
       </div>

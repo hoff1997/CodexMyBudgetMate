@@ -11,19 +11,26 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "My Budget Mate",
+  title: {
+    default: "My Budget Mate | NZ Budgeting App for Kiwi Pay Cycles",
+    template: "%s | My Budget Mate",
+  },
   description:
-    "Personalised envelope budgeting with Supabase persistence and Akahu-powered bank connections.",
+    "Free NZ budgeting app with Akahu bank sync, envelope budgeting, and fortnightly pay support. Finally, a money app built for how Kiwis actually get paid.",
+  metadataBase: new URL("https://www.mybudgetmate.co.nz"),
   icons: {
     icon: "/favicon.svg",
   },
+  authors: [{ name: "My Budget Mate" }],
+  creator: "My Budget Mate",
+  publisher: "My Budget Mate",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`h-full bg-background ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en-NZ" className={`h-full bg-background ${inter.variable}`} suppressHydrationWarning>
       <body className="h-full font-sans" suppressHydrationWarning>
         <AppProviders>
           {children}

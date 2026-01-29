@@ -754,15 +754,24 @@ BEGIN
   -- ============================================
   -- STEP 19: Household
   -- ============================================
-  DELETE FROM households WHERE EXISTS (
-    SELECT 1 FROM household_members hm WHERE hm.household_id = households.id AND hm.user_id = v_user_id
+  -- First delete existing household membership for this user
+  DELETE FROM household_members WHERE user_id = v_user_id;
+  DELETE FROM households WHERE NOT EXISTS (
+    SELECT 1 FROM household_members hm WHERE hm.household_id = households.id
   );
 
   v_household_id := gen_random_uuid();
 
+  -- Temporarily disable the trigger that tries to use auth.uid()
+  ALTER TABLE households DISABLE TRIGGER on_household_created;
+
   INSERT INTO households (id, name) VALUES
     (v_household_id, 'The Demo Family');
 
+  -- Re-enable the trigger
+  ALTER TABLE households ENABLE TRIGGER on_household_created;
+
+  -- Manually insert the household member (since trigger was disabled)
   INSERT INTO household_members (household_id, user_id, role, display_name, joined_at, invited_by) VALUES
     (v_household_id, v_user_id, 'owner', 'Demo User', NOW() - INTERVAL '30 days', NULL);
 

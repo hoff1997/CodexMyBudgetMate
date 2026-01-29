@@ -1654,6 +1654,184 @@ import { FluentEmojiPicker } from "@/components/ui/fluent-emoji-picker";
 />
 ```
 
+## 💵 Wallet (Cash on Hand) System (Added Jan 2026)
+
+### Overview
+
+The Wallet feature tracks physical cash for both adults and kids. It follows the same pattern as CC Holding - a tracking envelope paired with a cash account.
+
+### Architecture
+
+| Component | Adults | Kids |
+|-----------|--------|------|
+| **Account Table** | `accounts` (`is_wallet=true`) | `child_bank_accounts` (`envelope_type='wallet'`) |
+| **Transaction Table** | `wallet_transactions` | `kid_wallet_transactions` |
+| **Balance Source** | `accounts.current_balance` | `child_bank_accounts.current_balance` |
+
+### Database Schema
+
+**Migration**: `supabase/migrations/0089_wallet_cash_on_hand.sql`
+
+```sql
+-- Adults: Wallet account flag
+ALTER TABLE accounts ADD COLUMN is_wallet BOOLEAN DEFAULT false;
+
+-- Adult wallet transactions
+CREATE TABLE wallet_transactions (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  wallet_account_id UUID NOT NULL REFERENCES accounts(id),
+  amount NUMERIC(10, 2) NOT NULL, -- positive = deposit, negative = withdrawal
+  source TEXT NOT NULL, -- 'manual', 'atm_withdrawal', 'gift', 'spending', 'transfer'
+  description TEXT,
+  linked_bank_transaction_id UUID REFERENCES transactions(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Kids: Add 'wallet' to envelope types
+-- Uses existing child_bank_accounts table with envelope_type='wallet'
+
+-- Kid wallet transactions
+CREATE TABLE kid_wallet_transactions (
+  id UUID PRIMARY KEY,
+  child_profile_id UUID NOT NULL REFERENCES child_profiles(id),
+  amount NUMERIC(10, 2) NOT NULL,
+  source TEXT NOT NULL, -- 'manual', 'pocket_money', 'gift', 'spending', 'chore_payment'
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### Transaction Sources
+
+**Adults:**
+- `manual` - Manual entry
+- `atm_withdrawal` - ATM withdrawal (auto-detected)
+- `gift` - Gift received
+- `spending` - Cash spent
+- `transfer` - Transfer from/to bank
+
+**Kids:**
+- `manual` - Manual entry
+- `pocket_money` - Pocket money
+- `gift` - Gift received
+- `spending` - Cash spent
+- `chore_payment` - Payment for chores
+
+### API Routes
+
+**Adults:**
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `GET /api/wallet` | GET | Get wallet summary (balance + recent transactions) |
+| `POST /api/wallet` | POST | Create wallet account |
+| `POST /api/wallet/transactions` | POST | Add transaction |
+| `DELETE /api/wallet/transactions/[id]` | DELETE | Delete transaction |
+
+**Kids:**
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `GET /api/kids/[childId]/wallet` | GET | Get kid's wallet summary |
+| `POST /api/kids/[childId]/wallet` | POST | Add kid wallet transaction |
+| `DELETE /api/kids/[childId]/wallet/[id]` | DELETE | Delete kid wallet transaction |
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `WalletCard` | `components/wallet/wallet-card.tsx` | Dashboard card for adults |
+| `WalletTransactionDialog` | `components/wallet/wallet-transaction-dialog.tsx` | Add/spend cash dialog |
+| `KidWalletCard` | `components/kids/kid-wallet-card.tsx` | Dashboard card for kids |
+| `KidWalletTransactionDialog` | `components/kids/kid-wallet-transaction-dialog.tsx` | Kid cash dialog |
+| `CashWithdrawalPrompt` | `components/reconcile/cash-withdrawal-prompt.tsx` | ATM detection prompt |
+
+### Cash Withdrawal Detection
+
+**File**: `lib/utils/cash-withdrawal-detection.ts`
+
+Automatically detects ATM withdrawals during transaction reconciliation:
+
+```typescript
+import { isCashWithdrawal, extractCashAmount } from "@/lib/utils/cash-withdrawal-detection";
+
+// Check if transaction is a cash withdrawal
+const isWithdrawal = isCashWithdrawal(transaction.description);
+
+// Get absolute amount
+const amount = extractCashAmount(transaction.amount);
+```
+
+**Detection Patterns:**
+- `ATM`, `CASH OUT`, `WITHDRAWAL`, `CASH BACK`, `TELLER`
+- NZ bank-specific: `KIWIBANK ATM`, `ANZ ATM`, `BNZ ATM`, `ASB ATM`, `WESTPAC ATM`
+
+**Exclusion Patterns:**
+- `TRANSFER`, `EFTPOS`, `PURCHASE`, `DIRECT DEBIT`, `AUTOMATIC PAYMENT`
+
+### Reconciliation Integration
+
+When approving a transaction in the reconciliation workbench:
+
+1. System checks if description matches ATM patterns via `isCashWithdrawal()`
+2. If detected, shows `CashWithdrawalPrompt` dialog
+3. User can choose to:
+   - "Yes, Add to Wallet" → Creates wallet transaction + approves bank transaction
+   - "No, Just Approve" → Only approves bank transaction
+4. Linked transactions maintain audit trail via `linked_bank_transaction_id`
+
+### Dashboard Integration
+
+**Adult Dashboard** (`dashboard-v2-client.tsx`):
+- WalletCard shown in 3-column grid with Quick Glance and Upcoming Bills
+- Data fetched server-side in `dashboard/page.tsx`
+- Shows balance, quick add/spend buttons, recent transactions
+
+**Kids Dashboard** (`kid-dashboard-client.tsx`):
+- KidWalletCard shown after Savings Goals section
+- Only displayed if wallet account exists (`envelope_type='wallet'`)
+- Excludes wallet from main money grid (filters `envelope_type !== 'wallet'`)
+
+### Types
+
+**File**: `lib/types/wallet.ts`
+
+```typescript
+// Adult types
+export interface WalletTransaction { ... }
+export interface WalletAccount { ... }
+export interface WalletSummary { ... }
+
+// Kid types
+export interface KidWalletTransaction { ... }
+export interface KidWalletAccount { ... }
+export interface KidWalletSummary { ... }
+
+// Utility functions
+export function formatWalletTransaction(transaction): { amountDisplay, isDeposit, sourceLabel }
+export function calculateWalletBalance(transactions): number
+```
+
+### Hook
+
+**File**: `lib/hooks/use-wallet.ts`
+
+```typescript
+import { useWallet } from "@/lib/hooks/use-wallet";
+
+const {
+  walletSummary,
+  isLoading,
+  hasWallet,
+  balance,
+  recentTransactions,
+  addTransaction,
+  deleteTransaction,
+  createWallet,
+} = useWallet();
+```
+
 ## 🔒 Security Measures (Updated Jan 2026)
 
 ### Pre-Commit Secret Scanner

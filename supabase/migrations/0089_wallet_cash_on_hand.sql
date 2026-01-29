@@ -33,12 +33,12 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
 -- 4. Add 'wallet' to kid envelope types
 -- First drop the existing constraint if it exists
 ALTER TABLE child_bank_accounts
-  DROP CONSTRAINT IF EXISTS child_bank_accounts_account_type_check;
+  DROP CONSTRAINT IF EXISTS child_bank_accounts_envelope_type_check;
 
 -- Then add the new constraint with 'wallet' included
 ALTER TABLE child_bank_accounts
-  ADD CONSTRAINT child_bank_accounts_account_type_check
-  CHECK (account_type IN ('spend', 'save', 'invest', 'give', 'wallet'));
+  ADD CONSTRAINT child_bank_accounts_envelope_type_check
+  CHECK (envelope_type IN ('spend', 'save', 'invest', 'give', 'wallet'));
 
 -- 5. Kid wallet transactions (simpler than adult - just amount tracking)
 CREATE TABLE IF NOT EXISTS kid_wallet_transactions (
@@ -122,7 +122,7 @@ CREATE INDEX IF NOT EXISTS idx_kid_wallet_transactions_created ON kid_wallet_tra
 -- ============================================
 
 -- Add wallet account to existing child profiles that don't have one
-INSERT INTO child_bank_accounts (id, child_profile_id, account_type, balance, created_at)
+INSERT INTO child_bank_accounts (id, child_profile_id, envelope_type, current_balance, created_at)
 SELECT
   uuid_generate_v4(),
   cp.id,
@@ -132,7 +132,7 @@ SELECT
 FROM child_profiles cp
 WHERE NOT EXISTS (
   SELECT 1 FROM child_bank_accounts cba
-  WHERE cba.child_profile_id = cp.id AND cba.account_type = 'wallet'
+  WHERE cba.child_profile_id = cp.id AND cba.envelope_type = 'wallet'
 );
 
 -- ============================================
@@ -143,7 +143,7 @@ CREATE OR REPLACE FUNCTION create_kid_wallet_on_profile()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Create wallet account for new child profile
-  INSERT INTO child_bank_accounts (id, child_profile_id, account_type, balance, created_at)
+  INSERT INTO child_bank_accounts (id, child_profile_id, envelope_type, current_balance, created_at)
   VALUES (uuid_generate_v4(), NEW.id, 'wallet', 0, NOW());
 
   RETURN NEW;
@@ -184,9 +184,9 @@ RETURNS NUMERIC AS $$
 DECLARE
   v_balance NUMERIC;
 BEGIN
-  SELECT balance INTO v_balance
+  SELECT current_balance INTO v_balance
   FROM child_bank_accounts
-  WHERE child_profile_id = p_child_id AND account_type = 'wallet'
+  WHERE child_profile_id = p_child_id AND envelope_type = 'wallet'
   LIMIT 1;
 
   RETURN COALESCE(v_balance, 0);

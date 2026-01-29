@@ -109,6 +109,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     { count: goalCount },
     { count: bankConnectionCount },
     { count: pendingReconciliationCount },
+    { data: walletAccount },
+    { data: walletTransactions },
   ] = await Promise.all([
     // Profile
     supabase
@@ -192,6 +194,22 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("status", "pending"),
+
+    // Wallet account (cash on hand)
+    supabase
+      .from("accounts")
+      .select("id, name, current_balance, is_wallet")
+      .eq("user_id", userId)
+      .eq("is_wallet", true)
+      .maybeSingle(),
+
+    // Recent wallet transactions
+    supabase
+      .from("wallet_transactions")
+      .select("id, amount, source, description, created_at, wallet_account_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   // Calculate income this month
@@ -352,6 +370,29 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         suggestions,
         unallocatedAmount,
         pendingReconciliationCount: pendingReconciliationCount ?? 0,
+        walletSummary: walletAccount
+          ? {
+              account: {
+                id: walletAccount.id,
+                user_id: userId,
+                name: walletAccount.name,
+                current_balance: Number(walletAccount.current_balance) || 0,
+                is_wallet: true as const,
+                account_type: "cash" as const,
+              },
+              balance: Number(walletAccount.current_balance) || 0,
+              recentTransactions: (walletTransactions ?? []).map((t) => ({
+                id: t.id,
+                user_id: userId,
+                wallet_account_id: t.wallet_account_id,
+                amount: Number(t.amount) || 0,
+                source: t.source as "manual" | "atm_withdrawal" | "gift" | "spending" | "transfer",
+                description: t.description,
+                created_at: t.created_at,
+              })),
+              hasWallet: true,
+            }
+          : null,
       }}
     />
   );

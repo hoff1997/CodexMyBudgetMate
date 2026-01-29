@@ -3,7 +3,7 @@
  *
  * The Wallet feature tracks physical cash for both adults and kids.
  * Adults use the accounts table with is_wallet=true.
- * Kids use child_bank_accounts with account_type='wallet'.
+ * Kids use child_bank_accounts with envelope_type='wallet'.
  */
 
 // ============================================
@@ -69,8 +69,8 @@ export interface KidWalletTransaction {
 export interface KidWalletAccount {
   id: string;
   child_profile_id: string;
-  account_type: "wallet";
-  balance: number;
+  envelope_type: "wallet";
+  current_balance: number;
   created_at?: string;
 }
 

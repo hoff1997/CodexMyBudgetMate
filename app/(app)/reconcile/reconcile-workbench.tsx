@@ -20,6 +20,8 @@ import { EnvelopeCombobox } from "@/components/shared/envelope-combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/cn";
+import { CashWithdrawalPrompt } from "@/components/reconcile/cash-withdrawal-prompt";
+import { isCashWithdrawal, extractCashAmount } from "@/lib/utils/cash-withdrawal-detection";
 
 type WorkbenchRow = TransactionRow & {
   labels?: string[];
@@ -231,6 +233,12 @@ export function ReconcileWorkbench({ transactions }: Props) {
   const [duplicateActionError, setDuplicateActionError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
+  // Cash withdrawal prompt state
+  const [cashWithdrawalPrompt, setCashWithdrawalPrompt] = useState<{
+    transaction: TransactionRow;
+    amount: number;
+  } | null>(null);
+
   const duplicateGroups = useMemo(() => {
     const map = new Map<string, WorkbenchRow[]>();
     rows.forEach((tx) => {
@@ -437,7 +445,21 @@ export function ReconcileWorkbench({ transactions }: Props) {
     [rows],
   );
 
-async function handleApprove(tx: TransactionRow) {
+async function handleApprove(tx: TransactionRow, skipCashWithdrawalCheck = false) {
+  // Check for cash withdrawal before approving (only for negative amounts / withdrawals)
+  const description = tx.description || tx.merchant_name || tx.bank_memo || "";
+  const isWithdrawal = isCashWithdrawal(description);
+  const amount = tx.amount ? Math.abs(Number(tx.amount)) : 0;
+
+  if (!skipCashWithdrawalCheck && isWithdrawal && amount > 0 && !usingDemo) {
+    // Show cash withdrawal prompt
+    setCashWithdrawalPrompt({
+      transaction: tx,
+      amount: extractCashAmount(Number(tx.amount)),
+    });
+    return;
+  }
+
   setRows((prev) =>
     prev.map((row) => (row.id === tx.id ? { ...row, status: "approved" } : row)),
   );
@@ -1272,6 +1294,51 @@ async function submitDuplicateResolution(
           }
         }}
         onDecision={(decision, targetId, note) => submitDuplicateResolution(decision, targetId, note)}
+      />
+      <CashWithdrawalPrompt
+        open={Boolean(cashWithdrawalPrompt)}
+        onOpenChange={(open) => {
+          if (!open) setCashWithdrawalPrompt(null);
+        }}
+        amount={cashWithdrawalPrompt?.amount ?? 0}
+        description={
+          cashWithdrawalPrompt?.transaction.description ||
+          cashWithdrawalPrompt?.transaction.merchant_name ||
+          cashWithdrawalPrompt?.transaction.bank_memo ||
+          ""
+        }
+        transactionId={cashWithdrawalPrompt?.transaction.id ?? ""}
+        onAddToWallet={async () => {
+          if (!cashWithdrawalPrompt) return;
+          const tx = cashWithdrawalPrompt.transaction;
+          const amount = cashWithdrawalPrompt.amount;
+          try {
+            // Add to wallet
+            await fetch("/api/wallet/transactions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: amount,
+                source: "atm_withdrawal",
+                description: tx.description || tx.merchant_name || "ATM Withdrawal",
+                linked_bank_transaction_id: tx.id,
+              }),
+            });
+            toast.success(`$${amount.toFixed(2)} added to your Wallet`);
+          } catch (error) {
+            console.error("Failed to add to wallet:", error);
+            toast.error("Failed to add to wallet");
+          }
+          // Approve the transaction regardless
+          setCashWithdrawalPrompt(null);
+          await handleApprove(tx, true);
+        }}
+        onSkip={() => {
+          if (!cashWithdrawalPrompt) return;
+          const tx = cashWithdrawalPrompt.transaction;
+          setCashWithdrawalPrompt(null);
+          void handleApprove(tx, true);
+        }}
       />
     </div>
   );

@@ -32,6 +32,8 @@ import { RemyHelpPanel } from "@/components/coaching/RemyHelpPanel";
 import { CelebrationRemindersWidget } from "./celebration-reminders-widget";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import type { SmartSuggestion } from "@/lib/utils/smart-suggestion-generator";
+import { WalletCard } from "@/components/wallet/wallet-card";
+import type { WalletSummary } from "@/lib/types/wallet";
 
 export interface DashboardV2Data {
   // User info
@@ -112,6 +114,9 @@ export interface DashboardV2Data {
 
   // Reconciliation
   pendingReconciliationCount?: number;
+
+  // Wallet (Cash on Hand)
+  walletSummary?: WalletSummary | null;
 }
 
 interface DashboardV2ClientProps {
@@ -392,14 +397,20 @@ export function DashboardV2Client({
       {/* Reconciliation Alert - shows if there are pending items */}
       <ReconciliationAlertWidget pendingCount={data.pendingReconciliationCount ?? 0} />
 
-      {/* Section 4: Quick Glance + Upcoming Bills side-by-side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Section 4: Quick Glance + Wallet + Upcoming Bills */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left: Quick Glance */}
         <QuickGlanceWidget
           envelopes={envelopesWithMonitorState}
           onToggleMonitored={handleToggleMonitored}
           surplusAmount={calculations.unallocated > 0 ? calculations.unallocated : 0}
           ccHoldingAmount={calculations.holdingBalance}
+        />
+
+        {/* Middle: Wallet (Cash on Hand) */}
+        <WalletCard
+          walletSummary={data.walletSummary ?? null}
+          isLoading={false}
         />
 
         {/* Right: Upcoming Bills */}

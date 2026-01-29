@@ -23,6 +23,8 @@ import {
 import Link from "next/link";
 import { RemyHelpButton } from "@/components/shared/remy-help-button";
 import { SavingsGoalsSection } from "@/components/kids/savings-goals-section";
+import { KidWalletCard } from "@/components/kids/kid-wallet-card";
+import type { KidWalletSummary, KidWalletTransaction } from "@/lib/types/wallet";
 
 interface ChildProfile {
   id: string;
@@ -189,6 +191,21 @@ export function KidDashboardClient({
   // Get save account for goals section
   const saveAccount = accounts.find((a) => a.envelope_type === "save") || null;
 
+  // Get wallet account and create summary for KidWalletCard
+  const walletAccount = accounts.find((a) => a.envelope_type === "wallet") || null;
+  const walletSummary: KidWalletSummary | null = walletAccount
+    ? {
+        account: {
+          id: walletAccount.id,
+          child_profile_id: child.id,
+          envelope_type: "wallet" as const,
+          current_balance: walletAccount.current_balance,
+        },
+        balance: walletAccount.current_balance,
+        recentTransactions: [], // Transactions are fetched by the card if needed
+      }
+    : null;
+
   const completedExpected = expectedChores.filter((c) => c.status === "done" || c.status === "approved").length;
   const completedExtra = extraChores.filter((c) => c.status === "done" || c.status === "approved").length;
 
@@ -293,10 +310,10 @@ export function KidDashboardClient({
                 Details <ChevronRight className="h-3 w-3" />
               </Link>
             </div>
-            {/* Top row: Spend, Invest, Give (3 columns) */}
+            {/* Top row: Spend, Invest, Give (3 columns) - excludes Save and Wallet */}
             <div className="grid grid-cols-3 gap-2 mb-2">
               {accounts
-                .filter((a) => a.envelope_type !== "save")
+                .filter((a) => a.envelope_type !== "save" && a.envelope_type !== "wallet")
                 .map((account) => {
                   const config = ENVELOPE_ICONS[account.envelope_type as keyof typeof ENVELOPE_ICONS];
                   const Icon = config?.icon || Wallet;
@@ -366,6 +383,18 @@ export function KidDashboardClient({
           goals={goals}
           saveAccount={saveAccount}
         />
+
+        {/* Wallet (Cash on Hand) - Only show if wallet exists */}
+        {walletSummary && (
+          <div className="mb-3">
+            <KidWalletCard
+              childId={child.id}
+              childName={child.name}
+              walletSummary={walletSummary}
+              onTransactionComplete={() => router.refresh()}
+            />
+          </div>
+        )}
 
         {/* Expected Chores - Compact */}
         <Card className="mb-3">
